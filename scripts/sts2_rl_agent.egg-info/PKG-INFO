@@ -1,0 +1,14 @@
+Metadata-Version: 2.4
+Name: sts2-rl-agent
+Version: 0.1.0
+Summary: Slay the Spire 2 headless combat simulator for RL training
+Requires-Python: >=3.11
+Requires-Dist: gymnasium>=1.0.0
+Requires-Dist: numpy>=1.26
+Provides-Extra: train
+Requires-Dist: stable-baselines3>=2.3.0; extra == "train"
+Requires-Dist: sb3-contrib>=2.3.0; extra == "train"
+Requires-Dist: torch>=2.0; extra == "train"
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0; extra == "dev"
+Requires-Dist: pytest-cov>=5.0; extra == "dev"

@@ -1,0 +1,11 @@
+gymnasium>=1.0.0
+numpy>=1.26
+
+[dev]
+pytest>=8.0
+pytest-cov>=5.0
+
+[train]
+stable-baselines3>=2.3.0
+sb3-contrib>=2.3.0
+torch>=2.0

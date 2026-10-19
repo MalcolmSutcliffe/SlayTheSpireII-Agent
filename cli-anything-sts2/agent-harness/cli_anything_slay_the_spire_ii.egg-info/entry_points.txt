@@ -1,0 +1,2 @@
+[console_scripts]
+cli-anything-sts2 = cli_anything.slay_the_spire_ii.slay_the_spire_ii_cli:main
