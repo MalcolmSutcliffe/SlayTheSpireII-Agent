@@ -8,7 +8,7 @@
     "net9.0": []
   },
   "packageFolders": {
-    "/home/malcolmsutcliffe/Documents/Malcolm_Stuff/Projects/SlayTheSpireII-Agent/cli-anything-sts2/agent-harness/bridge/plugin/.dotnet-cli-home/.nuget/packages/": {}
+    "/home/malcolmsutcliffe/.nuget/packages/": {}
   },
   "project": {
     "version": "1.0.0",
@@ -16,11 +16,11 @@
       "projectUniqueName": "/home/malcolmsutcliffe/Documents/Malcolm_Stuff/Projects/SlayTheSpireII-Agent/cli-anything-sts2/agent-harness/bridge/plugin/STS2_Bridge.csproj",
       "projectName": "STS2_Bridge",
       "projectPath": "/home/malcolmsutcliffe/Documents/Malcolm_Stuff/Projects/SlayTheSpireII-Agent/cli-anything-sts2/agent-harness/bridge/plugin/STS2_Bridge.csproj",
-      "packagesPath": "/home/malcolmsutcliffe/Documents/Malcolm_Stuff/Projects/SlayTheSpireII-Agent/cli-anything-sts2/agent-harness/bridge/plugin/.dotnet-cli-home/.nuget/packages/",
+      "packagesPath": "/home/malcolmsutcliffe/.nuget/packages/",
       "outputPath": "/home/malcolmsutcliffe/Documents/Malcolm_Stuff/Projects/SlayTheSpireII-Agent/cli-anything-sts2/agent-harness/bridge/plugin/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
-        "/home/malcolmsutcliffe/Documents/Malcolm_Stuff/Projects/SlayTheSpireII-Agent/cli-anything-sts2/agent-harness/bridge/plugin/.dotnet-cli-home/.nuget/NuGet/NuGet.Config"
+        "/home/malcolmsutcliffe/.nuget/NuGet/NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net9.0"

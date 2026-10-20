@@ -1,16 +1,14 @@
 from agents.base_agent import BaseAgent
 from agents.my_agent import MyAgent
 
-from sts2_env.run.run_manager import RunManager, SUPPORTED_CHARACTER_IDS
+from sts2_lite.combat import CombatState, Combat
 
 
 import json
 import subprocess
 
+DO_INTERNAL = False
 
-def run_agent():
-    # set up new mgr
-    seed = 0;
 
 def act(action):
     if action["action"] == "end_turn":
@@ -19,29 +17,45 @@ def act(action):
         if "target_name" in action:
             subprocess.run(["cli-anything-sts2", 
                             "play-card", 
-                            str(action["hand_index"]),
+                            str(action["card_index"]),
                             "--target", 
-                            action["target_name"] + "_0"])
+                            action["target_name"]])
         else:
-            subprocess.run(["cli-anything-sts2", "play-card", str(action["hand_index"])])
+            subprocess.run(["cli-anything-sts2", "play-card", str(action["card_index"])])
+
+def run_agent(agent : BaseAgent):
+    game_state = subprocess.run(["cli-anything-sts2", "state"], capture_output=True, text=True)
+    game_state = json.loads(game_state.stdout)
+    combat_state = CombatState.from_dict(game_state)
+    
+    if DO_INTERNAL:
+        while True:
+            c = Combat(combat_state)
+            print(combat_state.readable())
+            print(c.get_available_actions())
+            input("waiting for input ... \n")
+            action = agent.get_action(c.combat_state, 500)
+            print(action)
+            c.perform_action(action)
+
+    else:
+        while True:
+            input("waiting for input ... \n")
+            game_state = subprocess.run(["cli-anything-sts2", "state"], capture_output=True, text=True)
+            game_state = json.loads(game_state.stdout)
+            if game_state["type"] != "decision":
+                continue
+            if game_state["decision"] != "combat_play":
+                continue
+            combat_state = CombatState.from_dict(game_state)
+            print(combat_state.readable())
+            action = agent.get_action(combat_state, 1000)
+            act(action)
 
 def main():
     agent = MyAgent()
-    # get state from command line
-    # make RunManager 
-    # get agent output
-    seed = 0
-    mgr = RunManager(seed = seed, ascension_level=0, start_with_neow=True) # ironclad ascension 0 ...
-    game_state = subprocess.run(["cli-anything-sts2", "state"], capture_output=True, text=True)
-    game_state = json.loads(game_state.stdout)
-    if game_state["type"] != "decision":
-        return
-    if game_state["decision"] != "combat_play":
-        return
-    mgr.align_to_combat_state(game_state)
-    action = agent.get_action(mgr, 10)
-    print(action)
-    act(action)
+    run_agent(agent)
+    
     
 
 

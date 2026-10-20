@@ -4,12 +4,12 @@
     <RestoreSuccess Condition=" '$(RestoreSuccess)' == '' ">True</RestoreSuccess>
     <RestoreTool Condition=" '$(RestoreTool)' == '' ">NuGet</RestoreTool>
     <ProjectAssetsFile Condition=" '$(ProjectAssetsFile)' == '' ">$(MSBuildThisFileDirectory)project.assets.json</ProjectAssetsFile>
-    <NuGetPackageRoot Condition=" '$(NuGetPackageRoot)' == '' ">/home/malcolmsutcliffe/Documents/Malcolm_Stuff/Projects/SlayTheSpireII-Agent/cli-anything-sts2/agent-harness/bridge/plugin/.dotnet-cli-home/.nuget/packages/</NuGetPackageRoot>
-    <NuGetPackageFolders Condition=" '$(NuGetPackageFolders)' == '' ">/home/malcolmsutcliffe/Documents/Malcolm_Stuff/Projects/SlayTheSpireII-Agent/cli-anything-sts2/agent-harness/bridge/plugin/.dotnet-cli-home/.nuget/packages/</NuGetPackageFolders>
+    <NuGetPackageRoot Condition=" '$(NuGetPackageRoot)' == '' ">/home/malcolmsutcliffe/.nuget/packages/</NuGetPackageRoot>
+    <NuGetPackageFolders Condition=" '$(NuGetPackageFolders)' == '' ">/home/malcolmsutcliffe/.nuget/packages/</NuGetPackageFolders>
     <NuGetProjectStyle Condition=" '$(NuGetProjectStyle)' == '' ">PackageReference</NuGetProjectStyle>
     <NuGetToolVersion Condition=" '$(NuGetToolVersion)' == '' ">7.0.0</NuGetToolVersion>
   </PropertyGroup>
   <ItemGroup Condition=" '$(ExcludeRestorePackageImports)' != 'true' ">
-    <SourceRoot Include="/home/malcolmsutcliffe/Documents/Malcolm_Stuff/Projects/SlayTheSpireII-Agent/cli-anything-sts2/agent-harness/bridge/plugin/.dotnet-cli-home/.nuget/packages/" />
+    <SourceRoot Include="/home/malcolmsutcliffe/.nuget/packages/" />
   </ItemGroup>
 </Project>

@@ -3886,67 +3886,45 @@ class CombatState:
         self.hand = [create_card(CardId[card["id"]], card["is_upgraded"]) for card in game_state["hand"]]
         self.draw_pile = [create_card(CardId[card["id"]], card["is_upgraded"]) for card in game_state["player"]["draw_pile"]]
         self.discard_pile = [create_card(CardId[card["id"]], card["is_upgraded"]) for card in game_state["player"]["discard_pile"]]
+        self.player_hp = game_state["player"]["hp"]
+        self.player_max_hp = game_state["player"]["max_hp"]
+        self.player.block = game_state["player"]["block"]
+        self.deck = self.parse_deck(game_state)
+        self.relics= self.parse_relics(game_state)
+        self.gold = game_state["player"]["gold"]
+        self.potions = self.parse_potions(game_state)
+        self.max_potion_slots = 3
+        self.ascension_level = game_state["run"]["ascension"]
 
-        # Enemies
-        from sts2_env.monsters.act1_weak import (
-            create_nibbit, 
-            create_fuzzy_wurm_crawler, 
-            create_leaf_slime_m, 
-            create_leaf_slime_s,
-            create_twig_slime_m,
-            create_twig_slime_s,
-            create_shrinker_beetle,
-        )
         from sts2_env.powers.base import PowerInstance
-        self.enemies = []
-        self.enemy_ais: dict[int, MonsterAI] = {}
-        rng = Rng(random.randint(0,INT_MAX))
+
+        for status in game_state["player"]["status"]:
+            power = PowerInstance(PowerId[status["id"][:-6]], status["amount"])
+            self.player.powers[power.power_id] = power
+
+        # enemies
         for (i,enemy) in enumerate(game_state["enemies"]):
-            if enemy["name"] == "Nibbit":
-                (creature, ai) = create_nibbit(
-                    rng, 
-                    is_alone=len(game_state["enemies"]) == 1,
-                    is_front=(i==0),
-                    ascension_level=game_state["context"]["ascension"],
-                )
-            if enemy["name"] == "Fuzzy Wurm Crawler":
-                (creature, ai) = create_fuzzy_wurm_crawler(
-                    rng,
-                    ascension_level=game_state["context"]["ascension"],
-                )
-            if enemy["name"] == "Shrinker Beetle":
-                (creature, ai) = create_shrinker_beetle(
-                    rng,
-                    ascension_level=game_state["context"]["ascension"],
-                )
-            if enemy["name"] == "Leaf Slime (S)":
-                (creature, ai) = create_leaf_slime_s(
-                    rng,
-                    ascension_level=game_state["context"]["ascension"],
-                )
-            if enemy["name"] == "Leaf Slime (M)":
-                (creature, ai) = create_leaf_slime_m(
-                    rng,
-                    ascension_level=game_state["context"]["ascension"],
-                )
-            if enemy["name"] == "Twig Slime (S)":
-                (creature, ai) = create_twig_slime_s(
-                    rng,
-                    ascension_level=game_state["context"]["ascension"],
-                )
-            if enemy["name"] == "Twig Slime (M)":
-                (creature, ai) = create_twig_slime_m(
-                    rng,
-                    ascension_level=game_state["context"]["ascension"],
-                )
-            for i in range(self.round_number):
-                ai.roll_move(rng)
-            creature.max_hp = enemy["max_hp"]
-            creature.current_hp = enemy["hp"]
-            creature.block = enemy["block"]
-            creature.combat_id = i
+            self.enemies[i].max_hp = enemy["max_hp"]
+            self.enemies[i].current_hp = enemy["hp"]
+            self.enemies[i].block = enemy["block"]
+            self.enemies[i].combat_id = i
             for status in enemy["status"]:
                 power = PowerInstance(PowerId[status["id"][:-6]], status["amount"])
-                creature.powers[power.power_id] = power
-            self.enemies.append(creature)
-            self.enemy_ais[i] = ai
+                self.enemies[i].powers[power.power_id] = power
+                
+
+    def parse_potions(self, game_state) -> list[PotionInstance]:
+        return []
+        
+    def parse_relics(self, game_state) -> list[str]:
+        from sts2_env.relics.registry import create_relic
+        relics = [create_relic(RelicId[r['id']]) for r in game_state["player"]["relics"]]
+        return relics
+
+    def parse_card(self, card) -> CardInstance:
+        card_id = card["id"]
+        is_upgraded = card["is_upgraded"]
+        return create_card(CardId[card_id], is_upgraded)
+
+    def parse_deck(self, game_state) -> list[CardInstance]:
+        return [self.parse_card(card) for card in game_state["player"]["deck"]]

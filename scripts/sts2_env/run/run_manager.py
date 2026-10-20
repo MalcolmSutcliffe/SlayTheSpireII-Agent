@@ -548,6 +548,7 @@ class RunManager:
             ascension_level=self._run_state.ascension_level,
         )
         self._selected_combat_player_id = player.player_id
+        
 
         # Select encounter from appropriate pool
         pools = _get_encounter_pools(self._run_state.current_act_index)
@@ -2120,79 +2121,55 @@ class RunManager:
     # ------------------------------------------------------------------
     # Hack in game state read from actual running game to perform mcts search
     # ------------------------------------------------------------------
-    def align_to_combat_state(self, game_state):
-        combat_state = self.parse_combat_state(game_state)
-        self._combat = combat_state
+    def align_to_combat_start(self, game_state):
         self.set_up_encounter(game_state)
+        self.align_to_combat_state(game_state)
+    
+    def align_to_combat_state(self, game_state):
         self._combat.align_to_combat_state(game_state)
-
         return
 
     def set_up_encounter(self, game_state):
-        self._phase = self.PHASE_COMBAT
-        
         if game_state["run"]["act"] == 1:
             pools = _get_encounter_pools(0)
             if game_state["enemies"][0]["entity_id"] == "SHRINKER_BEETLE_0":
-                setup_fn = pools["weak"][3]
-                room_type = RoomType.MONSTER
-            if game_state["enemies"][0]["entity_id"] == "FUZZY_WURM_CRAWLER_0":
-                setup_fn = pools["weak"][2]
-                room_type = RoomType.MONSTER
-            if game_state["enemies"][0]["entity_id"] == "NIBBIT_0":
                 setup_fn = pools["weak"][1]
                 room_type = RoomType.MONSTER
-            if game_state["enemies"][0]["entity_id"] == "LEAF_SLIME_S_0" or "TWIG_SLIME_S_0":
+            if game_state["enemies"][0]["entity_id"] == "FUZZY_WURM_CRAWLER_0":
                 setup_fn = pools["weak"][0]
                 room_type = RoomType.MONSTER
+            if game_state["enemies"][0]["entity_id"] == "NIBBIT_0":
+                setup_fn = pools["weak"][3]
+                room_type = RoomType.MONSTER
+            if game_state["enemies"][0]["entity_id"] == "LEAF_SLIME_S_0" or "TWIG_SLIME_S_0":
+                setup_fn = pools["weak"][2]
+                room_type = RoomType.MONSTER
 
+        self._phase = self.PHASE_COMBAT
         self._current_room_type = room_type
         self._current_room = create_room(room_type)
+        reset_instance_counter()
+
+        player = self._run_state.player
+        combat_seed = random.randint(0,INT_MAX)
+
+        self._combat = CombatState(
+                    player_hp=player.current_hp,
+                    player_max_hp=player.max_hp,
+                    deck=list(player.deck),
+                    rng_seed=combat_seed,
+                    relics=list(self._run_state.relics),
+                    gold=player.gold,
+                    character_id=self._run_state.player.character_id,
+                    potions=list(player.potions),
+                    max_potion_slots=player.max_potion_slots,
+                    player_state=player,
+                    room=self._current_room,
+                    ascension_level=self._run_state.ascension_level,
+                )
 
         encounter_rng = Rng(random.randint(0, INT_MAX))
         setup_fn(self._combat, encounter_rng)
 
-        # self.set_up_monsters(game_state)
-
-    def parse_potions(self, game_state) -> list[PotionInstance]:
-        return
-
-    def parse_relics(self, game_state) -> list[str]:
-        relics = [r['id'] for r in game_state["player"]["relics"]]
-        return relics
-
-    def parse_card(self, card) -> CardInstance:
-        card_id = card["id"]
-        is_upgraded = card["is_upgraded"]
-        return create_card(CardId[card_id], is_upgraded)
-
-    def parse_deck(self, game_state) -> list[CardInstance]:
-        return [self.parse_card(card) for card in game_state["player"]["deck"]]
-
-    def parse_combat_state(self, game_state : dict) -> CombatState:
-        player_hp = game_state["player"]["hp"]
-        player_max_hp = game_state["player"]["max_hp"]
-        deck = self.parse_deck(game_state)
-        relics= self.parse_relics(game_state)
-        gold = game_state["player"]["gold"]
-        character_id = game_state["player"]["character"]
-        potions = self.parse_potions(game_state)
-        max_potion_slots = 3
-        player_state = None
-        # ally_players
-        # room
-        ascension_level = game_state["run"]["ascension"]
-        combat_state = CombatState(
-            player_hp=player_hp,
-            player_max_hp=player_max_hp,
-            deck=deck,
-            rng_seed=0,
-            relics=relics,
-            gold=gold,
-            character_id="Ironclad",
-            potions=potions,
-            max_potion_slots=max_potion_slots,
-            player_state=player_state,
-            ascension_level=ascension_level
-            )
-        return combat_state
+        self._fire_modifiers_after_room_entered(RoomVisitContext(room_type), combat=self._combat)
+        self._combat.start_combat()
