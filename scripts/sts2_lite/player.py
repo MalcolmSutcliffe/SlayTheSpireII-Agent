@@ -24,13 +24,13 @@ class Player(Creature):
             pl.status[StatusId[s["id"][:-6]]] = Status.from_dict(s)
         pl.hand = []
         for card in player["hand"]:
-            pl.hand.append(Card(card))
+            pl.hand.append(Card.from_dict(card))
         pl.draw_pile = []
         for card in player["draw_pile"]:
-            pl.draw_pile.append(Card(card))
+            pl.draw_pile.append(Card.from_dict(card))
         pl.discard_pile = []
         for card in player["discard_pile"]:
-            pl.discard_pile.append(Card(card))
+            pl.discard_pile.append(Card.from_dict(card))
         return pl
 
     @classmethod
@@ -54,6 +54,13 @@ class Player(Creature):
             new_pl.discard_pile.append(card)
         return new_pl
     
+    def turn_start(self):
+        super().turn_start()
+        self.draw_cards(5)
+
+        if StatusId.CRIMSON_MANTLE in self.status:
+            self.apply_block(self.status[StatusId.CRIMSON_MANTLE].amount)
+            self.lose_hp(1)
     
     def draw_cards(self, num_cards : int):
         for i in range(num_cards):
@@ -71,6 +78,17 @@ class Player(Creature):
     def shuffle_discard_into_draw(self):
         self.draw_pile.extend(self.discard_pile)
         random.shuffle(self.draw_pile)
+
+    def exhaust_card(self, card :Card):
+        if card in self.hand:
+            self.hand.remove(card)
+            return
+        if card in self.draw_pile:
+            self.draw_pile.remove(card)
+            return
+        if card in self.discard_pile:
+            self.discard_pile.remove(card)
+            return
 
     def readable(self) -> str:
         output = ""

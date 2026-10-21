@@ -29,15 +29,10 @@ def run_agent(agent : BaseAgent):
     combat_state = CombatState.from_dict(game_state)
     
     if DO_INTERNAL:
-        while True:
-            c = Combat(combat_state)
-            print(combat_state.readable())
-            print(c.get_available_actions())
-            input("waiting for input ... \n")
-            action = agent.get_action(c.combat_state, 500)
-            print(action)
-            c.perform_action(action)
-
+        c = Combat(combat_state)
+        # c.perform_action({'action': 'play_card', 'card_index': 3, 'target': 1, 'target_name': 'PHANTASMAL_GARDENER_1'})
+        action = agent.get_action(c.combat_state)
+        print(action)
     else:
         while True:
             input("waiting for input ... \n")
@@ -48,8 +43,9 @@ def run_agent(agent : BaseAgent):
             if game_state["decision"] != "combat_play":
                 continue
             combat_state = CombatState.from_dict(game_state)
-            print(combat_state.readable())
-            action = agent.get_action(combat_state, 1000)
+            # print(combat_state.readable())
+            action = agent.get_action(combat_state, 5000)
+            print(action)
             act(action)
 
 def main():

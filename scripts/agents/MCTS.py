@@ -1,10 +1,11 @@
 import random
 import math
-import copy
+import sys
 
 from sts2_lite.combat import CombatState, Combat
 
 EXPLORATION_CONSTANT = 0.5
+TURN_DECAY_CONSTANT = 0.05
 
 
 class sts2_Node:
@@ -28,14 +29,9 @@ class sts2_Node:
         self.total_reward = 0.0
         self.is_terminal = False
         self.is_expanded = False
+        self.is_fully_expanded = False
         if parent:
             self.depth = parent.depth + 1
-
-    # uct score 
-    def get_uct_score(self, num_sims : int):
-        if self.visits == 0:
-            return 1
-        return self.total_reward / self.visits + EXPLORATION_CONSTANT*math.sqrt(math.log(num_sims)/self.visits)
 
 class sts2_MCTS:
     _root_node : sts2_Node = None
@@ -46,7 +42,8 @@ class sts2_MCTS:
         pass
 
     def monte_carlo_tree_search(self, combat_state : CombatState, max_sims : int) -> dict:
-        self._root_node = sts2_Node(None, combat_state)
+        sys.setrecursionlimit(max_sims)
+        self._root_node = sts2_Node(None, CombatState.deepcopy(combat_state))
         self._num_sims = 0
         self._max_sims = max_sims
 
@@ -55,50 +52,75 @@ class sts2_MCTS:
             sim_result = self._simulate_random_combat(leaf) # simulate
             backpropagate(leaf, sim_result)
 
-        best_child = max(self._root_node.children, key=lambda c: c.total_reward / c.visits)
+        for node in self._root_node.children:
+            print(str(node.action) + ": " + str(node.total_reward/node.visits) + ", " + str(node.visits))
+
+        best_child = max(self._root_node.children, key=lambda c: c.visits)
+        sys.setrecursionlimit(1000)
         return best_child.action
 
     # finds the optimal node to simulate from
     def traverse_node(self, node : sts2_Node) -> sts2_Node:
-        while node.is_expanded:
+        while node.is_fully_expanded:
             node = self._best_uct(node)
-        expand_node(node)
-        return self._best_uct(node)
+        if not node.is_expanded:
+            expand_node(node)
+        if node.is_terminal:
+            return node
+        leaf = get_unvisited_child(node)
+        return leaf or node
         
     # simulate combat to end
     def _simulate_random_combat(self, node : sts2_Node) -> float:
 
-        c = Combat(copy.deepcopy(node.state))
+        c = Combat(CombatState.deepcopy(node.state))
         while not c.is_over:
             actions = c.get_available_actions()
 
             if len(actions) == 0:
                 break
             
-            # if only action is end turn:
-            if len(actions) <= 1:
-                choice = actions[0]
-            # choose random non end-turn action
-            else:
-                choice = random.choice(actions[::-1])
-
-            # print(choice)
-            c.perform_action(choice)
+            c.perform_action(actions[0])
 
         self._num_sims += 1
         outcome = self._rate_outcome(c.combat_state)
         return outcome
 
 
-    def _rate_outcome(self, combat_state) -> float:
+    def _rate_outcome(self, combat_state : CombatState) -> float:
         current_hp = combat_state.player.current_hp
         max_hp = combat_state.player.max_hp
-        return float(current_hp) / max_hp
+        num_turns = combat_state.turn_number
+        # if won fight: outcome is best max hp with slight bias towars less turns
+        if current_hp > 0:
+            outcome = (float(current_hp) / max_hp) - TURN_DECAY_CONSTANT*num_turns
+        # otherwise: minimize enemy HP
+        else:
+            total_enemy_hp = 0
+            total_enemy_max_hp = 0
+            for enemy in combat_state.enemies:
+                total_enemy_max_hp += enemy.max_hp
+                total_enemy_hp += enemy.current_hp
+            outcome  = -float(total_enemy_hp)/total_enemy_max_hp
+        return outcome
+
+    # uct score 
+    def get_uct_score(self, node : sts2_Node):
+        if node.visits == 0:
+            return 0
+        return node.total_reward/node.visits + EXPLORATION_CONSTANT*math.sqrt(math.log(self._num_sims)/node.visits)
 
     def _best_uct(self, node : sts2_Node) -> sts2_Node:
         if len(node.children) == 0:
             return node
-        return max(node.children, key = lambda x: x.get_uct_score(self._num_sims))
+        return max(node.children, key = lambda x: self.get_uct_score(x))
+
+def get_unvisited_child(node : sts2_Node):
+    for child in node.children:
+        if child.visits == 0:
+            return child
+    node.is_fully_expanded = True
+    return None
 
 def expand_node(node : sts2_Node):
     c = Combat(node.state)
@@ -108,7 +130,7 @@ def expand_node(node : sts2_Node):
     for a in actions:
         c_a = Combat(CombatState.deepcopy(node.state))
         c_a.perform_action(a)
-        new_child = sts2_Node(node, c.combat_state, a)
+        new_child = sts2_Node(node, c_a.combat_state, a)
         node.children.append(new_child)
 
     node.is_expanded = True
@@ -116,6 +138,6 @@ def expand_node(node : sts2_Node):
 def backpropagate(node : sts2_Node, result):
     if node is None:
         return
-    node.visits += 1
     node.total_reward += result
+    node.visits += 1
     backpropagate(node.parent, result)

@@ -26,7 +26,6 @@ class Enemy(Creature):
         e.max_hp = enemy["max_hp"]
         e.current_hp = enemy["hp"]
         e.block = enemy["block"]
-        e.is_minion = False
         e.enemy_id = enemy["entity_id"]
         e.attack_damage = 0
         for intent in enemy["intents"]:
@@ -41,6 +40,9 @@ class Enemy(Creature):
         e.status = {}
         for s in enemy["status"]:
             e.status[StatusId[s["id"][:-6]]] = Status.from_dict(s)
+
+        if StatusId.MINION in e.status:
+            e.is_minion = True
         return e
 
     @classmethod
@@ -49,7 +51,7 @@ class Enemy(Creature):
         new_e.max_hp = enemy.max_hp
         new_e.current_hp = enemy.current_hp
         new_e.block = enemy.block
-        new_e.is_minion = False
+        new_e.is_minion = enemy.is_minion
         new_e.enemy_id = enemy.enemy_id
         new_e.status = {}
         for s in enemy.status.values():
@@ -61,6 +63,10 @@ class Enemy(Creature):
     def perform_turn(self, combat : Combat):
         for i in range(self.num_attacks):
             combat.combat_state.player.apply_damage(self.attack_damage)
+        if StatusId.TERRITORIAL in self.status:
+            self.apply_status(StatusId.STRENGTH, 1)
+        if StatusId.RITUAL in self.status:
+            self.apply_status(StatusId.STRENGTH, self.status[StatusId.RITUAL].amount)
 
     def readable(self) -> str:
         output = ""

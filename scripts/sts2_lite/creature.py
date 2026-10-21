@@ -6,6 +6,7 @@ class Creature:
     block : int
     status : dict[StatusId, Status] = {}
     is_minion : bool
+    has_been_attacked_this_turn : bool
 
     def __init__(self, max_hp=1, current_hp=1, block=0, status = {}, is_minion=False):
         self.max_hp=max_hp
@@ -13,6 +14,26 @@ class Creature:
         self.block=block
         self.status=status
         self.is_minion=is_minion
+        self.has_been_attacked_this_turn = False
+
+    def lose_hp(self, hp_loss : int):
+        self.current_hp -= hp_loss
+        if self.current_hp <= 0:
+            self.die()
+
+    def turn_start(self):
+        self.block = 0
+        self.has_been_attacked_this_turn = False
+        if StatusId.PLATING in self.status:
+            self.apply_block(self.status[StatusId.PLATING].amount)
+
+    def turn_end(self):
+        pass
+
+    def apply_attack_damage(self, damage :int, sender : Creature):
+        if StatusId.THORNS in self.status:
+            sender.apply_damage(self.status[StatusId.THORNS].amount)
+        self.apply_damage(damage)
 
     def apply_damage(self, damage: int):
         if self.block > 0:
@@ -22,9 +43,15 @@ class Creature:
             else:
                 damage -= self.block
                 self.block = 0
+        if StatusId.SLIPPERY in self.status and self.status[StatusId.SLIPPERY].amount > 0:
+            damage = 1
+            self.status[StatusId.SLIPPERY].amount -= 1
         self.current_hp -= damage
         if self.current_hp <= 0:
             self.die()
+        if StatusId.SKITTISH in self.status and self.has_been_attacked_this_turn == False:
+            self.apply_block(self.status[StatusId.SKITTISH].amount)
+        self.has_been_attacked_this_turn = True
 
     def apply_block(self, block: int):
         self.block += block
@@ -36,7 +63,7 @@ class Creature:
             self.status[status] = Status(status, amount)
 
     def die(self):
-        return
+        self.current_hp = 0
 
     def readable(self) -> str:
         output = ""
