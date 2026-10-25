@@ -1,2 +1,6 @@
 **/__pycache__/
-
+/cli-anything-sts2/
+/docs/
+**/sts2_env/
+**/sts2_rl_agent.eg-info/
+SlayTheSpireII-Agent.sln

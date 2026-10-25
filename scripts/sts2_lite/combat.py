@@ -1,9 +1,14 @@
-from enum import Enum
+from __future__ import annotations
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from sts2_lite.combat import CombatState
 
 from sts2_lite.creature import Creature
 from sts2_lite.player import Player
 from sts2_lite.enemy import Enemy
 from sts2_lite.card import TargetType, Card
+from sts2_lite.events import EventManager
 
 from sts2_lite.status import StatusId, StatusBehaviour
 
@@ -18,6 +23,12 @@ class CombatState:
     def __init__(self):
         pass
 
+    def register_events(self, combat : CombatSimulator):
+        self.player.register_events(combat)
+        for enemy in self.enemies:
+            enemy.register_events(combat)
+        # relics
+    
     @classmethod
     def from_dict(cls, combat_state : dict):
         cs = cls()
@@ -58,12 +69,15 @@ class CombatState:
             output += enemy.readable()
         return output
 
-class Combat:
+class CombatSimulator:
     combat_state : CombatState
     is_over : bool = False
+    event_manager : EventManager
 
     def __init__(self, combat_state : CombatState):
+        self.event_manager = EventManager()
         self.combat_state = combat_state
+        self.combat_state.register_events(self)
         self._check_is_over()
 
     ###
@@ -83,23 +97,25 @@ class Combat:
     def play_card(self, card_index : int, target_index : int):
         if self.is_over:
             return
+        
         card = self.combat_state.player.hand[card_index]
         
         if card.play_card(self, target_index):
             if card in self.combat_state.player.hand:
                 card = self.combat_state.player.hand.pop(card_index)
                 self.combat_state.player.discard_pile.append(card)
+
+        self.event_manager.on_card_played(card)
         
-        for enemy in self.combat_state.enemies:
-            if StatusId.SLOW in enemy.status:
-                enemy.status[StatusId.SLOW].amount = enemy.status[StatusId.SLOW].amount + 10
         self._remove_dead_enemies()
         self.is_over = self._check_is_over()
 
     def end_turn(self):
         if self.is_over:
             return
-        self.combat_state.energy = 0
+
+        self.event_manager.on_end_turn()
+        
         self._discard_hand()
         self._play_enemy_turn()
         self._decrease_statuses()
@@ -125,34 +141,6 @@ class Combat:
     def _play_enemy_turn(self):
         for enemy in self.combat_state.enemies:
             enemy.perform_turn(self)
-    
-    def _decrease_statuses(self):
-        for enemy in self.combat_state.enemies:
-            to_remove : list[StatusId] = []
-            for status in enemy.status.values():
-                if status.behavior == StatusBehaviour.STATIC:
-                    pass
-                elif status.behavior == StatusBehaviour.RESET_TO_ZERO:
-                    status.amount = 0
-                elif status.behavior == StatusBehaviour.DECREASE_BY_ONE:
-                    status.amount -=1
-                    if status.amount <= 0:
-                        to_remove.append(status.status_id)
-            for id in to_remove:
-                del enemy.status[id]
-
-        to_remove : list[StatusId] = []  
-        for status in self.combat_state.player.status.values():
-            if status.behavior == StatusBehaviour.STATIC:
-                pass
-            elif status.behavior == StatusBehaviour.RESET_TO_ZERO:
-                status.amount = 0
-            elif status.behavior == StatusBehaviour.DECREASE_BY_ONE:
-                status.amount -=1
-                if status.amount <= 0:
-                    to_remove.append(status.status_id)
-        for id in to_remove:
-            del self.combat_state.player.status[id]
     
     def _remove_dead_enemies(self):
         self.combat_state.enemies = [e for e in self.combat_state.enemies if e.current_hp > 0]
@@ -191,24 +179,7 @@ class Combat:
 
     def calculate_damage(self, initial_damage : int, owner: Creature, target : Creature):
         
-        damage = initial_damage
-        
-        # check owner statuses
-        if StatusId.STRENGTH in owner.status:
-            damage += owner.status[StatusId.STRENGTH].amount
-        if StatusId.WEAK in owner.status:
-            damage *= 0.75
-        if StatusId.SHRINK in owner.status:
-            damage *= 0.7
-        
-        # check target status
-        if StatusId.VULNERABLE in target.status:
-            damage *= 1.5
-        if StatusId.SLOW in target.status:
-            slow_amount = target.status[StatusId.SLOW].amount
-            damage *= 1.0 + (float(slow_amount)/10.0)
-
-        
+        damage = self.event_manager.modify_damage(initial_damage, owner, target)
         return int(damage)
 
     def calculate_block(self, initial_block : int, owner : Creature):

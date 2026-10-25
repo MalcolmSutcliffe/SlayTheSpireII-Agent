@@ -1,3 +1,12 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from sts2_lite.status import StatusInstance
+    from sts2_lite.creature import Creature
+    from sts2_lite.combat import CombatSimulator
+    from sts2_lite.events import EventType
+
 from enum import Enum, auto
 
 class StatusId(Enum):
@@ -25,52 +34,52 @@ class StatusId(Enum):
     MINION = auto()
     STEAM_ERUPTION = auto()
 
-class StatusBehaviour(Enum):
-    STATIC = auto()
-    DECREASE_BY_ONE = auto()
-    RESET_TO_ZERO = auto()
-
-STATUS_BEHAVIOURS : dict[StatusId, StatusBehaviour]= {
-    StatusId.STRENGTH : StatusBehaviour.STATIC,
-    StatusId.DEXTERITY : StatusBehaviour.STATIC,
-    StatusId.THORNS : StatusBehaviour.STATIC,
-    StatusId.SUCK : StatusBehaviour.STATIC,
-    StatusId.SHRINK : StatusBehaviour.STATIC,
-    StatusId.RAVENOUS : StatusBehaviour.STATIC,
-    StatusId.TERRITORIAL : StatusBehaviour.STATIC,
-    StatusId.CRIMSON_MANTLE : StatusBehaviour.STATIC,
-    StatusId.FREE_ATTACK : StatusBehaviour.STATIC,
-    StatusId.INFESTED : StatusBehaviour.STATIC,
-    StatusId.SLIPPERY : StatusBehaviour.STATIC,
-    StatusId.RITUAL : StatusBehaviour.STATIC,
-    StatusId.SKITTISH : StatusBehaviour.STATIC,
-    StatusId.SHRIEK : StatusBehaviour.STATIC,
-    StatusId.VIGOR : StatusBehaviour.STATIC,
-    StatusId.SMOGGY : StatusBehaviour.STATIC,
-    StatusId.MINION : StatusBehaviour.STATIC,
-    StatusId.STEAM_ERUPTION : StatusBehaviour.STATIC,
-    StatusId.WEAK : StatusBehaviour.DECREASE_BY_ONE,
-    StatusId.VULNERABLE : StatusBehaviour.DECREASE_BY_ONE,
-    StatusId.FRAIL : StatusBehaviour.DECREASE_BY_ONE,
-    StatusId.PLATING : StatusBehaviour.DECREASE_BY_ONE,
-    StatusId.SLOW : StatusBehaviour.RESET_TO_ZERO,
-}
-
-class Status:
+class StatusInstance:
     status_id : StatusId
     amount : int
-    behavior : StatusBehaviour
+    owner : Creature
 
-
-    def __init__(self, status_id : StatusId, amount : int):
+    def __init__(self, status_id : StatusId, amount : int, owner: Creature):
         self.status_id = status_id
         self.amount = amount
-        self.behavior = STATUS_BEHAVIOURS[status_id]
+        self.owner = owner
+
+    def register_events(combat : CombatSimulator):
+        pass
 
     @classmethod
     def from_dict(cls, status : dict):
         return cls(StatusId[status["id"][:-6]], status["amount"])
 
     @classmethod
-    def deepcopy(cls, status : Status):
+    def deepcopy(cls, status : StatusInstance):
         return cls(status.status_id, status.amount)
+
+
+# ---
+# Status classes
+# ---
+class Strength(StatusInstance):
+    def __init__(self, amount :int, owner : Creature):
+        super().__init__(StatusId.STRENGTH, amount, owner)
+
+    def register_event(self, combat : CombatSimulator):
+        combat.event_manager.add_listener(EventType.MODIFY_DAMAGE_ADDITIVE, self.damage_modifier)
+
+    def damage_modifier(self, damage : int, owner : Creature, target : Creature):
+        if self.owner == owner:
+            return damage + self.amount
+
+# ---
+# Status factory
+# --- 
+def create_status(status_id : StatusId, amount : int, owner : Creature, combat : CombatSimulator) -> StatusInstance:
+    return STATUS_GENERATORS[status_id](amount, owner, combat)
+
+def create_strength(amount : int, owner : Creature) -> Strength:
+    return Strength(amount, owner)
+
+STATUS_GENERATORS : dict[StatusId, function] = {
+    StatusId.STRENGTH : create_strength
+}
+

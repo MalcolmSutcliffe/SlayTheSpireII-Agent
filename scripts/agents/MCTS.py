@@ -2,7 +2,7 @@ import random
 import math
 import sys
 
-from sts2_lite.combat import CombatState, Combat
+from sts2_lite.combat import CombatState, CombatSimulator
 
 EXPLORATION_CONSTANT = 0.5
 TURN_DECAY_CONSTANT = 0.05
@@ -73,7 +73,7 @@ class sts2_MCTS:
     # simulate combat to end
     def _simulate_random_combat(self, node : sts2_Node) -> float:
 
-        c = Combat(CombatState.deepcopy(node.state))
+        c = CombatSimulator(CombatState.deepcopy(node.state))
         while not c.is_over:
             actions = c.get_available_actions()
 
@@ -123,12 +123,12 @@ def get_unvisited_child(node : sts2_Node):
     return None
 
 def expand_node(node : sts2_Node):
-    c = Combat(node.state)
+    c = CombatSimulator(node.state)
     actions = c.get_available_actions()
 
     # expand node
     for a in actions:
-        c_a = Combat(CombatState.deepcopy(node.state))
+        c_a = CombatSimulator(CombatState.deepcopy(node.state))
         c_a.perform_action(a)
         new_child = sts2_Node(node, c_a.combat_state, a)
         node.children.append(new_child)

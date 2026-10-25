@@ -1,10 +1,16 @@
-from sts2_lite.status import Status, StatusId
+from __future__ import annotations
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from sts2_lite.combat import CombatSimulator, CombatState
+
+from sts2_lite.status import StatusInstance, StatusId
 
 class Creature:
     max_hp : int
     current_hp : int
     block : int
-    status : dict[StatusId, Status] = {}
+    status : dict[StatusId, StatusInstance] = {}
     is_minion : bool
     has_been_attacked_this_turn : bool
 
@@ -15,6 +21,10 @@ class Creature:
         self.status=status
         self.is_minion=is_minion
         self.has_been_attacked_this_turn = False
+
+    def register_events(self, combat : CombatSimulator):
+        for s in self.status.values():
+            s.register_events(combat)
 
     def lose_hp(self, hp_loss : int):
         self.current_hp -= hp_loss
@@ -60,7 +70,7 @@ class Creature:
         if status in self.status:
             self.status[status].amount += amount
         else:
-            self.status[status] = Status(status, amount)
+            self.status[status] = StatusInstance(status, amount)
 
     def die(self):
         self.current_hp = 0
