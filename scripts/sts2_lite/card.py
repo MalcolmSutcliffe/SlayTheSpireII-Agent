@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from sts2_lite.combat import Combat
+    from sts2_lite.combat import CombatSimulator
 
 from enum import Enum, auto
 
@@ -87,7 +87,7 @@ class Card:
         new_card.is_unplayable = card.is_unplayable
         return new_card
 
-    def play_card(self, combat : Combat, target_index : int) -> bool:
+    def play_card(self, combat : CombatSimulator, target_index : int) -> bool:
         energy= combat.combat_state.energy
         
         if self.energy_cost == "X":
@@ -101,7 +101,7 @@ class Card:
             combat.combat_state.energy -= self.energy_cost
             return GET_CARD_FUNCTION[self.card_id](self, combat, target_index, self.is_upgraded)
             
-    def can_play_card(self, combat : Combat, target_index):
+    def can_play_card(self, combat : CombatSimulator, target_index):
         if self.is_unplayable:
             return False
         if type(self.energy_cost) is str and self.energy_cost == "X":
@@ -117,7 +117,7 @@ class Card:
 ### Card Functions
 ###
 
-def play_strike(card: Card, combat : Combat, target_index : int, is_upgraded=False) -> bool:
+def play_strike(card: Card, combat : CombatSimulator, target_index : int, is_upgraded=False) -> bool:
 
     if target_index >= len(combat.combat_state.enemies):
         print("Index out of bounds")
@@ -134,7 +134,7 @@ def play_strike(card: Card, combat : Combat, target_index : int, is_upgraded=Fal
     target.apply_attack_damage(damage, owner)
     return True
 
-def play_defend(card: Card, combat : Combat, target_index=0, is_upgraded=False):
+def play_defend(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     block = 5
     if is_upgraded:
         block = 8
@@ -143,7 +143,7 @@ def play_defend(card: Card, combat : Combat, target_index=0, is_upgraded=False):
     combat.combat_state.player.apply_block(block)
     return True
 
-def play_bash(card: Card, combat : Combat, target_index : int, is_upgraded=False):
+def play_bash(card: Card, combat : CombatSimulator, target_index : int, is_upgraded=False):
     if target_index >= len(combat.combat_state.enemies):
         print("Index out of bounds")
         return False
@@ -162,7 +162,7 @@ def play_bash(card: Card, combat : Combat, target_index : int, is_upgraded=False
     target.apply_status(StatusId.VULNERABLE, vuln_amount)
     return True
 
-def play_blood_wall(card: Card, combat : Combat, target_index : int, is_upgraded=False):
+def play_blood_wall(card: Card, combat : CombatSimulator, target_index : int, is_upgraded=False):
     block = 16
     if is_upgraded:
         block = 20
@@ -172,12 +172,12 @@ def play_blood_wall(card: Card, combat : Combat, target_index : int, is_upgraded
     combat.combat_state.player.lose_hp(2)
     return True
 
-def play_slimed(card: Card, combat : Combat, target_index : int, is_upgraded=False):
+def play_slimed(card: Card, combat : CombatSimulator, target_index : int, is_upgraded=False):
     combat.combat_state.player.draw_card()
     combat.combat_state.player.exhaust_card(card)
     return True
 
-def play_perfected_strike(card: Card, combat : Combat, target_index : int, is_upgraded=False):
+def play_perfected_strike(card: Card, combat : CombatSimulator, target_index : int, is_upgraded=False):
     total_strikes = 0
     for card in combat.combat_state.deck:
         if "Strike" in card.name:
@@ -193,7 +193,7 @@ def play_perfected_strike(card: Card, combat : Combat, target_index : int, is_up
     target.apply_attack_damage(damage, owner)
     return True
 
-def play_breakthrough(card: Card, combat : Combat, target_index : int, is_upgraded=False) -> bool:
+def play_breakthrough(card: Card, combat : CombatSimulator, target_index : int, is_upgraded=False) -> bool:
 
     damage = 9
     if is_upgraded:
@@ -207,7 +207,7 @@ def play_breakthrough(card: Card, combat : Combat, target_index : int, is_upgrad
     
     return True
 
-def play_shrug_it_off(card: Card, combat : Combat, target_index=0, is_upgraded=False):
+def play_shrug_it_off(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     block = 8
     if is_upgraded:
         block = 11
@@ -217,7 +217,7 @@ def play_shrug_it_off(card: Card, combat : Combat, target_index=0, is_upgraded=F
     combat.combat_state.player.draw_cards(1)
     return True
 
-def play_pommel_strike(card: Card, combat : Combat, target_index : int, is_upgraded=False) -> bool:
+def play_pommel_strike(card: Card, combat : CombatSimulator, target_index : int, is_upgraded=False) -> bool:
 
     if target_index >= len(combat.combat_state.enemies):
         print("Index out of bounds")
@@ -237,7 +237,7 @@ def play_pommel_strike(card: Card, combat : Combat, target_index : int, is_upgra
     combat.combat_state.player.draw_cards(draw)
     return True
 
-def play_iron_wave(card: Card, combat : Combat, target_index : int, is_upgraded=False) -> bool:
+def play_iron_wave(card: Card, combat : CombatSimulator, target_index : int, is_upgraded=False) -> bool:
 
     if target_index >= len(combat.combat_state.enemies):
         print("Index out of bounds")
@@ -258,7 +258,7 @@ def play_iron_wave(card: Card, combat : Combat, target_index : int, is_upgraded=
     target.apply_attack_damage(damage, owner)
     return True
 
-def play_thunderclap(card: Card, combat : Combat, target_index : int, is_upgraded=False) -> bool:
+def play_thunderclap(card: Card, combat : CombatSimulator, target_index : int, is_upgraded=False) -> bool:
 
     damage = 4
     if is_upgraded:
@@ -273,14 +273,14 @@ def play_thunderclap(card: Card, combat : Combat, target_index : int, is_upgrade
     
     return True
 
-def play_inflame(card: Card, combat : Combat, target_index : int, is_upgraded=False) -> bool:
+def play_inflame(card: Card, combat : CombatSimulator, target_index : int, is_upgraded=False) -> bool:
     strength_amount = 2
     if is_upgraded:
         strength_amount = 3
     combat.combat_state.player.apply_status(StatusId.STRENGTH, strength_amount)
     return True
 
-def play_fight_me(card: Card, combat : Combat, target_index : int, is_upgraded=False) -> bool:
+def play_fight_me(card: Card, combat : CombatSimulator, target_index : int, is_upgraded=False) -> bool:
     strength_amount = 3
     damage = 5
     if is_upgraded:
@@ -295,7 +295,7 @@ def play_fight_me(card: Card, combat : Combat, target_index : int, is_upgraded=F
     target.apply_status(StatusId.STRENGTH, 1)
     return True
 
-def play_tremble(card: Card, combat : Combat, target_index : int, is_upgraded=False) -> bool:
+def play_tremble(card: Card, combat : CombatSimulator, target_index : int, is_upgraded=False) -> bool:
     if target_index >= len(combat.combat_state.enemies):
         print("Index out of bounds")
         return False
@@ -310,7 +310,7 @@ def play_tremble(card: Card, combat : Combat, target_index : int, is_upgraded=Fa
     owner.exhaust_card(card)
     return True
 
-def play_crimson_mantle(card: Card, combat : Combat, target_index : int, is_upgraded=False) -> bool:
+def play_crimson_mantle(card: Card, combat : CombatSimulator, target_index : int, is_upgraded=False) -> bool:
     
     amount = 8
     if is_upgraded:
@@ -320,7 +320,7 @@ def play_crimson_mantle(card: Card, combat : Combat, target_index : int, is_upgr
     owner.apply_status(StatusId.CRIMSON_MANTLE, amount)
     return True
 
-def play_anger(card: Card, combat : Combat, target_index : int, is_upgraded=False) -> bool:
+def play_anger(card: Card, combat : CombatSimulator, target_index : int, is_upgraded=False) -> bool:
 
     if target_index >= len(combat.combat_state.enemies):
         print("Index out of bounds")
@@ -340,7 +340,7 @@ def play_anger(card: Card, combat : Combat, target_index : int, is_upgraded=Fals
     target.apply_attack_damage(damage, owner)
     return True
 
-def play_bludgeon(card: Card, combat : Combat, target_index : int, is_upgraded=False) -> bool:
+def play_bludgeon(card: Card, combat : CombatSimulator, target_index : int, is_upgraded=False) -> bool:
 
     if target_index >= len(combat.combat_state.enemies):
         print("Index out of bounds")
@@ -357,7 +357,7 @@ def play_bludgeon(card: Card, combat : Combat, target_index : int, is_upgraded=F
     target.apply_attack_damage(damage, owner)
     return True
 
-def play_unrelenting(card: Card, combat : Combat, target_index : int, is_upgraded=False) -> bool:
+def play_unrelenting(card: Card, combat : CombatSimulator, target_index : int, is_upgraded=False) -> bool:
      
     if target_index >= len(combat.combat_state.enemies):
         print("Index out of bounds")
@@ -377,7 +377,7 @@ def play_unrelenting(card: Card, combat : Combat, target_index : int, is_upgrade
     owner.apply_status(StatusId.FREE_ATTACK, 1)
     return True
 
-def play_body_slam(card: Card, combat : Combat, target_index : int, is_upgraded=False) -> bool:
+def play_body_slam(card: Card, combat : CombatSimulator, target_index : int, is_upgraded=False) -> bool:
     if target_index >= len(combat.combat_state.enemies):
         print("Index out of bounds")
         return False
@@ -389,7 +389,7 @@ def play_body_slam(card: Card, combat : Combat, target_index : int, is_upgraded=
     
     target.apply_attack_damage(damage, owner)
 
-def play_twin_strike(card: Card, combat : Combat, target_index : int, is_upgraded=False) -> bool:
+def play_twin_strike(card: Card, combat : CombatSimulator, target_index : int, is_upgraded=False) -> bool:
 
     if target_index >= len(combat.combat_state.enemies):
         print("Index out of bounds")

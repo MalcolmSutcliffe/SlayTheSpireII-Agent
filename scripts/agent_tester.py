@@ -1,7 +1,7 @@
 from agents.base_agent import BaseAgent
 from agents.my_agent import MyAgent
 
-from sts2_lite.combat import CombatState, Combat
+from sts2_lite.combat import CombatState, CombatSimulator
 
 
 import json
@@ -29,7 +29,7 @@ def run_agent(agent : BaseAgent):
     combat_state = CombatState.from_dict(game_state)
     
     if DO_INTERNAL:
-        c = Combat(combat_state)
+        c = CombatSimulator(combat_state)
         # c.perform_action({'action': 'play_card', 'card_index': 3, 'target': 1, 'target_name': 'PHANTASMAL_GARDENER_1'})
         action = agent.get_action(c.combat_state)
         print(action)

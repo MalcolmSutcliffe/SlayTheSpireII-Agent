@@ -2,12 +2,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from sts2_lite.combat import Combat
+    from sts2_lite.combat import CombatSimulator
 
 from enum import Enum, auto
 
 from sts2_lite.creature import Creature
-from sts2_lite.status import Status, StatusId
+from sts2_lite.status import StatusInstance, StatusId
 
 class EnemyId(Enum):
     SEAPUNK = auto()
@@ -39,7 +39,7 @@ class Enemy(Creature):
                 
         e.status = {}
         for s in enemy["status"]:
-            e.status[StatusId[s["id"][:-6]]] = Status.from_dict(s)
+            e.status[StatusId[s["id"][:-6]]] = StatusInstance.from_dict(s)
 
         if StatusId.MINION in e.status:
             e.is_minion = True
@@ -55,12 +55,12 @@ class Enemy(Creature):
         new_e.enemy_id = enemy.enemy_id
         new_e.status = {}
         for s in enemy.status.values():
-            new_e.status[s.status_id] = Status.deepcopy(s)
+            new_e.status[s.status_id] = StatusInstance.deepcopy(s)
         new_e.attack_damage = enemy.attack_damage
         new_e.num_attacks = enemy.num_attacks
         return new_e
 
-    def perform_turn(self, combat : Combat):
+    def perform_turn(self, combat : CombatSimulator):
         for i in range(self.num_attacks):
             combat.combat_state.player.apply_damage(self.attack_damage)
         if StatusId.TERRITORIAL in self.status:

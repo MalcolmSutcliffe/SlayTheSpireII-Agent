@@ -1,8 +1,14 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from sts2_lite.combat import Player
+
 import random
 
 from sts2_lite.creature import Creature
 from sts2_lite.card import Card
-from sts2_lite.status import Status, StatusId
+from sts2_lite.status import StatusInstance, StatusId
 
 class Player(Creature):
     hand : list[Card] = []
@@ -21,7 +27,7 @@ class Player(Creature):
         pl.is_minion = False
         pl.status = {}
         for s in player["status"]:
-            pl.status[StatusId[s["id"][:-6]]] = Status.from_dict(s)
+            pl.status[StatusId[s["id"][:-6]]] = StatusInstance.from_dict(s)
         pl.hand = []
         for card in player["hand"]:
             pl.hand.append(Card.from_dict(card))
@@ -42,7 +48,7 @@ class Player(Creature):
         new_pl.is_minion = False
         new_pl.status = {}
         for s in player.status.values():
-            new_pl.status[s.status_id] = Status.deepcopy(s)
+            new_pl.status[s.status_id] = StatusInstance.deepcopy(s)
         new_pl.hand = []
         for card in player.hand:
             new_pl.hand.append(card)

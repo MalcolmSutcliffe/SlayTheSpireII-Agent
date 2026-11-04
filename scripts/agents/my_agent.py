@@ -1,6 +1,6 @@
 from agents.base_agent import BaseAgent
 
-from sts2_lite.combat import CombatState, Combat
+from sts2_lite.combat import CombatState, CombatSimulator
 
 from agents.MCTS import sts2_MCTS
     
@@ -23,7 +23,7 @@ class MyAgent(BaseAgent):
 
     def get_action(self, combat_state : CombatState, num_sims = 100):
         mcts = sts2_MCTS()
-        c = Combat(combat_state)
+        c = CombatSimulator(combat_state)
         actions = c.get_available_actions()
         if len(actions) == 1:
             return actions[0]

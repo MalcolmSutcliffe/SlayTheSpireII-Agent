@@ -1,4 +1,4 @@
-from sts2_lite.combat import CombatState, Combat
+from sts2_lite.combat import CombatState, CombatSimulator
 
 ## Base class for an agent. Recieves a game state as an input and returns an action.
 class BaseAgent:
@@ -8,6 +8,6 @@ class BaseAgent:
         pass
 
     def get_action(self, combat_state : CombatState):
-        c = Combat(combat_state)
+        c = CombatSimulator(combat_state)
         actions = c.get_available_actions()
         return actions[0]
