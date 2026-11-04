@@ -10,7 +10,7 @@ from sts2_lite.enemy import Enemy
 from sts2_lite.card import TargetType, Card
 from sts2_lite.events import EventManager
 
-from sts2_lite.status import StatusId, StatusBehaviour
+from sts2_lite.status import StatusId
 
 class CombatState:
     player : Player
