@@ -39,7 +39,6 @@ def make_state(hand, enemy_count=2, enemy_hp=40):
     cs.enemies = [make_enemy(enemy_hp, f"E{i}") for i in range(enemy_count)]
     cs.energy = cs.max_energy = 3
     cs.turn_number = 1
-    cs.deck = []
     return cs
 
 def play(cs, target=0):

@@ -19,7 +19,6 @@ def make_state(attack_damage=8, num_attacks=2, player_hp=50):
     cs.player, cs.enemies = p, [e]
     cs.energy = cs.max_energy = 3
     cs.turn_number = 1
-    cs.deck = []
     return cs
 
 def enemy_turn(cs):

@@ -195,7 +195,7 @@ def test_enemy_without_moves_also_loses_block_on_its_turn():
     cs.player, e = Player(), Enemy()
     e.max_hp = e.current_hp = 20
     e.enemy_id, e.attack_damage, e.num_attacks, e.block = "X_0", 0, 0, 7
-    cs.enemies, cs.energy, cs.max_energy, cs.turn_number, cs.deck = [e], 3, 3, 1, []
+    cs.enemies, cs.energy, cs.max_energy, cs.turn_number = [e], 3, 3, 1
     enemy_turn(cs)
     assert e.block == 0
 

@@ -64,6 +64,7 @@ class StatusId(Enum):
     MANGLE = auto()
     HELLRAISER = auto()
     INFERNO = auto()
+    SELF_FORMING_CLAY = auto()
 
 INFESTED_SPAWNS = 4
 
@@ -126,6 +127,7 @@ STATUS_BEAVIOURS : dict[StatusId, StatusBehaviour] = {
     StatusId.MANGLE : StatusBehaviour.STATIC,
     StatusId.HELLRAISER : StatusBehaviour.STATIC,
     StatusId.INFERNO : StatusBehaviour.STATIC,
+    StatusId.SELF_FORMING_CLAY : StatusBehaviour.STATIC,     # paid out and removed at the start of the next turn
 }
 
 DEBUFFS = frozenset({StatusId.WEAK, StatusId.VULNERABLE, StatusId.FRAIL, StatusId.SHRINK,
@@ -200,6 +202,11 @@ def _ringing_on_end_turn(combat : CombatSimulator, owner : Creature, amount : in
 
 def _own(combat : CombatSimulator, owner : Creature) -> bool:
     return owner is combat.combat_state.player
+
+def _self_forming_clay_on_turn_start(combat : CombatSimulator, owner : Creature, amount : int):
+    if _own(combat, owner):
+        del owner.status[StatusId.SELF_FORMING_CLAY]
+        combat.gain_block(owner, amount)
 
 def _plating_on_end_turn(combat : CombatSimulator, owner : Creature, amount : int):
     # the player's Plating pays out as the turn ends
@@ -293,6 +300,7 @@ STATUS_HANDLERS : dict[tuple[StatusId, EventType], Callable] = {
     (StatusId.CONSTRICT, EventType.END_TURN) : _constrict_on_end_turn,
     (StatusId.CONSTRICT, EventType.CREATURE_KILLED) : _constrict_on_creature_killed,
     (StatusId.PLATING, EventType.END_TURN) : _plating_on_end_turn,
+    (StatusId.SELF_FORMING_CLAY, EventType.PLAYER_TURN_START) : _self_forming_clay_on_turn_start,
     (StatusId.DEMON_FORM, EventType.PLAYER_TURN_START) : _demon_form_on_turn_start,
     (StatusId.FEEL_NO_PAIN, EventType.CARD_EXHAUSTED) : _feel_no_pain_on_exhausted,
     (StatusId.DARK_EMBRACE, EventType.CARD_EXHAUSTED) : _dark_embrace_on_exhausted,

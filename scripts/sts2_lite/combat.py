@@ -11,6 +11,7 @@ from sts2_lite.card import TargetType, CardType, Card, CardId, STRIKE_CARDS
 from sts2_lite.damage import modify_damage, base_from_displayed
 from sts2_lite import rng
 from sts2_lite.events import EventType
+from sts2_lite.relic import RelicId, PER_TURN_FLAG, ALWAYS_REPORTED, after_card_played, release_card, fire_relics, upgraded_after_play
 
 from sts2_lite.status import StatusId, StatusBehaviour, STATUS_HANDLERS
 from sts2_lite.enemy_moves import SUMMONS
@@ -35,7 +36,6 @@ class CombatState:
     max_energy : int
     enemies : list[Enemy]
     turn_number : int
-    deck : list[Card]
     ascension : int = 0
 
     def __init__(self):
@@ -68,9 +68,6 @@ class CombatState:
         cs._infer_ringing_play()
         cs.energy = combat_state["energy"]
         cs.max_energy = combat_state["max_energy"]
-        cs.deck = []
-        for card in combat_state["player"]["deck"]:
-            cs.deck.append(Card.from_dict(card))
         if combat_state.get("decision") == "hand_select":
             cs._load_hand_select(combat_state)
         return cs
@@ -101,6 +98,12 @@ class CombatState:
         new.card_blocks_this_turn = old.card_blocks_this_turn
         new.cards_exhausted_this_turn = old.cards_exhausted_this_turn
         new.lost_hp_this_turn = old.lost_hp_this_turn
+        for relic_id, relic in new.relics.items():
+            kept = old.relics.get(relic_id)
+            if kept is not None:
+                relic.value = kept.value        # Beating Remnant's damage so far this turn, the card types seen (Rainbow Ring)
+                if relic_id in PER_TURN_FLAG and kept.used:
+                    relic.used = True
         self.cards_played = max(self.cards_played, previous.cards_played)
 
     def carry_combat_counters(self, previous : CombatState | None):
@@ -110,6 +113,10 @@ class CombatState:
             return
         old, new = previous.player, self.player
         new.hp_loss_events = max(new.hp_loss_events, old.hp_loss_events)
+        for relic_id, relic in new.relics.items():
+            kept = old.relics.get(relic_id)
+            if kept is not None and kept.used and relic_id not in PER_TURN_FLAG and relic_id not in ALWAYS_REPORTED:
+                relic.used = True       # the bridge does not say that a once-only relic has been spent
         if StatusId.INFERNO in new.status and old.inferno_plays > 0:
             new.inferno_plays = old.inferno_plays
 
@@ -170,9 +177,6 @@ class CombatState:
         new_cs.revivals = list(combat_state.revivals)
         new_cs.cards_played = combat_state.cards_played
         new_cs.pending_choice = combat_state.pending_choice.deepcopy() if combat_state.pending_choice else None
-        new_cs.deck = []
-        for card in combat_state.deck:
-            new_cs.deck.append(card)
         return new_cs
         
     def readable(self) -> str:
@@ -188,14 +192,34 @@ class CombatState:
 class IllegalActionError(ValueError):
     """Raised when an action is not legal in the current state."""
 
+class _CardInPlay:
+    """Context manager behind CombatSimulator._playing; a plain class because it runs on every card played."""
+    __slots__ = ("simulator", "card", "previous")
+
+    def __init__(self, simulator : CombatSimulator, card : Card):
+        self.simulator = simulator
+        self.card = card
+
+    def __enter__(self):
+        self.previous = self.simulator.card_in_play
+        self.simulator.card_in_play = self.card
+
+    def __exit__(self, *exc):
+        self.simulator.card_in_play = self.previous
+
+
 class CombatSimulator:
     combat_state : CombatState
     is_over : bool = False
     ethereal_exhaust : bool = False     # set while the hand is discarded at end of turn
+    in_enemy_turn : bool = False        # set while the enemies act
+    _announced_block : int | None = None    # block given through gain_block while the player's turn starts
 
     def __init__(self, combat_state : CombatState):
         self.combat_state = combat_state
+        self.card_in_play = None        # the card whose effect is being resolved, for relics that care which card dealt damage
         combat_state.player.draw_hook = self._card_drawn
+        combat_state.player.shuffle_hook = self._shuffled
         self._check_is_over()
 
     ###
@@ -218,6 +242,8 @@ class CombatSimulator:
                 handler = STATUS_HANDLERS.get((status_id, event))
                 if handler is not None:
                     handler(self, creature, inst.amount, *args)
+        if cs.player.relics:
+            fire_relics(self, event, *args)
 
     ###
     ### Interface points
@@ -295,21 +321,45 @@ class CombatSimulator:
 
         # the card leaves the hand first; it reaches its pile after the card-played hooks
         hand.pop(card_index)
+        emptied = not hand
         original, card = card, self.private_copy(card)
         try:
-            card.play_card(self, target_index)
+            with self._playing(card):
+                card.play_card(self, target_index)
         except ValueError:
             hand.insert(card_index, original)
+            release_card(self.combat_state.player)
             raise
         self.combat_state.cards_played += 1
+        if emptied:
+            self.fire(EventType.HAND_EMPTIED)         # after the play succeeded: a refused play must not draw
 
         self._finish_card_play(card, hp_loss_mark)
+
+    def _playing(self, card : Card) -> _CardInPlay:
+        """Marks `card` as the one being played (cards can play other cards, so the previous one is put back)."""
+        return _CardInPlay(self, card)
 
     @staticmethod
     def private_copy(card : Card) -> Card:
         """Cards that grow when played (Rampage, Thrash) are played as a copy: card objects are shared between
         simulated states, so the played one must not be changed in place. The copy goes to the discard pile."""
         return Card.create_copy(card) if card.card_id in (CardId.RAMPAGE, CardId.THRASH) else card
+
+    def _shuffled(self):
+        self.fire(EventType.SHUFFLED)
+
+    def _sync_hp(self):
+        """Relics that react to hit points hear about what happened since the last time (they cannot react on the spot: the
+        creature that loses the hit points knows nothing about the fight)."""
+        player = self.combat_state.player
+        if not player.relics:
+            return
+        lost, player.hp_lost_log = player.hp_lost_log, []
+        if player.current_hp > 0:
+            for amount in lost:
+                self.fire(EventType.HP_LOST, amount)
+        self.fire(EventType.HP_CHANGED)
 
     def _card_drawn(self, card : Card):
         """Hellraiser plays a Strike the moment it is drawn."""
@@ -323,7 +373,11 @@ class CombatSimulator:
         if card.type == CardType.Attack:
             player.attacks_played_this_turn += 1
             player.reduce_stomp_costs()
+        if player.relics:
+            after_card_played(player, card)
         self.fire(EventType.CARD_PLAYED, card)
+        if player.relics:
+            card = upgraded_after_play(player, card)        # Razor Tooth
         self._move_played_card(card, force_exhaust)
         self._after_hp_loss(hp_loss_mark)
 
@@ -351,7 +405,8 @@ class CombatSimulator:
             player.exhaust_pile.remove(card)
         hp_loss_mark = player.hp_loss_events
         card = self.private_copy(card)
-        card.play_card(self, target, free=True)
+        with self._playing(card):
+            card.play_card(self, target, free=True)
         self._finish_card_play(card, hp_loss_mark, force_exhaust)
 
     def _rupture(self, hp_loss_mark : int):
@@ -363,6 +418,7 @@ class CombatSimulator:
 
     def _after_hp_loss(self, hp_loss_mark : int):
         """Everything that reacts to the player losing HP on their own turn."""
+        self._sync_hp()
         self._rupture(hp_loss_mark)
         self._inferno(hp_loss_mark)
 
@@ -381,6 +437,8 @@ class CombatSimulator:
         """Block that has already been through Dexterity and Frail (or never is)."""
         creature.apply_block(amount)
         if amount > 0:
+            if self._announced_block is not None and creature is self.combat_state.player:
+                self._announced_block += amount
             self.fire(EventType.BLOCK_GAINED, creature, amount)
 
     def _move_played_card(self, card : Card, force_exhaust : bool = False):
@@ -416,6 +474,11 @@ class CombatSimulator:
             return
 
         self._discard_hand()
+        self.fire(EventType.PLAYER_TURN_ENDED)
+        self.resolve_deaths()
+        self._check_is_over()
+        if self.is_over:
+            return
         player = self.combat_state.player
         player.status.pop(StatusId.NO_DRAW, None)           # Battle Trance and Expect a Fight last
         player.status.pop(StatusId.NO_ENERGY_GAIN, None)    # until the end of the player's turn
@@ -454,22 +517,31 @@ class CombatSimulator:
                 self.fire(EventType.CARD_EXHAUSTED, card)
                 self.ethereal_exhaust = False
                 exhausted += 1
-        player.discard_pile.extend(player.hand)
-        player.hand.clear()
+        if not (RelicId.RINGING_TRIANGLE in player.relics and self.combat_state.turn_number <= 1):
+            player.discard_pile.extend(player.hand)     # Ringing Triangle keeps the hand after the first turn
+            player.hand.clear()
         if exhausted:
             self.fire(EventType.ETHEREAL_EXHAUSTED, exhausted)
 
     def _start_player_turn(self):
-        self.combat_state.energy = self.combat_state.max_energy
-        self.combat_state.cards_played = 0
         player = self.combat_state.player
+        if RelicId.ICE_CREAM in player.relics and self.combat_state.turn_number > 1:
+            self.combat_state.energy += self.combat_state.max_energy        # Ice Cream: unspent energy is kept
+        else:
+            self.combat_state.energy = self.combat_state.max_energy
+        self.combat_state.cards_played = 0
         self.fire(EventType.BEFORE_PLAYER_TURN)
-        retained_block = player.block if StatusId.BARRICADE in player.status else 0
+        retained_block = player.block_kept_at_turn_start()
         hp_loss_mark = player.hp_loss_events
+        self._announced_block = 0
         player.turn_start()
-        self.gain_block(player, player.block - retained_block)   # Plating, Crimson Mantle
+        # Plating and Crimson Mantle gave block without anyone being told; block given through gain_block (The Abacus,
+        # when the draw shuffles) has already been announced
+        self.gain_block(player, player.block - retained_block - self._announced_block)
+        self._announced_block = None
         self._after_hp_loss(hp_loss_mark)
         self.fire(EventType.PLAYER_TURN_START)
+        self._check_is_over()           # Mercury Hourglass can end the fight
         for enemy in self.combat_state.enemies:
             enemy.turn_start()
 
@@ -491,10 +563,15 @@ class CombatSimulator:
             del creature.status[s]
 
     def _play_enemy_turn(self):
-        for enemy in list(self.combat_state.enemies):     # enemies summoned now act next turn
-            enemy.perform_turn(self)
-            self.resolve_deaths()        # an attacker can die to Flame Barrier
-        self.fire(EventType.ENEMY_TURN_END)
+        self.in_enemy_turn = True
+        try:
+            for enemy in list(self.combat_state.enemies):     # enemies summoned now act next turn
+                enemy.perform_turn(self)
+                self.resolve_deaths()        # an attacker can die to Flame Barrier
+                self._sync_hp()
+            self.fire(EventType.ENEMY_TURN_END)
+        finally:
+            self.in_enemy_turn = False
         self._revive()
 
     def _revive(self):
@@ -568,7 +645,7 @@ class CombatSimulator:
         return output
 
     def calculate_damage(self, initial_damage : int, owner: Creature, target : Creature) -> int:
-        return modify_damage(initial_damage, owner, target)
+        return modify_damage(initial_damage, owner, target, self.card_in_play)
 
     def calculate_block(self, initial_block : int, owner : Creature, multiplier : int = 1) -> int:
         # Dexterity, then Frail and any other multiplier (Unmovable)

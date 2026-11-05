@@ -5,6 +5,7 @@ if TYPE_CHECKING:
     from sts2_lite.combat import CombatSimulator
     from sts2_lite.creature import Creature
     from sts2_lite.enemy import Enemy
+    from sts2_lite.player import Player
 
 import re
 from enum import Enum, auto
@@ -12,6 +13,7 @@ from enum import Enum, auto
 from sts2_lite import rng
 from sts2_lite.events import EventType
 from sts2_lite.status import StatusId
+from sts2_lite.relic import block_multiplier, block_gained, debuff_multiplier, x_bonus, before_card_played, snapshot, restore
 
 
 class CardType(Enum):
@@ -243,6 +245,10 @@ class Card:
         return new_card
 
     @property
+    def is_strike(self) -> bool:
+        return self.card_id in STRIKE_CARDS
+
+    @property
     def is_upgradable(self) -> bool:
         return not self.is_upgraded and self.type != CardType.Status
 
@@ -295,23 +301,32 @@ class Card:
         free_attack = player.status.get(StatusId.FREE_ATTACK)
         free_attack_amount = free_attack.amount if free_attack else 0
         play = GET_CARD_FUNCTION[self.card_id]
+        saved = snapshot(player) if player.relics else None
 
         try:
             if self.energy_cost == "X":
-                x = energy
+                x = energy + x_bonus(player) if player.relics else energy        # Chemical X
+                if saved:
+                    before_card_played(combat, self, 0 if free else energy)
                 if not free:
                     combat.combat_state.energy = 0
                 play(self, combat, target_index, self.is_upgraded, x)
             else:
+                spent = cost
                 if self.type == CardType.Attack and free_attack_amount > 0 and not free:
                     free_attack.amount -= 1
                     combat.combat_state.energy += cost
+                    spent = 0
+                if saved:
+                    before_card_played(combat, self, spent)
                 combat.combat_state.energy -= cost
                 play(self, combat, target_index, self.is_upgraded)
         except ValueError:
             combat.combat_state.energy = energy
             if free_attack:
                 free_attack.amount = free_attack_amount
+            if saved:
+                restore(player, saved)
             raise
 
         if self.type == CardType.Attack and StatusId.ONE_TWO_PUNCH in player.status:
@@ -366,17 +381,27 @@ def _gain_block(combat : CombatSimulator, base : int):
     owner = combat.combat_state.player
     doubled = owner.card_blocks_this_turn < owner.status_amount(StatusId.UNMOVABLE)
     owner.card_blocks_this_turn += 1
-    combat.gain_block(owner, combat.calculate_block(base, owner, 2 if doubled else 1))
+    multiplier = 2 if doubled else 1
+    if owner.relics:
+        multiplier *= block_multiplier(owner, combat.card_in_play)     # Vambrace
+    block = combat.calculate_block(base, owner, multiplier)
+    if owner.relics:
+        block_gained(owner, combat.card_in_play, block)
+    combat.gain_block(owner, block)
 
 def _vulnerable(combat : CombatSimulator, target : Creature, amount : int):
     player = combat.combat_state.player
     before = target.status_amount(StatusId.VULNERABLE)
+    if player.relics:
+        amount *= debuff_multiplier(player, combat.card_in_play, target)      # Unsettling Lamp
     target.apply_status(StatusId.VULNERABLE, amount)
     if target.status_amount(StatusId.VULNERABLE) > before:      # Vicious: not if Artifact stopped it
         player.draw_cards(player.status_amount(StatusId.VICIOUS))
 
-def _temp_strength(target : Creature, marker : StatusId, amount : int, sign : int):
+def _temp_strength(target : Creature, marker : StatusId, amount : int, sign : int, combat : CombatSimulator | None = None):
     """Strength that is taken back when the target's turn ends (Setup Strike, Mangle). `sign` is -1 for a loss."""
+    if sign < 0 and combat is not None and combat.combat_state.player.relics:
+        amount *= debuff_multiplier(combat.combat_state.player, combat.card_in_play, target)      # Unsettling Lamp doubles the marker, which doubles the Strength it takes
     before = target.status_amount(marker)
     target.apply_status(marker, amount)
     if target.status_amount(marker) == before:          # Artifact stopped the debuff
@@ -395,6 +420,12 @@ PLAIN_DAMAGE = {        # id : (damage, damage upgraded) of the cards that print
     CardId.TWIN_STRIKE : (5, 7), CardId.UNRELENTING : (14, 20), CardId.UPPERCUT : (13, 13), CardId.WHIRLWIND : (5, 8),
 }
 
+def _strikes(player : Player, in_play : Card | None = None) -> int:
+    """Perfected Strike counts every Strike the player has in the fight: hand, draw, discard and exhaust piles
+    (so generated and exhausted Strikes count), plus the card being played, which is out of the hand."""
+    piles = player.hand + player.draw_pile + player.discard_pile + player.exhaust_pile
+    return sum(c.is_strike for c in piles) + (1 if in_play is not None and in_play.is_strike else 0)
+
 def _printed_damage(card : Card, combat : CombatSimulator) -> int:
     """The base damage an Attack in the hand would print right now (Thrash adds this to itself)."""
     player = combat.combat_state.player
@@ -406,7 +437,7 @@ def _printed_damage(card : Card, combat : CombatSimulator) -> int:
     if card.card_id == CardId.BULLY:
         return 4
     if card.card_id == CardId.PERFECTED_STRIKE:
-        return 6 + (3 if up else 2) * sum("Strike" in c.name for c in combat.combat_state.deck)
+        return 6 + (3 if up else 2) * _strikes(player)
     if card.card_id == CardId.RAMPAGE:
         return 9 + card.bonus_damage
     if card.card_id == CardId.THRASH:
@@ -679,7 +710,7 @@ def play_juggling(card: Card, combat : CombatSimulator, target_index=0, is_upgra
 def play_mangle(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     target = _enemy(combat, target_index)
     _attack(combat, 20 if is_upgraded else 15, target)
-    _temp_strength(target, StatusId.MANGLE, 15 if is_upgraded else 10, -1)
+    _temp_strength(target, StatusId.MANGLE, 15 if is_upgraded else 10, -1, combat)
 
 def play_molten_fist(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     target = _enemy(combat, target_index)
@@ -709,7 +740,7 @@ def play_pacts_end(card: Card, combat : CombatSimulator, target_index=0, is_upgr
 
 def play_perfected_strike(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     target = _enemy(combat, target_index)
-    strikes = sum("Strike" in c.name for c in combat.combat_state.deck)
+    strikes = _strikes(combat.combat_state.player, card)
     _attack(combat, 6 + (3 if is_upgraded else 2) * strikes, target)
 
 def play_pillage(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
@@ -864,7 +895,8 @@ def play_uppercut(card: Card, combat : CombatSimulator, target_index=0, is_upgra
     target = _enemy(combat, target_index)
     _attack(combat, 13, target)
     debuff = 2 if is_upgraded else 1
-    target.apply_status(StatusId.WEAK, debuff)
+    player = combat.combat_state.player
+    target.apply_status(StatusId.WEAK, debuff * debuff_multiplier(player, combat.card_in_play, target) if player.relics else debuff)
     _vulnerable(combat, target, debuff)
 
 def play_vicious(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):

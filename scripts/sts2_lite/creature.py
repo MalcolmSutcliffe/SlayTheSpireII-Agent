@@ -5,6 +5,7 @@ if TYPE_CHECKING:
     from sts2_lite.combat import CombatSimulator, CombatState
 
 from sts2_lite.status import StatusInstance, StatusId, is_debuff
+from sts2_lite.relic import RelicId, STURDY_CLAMP_BLOCK, modify_hp_loss
 
 class Creature:
     max_hp : int
@@ -14,6 +15,7 @@ class Creature:
     is_minion : bool
     has_been_attacked_this_turn : bool
     lost_hp_this_turn : bool
+    relics = ()         # only the player holds relics (Player.relics); empty for everything else
 
     def __init__(self, max_hp=1, current_hp=1, block=0, status=None, is_minion=False):
         self.max_hp=max_hp
@@ -24,6 +26,7 @@ class Creature:
         self.has_been_attacked_this_turn = False
         self.lost_hp_this_turn = False
         self.hp_loss_events = 0     # running total of times hit points were lost
+        self.hp_lost_log = []       # amounts lost since the simulator last reacted (relics that react to damage)
 
     plating_at_turn_start = True    # the player's Plating pays out at end of turn instead
 
@@ -32,6 +35,8 @@ class Creature:
         return s.amount if s is not None else 0
 
     def lose_hp(self, hp_loss : int):
+        if hp_loss > 0 and self.relics:
+            hp_loss = modify_hp_loss(self, hp_loss)
         if hp_loss > 0:
             self.lost_hp_this_turn = True
             self.hp_loss_events += 1
@@ -39,9 +44,16 @@ class Creature:
         if self.current_hp <= 0:
             self.die()
 
+    def block_kept_at_turn_start(self) -> int:
+        """The block this creature keeps when its turn starts: all of it with Barricade, up to 10 with Sturdy Clamp."""
+        if StatusId.BARRICADE in self.status:
+            return self.block
+        if self.relics and RelicId.STURDY_CLAMP in self.relics:
+            return min(self.block, STURDY_CLAMP_BLOCK)
+        return 0
+
     def turn_start(self):
-        if StatusId.BARRICADE not in self.status:
-            self.block = 0
+        self.block = self.block_kept_at_turn_start()
         self.has_been_attacked_this_turn = False
         self.lost_hp_this_turn = False
         if StatusId.PLATING in self.status and self.plating_at_turn_start:
@@ -82,6 +94,11 @@ class Creature:
             if self.status[StatusId.SLIPPERY].amount == 0:
                 del self.status[StatusId.SLIPPERY]
         
+        if self.relics:
+            damage = modify_hp_loss(self, damage)
+            if damage <= 0:
+                return
+
         self.current_hp -= damage
         self.lost_hp_this_turn = True
         self.hp_loss_events += 1

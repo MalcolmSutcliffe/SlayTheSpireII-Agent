@@ -8,6 +8,7 @@ from sts2_lite import rng
 from sts2_lite.creature import Creature
 from sts2_lite.card import Card, CardId, CardType
 from sts2_lite.status import StatusInstance, StatusId
+from sts2_lite.relic import RelicId, RelicInstance, strength_received, lizard_tail_revive, hand_draw_bonus
 
 class Player(Creature):
     plating_at_turn_start = False
@@ -15,9 +16,11 @@ class Player(Creature):
     draw_pile : list[Card]
     discard_pile : list[Card]
     exhaust_pile : list[Card]
+    relics : dict[RelicId, RelicInstance]      # relics with an effect in combat
     cards_drawn : int       # running total of cards drawn
     unknown_draws : int     # running total of draws and top-card plays the agent could not foresee; compare before and after an action
     inferno_plays : int      # times Inferno has been played this combat: its HP loss each turn
+    shuffle_hook = None      # called when the discard pile is shuffled into the draw pile (set by the simulator)
     draw_hook = None         # called with each card drawn into the hand (set by the simulator for Hellraiser)
     known_top : int         # how many cards at the end of draw_pile (the top) the agent knows the identity and order of
     cards_exhausted_this_turn : int
@@ -28,6 +31,7 @@ class Player(Creature):
         self.draw_pile = []
         self.discard_pile = []
         self.exhaust_pile = []
+        self.relics = {}
         self.cards_drawn = 0
         self.unknown_draws = 0
         self.known_top = 0
@@ -56,6 +60,9 @@ class Player(Creature):
         for card in player["discard_pile"]:
             pl.discard_pile.append(Card.from_dict(card))
         pl.exhaust_pile = [Card.from_dict(card) for card in player.get("exhaust_pile", [])]
+        for relic in map(RelicInstance.from_dict, player.get("relics", [])):
+            if relic is not None:
+                pl.relics[relic.relic_id] = relic
         pl.inferno_plays = max(1, round(pl.status_amount(StatusId.INFERNO) / 7.5)) if StatusId.INFERNO in pl.status else 0
         pl._read_growing_cards()
         return pl
@@ -106,6 +113,7 @@ class Player(Creature):
         for card in player.discard_pile:
             new_pl.discard_pile.append(card)
         new_pl.exhaust_pile = list(player.exhaust_pile)
+        new_pl.relics = {relic_id: RelicInstance.deepcopy(relic) for relic_id, relic in player.relics.items()}
         new_pl.cards_drawn = player.cards_drawn
         new_pl.unknown_draws = player.unknown_draws
         new_pl.known_top = player.known_top
@@ -113,21 +121,35 @@ class Player(Creature):
         new_pl.cards_exhausted_this_turn = player.cards_exhausted_this_turn
         new_pl.lost_hp_this_turn = player.lost_hp_this_turn
         new_pl.hp_loss_events = player.hp_loss_events
+        new_pl.hp_lost_log = list(player.hp_lost_log)
         new_pl.attacks_played_this_turn = player.attacks_played_this_turn
         new_pl.card_blocks_this_turn = player.card_blocks_this_turn
         return new_pl
     
     def turn_start(self):
+        remnant = self.relics.get(RelicId.BEATING_REMNANT)
+        if remnant is not None:
+            remnant.value = 0       # its damage limit counts from here
         super().turn_start()
         self.cards_exhausted_this_turn = 0
         self.attacks_played_this_turn = 0
         self.card_blocks_this_turn = 0
-        self.draw_cards(5, from_hand_draw=True)
+        self.draw_cards(5 + hand_draw_bonus(self) if self.relics else 5, from_hand_draw=True)
 
         if StatusId.CRIMSON_MANTLE in self.status:
             self.apply_block(self.status[StatusId.CRIMSON_MANTLE].amount)
             self.lose_hp(1)
     
+    def apply_status(self, status : StatusId, amount : int, bypass_artifact : bool = False):
+        if status is StatusId.STRENGTH and amount > 0 and self.relics:
+            amount = strength_received(self, amount)
+        super().apply_status(status, amount, bypass_artifact)
+
+    def die(self):
+        if self.relics and lizard_tail_revive(self):
+            return
+        super().die()
+
     def draw_cards(self, num_cards : int, from_hand_draw : bool = False):
         for i in range(num_cards):
             self.draw_card(from_hand_draw)
@@ -223,6 +245,8 @@ class Player(Creature):
         self.discard_pile = []
         self.known_top = 0
         self.shuffle_draw_pile()
+        if self.shuffle_hook is not None:
+            self.shuffle_hook()
 
     def upgrade_card(self, card : Card) -> Card | None:
         """Replace a card in the hand or a pile with its upgraded version. Returns it, or None if the card

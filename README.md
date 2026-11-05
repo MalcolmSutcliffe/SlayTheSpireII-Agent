@@ -6,9 +6,16 @@
 
 ## REFERENCES:
 
-https://github.com/zhiyue/sts2-rl-agent -> headless sts2_env was used for cross-referencing
+https://github.com/HKUDS/CLI-Anything/blob/main/skills/cli-anything-slay-the-spire-ii/SKILL.md -> Used for command line interface with STS2
+    changes: 
+    - added relic "status" field to state ouput
+    - changed draw pile, discard pile, and exhaust pile to have full card information
+    - expose various extra exposes for important relic functionality between card plays
+
+https://github.com/zhiyue/sts2-rl-agent -> headless sts2_env used for cross-referencing game behaviour
+
 https://int8.io/monte-carlo-tree-search-beginners-guide/ -> used as reference for initial MCTS implementation
-https://github.com/HKUDS/CLI-Anything/blob/main/skills/cli-anything-slay-the-spire-ii/SKILL.md -> Used for command line interface with STS2 (updated for newest version)
+
 
 
 ## Current functionality:
