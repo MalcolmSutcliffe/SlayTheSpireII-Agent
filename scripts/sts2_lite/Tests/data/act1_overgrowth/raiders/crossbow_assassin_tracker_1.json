@@ -1,0 +1,281 @@
+{
+ "round": 1,
+ "energy": 3,
+ "max_energy": 3,
+ "context": {
+  "act": 1,
+  "floor": 21,
+  "ascension": 0
+ },
+ "player": {
+  "hp": 30,
+  "max_hp": 80,
+  "block": 0,
+  "status": [],
+  "hand": [
+   {
+    "id": "STRIKE_IRONCLAD",
+    "name": "Strike",
+    "type": "Attack",
+    "cost": "1",
+    "is_upgraded": false,
+    "target_type": "AnyEnemy",
+    "can_play": true
+   },
+   {
+    "id": "DEFEND_IRONCLAD",
+    "name": "Defend",
+    "type": "Skill",
+    "cost": "1",
+    "is_upgraded": false,
+    "target_type": "Self",
+    "can_play": true
+   },
+   {
+    "id": "UNRELENTING",
+    "name": "Unrelenting",
+    "type": "Attack",
+    "cost": "2",
+    "is_upgraded": false,
+    "target_type": "AnyEnemy",
+    "can_play": true
+   },
+   {
+    "id": "DEFEND_IRONCLAD",
+    "name": "Defend",
+    "type": "Skill",
+    "cost": "1",
+    "is_upgraded": false,
+    "target_type": "Self",
+    "can_play": true
+   },
+   {
+    "id": "STRIKE_IRONCLAD",
+    "name": "Strike",
+    "type": "Attack",
+    "cost": "1",
+    "is_upgraded": false,
+    "target_type": "AnyEnemy",
+    "can_play": true
+   }
+  ],
+  "draw_pile": [
+   {
+    "id": "DEFEND_IRONCLAD",
+    "name": "Defend",
+    "type": "Skill",
+    "cost": "1",
+    "is_upgraded": false,
+    "target_type": "Self",
+    "can_play": true
+   },
+   {
+    "id": "STRIKE_IRONCLAD",
+    "name": "Strike+",
+    "type": "Attack",
+    "cost": "1",
+    "is_upgraded": true,
+    "target_type": "AnyEnemy",
+    "can_play": true
+   },
+   {
+    "id": "STRIKE_IRONCLAD",
+    "name": "Strike",
+    "type": "Attack",
+    "cost": "1",
+    "is_upgraded": false,
+    "target_type": "AnyEnemy",
+    "can_play": true
+   },
+   {
+    "id": "TWIN_STRIKE",
+    "name": "Twin Strike",
+    "type": "Attack",
+    "cost": "1",
+    "is_upgraded": false,
+    "target_type": "AnyEnemy",
+    "can_play": true
+   },
+   {
+    "id": "DEFEND_IRONCLAD",
+    "name": "Defend+",
+    "type": "Skill",
+    "cost": "1",
+    "is_upgraded": true,
+    "target_type": "Self",
+    "can_play": true
+   },
+   {
+    "id": "BASH",
+    "name": "Bash",
+    "type": "Attack",
+    "cost": "2",
+    "is_upgraded": false,
+    "target_type": "AnyEnemy",
+    "can_play": true
+   },
+   {
+    "id": "STRIKE_IRONCLAD",
+    "name": "Strike",
+    "type": "Attack",
+    "cost": "1",
+    "is_upgraded": false,
+    "target_type": "AnyEnemy",
+    "can_play": true
+   }
+  ],
+  "discard_pile": [],
+  "exhaust_pile": [],
+  "deck": [
+   {
+    "id": "STRIKE_IRONCLAD",
+    "name": "Strike",
+    "type": "Attack",
+    "cost": "1",
+    "is_upgraded": false,
+    "target_type": "AnyEnemy",
+    "can_play": true
+   },
+   {
+    "id": "STRIKE_IRONCLAD",
+    "name": "Strike",
+    "type": "Attack",
+    "cost": "1",
+    "is_upgraded": false,
+    "target_type": "AnyEnemy",
+    "can_play": true
+   },
+   {
+    "id": "STRIKE_IRONCLAD",
+    "name": "Strike",
+    "type": "Attack",
+    "cost": "1",
+    "is_upgraded": false,
+    "target_type": "AnyEnemy",
+    "can_play": true
+   },
+   {
+    "id": "STRIKE_IRONCLAD",
+    "name": "Strike",
+    "type": "Attack",
+    "cost": "1",
+    "is_upgraded": false,
+    "target_type": "AnyEnemy",
+    "can_play": true
+   },
+   {
+    "id": "STRIKE_IRONCLAD",
+    "name": "Strike+",
+    "type": "Attack",
+    "cost": "1",
+    "is_upgraded": true,
+    "target_type": "AnyEnemy",
+    "can_play": true
+   },
+   {
+    "id": "DEFEND_IRONCLAD",
+    "name": "Defend",
+    "type": "Skill",
+    "cost": "1",
+    "is_upgraded": false,
+    "target_type": "Self",
+    "can_play": true
+   },
+   {
+    "id": "DEFEND_IRONCLAD",
+    "name": "Defend",
+    "type": "Skill",
+    "cost": "1",
+    "is_upgraded": false,
+    "target_type": "Self",
+    "can_play": true
+   },
+   {
+    "id": "DEFEND_IRONCLAD",
+    "name": "Defend",
+    "type": "Skill",
+    "cost": "1",
+    "is_upgraded": false,
+    "target_type": "Self",
+    "can_play": true
+   },
+   {
+    "id": "DEFEND_IRONCLAD",
+    "name": "Defend+",
+    "type": "Skill",
+    "cost": "1",
+    "is_upgraded": true,
+    "target_type": "Self",
+    "can_play": true
+   },
+   {
+    "id": "BASH",
+    "name": "Bash",
+    "type": "Attack",
+    "cost": "2",
+    "is_upgraded": false,
+    "target_type": "AnyEnemy",
+    "can_play": true
+   },
+   {
+    "id": "TWIN_STRIKE",
+    "name": "Twin Strike",
+    "type": "Attack",
+    "cost": "1",
+    "is_upgraded": false,
+    "target_type": "AnyEnemy",
+    "can_play": true
+   },
+   {
+    "id": "UNRELENTING",
+    "name": "Unrelenting",
+    "type": "Attack",
+    "cost": "2",
+    "is_upgraded": false,
+    "target_type": "AnyEnemy",
+    "can_play": true
+   }
+  ]
+ },
+ "enemies": [
+  {
+   "entity_id": "CROSSBOW_RUBY_RAIDER_0",
+   "hp": 19,
+   "max_hp": 19,
+   "block": 0,
+   "status": [],
+   "intents": [
+    {
+     "type": "Defend",
+     "label": ""
+    }
+   ]
+  },
+  {
+   "entity_id": "ASSASSIN_RUBY_RAIDER_0",
+   "hp": 22,
+   "max_hp": 22,
+   "block": 0,
+   "status": [],
+   "intents": [
+    {
+     "type": "Attack",
+     "label": "10"
+    }
+   ]
+  },
+  {
+   "entity_id": "TRACKER_RUBY_RAIDER_0",
+   "hp": 21,
+   "max_hp": 21,
+   "block": 0,
+   "status": [],
+   "intents": [
+    {
+     "type": "Debuff",
+     "label": ""
+    }
+   ]
+  }
+ ]
+}

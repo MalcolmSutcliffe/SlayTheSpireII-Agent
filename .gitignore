@@ -7,3 +7,5 @@ SlayTheSpireII-Agent.sln
 *.pyc
 /cli-anything-sts2/agent-harness/bridge/plugin/obj/Debug
 *.cache
+sts2_decompiled/
+
