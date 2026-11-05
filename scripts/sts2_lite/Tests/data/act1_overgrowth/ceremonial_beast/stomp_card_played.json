@@ -1,0 +1,1161 @@
+{
+  "type": "decision",
+  "decision": "combat_play",
+  "room_type": "boss",
+  "context": {
+    "act": 1,
+    "floor": 26,
+    "ascension": 0
+  },
+  "run": {
+    "act": 1,
+    "floor": 26,
+    "ascension": 0
+  },
+  "round": 4,
+  "turn": "player",
+  "is_play_phase": null,
+  "energy": 1,
+  "max_energy": 3,
+  "hand": [
+    {
+      "index": 0,
+      "id": "STRIKE_IRONCLAD",
+      "name": "Strike",
+      "type": "Attack",
+      "cost": "0",
+      "star_cost": null,
+      "description": "Deal 6 damage. Ringing.",
+      "target_type": "AnyEnemy",
+      "can_play": false,
+      "unplayable_reason": "BlockedByHook",
+      "is_upgraded": false,
+      "keywords": [
+        {
+          "name": "Ringing",
+          "description": "You can only play 1 card this turn."
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "id": "DEFEND_IRONCLAD",
+      "name": "Defend",
+      "type": "Skill",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Gain 5 Block. Ringing.",
+      "target_type": "Self",
+      "can_play": false,
+      "unplayable_reason": "BlockedByHook",
+      "is_upgraded": false,
+      "keywords": [
+        {
+          "name": "Ringing",
+          "description": "You can only play 1 card this turn."
+        },
+        {
+          "name": "Block",
+          "description": "Until next turn, prevents damage."
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "id": "STRIKE_IRONCLAD",
+      "name": "Strike",
+      "type": "Attack",
+      "cost": "0",
+      "star_cost": null,
+      "description": "Deal 6 damage. Ringing.",
+      "target_type": "AnyEnemy",
+      "can_play": false,
+      "unplayable_reason": "BlockedByHook",
+      "is_upgraded": false,
+      "keywords": [
+        {
+          "name": "Ringing",
+          "description": "You can only play 1 card this turn."
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "id": "TWIN_STRIKE",
+      "name": "Twin Strike",
+      "type": "Attack",
+      "cost": "0",
+      "star_cost": null,
+      "description": "Deal 5 damage twice. Ringing.",
+      "target_type": "AnyEnemy",
+      "can_play": false,
+      "unplayable_reason": "BlockedByHook",
+      "is_upgraded": false,
+      "keywords": [
+        {
+          "name": "Ringing",
+          "description": "You can only play 1 card this turn."
+        }
+      ]
+    }
+  ],
+  "enemies": [
+    {
+      "entity_id": "CEREMONIAL_BEAST_0",
+      "combat_id": 1,
+      "name": "Ceremonial Beast",
+      "hp": 113,
+      "max_hp": 252,
+      "block": 0,
+      "status": [],
+      "intents": [
+        {
+          "type": "Attack",
+          "label": "15",
+          "title": "Aggressive",
+          "description": "This enemy intends to Attack for 15 damage."
+        }
+      ]
+    }
+  ],
+  "player": {
+    "character": "The Ironclad",
+    "hp": 80,
+    "max_hp": 80,
+    "block": 0,
+    "deck": [
+      {
+        "index": 0,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": []
+      },
+      {
+        "index": 1,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": []
+      },
+      {
+        "index": 2,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": []
+      },
+      {
+        "index": 3,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": []
+      },
+      {
+        "index": 4,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike+",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 9 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": true,
+        "keywords": []
+      },
+      {
+        "index": 5,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 6,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 7,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 8,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend+",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 8 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": true,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 9,
+        "id": "BASH",
+        "name": "Bash",
+        "type": "Attack",
+        "cost": "2",
+        "star_cost": null,
+        "description": "Deal 8 damage. Apply 2 Vulnerable.",
+        "target_type": "AnyEnemy",
+        "can_play": false,
+        "unplayable_reason": "EnergyCostTooHigh",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Vulnerable",
+            "description": "Vulnerable creatures take 50% more damage from Attacks."
+          }
+        ]
+      },
+      {
+        "index": 10,
+        "id": "TWIN_STRIKE",
+        "name": "Twin Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 5 damage twice.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": []
+      },
+      {
+        "index": 11,
+        "id": "UNRELENTING",
+        "name": "Unrelenting",
+        "type": "Attack",
+        "cost": "2",
+        "star_cost": null,
+        "description": "Deal 14 damage. The next Attack you play costs 0 [ironclad_energy_icon.png].",
+        "target_type": "AnyEnemy",
+        "can_play": false,
+        "unplayable_reason": "EnergyCostTooHigh",
+        "is_upgraded": false,
+        "keywords": []
+      }
+    ],
+    "energy": 1,
+    "max_energy": 3,
+    "hand": [
+      {
+        "index": 0,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "0",
+        "star_cost": null,
+        "description": "Deal 6 damage. Ringing.",
+        "target_type": "AnyEnemy",
+        "can_play": false,
+        "unplayable_reason": "BlockedByHook",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Ringing",
+            "description": "You can only play 1 card this turn."
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block. Ringing.",
+        "target_type": "Self",
+        "can_play": false,
+        "unplayable_reason": "BlockedByHook",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Ringing",
+            "description": "You can only play 1 card this turn."
+          },
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 2,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "0",
+        "star_cost": null,
+        "description": "Deal 6 damage. Ringing.",
+        "target_type": "AnyEnemy",
+        "can_play": false,
+        "unplayable_reason": "BlockedByHook",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Ringing",
+            "description": "You can only play 1 card this turn."
+          }
+        ]
+      },
+      {
+        "index": 3,
+        "id": "TWIN_STRIKE",
+        "name": "Twin Strike",
+        "type": "Attack",
+        "cost": "0",
+        "star_cost": null,
+        "description": "Deal 5 damage twice. Ringing.",
+        "target_type": "AnyEnemy",
+        "can_play": false,
+        "unplayable_reason": "BlockedByHook",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Ringing",
+            "description": "You can only play 1 card this turn."
+          }
+        ]
+      }
+    ],
+    "draw_pile_count": 2,
+    "discard_pile_count": 6,
+    "exhaust_pile_count": 0,
+    "draw_pile": [
+      {
+        "index": 0,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage. Ringing.",
+        "target_type": "AnyEnemy",
+        "can_play": false,
+        "unplayable_reason": "BlockedByHook",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Ringing",
+            "description": "You can only play 1 card this turn."
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block. Ringing.",
+        "target_type": "Self",
+        "can_play": false,
+        "unplayable_reason": "BlockedByHook",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Ringing",
+            "description": "You can only play 1 card this turn."
+          },
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      }
+    ],
+    "discard_pile": [
+      {
+        "index": 0,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block. Ringing.",
+        "target_type": "Self",
+        "can_play": false,
+        "unplayable_reason": "BlockedByHook",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Ringing",
+            "description": "You can only play 1 card this turn."
+          },
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "id": "BASH",
+        "name": "Bash",
+        "type": "Attack",
+        "cost": "2",
+        "star_cost": null,
+        "description": "Deal 8 damage. Apply 2 Vulnerable. Ringing.",
+        "target_type": "AnyEnemy",
+        "can_play": false,
+        "unplayable_reason": "BlockedByHook, EnergyCostTooHigh",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Vulnerable",
+            "description": "Vulnerable creatures take 50% more damage from Attacks."
+          },
+          {
+            "name": "Ringing",
+            "description": "You can only play 1 card this turn."
+          }
+        ]
+      },
+      {
+        "index": 2,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike+",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 9 damage. Ringing.",
+        "target_type": "AnyEnemy",
+        "can_play": false,
+        "unplayable_reason": "BlockedByHook",
+        "is_upgraded": true,
+        "keywords": [
+          {
+            "name": "Ringing",
+            "description": "You can only play 1 card this turn."
+          }
+        ]
+      },
+      {
+        "index": 3,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage. Ringing.",
+        "target_type": "AnyEnemy",
+        "can_play": false,
+        "unplayable_reason": "BlockedByHook",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Ringing",
+            "description": "You can only play 1 card this turn."
+          }
+        ]
+      },
+      {
+        "index": 4,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend+",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 8 Block. Ringing.",
+        "target_type": "Self",
+        "can_play": false,
+        "unplayable_reason": "BlockedByHook",
+        "is_upgraded": true,
+        "keywords": [
+          {
+            "name": "Ringing",
+            "description": "You can only play 1 card this turn."
+          },
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 5,
+        "id": "UNRELENTING",
+        "name": "Unrelenting",
+        "type": "Attack",
+        "cost": "2",
+        "star_cost": null,
+        "description": "Deal 14 damage. The next Attack you play costs 0 [ironclad_energy_icon.png]. Ringing.",
+        "target_type": "AnyEnemy",
+        "can_play": false,
+        "unplayable_reason": "BlockedByHook, EnergyCostTooHigh",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Ringing",
+            "description": "You can only play 1 card this turn."
+          }
+        ]
+      }
+    ],
+    "exhaust_pile": [],
+    "gold": 175,
+    "status": [
+      {
+        "id": "RINGING_POWER",
+        "name": "Ringing",
+        "amount": 1,
+        "type": "Debuff",
+        "description": "You can only play 1 card this turn.",
+        "keywords": []
+      },
+      {
+        "id": "FREE_ATTACK_POWER",
+        "name": "Free Attack",
+        "amount": 1,
+        "type": "Buff",
+        "description": "Your next Attack costs 0 [ironclad_energy_icon.png].",
+        "keywords": []
+      }
+    ],
+    "relics": [
+      {
+        "id": "BURNING_BLOOD",
+        "name": "Burning Blood",
+        "description": "At the end of combat, heal 6 HP.",
+        "counter": null,
+        "keywords": []
+      },
+      {
+        "id": "NEOWS_TALISMAN",
+        "name": "Neow's Talisman",
+        "description": "Upon pickup, Upgrade 1 of your Strikes and 1 of your Defends.",
+        "counter": null,
+        "keywords": []
+      }
+    ],
+    "potions": [
+      {
+        "id": "DISTILLED_CHAOS",
+        "name": "Distilled Chaos",
+        "description": "Play the top 3 cards of your Draw Pile.",
+        "slot": 0,
+        "can_use_in_combat": true,
+        "target_type": "Self",
+        "keywords": []
+      }
+    ]
+  },
+  "draw_pile_count": 2,
+  "discard_pile_count": 6,
+  "exhaust_pile_count": 0,
+  "battle": {
+    "round": 4,
+    "turn": "player",
+    "player": {
+      "character": "The Ironclad",
+      "hp": 80,
+      "max_hp": 80,
+      "block": 0,
+      "deck": [
+        {
+          "index": 0,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": []
+        },
+        {
+          "index": 1,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": []
+        },
+        {
+          "index": 2,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": []
+        },
+        {
+          "index": 3,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": []
+        },
+        {
+          "index": 4,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike+",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 9 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": true,
+          "keywords": []
+        },
+        {
+          "index": 5,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        },
+        {
+          "index": 6,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        },
+        {
+          "index": 7,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        },
+        {
+          "index": 8,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend+",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 8 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": true,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        },
+        {
+          "index": 9,
+          "id": "BASH",
+          "name": "Bash",
+          "type": "Attack",
+          "cost": "2",
+          "star_cost": null,
+          "description": "Deal 8 damage. Apply 2 Vulnerable.",
+          "target_type": "AnyEnemy",
+          "can_play": false,
+          "unplayable_reason": "EnergyCostTooHigh",
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Vulnerable",
+              "description": "Vulnerable creatures take 50% more damage from Attacks."
+            }
+          ]
+        },
+        {
+          "index": 10,
+          "id": "TWIN_STRIKE",
+          "name": "Twin Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 5 damage twice.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": []
+        },
+        {
+          "index": 11,
+          "id": "UNRELENTING",
+          "name": "Unrelenting",
+          "type": "Attack",
+          "cost": "2",
+          "star_cost": null,
+          "description": "Deal 14 damage. The next Attack you play costs 0 [ironclad_energy_icon.png].",
+          "target_type": "AnyEnemy",
+          "can_play": false,
+          "unplayable_reason": "EnergyCostTooHigh",
+          "is_upgraded": false,
+          "keywords": []
+        }
+      ],
+      "energy": 1,
+      "max_energy": 3,
+      "hand": [
+        {
+          "index": 0,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "0",
+          "star_cost": null,
+          "description": "Deal 6 damage. Ringing.",
+          "target_type": "AnyEnemy",
+          "can_play": false,
+          "unplayable_reason": "BlockedByHook",
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Ringing",
+              "description": "You can only play 1 card this turn."
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block. Ringing.",
+          "target_type": "Self",
+          "can_play": false,
+          "unplayable_reason": "BlockedByHook",
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Ringing",
+              "description": "You can only play 1 card this turn."
+            },
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "0",
+          "star_cost": null,
+          "description": "Deal 6 damage. Ringing.",
+          "target_type": "AnyEnemy",
+          "can_play": false,
+          "unplayable_reason": "BlockedByHook",
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Ringing",
+              "description": "You can only play 1 card this turn."
+            }
+          ]
+        },
+        {
+          "index": 3,
+          "id": "TWIN_STRIKE",
+          "name": "Twin Strike",
+          "type": "Attack",
+          "cost": "0",
+          "star_cost": null,
+          "description": "Deal 5 damage twice. Ringing.",
+          "target_type": "AnyEnemy",
+          "can_play": false,
+          "unplayable_reason": "BlockedByHook",
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Ringing",
+              "description": "You can only play 1 card this turn."
+            }
+          ]
+        }
+      ],
+      "draw_pile_count": 2,
+      "discard_pile_count": 6,
+      "exhaust_pile_count": 0,
+      "draw_pile": [
+        {
+          "index": 0,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 6 damage. Ringing.",
+          "target_type": "AnyEnemy",
+          "can_play": false,
+          "unplayable_reason": "BlockedByHook",
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Ringing",
+              "description": "You can only play 1 card this turn."
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block. Ringing.",
+          "target_type": "Self",
+          "can_play": false,
+          "unplayable_reason": "BlockedByHook",
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Ringing",
+              "description": "You can only play 1 card this turn."
+            },
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        }
+      ],
+      "discard_pile": [
+        {
+          "index": 0,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block. Ringing.",
+          "target_type": "Self",
+          "can_play": false,
+          "unplayable_reason": "BlockedByHook",
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Ringing",
+              "description": "You can only play 1 card this turn."
+            },
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "id": "BASH",
+          "name": "Bash",
+          "type": "Attack",
+          "cost": "2",
+          "star_cost": null,
+          "description": "Deal 8 damage. Apply 2 Vulnerable. Ringing.",
+          "target_type": "AnyEnemy",
+          "can_play": false,
+          "unplayable_reason": "BlockedByHook, EnergyCostTooHigh",
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Vulnerable",
+              "description": "Vulnerable creatures take 50% more damage from Attacks."
+            },
+            {
+              "name": "Ringing",
+              "description": "You can only play 1 card this turn."
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike+",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 9 damage. Ringing.",
+          "target_type": "AnyEnemy",
+          "can_play": false,
+          "unplayable_reason": "BlockedByHook",
+          "is_upgraded": true,
+          "keywords": [
+            {
+              "name": "Ringing",
+              "description": "You can only play 1 card this turn."
+            }
+          ]
+        },
+        {
+          "index": 3,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 6 damage. Ringing.",
+          "target_type": "AnyEnemy",
+          "can_play": false,
+          "unplayable_reason": "BlockedByHook",
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Ringing",
+              "description": "You can only play 1 card this turn."
+            }
+          ]
+        },
+        {
+          "index": 4,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend+",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 8 Block. Ringing.",
+          "target_type": "Self",
+          "can_play": false,
+          "unplayable_reason": "BlockedByHook",
+          "is_upgraded": true,
+          "keywords": [
+            {
+              "name": "Ringing",
+              "description": "You can only play 1 card this turn."
+            },
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        },
+        {
+          "index": 5,
+          "id": "UNRELENTING",
+          "name": "Unrelenting",
+          "type": "Attack",
+          "cost": "2",
+          "star_cost": null,
+          "description": "Deal 14 damage. The next Attack you play costs 0 [ironclad_energy_icon.png]. Ringing.",
+          "target_type": "AnyEnemy",
+          "can_play": false,
+          "unplayable_reason": "BlockedByHook, EnergyCostTooHigh",
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Ringing",
+              "description": "You can only play 1 card this turn."
+            }
+          ]
+        }
+      ],
+      "exhaust_pile": [],
+      "gold": 175,
+      "status": [
+        {
+          "id": "RINGING_POWER",
+          "name": "Ringing",
+          "amount": 1,
+          "type": "Debuff",
+          "description": "You can only play 1 card this turn.",
+          "keywords": []
+        },
+        {
+          "id": "FREE_ATTACK_POWER",
+          "name": "Free Attack",
+          "amount": 1,
+          "type": "Buff",
+          "description": "Your next Attack costs 0 [ironclad_energy_icon.png].",
+          "keywords": []
+        }
+      ],
+      "relics": [
+        {
+          "id": "BURNING_BLOOD",
+          "name": "Burning Blood",
+          "description": "At the end of combat, heal 6 HP.",
+          "counter": null,
+          "keywords": []
+        },
+        {
+          "id": "NEOWS_TALISMAN",
+          "name": "Neow's Talisman",
+          "description": "Upon pickup, Upgrade 1 of your Strikes and 1 of your Defends.",
+          "counter": null,
+          "keywords": []
+        }
+      ],
+      "potions": [
+        {
+          "id": "DISTILLED_CHAOS",
+          "name": "Distilled Chaos",
+          "description": "Play the top 3 cards of your Draw Pile.",
+          "slot": 0,
+          "can_use_in_combat": true,
+          "target_type": "Self",
+          "keywords": []
+        }
+      ]
+    },
+    "enemies": [
+      {
+        "entity_id": "CEREMONIAL_BEAST_0",
+        "combat_id": 1,
+        "name": "Ceremonial Beast",
+        "hp": 113,
+        "max_hp": 252,
+        "block": 0,
+        "status": [],
+        "intents": [
+          {
+            "type": "Attack",
+            "label": "15",
+            "title": "Aggressive",
+            "description": "This enemy intends to Attack for 15 damage."
+          }
+        ]
+      }
+    ]
+  }
+}

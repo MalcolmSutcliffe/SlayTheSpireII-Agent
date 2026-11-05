@@ -9,17 +9,22 @@ if TYPE_CHECKING:
 WEAK_MULTIPLIER = 0.75
 VULNERABLE_MULTIPLIER = 1.5
 SHRINK_MULTIPLIER = 0.7
+COLOSSUS_MULTIPLIER = 0.5
 
 
 def modify_damage(base : int, attacker : Creature, target : Creature) -> int:
-    # Strength, Weak, Vulnerable, then Shrink; truncated once at the end
+    # Strength, Weak, Vulnerable, Shrink, then Slow; truncated once at the end
     damage = base + attacker.status_amount(StatusId.STRENGTH)
     if StatusId.WEAK in attacker.status:
         damage *= WEAK_MULTIPLIER
     if StatusId.VULNERABLE in target.status:
-        damage *= VULNERABLE_MULTIPLIER
+        damage *= VULNERABLE_MULTIPLIER + attacker.status_amount(StatusId.CRUELTY) / 100
+    if StatusId.COLOSSUS in target.status and StatusId.VULNERABLE in attacker.status:
+        damage *= COLOSSUS_MULTIPLIER
     if StatusId.SHRINK in attacker.status:
         damage *= SHRINK_MULTIPLIER
+    if StatusId.SLOW in target.status:
+        damage *= 1 + target.status[StatusId.SLOW].amount / 100
     return max(0, int(damage))
 
 

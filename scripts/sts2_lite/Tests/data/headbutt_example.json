@@ -1,0 +1,183 @@
+{
+  "type": "decision",
+  "decision": "card_select",
+  "context": {
+    "act": 1,
+    "floor": 3,
+    "ascension": 0
+  },
+  "run": {
+    "act": 1,
+    "floor": 3,
+    "ascension": 0
+  },
+  "screen_type": "NCombatPileCardSelectScreen",
+  "prompt": "Choose a card to put on top of your Draw Pile.",
+  "cards": [
+    {
+      "index": 0,
+      "id": "DEFEND_IRONCLAD",
+      "name": "Defend",
+      "type": "Skill",
+      "cost": "1",
+      "description": "Gain 5 Block.",
+      "rarity": "Basic",
+      "is_upgraded": false,
+      "keywords": [
+        {
+          "name": "Block",
+          "description": "Until next turn, prevents damage."
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "id": "ARMAMENTS",
+      "name": "Armaments",
+      "type": "Skill",
+      "cost": "1",
+      "description": "Gain 5 Block. Upgrade a card in your Hand.",
+      "rarity": "Common",
+      "is_upgraded": false,
+      "keywords": [
+        {
+          "name": "Block",
+          "description": "Until next turn, prevents damage."
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "id": "DEFEND_IRONCLAD",
+      "name": "Defend",
+      "type": "Skill",
+      "cost": "1",
+      "description": "Gain 5 Block.",
+      "rarity": "Basic",
+      "is_upgraded": false,
+      "keywords": [
+        {
+          "name": "Block",
+          "description": "Until next turn, prevents damage."
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "id": "STRIKE_IRONCLAD",
+      "name": "Strike+",
+      "type": "Attack",
+      "cost": "1",
+      "description": "Deal 9 damage.",
+      "rarity": "Basic",
+      "is_upgraded": true,
+      "keywords": []
+    },
+    {
+      "index": 4,
+      "id": "STRIKE_IRONCLAD",
+      "name": "Strike",
+      "type": "Attack",
+      "cost": "1",
+      "description": "Deal 6 damage.",
+      "rarity": "Basic",
+      "is_upgraded": false,
+      "keywords": []
+    }
+  ],
+  "player": {
+    "character": "The Ironclad",
+    "hp": 80,
+    "max_hp": 80,
+    "gold": 99
+  },
+  "preview_showing": false,
+  "can_skip": false,
+  "can_confirm": false,
+  "can_cancel": false,
+  "card_select": {
+    "screen_type": "NCombatPileCardSelectScreen",
+    "player": {
+      "character": "The Ironclad",
+      "hp": 80,
+      "max_hp": 80,
+      "gold": 99
+    },
+    "prompt": "Choose a card to put on top of your Draw Pile.",
+    "cards": [
+      {
+        "index": 0,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "description": "Gain 5 Block.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "id": "ARMAMENTS",
+        "name": "Armaments",
+        "type": "Skill",
+        "cost": "1",
+        "description": "Gain 5 Block. Upgrade a card in your Hand.",
+        "rarity": "Common",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 2,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "description": "Gain 5 Block.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 3,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike+",
+        "type": "Attack",
+        "cost": "1",
+        "description": "Deal 9 damage.",
+        "rarity": "Basic",
+        "is_upgraded": true,
+        "keywords": []
+      },
+      {
+        "index": 4,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "description": "Deal 6 damage.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": []
+      }
+    ],
+    "preview_showing": false,
+    "can_cancel": false,
+    "can_confirm": false
+  }
+}

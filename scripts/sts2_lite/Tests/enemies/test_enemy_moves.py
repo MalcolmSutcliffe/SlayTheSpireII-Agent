@@ -50,12 +50,24 @@ def test_nibbit_values():
 def test_butt_hits_harder_on_high_ascension():
     assert nibbit(8)["BUTT"].damage == 12
     assert nibbit(9)["BUTT"].damage == 13
-    assert nibbit(9)["SLICE"].damage == 6
+
+def test_nibbit_slice_damage_rises_on_the_deadly_ascension():
+    assert (nibbit(8)["SLICE"].damage, nibbit(9)["SLICE"].damage) == (6, 7)
+
+def test_nibbit_slice_block_rises_on_the_tough_ascension():
+    assert (nibbit(7)["SLICE"].block, nibbit(8)["SLICE"].block, nibbit(9)["SLICE"].block) == (5, 6, 6)
+
+def test_nibbit_hiss_gives_more_strength_on_the_deadly_ascension():
+    assert nibbit(8)["HISS"].self_status == ((StatusId.STRENGTH, 2),)
+    assert nibbit(9)["HISS"].self_status == ((StatusId.STRENGTH, 3),)
 
 def test_every_follow_up_exists():
     for table in MOVE_TABLES.values():
         moves = table(0)
-        assert all(m.next_move in moves for m in moves.values())
+        for m in moves.values():
+            following = [m.next_move] if m.next_move else []
+            following += [b.move for b in m.branches] + list(m.next_by_slot)
+            assert following and all(f in moves for f in following)
 
 
 # ---------------------------------------------------------------- reading the current move
@@ -143,7 +155,7 @@ def test_high_ascension_butt_damage_is_used():
     cs = nibbit_state(HISS, ascension=9)
     enemy_turn(cs)
     enemy_turn(cs)
-    assert cs.player.current_hp == 80 - 15      # 13 + 2 Strength
+    assert cs.player.current_hp == 80 - 16      # 13 + 3 Strength
 
 def test_player_block_absorbs_a_move():
     cs = nibbit_state(BUTT)
@@ -235,13 +247,10 @@ def test_readable_shows_the_move():
 
 
 # ---------------------------------------------------------------- real bridge captures (ascension 0)
-import json
-from pathlib import Path
-
-DATA = Path(__file__).parent / "data"
+from sts2_lite.Tests import captures
 
 def captured(name):
-    return CombatState.from_dict(json.loads((DATA / f"nibbit_{name}.json").read_text()))
+    return captures.load("nibbit", name)
 
 def test_captured_hiss_turn():
     e = captured("hiss").enemies[0]
@@ -290,8 +299,8 @@ def test_captured_states_offer_actions():
 from sts2_lite.damage import modify_damage
 from sts2_lite.enemy_moves import shrinker_beetle
 
-def beetle(name="shrinker_beetle_attack"):
-    return CombatState.from_dict(json.loads((DATA / f"{name}.json").read_text()))
+def beetle(name="attack"):
+    return captures.load("shrinker_beetle", name)
 
 def beetle_bridge(intents, ascension=None, player_status=()):
     state = bridge_state(intents, entity="SHRINKER_BEETLE_0", ascension=ascension, player_status=player_status)
@@ -394,7 +403,7 @@ def test_shrink_does_not_slow_enemy_attacks():
 
 # ---- losing the debuff
 def test_shrink_ends_when_the_beetle_dies():
-    cs = CombatState.from_dict(json.loads((DATA / "shrinker_beetle_attack.json").read_text()))
+    cs = beetle("attack")
     sim = CombatSimulator(cs)
     other = type(cs.enemies[0]).deepcopy(cs.enemies[0])
     other.enemy_id = "NIBBIT_0"
@@ -440,39 +449,39 @@ def test_beetle_moves_use_no_randomness():
 
 # ---- captured beetle turns
 def test_captured_shrink_turn():
-    cs = beetle("shrinker_beetle_debuff")
+    cs = beetle("debuff")
     e = cs.enemies[0]
     assert e.move_id == "SHRINK" and e.num_attacks == 0
     assert cs.player.status_amount(StatusId.SHRINK) == 0
 
 def test_captured_stomp_turn():
-    cs = beetle("shrinker_beetle_attack_strong")
+    cs = beetle("attack_strong")
     e = cs.enemies[0]
     assert e.move_id == "STOMP"
     assert (e.attack_damage, e.num_attacks) == (13, 1)
     assert cs.player.status_amount(StatusId.SHRINK) == -1
 
 def test_captured_beetle_turns_follow_the_cycle():
-    for name, following in (("shrinker_beetle_debuff", "CHOMP"), ("shrinker_beetle_attack", "STOMP"),
-                            ("shrinker_beetle_attack_strong", "CHOMP")):
+    for name, following in (("debuff", "CHOMP"), ("attack", "STOMP"),
+                            ("attack_strong", "CHOMP")):
         cs = beetle(name)
         enemy_turn(cs)
         assert cs.enemies[0].move_id == following
 
 def test_captured_shrink_turn_debuffs_the_player():
-    cs = beetle("shrinker_beetle_debuff")
+    cs = beetle("debuff")
     enemy_turn(cs)
     assert cs.player.status_amount(StatusId.SHRINK) == -1
     assert cs.player.current_hp == 73
 
 def test_captured_stomp_hits_for_thirteen():
-    cs = beetle("shrinker_beetle_attack_strong")
+    cs = beetle("attack_strong")
     enemy_turn(cs)
     assert cs.player.current_hp == 66 - 13
 
 def test_strike_under_shrink_deals_what_the_card_shows():
     # the game shows Strike as 4 under Shrink
-    cs = beetle("shrinker_beetle_attack_strong")
+    cs = beetle("attack_strong")
     index = next(i for i, c in enumerate(cs.player.hand) if c.name == "Strike")
     CombatSimulator(cs).play_card(index, 0)
     assert cs.enemies[0].current_hp == 40 - 4
@@ -492,7 +501,7 @@ GOOP_INTENT = [{"type": "Attack", "label": "4"}]
 INHALE_INTENT = [{"type": "Buff", "label": ""}]
 
 def crawler(name):
-    return CombatState.from_dict(json.loads((DATA / f"fuzzy_wurm_crawler_{name}.json").read_text()))
+    return captures.load("fuzzy_wurm_crawler", name)
 
 def crawler_bridge(intents, round_number, ascension=None, strength=0):
     state = bridge_state(intents, entity="FUZZY_WURM_CRAWLER_0", ascension=ascension,

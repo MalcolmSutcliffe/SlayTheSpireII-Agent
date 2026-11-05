@@ -702,3 +702,121 @@ def test_damaged_enemy_rates_better_when_unfinished():
 def test_search_terminates_on_a_stalled_fight():
     action = sts2_MCTS().monte_carlo_tree_search(stalled_fight(), 100)
     assert action["action"] in ("play_card", "end_turn")
+
+
+# ---------------------------------------------------------------- random slime moves
+def _twig_m_after_clump():
+    from sts2_lite.combat import CombatState
+    cs = CombatState.from_dict({
+        "round": 2, "energy": 3, "max_energy": 3, "context": {"ascension": 0},
+        "player": {"max_hp": 80, "hp": 80, "block": 0, "status": [], "hand": [],
+                   "draw_pile": [], "discard_pile": [], "deck": []},
+        "enemies": [{"entity_id": "TWIG_SLIME_M_0", "max_hp": 27, "hp": 27, "block": 0, "status": [],
+                     "intents": [{"type": "Attack", "label": "11"}]}],
+    })
+    return cs
+
+def test_end_turn_is_a_chance_node_when_a_slime_picks_randomly():
+    from agents.MCTS import expand_node, sts2_DeterministicNode, sts2_ChanceNode
+    node = sts2_DeterministicNode(None, _twig_m_after_clump(), None)
+    expand_node(node)
+    end = next(c for c in node.children if c.action["action"] == "end_turn")
+    assert isinstance(end, sts2_ChanceNode)
+
+def test_end_turn_stays_deterministic_when_the_slime_is_forced():
+    from agents.MCTS import expand_node, sts2_DeterministicNode, sts2_ChanceNode
+    cs = _twig_m_after_clump()
+    cs.enemies[0].move_streak = 2
+    node = sts2_DeterministicNode(None, cs, None)
+    expand_node(node)
+    end = next(c for c in node.children if c.action["action"] == "end_turn")
+    assert not isinstance(end, sts2_ChanceNode)
+
+
+# ---------------------------------------------------------------- summoned enemies
+def _phrog_state(hp):
+    from sts2_lite.Tests import captures
+    cs = captures.load("phrog_parasite", "lash")
+    cs.enemies[0].current_hp = hp
+    return cs
+
+def _strike_at_phrog(node):
+    return next(c for c in node.children
+                if c.action["action"] == "play_card" and c.action["target"] == 0
+                and node.state.player.hand[c.action["card_index"]].card_id.name == "STRIKE_IRONCLAD")
+
+def test_killing_the_phrog_is_a_chance_node_because_wriggler_hp_is_random():
+    node = sts2_DeterministicNode(None, _phrog_state(1), None)
+    expand_node(node)
+    assert isinstance(_strike_at_phrog(node), sts2_ChanceNode)
+
+def test_hitting_the_phrog_without_killing_it_is_deterministic():
+    node = sts2_DeterministicNode(None, _phrog_state(50), None)
+    expand_node(node)
+    assert isinstance(_strike_at_phrog(node), sts2_DeterministicNode)
+
+def test_outcome_key_distinguishes_summoned_enemies():
+    a, b = _phrog_state(50), _phrog_state(50)
+    from sts2_lite.combat import CombatSimulator
+    CombatSimulator(b).summon(Enemy.spawn("WRIGGLER", 0, 0))
+    assert outcome_key(a) != outcome_key(b)
+
+def test_outcome_key_distinguishes_different_enemies_with_the_same_move():
+    a, b = make_state([strike()]), make_state([strike()])
+    a.enemies[0].enemy_id, b.enemies[0].enemy_id = "A_0", "B_0"
+    assert outcome_key(a) != outcome_key(b)
+
+
+# ---------------------------------------------------------------- known cards on top of the draw pile
+def known_state(known, draw):
+    cs = make_state([draw_card_in_hand()], draw=draw)
+    cs.player.known_top = known
+    return cs
+
+def draw_card_in_hand():
+    return make_card(CardId.DEFEND_IRONCLAD, "Defend", CardType.Skill, 0, TargetType.Self)
+
+def test_ending_the_turn_is_still_a_chance_node_with_no_known_cards():
+    cs = known_state(0, [strike() for _ in range(8)])
+    assert isinstance(child_for(expanded(cs), "end_turn"), sts2_ChanceNode)
+
+def test_ending_the_turn_with_five_known_cards_is_deterministic():
+    cs = known_state(5, [strike() for _ in range(8)])
+    assert isinstance(child_for(expanded(cs), "end_turn"), sts2_DeterministicNode)
+
+def test_ending_the_turn_with_four_known_cards_is_still_a_chance_node():
+    cs = known_state(4, [strike() for _ in range(8)])
+    assert isinstance(child_for(expanded(cs), "end_turn"), sts2_ChanceNode)
+
+def test_sampling_keeps_the_known_top_cards():
+    cs = known_state(1, [strike(), strike(), strike(), bash()])
+    cs.player.hand = []
+    for seed in range(10):
+        rng.seed(seed)
+        state = CombatState.deepcopy(cs)
+        state.player.shuffle_draw_pile()
+        assert state.player.draw_pile[-1].card_id == CardId.BASH
+
+def test_outcome_key_tells_known_orders_apart():
+    a = known_state(2, [defend(), strike(), bash()])
+    b = known_state(2, [defend(), bash(), strike()])
+    assert outcome_key(a) != outcome_key(b)
+
+def test_outcome_key_ignores_the_order_of_unknown_cards():
+    a = known_state(1, [defend(), strike(), bash()])
+    b = known_state(1, [strike(), defend(), bash()])
+    assert outcome_key(a) == outcome_key(b)
+
+def test_outcome_key_tells_apart_known_and_unknown():
+    a = known_state(1, [defend(), strike(), bash()])
+    b = known_state(0, [defend(), strike(), bash()])
+    assert outcome_key(a) != outcome_key(b)
+
+def test_sampled_outcomes_never_reshuffle_the_known_top_card():
+    for seed in range(10):
+        rng.seed(seed)
+        cs = known_state(1, [strike() for _ in range(12)] + [bash()])
+        cs.player.hand = [draw_card_in_hand()]
+        chance = sts2_ChanceNode(None, cs, {"action": "end_turn"})
+        child, _ = sts2_MCTS()._sample_outcome(chance)
+        assert any(c.card_id == CardId.BASH for c in child.state.player.hand)

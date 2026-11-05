@@ -307,12 +307,22 @@ def test_every_generated_action_is_legal():
             sim.perform_action(rng.choice(sim.get_available_actions()))
 
 
+NEW_POWER_CARDS = tuple(CardId[n] for n in (
+    'BARRICADE', 'COLOSSUS', 'CORRUPTION', 'CRUELTY', 'DARK_EMBRACE', 'DEMON_FORM', 'FEEL_NO_PAIN', 'FLAME_BARRIER',
+    'JUGGERNAUT', 'JUGGLING', 'ONE_TWO_PUNCH', 'PYRE', 'RAGE', 'RUPTURE', 'STAMPEDE', 'STONE_ARMOR', 'UNMOVABLE', 'VICIOUS',
+    'AGGRESSION', 'ARMAMENTS', 'BURNING_PACT', 'HAVOC', 'TRUE_GRIT',
+    'BATTLE_TRANCE', 'CASCADE', 'CONFLAGRATION', 'DRUM_OF_BATTLE', 'EXPECT_A_FIGHT', 'FORGOTTEN_RITUAL',
+    'HOWL_FROM_BEYOND', 'INFERNAL_BLADE', 'NOT_YET', 'OFFERING', 'PACTS_END',
+    'BRAND', 'HELLRAISER', 'INFERNO', 'PRIMAL_FORCE', 'STOKE', 'STOMP'))
+
 def test_every_single_target_card_rejects_a_bad_target():
     from sts2_lite.card import GET_CARD_FUNCTION
     targeted = [cid for cid, f in GET_CARD_FUNCTION.items()
                 if cid not in (CardId.DEFEND_IRONCLAD, CardId.BLOOD_WALL, CardId.SLIMED,
                                CardId.BREAKTHROUGH, CardId.SHRUG_IT_OFF, CardId.THUNDERCLAP,
-                               CardId.INFLAME, CardId.CRIMSON_MANTLE)]
+                               CardId.INFLAME, CardId.CRIMSON_MANTLE, CardId.IMPERVIOUS, CardId.EVIL_EYE,
+                                   CardId.SECOND_WIND, CardId.BLOODLETTING, CardId.WHIRLWIND,
+                                   CardId.SWORD_BOOMERANG, *NEW_POWER_CARDS)]
     assert len(targeted) >= 10
     for cid in targeted:
         cs = make_state([make_card(cid, cid.name, CardType.Attack, 1, TargetType.AnyEnemy)], enemy_count=1)

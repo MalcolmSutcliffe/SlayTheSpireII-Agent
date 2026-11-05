@@ -111,7 +111,7 @@ class sts2_MCTS:
 
         # sample from the true distribution: randomize the draw pile, then act
         state = CombatState.deepcopy(node.pre_state)
-        rng.shuffle(state.player.draw_pile)
+        state.player.shuffle_draw_pile()           # known top cards stay where they are
         sim = CombatSimulator(state)
         sim.perform_action(node.action)
         key = outcome_key(state)
@@ -197,10 +197,10 @@ def expand_node(node : sts2_Node):
     for a in actions:
         c_a = CombatSimulator(CombatState.deepcopy(node.state))
         player = c_a.combat_state.player
-        rng_calls, cards_drawn = rng.calls, player.cards_drawn
+        rng_calls, unknown_draws = rng.calls, player.unknown_draws
         c_a.perform_action(a)
-        # drawing or any rng use means the outcome is not fixed
-        is_random = rng.calls != rng_calls or player.cards_drawn != cards_drawn
+        # an unforeseeable draw or any rng use means the outcome is not fixed
+        is_random = rng.calls != rng_calls or player.unknown_draws != unknown_draws
         if is_random:
             new_child = sts2_ChanceNode(node, node.state, a)
         else:
@@ -217,7 +217,9 @@ def backpropagate(node, result):
         node = node.parent
 
 def outcome_key(state):
-    """Canonical key: hand and draw pile contents (order ignored) and each enemy's next move."""
+    """Canonical key: hand and draw pile contents (order ignored), who is on the field and their next moves."""
     p = state.player
     ids = lambda cards: tuple(sorted((c.card_id.value, c.is_upgraded) for c in cards))
-    return ids(p.hand), ids(p.draw_pile), tuple(e.move_id for e in state.enemies)
+    n = p.known_top
+    known = tuple((c.card_id.value, c.is_upgraded) for c in p.draw_pile[len(p.draw_pile) - n:]) if n else ()
+    return ids(p.hand), ids(p.draw_pile), known, tuple((e.enemy_id, e.move_id) for e in state.enemies)

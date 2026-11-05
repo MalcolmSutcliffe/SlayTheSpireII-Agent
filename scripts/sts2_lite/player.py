@@ -6,15 +6,21 @@ if TYPE_CHECKING:
 
 from sts2_lite import rng
 from sts2_lite.creature import Creature
-from sts2_lite.card import Card
+from sts2_lite.card import Card, CardId, CardType
 from sts2_lite.status import StatusInstance, StatusId
 
 class Player(Creature):
+    plating_at_turn_start = False
     hand : list[Card]
     draw_pile : list[Card]
     discard_pile : list[Card]
     exhaust_pile : list[Card]
-    cards_drawn : int       # running total; compare before and after an action
+    cards_drawn : int       # running total of cards drawn
+    unknown_draws : int     # running total of draws and top-card plays the agent could not foresee; compare before and after an action
+    inferno_plays : int      # times Inferno has been played this combat: its HP loss each turn
+    draw_hook = None         # called with each card drawn into the hand (set by the simulator for Hellraiser)
+    known_top : int         # how many cards at the end of draw_pile (the top) the agent knows the identity and order of
+    cards_exhausted_this_turn : int
 
     def __init__(self):
         super().__init__()
@@ -23,6 +29,12 @@ class Player(Creature):
         self.discard_pile = []
         self.exhaust_pile = []
         self.cards_drawn = 0
+        self.unknown_draws = 0
+        self.known_top = 0
+        self.inferno_plays = 0
+        self.attacks_played_this_turn = 0
+        self.card_blocks_this_turn = 0    # block gains from cards, for Unmovable
+        self.cards_exhausted_this_turn = 0
 
     @classmethod
     def from_dict(cls, player : dict):
@@ -44,7 +56,35 @@ class Player(Creature):
         for card in player["discard_pile"]:
             pl.discard_pile.append(Card.from_dict(card))
         pl.exhaust_pile = [Card.from_dict(card) for card in player.get("exhaust_pile", [])]
+        pl.inferno_plays = max(1, round(pl.status_amount(StatusId.INFERNO) / 7.5)) if StatusId.INFERNO in pl.status else 0
+        pl._read_growing_cards()
         return pl
+
+    def _read_growing_cards(self):
+        """Rampage and Thrash remember the damage they gained, which the bridge only shows in the card text.
+        Cards in the hand print their damage with Strength and Weak included, so that is taken back out."""
+        from sts2_lite.damage import base_from_displayed
+        for pile in (self.hand, self.draw_pile, self.discard_pile, self.exhaust_pile):
+            for card in pile:
+                if card.card_id not in (CardId.RAMPAGE, CardId.THRASH) or card.shown_damage is None:
+                    continue
+                shown = card.shown_damage
+                if pile is self.hand:
+                    shown = base_from_displayed(shown, self, Creature())
+                if card.card_id == CardId.RAMPAGE:
+                    step = 9 if card.is_upgraded else 5
+                    card.bonus_damage = max(0, round((shown - 9) / step)) * step
+                else:
+                    card.bonus_damage = max(0, shown - (6 if card.is_upgraded else 4))
+
+    def remove_displayed_tangled(self):
+        """The bridge shows attack costs with Tangled included; keep base costs."""
+        tangled = self.status_amount(StatusId.TANGLED)
+        if tangled == 0:
+            return
+        for card in self.hand + self.draw_pile + self.discard_pile + self.exhaust_pile:
+            if card.type == CardType.Attack and card.energy_cost != "X":
+                card.energy_cost = max(0, card.energy_cost - tangled)
 
     @classmethod
     def deepcopy(cls, player : Player) -> Player:
@@ -66,47 +106,146 @@ class Player(Creature):
         for card in player.discard_pile:
             new_pl.discard_pile.append(card)
         new_pl.exhaust_pile = list(player.exhaust_pile)
+        new_pl.cards_drawn = player.cards_drawn
+        new_pl.unknown_draws = player.unknown_draws
+        new_pl.known_top = player.known_top
+        new_pl.inferno_plays = player.inferno_plays
+        new_pl.cards_exhausted_this_turn = player.cards_exhausted_this_turn
+        new_pl.lost_hp_this_turn = player.lost_hp_this_turn
+        new_pl.hp_loss_events = player.hp_loss_events
+        new_pl.attacks_played_this_turn = player.attacks_played_this_turn
+        new_pl.card_blocks_this_turn = player.card_blocks_this_turn
         return new_pl
     
     def turn_start(self):
         super().turn_start()
-        self.draw_cards(5)
+        self.cards_exhausted_this_turn = 0
+        self.attacks_played_this_turn = 0
+        self.card_blocks_this_turn = 0
+        self.draw_cards(5, from_hand_draw=True)
 
         if StatusId.CRIMSON_MANTLE in self.status:
             self.apply_block(self.status[StatusId.CRIMSON_MANTLE].amount)
             self.lose_hp(1)
     
-    def draw_cards(self, num_cards : int):
+    def draw_cards(self, num_cards : int, from_hand_draw : bool = False):
         for i in range(num_cards):
-            self.draw_card()
+            self.draw_card(from_hand_draw)
 
-    def draw_card(self):
+    def draw_card(self, from_hand_draw : bool = False) -> Card | None:
+        """Draw one card and return it (None if nothing was drawn). Battle Trance stops every draw except the start-of-turn hand."""
+        if StatusId.NO_DRAW in self.status and not from_hand_draw:
+            return None
         if len(self.hand) >= 10:
-            return
+            return None
         if len(self.draw_pile) == 0:
             self.shuffle_discard_into_draw()
         if len(self.draw_pile) == 0:
-            return
-        self.hand.append(self.draw_pile.pop())
+            return None
+        card = self.draw_pile.pop()
+        self.hand.append(card)
         self.cards_drawn += 1
+        if self.known_top > 0:
+            self.known_top -= 1
+        else:
+            self.unknown_draws += 1
+        if self.draw_hook is not None:
+            self.draw_hook(card)
+        return card
 
     def shuffle_draw_pile(self):
-        rng.shuffle(self.draw_pile)
+        """Shuffle the draw pile, leaving the known cards on top where they are."""
+        if self.known_top <= 0:
+            rng.shuffle(self.draw_pile)
+            return
+        split = max(0, len(self.draw_pile) - self.known_top)
+        rest = self.draw_pile[:split]
+        rng.shuffle(rest)
+        self.draw_pile[:split] = rest
+
+    def take_top(self) -> Card | None:
+        """Remove and return the top card of the draw pile (reshuffling an empty pile first) without
+        putting it in the hand. Counts as an unforeseen draw unless the agent knew the card."""
+        if not self.draw_pile:
+            self.shuffle_discard_into_draw()
+        if not self.draw_pile:
+            return None
+        card = self.draw_pile.pop()
+        if self.known_top > 0:
+            self.known_top -= 1
+        else:
+            self.unknown_draws += 1
+        return card
+
+    def add_to_hand(self, card : Card):
+        """A card created mid-fight goes to the hand, or to the discard pile if the hand is full."""
+        if card.card_id == CardId.STOMP and self.attacks_played_this_turn:
+            card = card.cheaper_this_turn(self.attacks_played_this_turn)
+        if len(self.hand) < 10:
+            self.hand.append(card)
+        else:
+            self.discard_pile.append(card)
+
+    def reduce_stomp_costs(self):
+        """Every Stomp, wherever it is, costs 1 less this turn each time an Attack is played."""
+        for pile in (self.hand, self.draw_pile, self.discard_pile, self.exhaust_pile):
+            for i, c in enumerate(pile):
+                if c.card_id == CardId.STOMP and c.energy_cost != 0:
+                    pile[i] = c.cheaper_this_turn(1)
+
+    def restore_free_cards(self):
+        """At the end of the turn cards made free for this turn (Infernal Blade) get their cost back."""
+        for pile in (self.hand, self.draw_pile, self.discard_pile, self.exhaust_pile):
+            for i, c in enumerate(pile):
+                if c.restore_cost is not None:
+                    restored = Card.create_copy(c)
+                    restored.energy_cost, restored.restore_cost = c.restore_cost, None
+                    pile[i] = restored
+
+    def put_on_top(self, card : Card):
+        """Place a card on top of the draw pile; the agent knows what it is."""
+        self.draw_pile.append(card)
+        self.known_top += 1
+
+    def remove_from_draw_pile(self, card : Card):
+        """Remove a card from the draw pile, forgetting a known top card if it was one."""
+        index = next((i for i, c in enumerate(self.draw_pile) if c is card), None)
+        if index is None:
+            index = self.draw_pile.index(card)
+        if index >= len(self.draw_pile) - self.known_top:
+            self.known_top -= 1
+        del self.draw_pile[index]
 
     def shuffle_discard_into_draw(self):
         if not self.discard_pile:
             return
         self.draw_pile.extend(self.discard_pile)
         self.discard_pile = []
+        self.known_top = 0
         self.shuffle_draw_pile()
+
+    def upgrade_card(self, card : Card) -> Card | None:
+        """Replace a card in the hand or a pile with its upgraded version. Returns it, or None if the card
+        cannot be upgraded or is in none of the piles."""
+        if not card.is_upgradable:
+            return None
+        for pile in (self.hand, self.draw_pile, self.discard_pile, self.exhaust_pile):
+            for i, c in enumerate(pile):
+                if c is card:
+                    pile[i] = card.upgraded_copy()
+                    return pile[i]
+        return None
 
     def exhaust_card(self, card :Card):
         # the card being played is in none of the piles
-        for pile in (self.hand, self.draw_pile, self.discard_pile):
-            if card in pile:
-                pile.remove(card)
-                break
+        if card in self.hand:
+            self.hand.remove(card)
+        elif card in self.draw_pile:
+            self.remove_from_draw_pile(card)
+        elif card in self.discard_pile:
+            self.discard_pile.remove(card)
         self.exhaust_pile.append(card)
+        self.cards_exhausted_this_turn += 1
 
     def readable(self) -> str:
         output = ""
