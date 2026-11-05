@@ -4,19 +4,25 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from sts2_lite.combat import Player
 
-import random
-
+from sts2_lite import rng
 from sts2_lite.creature import Creature
 from sts2_lite.card import Card
 from sts2_lite.status import StatusInstance, StatusId
 
 class Player(Creature):
-    hand : list[Card] = []
-    draw_pile : list[Card] = []
-    discard_pile : list[Card] = []
+    hand : list[Card]
+    draw_pile : list[Card]
+    discard_pile : list[Card]
+    exhaust_pile : list[Card]
+    cards_drawn : int       # running total; compare before and after an action
 
     def __init__(self):
         super().__init__()
+        self.hand = []
+        self.draw_pile = []
+        self.discard_pile = []
+        self.exhaust_pile = []
+        self.cards_drawn = 0
 
     @classmethod
     def from_dict(cls, player : dict):
@@ -37,6 +43,7 @@ class Player(Creature):
         pl.discard_pile = []
         for card in player["discard_pile"]:
             pl.discard_pile.append(Card.from_dict(card))
+        pl.exhaust_pile = [Card.from_dict(card) for card in player.get("exhaust_pile", [])]
         return pl
 
     @classmethod
@@ -58,6 +65,7 @@ class Player(Creature):
         new_pl.discard_pile = []
         for card in player.discard_pile:
             new_pl.discard_pile.append(card)
+        new_pl.exhaust_pile = list(player.exhaust_pile)
         return new_pl
     
     def turn_start(self):
@@ -80,21 +88,25 @@ class Player(Creature):
         if len(self.draw_pile) == 0:
             return
         self.hand.append(self.draw_pile.pop())
+        self.cards_drawn += 1
+
+    def shuffle_draw_pile(self):
+        rng.shuffle(self.draw_pile)
 
     def shuffle_discard_into_draw(self):
+        if not self.discard_pile:
+            return
         self.draw_pile.extend(self.discard_pile)
-        random.shuffle(self.draw_pile)
+        self.discard_pile = []
+        self.shuffle_draw_pile()
 
     def exhaust_card(self, card :Card):
-        if card in self.hand:
-            self.hand.remove(card)
-            return
-        if card in self.draw_pile:
-            self.draw_pile.remove(card)
-            return
-        if card in self.discard_pile:
-            self.discard_pile.remove(card)
-            return
+        # the card being played is in none of the piles
+        for pile in (self.hand, self.draw_pile, self.discard_pile):
+            if card in pile:
+                pile.remove(card)
+                break
+        self.exhaust_pile.append(card)
 
     def readable(self) -> str:
         output = ""

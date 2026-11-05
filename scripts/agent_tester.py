@@ -7,7 +7,7 @@ from sts2_lite.combat import CombatState, CombatSimulator
 import json
 import subprocess
 
-DO_INTERNAL = False
+DO_INTERNAL = True
 
 
 def act(action):
@@ -24,16 +24,20 @@ def act(action):
             subprocess.run(["cli-anything-sts2", "play-card", str(action["card_index"])])
 
 def run_agent(agent : BaseAgent):
-    game_state = subprocess.run(["cli-anything-sts2", "state"], capture_output=True, text=True)
-    game_state = json.loads(game_state.stdout)
-    combat_state = CombatState.from_dict(game_state)
+    
     
     if DO_INTERNAL:
+        with open("example_output.json", "r") as f:
+            game_state = json.load(f)
+        combat_state = CombatState.from_dict(game_state)
         c = CombatSimulator(combat_state)
         # c.perform_action({'action': 'play_card', 'card_index': 3, 'target': 1, 'target_name': 'PHANTASMAL_GARDENER_1'})
         action = agent.get_action(c.combat_state)
         print(action)
     else:
+        game_state = subprocess.run(["cli-anything-sts2", "state"], capture_output=True, text=True)
+        game_state = json.loads(game_state.stdout)
+        combat_state = CombatState.from_dict(game_state)
         while True:
             input("waiting for input ... \n")
             game_state = subprocess.run(["cli-anything-sts2", "state"], capture_output=True, text=True)
@@ -53,8 +57,6 @@ def main():
     run_agent(agent)
     
     
-
-
 
 if __name__ == "__main__":
     main()
