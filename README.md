@@ -28,9 +28,6 @@ No functionality
 
 ## STS2_Lite
 
-Refactor code with event manager "hooks"
- - Make sure when copied, the event system is distinct
-
 Add Enemy Ais (Currently assumes enemy will make the same move when looking ahead)
  - [x] Act 1 Overgrowth
  - [ ] Act 1 Underdocks
