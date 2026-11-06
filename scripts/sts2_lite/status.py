@@ -8,9 +8,10 @@ if TYPE_CHECKING:
 from enum import Enum, auto
 
 from sts2_lite import rng
-from sts2_lite.events import EventType
+from sts2_lite.events import EventType, HandlerTable
 
 class StatusId(Enum):
+    __hash__ = object.__hash__      # members are singletons; Enum.__hash__ is pure Python
     STRENGTH = auto()
     WEAK = auto()
     VULNERABLE = auto()
@@ -48,6 +49,7 @@ class StatusId(Enum):
     DEMON_FORM = auto()
     FEEL_NO_PAIN = auto()
     FLAME_BARRIER = auto()
+    DIAMOND_DIADEM = auto()
     JUGGERNAUT = auto()
     JUGGLING = auto()
     ONE_TWO_PUNCH = auto()
@@ -111,6 +113,7 @@ STATUS_BEAVIOURS : dict[StatusId, StatusBehaviour] = {
     StatusId.DEMON_FORM : StatusBehaviour.STATIC,
     StatusId.FEEL_NO_PAIN : StatusBehaviour.STATIC,
     StatusId.FLAME_BARRIER : StatusBehaviour.STATIC,
+    StatusId.DIAMOND_DIADEM : StatusBehaviour.STATIC,
     StatusId.JUGGERNAUT : StatusBehaviour.STATIC,
     StatusId.JUGGLING : StatusBehaviour.STATIC,
     StatusId.ONE_TWO_PUNCH : StatusBehaviour.STATIC,
@@ -233,7 +236,7 @@ def _juggernaut_on_block_gained(combat : CombatSimulator, owner : Creature, amou
     living = [e for e in combat.combat_state.enemies if e.current_hp > 0]
     if living:
         target = living[0] if len(living) == 1 else rng.choice(living)
-        target.apply_damage(amount)
+        target.apply_damage(amount, owner)
 
 def _rage_on_card_played(combat : CombatSimulator, owner : Creature, amount : int, card):
     from sts2_lite.card import CardType     # card.py imports this module
@@ -245,6 +248,9 @@ def _rage_on_end_turn(combat : CombatSimulator, owner : Creature, amount : int):
 
 def _flame_barrier_on_enemy_turn_end(combat : CombatSimulator, owner : Creature, amount : int):
     del owner.status[StatusId.FLAME_BARRIER]
+
+def _diamond_diadem_on_enemy_turn_end(combat : CombatSimulator, owner : Creature, amount : int):
+    del owner.status[StatusId.DIAMOND_DIADEM]
 
 def _one_two_punch_on_end_turn(combat : CombatSimulator, owner : Creature, amount : int):
     del owner.status[StatusId.ONE_TWO_PUNCH]
@@ -287,7 +293,7 @@ def _inferno_on_turn_start(combat : CombatSimulator, owner : Creature, amount : 
     owner.lose_hp(max(1, owner.inferno_plays))
     combat._after_hp_loss(mark)
 
-STATUS_HANDLERS : dict[tuple[StatusId, EventType], Callable] = {
+STATUS_HANDLERS : dict[tuple[StatusId, EventType], Callable] = HandlerTable({
     (StatusId.INFERNO, EventType.PLAYER_TURN_START) : _inferno_on_turn_start,
     (StatusId.RITUAL, EventType.ENEMY_TURN_END) : _ritual_on_enemy_turn_end,
     (StatusId.TERRITORIAL, EventType.ENEMY_TURN_END) : _territorial_on_enemy_turn_end,
@@ -309,8 +315,9 @@ STATUS_HANDLERS : dict[tuple[StatusId, EventType], Callable] = {
     (StatusId.RAGE, EventType.CARD_PLAYED) : _rage_on_card_played,
     (StatusId.RAGE, EventType.END_TURN) : _rage_on_end_turn,
     (StatusId.FLAME_BARRIER, EventType.ENEMY_TURN_END) : _flame_barrier_on_enemy_turn_end,
+    (StatusId.DIAMOND_DIADEM, EventType.ENEMY_TURN_END) : _diamond_diadem_on_enemy_turn_end,
     (StatusId.ONE_TWO_PUNCH, EventType.END_TURN) : _one_two_punch_on_end_turn,
     (StatusId.JUGGLING, EventType.CARD_PLAYED) : _juggling_on_card_played,
     (StatusId.AGGRESSION, EventType.BEFORE_PLAYER_TURN) : _aggression_on_before_player_turn,
     (StatusId.STAMPEDE, EventType.PLAY_PHASE_END) : _stampede_on_end_turn,
-}
+})

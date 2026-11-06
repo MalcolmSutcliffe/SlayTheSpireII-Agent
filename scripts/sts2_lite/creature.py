@@ -5,7 +5,7 @@ if TYPE_CHECKING:
     from sts2_lite.combat import CombatSimulator, CombatState
 
 from sts2_lite.status import StatusInstance, StatusId, is_debuff
-from sts2_lite.relic import RelicId, STURDY_CLAMP_BLOCK, modify_hp_loss
+from sts2_lite.relic import RelicId, STURDY_CLAMP_BLOCK, modify_hp_loss, dealt_hp_loss, after_damage_given
 
 class Creature:
     max_hp : int
@@ -62,32 +62,41 @@ class Creature:
     def turn_end(self):
         pass
 
-    def apply_attack_damage(self, damage :int, sender : Creature, hits : int = 1):
+    def apply_attack_damage(self, damage :int, sender : Creature, hits : int = 1, recompute=None):
+        """`recompute`: damage is re-modified per hit (each hit is its own CreatureCmd.Damage)."""
         first_attack = not self.has_been_attacked_this_turn
         self.has_been_attacked_this_turn = True
-        for _ in range(hits):
+        for hit in range(hits):
             if sender.current_hp <= 0:
                 break
+            if hit and recompute is not None:
+                damage = recompute()
             if StatusId.THORNS in self.status:
-                sender.apply_damage(self.status[StatusId.THORNS].amount)
-            self.apply_damage(damage)
+                sender.apply_damage(self.status[StatusId.THORNS].amount, self)
+            self.apply_damage(damage, sender, True)
             if StatusId.FLAME_BARRIER in self.status:       # after the hit, unlike Thorns
-                sender.apply_damage(self.status[StatusId.FLAME_BARRIER].amount)
+                sender.apply_damage(self.status[StatusId.FLAME_BARRIER].amount, self)
         if first_attack and StatusId.SKITTISH in self.status:
             self.apply_block(self.status[StatusId.SKITTISH].amount)
 
-    def apply_damage(self, damage: int):
+    def apply_damage(self, damage: int, dealer : Creature | None = None, powered : bool = False):
+        """`dealer`: who deals it (player relics react); `powered`: an attack (ValueProp.IsPoweredAttack)."""
         if damage <= 0:
             return
-
+        broken = False
         if self.block > 0:
-            if self.block >= damage:
+            if self.block > damage:
                 self.block -= damage
                 return
-            else:
-                damage -= self.block
-                self.block = 0
-        
+            damage -= self.block
+            self.block = 0
+            broken = True
+        if damage > 0:
+            self._lose_hp_from_damage(damage, dealer, powered)
+        if dealer is not None and dealer.relics and dealer is not self:
+            after_damage_given(dealer, self, broken)
+
+    def _lose_hp_from_damage(self, damage : int, dealer : Creature | None, powered : bool):
         if StatusId.SLIPPERY in self.status and self.status[StatusId.SLIPPERY].amount > 0:
             damage = 1
             self.status[StatusId.SLIPPERY].amount -= 1
@@ -98,6 +107,8 @@ class Creature:
             damage = modify_hp_loss(self, damage)
             if damage <= 0:
                 return
+        if powered and dealer is not None and dealer.relics and dealer is not self:
+            damage = dealt_hp_loss(dealer, damage)        # The Boot (AfterOstyLate: after Slippery)
 
         self.current_hp -= damage
         self.lost_hp_this_turn = True
@@ -121,6 +132,8 @@ class Creature:
         self.block += block
 
     def apply_status(self, status: StatusId, amount : int, bypass_artifact : bool = False):
+        if self.current_hp <= 0:
+            return                  # dead creatures receive no powers (Creature.CanReceivePowers)
         if not bypass_artifact and StatusId.ARTIFACT in self.status and is_debuff(status, amount):
             self.status[StatusId.ARTIFACT].amount -= 1      # Artifact negates the whole debuff
             if self.status[StatusId.ARTIFACT].amount <= 0:

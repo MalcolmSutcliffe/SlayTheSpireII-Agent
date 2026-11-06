@@ -13,16 +13,18 @@ from enum import Enum, auto
 from sts2_lite import rng
 from sts2_lite.events import EventType
 from sts2_lite.status import StatusId
-from sts2_lite.relic import block_multiplier, block_gained, debuff_multiplier, x_bonus, before_card_played, snapshot, restore
+from sts2_lite.relic import block_multiplier, block_gained, debuff_multiplier, x_bonus, before_card_played, snapshot, restore, RelicId, extra_plays, free_by_relic, blocks_play
 
 
 class CardType(Enum):
+    __hash__ = object.__hash__      # members are singletons; Enum.__hash__ is pure Python
     Power = auto()
     Skill = auto()
     Attack = auto()
     Status = auto()
 
 class CardId(Enum):
+    __hash__ = object.__hash__      # members are singletons; Enum.__hash__ is pure Python
     STRIKE_IRONCLAD = auto()
     DEFEND_IRONCLAD = auto()
     BASH = auto()
@@ -46,6 +48,7 @@ class CardId(Enum):
     TWIN_STRIKE = auto()
     DAZED = auto()
     WOUND = auto()
+    SOOT = auto()
     BREAK = auto()
     HEMOKINESIS = auto()
     DISMANTLE = auto()
@@ -123,18 +126,45 @@ UPGRADE_COST_CHANGE = {
     CardId.BODY_SLAM : -1, CardId.HELLRAISER : -1,
 }
 
+class CardKeyword(Enum):
+    """Entities.Cards.CardKeyword (None omitted). Values are bits: cards store keywords as an int mask (Enum hashing is slow)."""
+    EXHAUST = 1
+    ETHEREAL = 2
+    INNATE = 4
+    UNPLAYABLE = 8
+    RETAIN = 16
+    SLY = 32
+    ETERNAL = 64
+
+_EXHAUST, _ETHEREAL, _UNPLAYABLE, _RETAIN = 1, 2, 8, 16
+
 # cards with the Exhaust keyword
 EXHAUSTING_CARDS = frozenset({CardId.SLIMED, CardId.TREMBLE, CardId.IMPERVIOUS, CardId.MOLTEN_FIST,
                               CardId.FEED, CardId.DOMINATE, CardId.FIEND_FIRE, CardId.FORGOTTEN_RITUAL,
                               CardId.INFERNAL_BLADE, CardId.NOT_YET, CardId.OFFERING})
 
 # cards with the Unplayable keyword
-UNPLAYABLE_CARDS = frozenset({CardId.DAZED, CardId.WOUND, CardId.INFECTION})
+UNPLAYABLE_CARDS = frozenset({CardId.DAZED, CardId.WOUND, CardId.INFECTION, CardId.SOOT})
 
 # cards with the Ethereal keyword: exhausted instead of discarded if still in hand at end of turn
 ETHEREAL_CARDS = frozenset({CardId.DAZED})
 
+def _set_canonical_keywords():
+    """CardModel.CanonicalKeywords, stored as a mask on each CardId member."""
+    for card_id in CardId:
+        card_id.keyword_mask = ((_EXHAUST if card_id in EXHAUSTING_CARDS else 0) | (_ETHEREAL if card_id in ETHEREAL_CARDS else 0)
+                                | (_UNPLAYABLE if card_id in UNPLAYABLE_CARDS else 0))
+
+_set_canonical_keywords()
+
+def keyword_mask(keywords) -> int:
+    mask = 0
+    for k in keywords:
+        mask |= k.value
+    return mask
+
 class TargetType(Enum):
+    __hash__ = object.__hash__      # members are singletons; Enum.__hash__ is pure Python
     AnyEnemy = auto()
     AllEnemies = auto()
     Self = auto()
@@ -152,17 +182,44 @@ class Card:
     restore_cost : int | str | None = None     # set while the cost is changed for this turn: the cost it gets back
     bonus_damage : int = 0                     # damage Rampage and Thrash have gained this combat
     shown_damage : int | None = None           # the damage printed on the card when it was loaded from the game
+    _keywords : int | None = None              # keyword mask; None: the card's canonical keywords
 
     def __init__(self):
         pass
 
     @property
+    def _mask(self) -> int:
+        return self._keywords if self._keywords is not None else self.card_id.keyword_mask
+
+    @property
+    def keywords(self) -> frozenset[CardKeyword]:
+        mask = self._mask
+        return frozenset(k for k in CardKeyword if mask & k.value)
+
+    def with_keyword(self, keyword : CardKeyword) -> Card:
+        """A copy with `keyword` added (CardCmd.ApplyKeyword); cards are shared between states, so never in place."""
+        mask = self._mask
+        if mask & keyword.value:
+            return self
+        new_card = Card.create_copy(self)
+        new_card._keywords = mask | keyword.value
+        return new_card
+
+    @property
     def exhausts(self) -> bool:
-        return self.card_id in EXHAUSTING_CARDS
+        return bool(self._mask & _EXHAUST)
 
     @property
     def ethereal(self) -> bool:
-        return self.card_id in ETHEREAL_CARDS
+        return bool(self._mask & _ETHEREAL)
+
+    @property
+    def unplayable(self) -> bool:
+        return bool(self._mask & _UNPLAYABLE)
+
+    @property
+    def retains(self) -> bool:
+        return bool(self._mask & _RETAIN)
 
     @classmethod
     def from_dict(cls, card : dict):
@@ -176,6 +233,8 @@ class Card:
         else:
             new_card.energy_cost = int(card["cost"])
         new_card.is_upgraded = card["is_upgraded"]
+        if card.get("card_keywords") is not None:       # CardModel.Keywords; older bridges only send hover tips
+            new_card._keywords = keyword_mask(CardKeyword[k.upper()] for k in card["card_keywords"] if k.upper() in CardKeyword.__members__)
         if new_card.card_id == CardId.STOMP and new_card.energy_cost < 3:
             new_card.restore_cost = 3           # the shown cost already includes this turn's Attacks
         match = re.search(r"Deal\s+(\d+)", card.get("description") or "")
@@ -216,6 +275,15 @@ class Card:
     def create_wound(cls) -> Card:
         c = cls()
         c.card_id, c.name, c.type = CardId.WOUND, "Wound", CardType.Status
+        c.energy_cost, c.target_type = 0, TargetType.NONE
+        c.is_upgraded = False
+        c.is_unplayable = True
+        return c
+
+    @classmethod
+    def create_soot(cls) -> Card:
+        c = cls()
+        c.card_id, c.name, c.type = CardId.SOOT, "Soot", CardType.Status
         c.energy_cost, c.target_type = 0, TargetType.NONE
         c.is_upgraded = False
         c.is_unplayable = True
@@ -280,6 +348,7 @@ class Card:
         new_card.is_unplayable = card.is_unplayable
         new_card.restore_cost = card.restore_cost
         new_card.bonus_damage = card.bonus_damage
+        new_card._keywords = card._keywords
         return new_card
 
     def current_cost(self, player) -> int | str:
@@ -288,13 +357,14 @@ class Card:
             return self.energy_cost
         if self.type == CardType.Skill and StatusId.CORRUPTION in player.status:
             return 0
-        if self.type != CardType.Attack:
-            return self.energy_cost
-        return self.energy_cost + player.status_amount(StatusId.TANGLED)
+        cost = self.energy_cost if self.type != CardType.Attack else self.energy_cost + player.status_amount(StatusId.TANGLED)
+        if player.relics and _SCARF in player.relics and free_by_relic(player):
+            return 0                # Brilliant Scarf (TryModifyEnergyCostInCombatLate)
+        return cost
 
     def play_card(self, combat : CombatSimulator, target_index : int, free : bool = False):
         """Play the card. Raises ValueError if it cannot be played; state is restored.
-        A free play (auto-play) costs nothing and does not use up Free Attack."""
+        A free play (auto-play) costs nothing but still consumes Free Attack (FreeAttackPower.BeforeCardPlayed)."""
         player = combat.combat_state.player
         energy = combat.combat_state.energy
         cost = 0 if free else self.current_cost(player)
@@ -302,18 +372,22 @@ class Card:
         free_attack_amount = free_attack.amount if free_attack else 0
         play = GET_CARD_FUNCTION[self.card_id]
         saved = snapshot(player) if player.relics else None
+        punch = player.status.get(StatusId.ONE_TWO_PUNCH) if self.type == CardType.Attack else None
+        x = None
 
         try:
+            extra = self._extra_plays(player, punch)
             if self.energy_cost == "X":
                 x = energy + x_bonus(player) if player.relics else energy        # Chemical X
+                spent = 0 if free else energy
                 if saved:
-                    before_card_played(combat, self, 0 if free else energy)
+                    before_card_played(combat, self, spent)
                 if not free:
                     combat.combat_state.energy = 0
                 play(self, combat, target_index, self.is_upgraded, x)
             else:
                 spent = cost
-                if self.type == CardType.Attack and free_attack_amount > 0 and not free:
+                if self.type == CardType.Attack and free_attack_amount > 0:
                     free_attack.amount -= 1
                     combat.combat_state.energy += cost
                     spent = 0
@@ -327,18 +401,36 @@ class Card:
                 free_attack.amount = free_attack_amount
             if saved:
                 restore(player, saved)
+            combat.vigor_pending = None
+            if punch is not None:
+                punch.amount += 1
+                player.status[StatusId.ONE_TWO_PUNCH] = punch
             raise
+        combat.finish_vigor()
 
-        if self.type == CardType.Attack and StatusId.ONE_TWO_PUNCH in player.status:
-            self._replay(combat, target_index, x if self.energy_cost == "X" else None)
+        for _ in range(extra):
+            combat.card_played_hooks(self)          # AfterCardPlayed of the previous play
+            if not any(e.current_hp > 0 for e in combat.combat_state.enemies):
+                break
+            if saved:
+                before_card_played(combat, self, spent)
+            self._replay(combat, target_index, x)
+            combat.finish_vigor()           # each play is its own attack command
+
+    def _extra_plays(self, player, punch) -> int:
+        """CardModel.GeneratePlayCount: One-Two Punch (decremented), Throwing Axe. Before the first play."""
+        extra = 0
+        if punch is not None:
+            extra += 1
+            punch.amount -= 1
+            if punch.amount <= 0:
+                del player.status[StatusId.ONE_TWO_PUNCH]
+        if player.relics and _AXE in player.relics:
+            extra += extra_plays(player)
+        return extra
 
     def _replay(self, combat : CombatSimulator, target_index : int, x):
-        """One-Two Punch: play an attack a second time, skipping a target that has died."""
-        player = combat.combat_state.player
-        punch = player.status[StatusId.ONE_TWO_PUNCH]
-        punch.amount -= 1
-        if punch.amount <= 0:
-            del player.status[StatusId.ONE_TWO_PUNCH]
+        """A further play (each fires Before/AfterCardPlayed); a dead target's effect is skipped."""
         if self.target_type == TargetType.AnyEnemy and combat.combat_state.enemies[target_index].current_hp <= 0:
             return
         if x is None:
@@ -347,10 +439,12 @@ class Card:
             GET_CARD_FUNCTION[self.card_id](self, combat, target_index, self.is_upgraded, x)
 
     def can_play_card(self, combat : CombatSimulator, target_index):
-        if self.is_unplayable:
+        if self.is_unplayable or self.unplayable:
             return False
         if StatusId.RINGING in combat.combat_state.player.status and combat.combat_state.cards_played >= 1:
             return False
+        if combat.combat_state.player.relics and _CHOKER in combat.combat_state.player.relics and blocks_play(combat.combat_state.player):
+            return False            # Velvet Choker
         if type(self.energy_cost) is str and self.energy_cost == "X":
             return True
         if self.type == CardType.Attack and StatusId.FREE_ATTACK in combat.combat_state.player.status:
@@ -359,6 +453,8 @@ class Card:
         if self.current_cost(combat.combat_state.player) <= combat.combat_state.energy:
             return True
         return False
+
+_SCARF, _CHOKER, _AXE = RelicId.BRILLIANT_SCARF, RelicId.VELVET_CHOKER, RelicId.THROWING_AXE
 
 ###
 ### Helpers
@@ -374,13 +470,24 @@ def _living(combat : CombatSimulator) -> list[Enemy]:
 
 def _attack(combat : CombatSimulator, base : int, target : Creature, hits : int = 1):
     owner = combat.combat_state.player
-    target.apply_attack_damage(combat.calculate_damage(base, owner, target), owner, hits)
+    base += combat.vigor_bonus()
+    recompute = None
+    if hits > 1 and RelicId.HAND_DRILL in owner.relics:     # a broken block makes later hits Vulnerable
+        recompute = lambda: combat.calculate_damage(base, owner, target)
+    target.apply_attack_damage(combat.calculate_damage(base, owner, target), owner, hits, recompute)
 
 def _gain_block(combat : CombatSimulator, base : int):
-    # Unmovable doubles the first block gains from cards each turn
+    # Unmovable: doubled while gains from *other* plays this turn < amount (UnmovablePower)
     owner = combat.combat_state.player
-    doubled = owner.card_blocks_this_turn < owner.status_amount(StatusId.UNMOVABLE)
+    play = combat.play_id
+    same_play = play is not None and owner.block_play == play
+    from_other_plays = owner.card_blocks_this_turn - (owner.block_play_gains if same_play else 0)
+    doubled = from_other_plays < owner.status_amount(StatusId.UNMOVABLE)
     owner.card_blocks_this_turn += 1
+    if same_play:
+        owner.block_play_gains += 1
+    else:
+        owner.block_play, owner.block_play_gains = play, 1
     multiplier = 2 if doubled else 1
     if owner.relics:
         multiplier *= block_multiplier(owner, combat.card_in_play)     # Vambrace
@@ -541,7 +648,7 @@ def play_cascade(card: Card, combat : CombatSimulator, target_index=0, is_upgrad
     for top in taken:
         if combat.is_over:
             break
-        if top.card_id in UNPLAYABLE_CARDS:
+        if top.unplayable:
             player.discard_pile.append(top)         # an unplayable card goes to the discard pile unplayed
         else:
             combat.auto_play(top)
@@ -569,7 +676,9 @@ def play_corruption(card: Card, combat : CombatSimulator, target_index=0, is_upg
         player.apply_status(StatusId.CORRUPTION, 1)
 
 def play_crimson_mantle(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    combat.combat_state.player.apply_status(StatusId.CRIMSON_MANTLE, 10 if is_upgraded else 8)
+    player = combat.combat_state.player
+    player.apply_status(StatusId.CRIMSON_MANTLE, 10 if is_upgraded else 8)
+    player.crimson_mantle_plays += 1        # self-damage per turn (CrimsonMantlePower.IncrementSelfDamage)
 
 def play_cruelty(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     combat.combat_state.player.apply_status(StatusId.CRUELTY, 50 if is_upgraded else 25)
@@ -655,7 +764,7 @@ def play_havoc(card: Card, combat : CombatSimulator, target_index=0, is_upgraded
     top = player.draw_pile[-1]
     if player.known_top == 0:
         player.unknown_draws += 1   # the top card is unknown to the agent, so this is a chance event
-    if top.type == CardType.Status:
+    if top.unplayable:                          # CardCmd.AutoPlay skips only Unplayable
         player.exhaust_card(top)
         combat.fire(EventType.CARD_EXHAUSTED, top)
     else:
@@ -855,7 +964,9 @@ def play_thrash(card: Card, combat : CombatSimulator, target_index=0, is_upgrade
     if attacks:
         victim = attacks[0] if len(attacks) == 1 else rng.choice(attacks)
         from sts2_lite.creature import Creature      # card.py is imported by creature.py's package
-        card.bonus_damage += combat.calculate_damage(_printed_damage(victim, combat), player, Creature())
+        from sts2_lite.damage import modify_damage
+        # relics read the victim, not Thrash (Thrash.OnPlay)
+        card.bonus_damage += modify_damage(_printed_damage(victim, combat), player, Creature(), victim, in_play=False)
         player.exhaust_card(victim)
         combat.fire(EventType.CARD_EXHAUSTED, victim)
 
@@ -1098,4 +1209,5 @@ GENERATED_CARDS = {
     CardId.INFECTION : Card.create_infection,
     CardId.DAZED : Card.create_dazed,
     CardId.WOUND : Card.create_wound,
+    CardId.SOOT : Card.create_soot,
 }

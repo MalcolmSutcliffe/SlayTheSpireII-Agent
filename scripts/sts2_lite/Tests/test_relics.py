@@ -52,7 +52,7 @@ def test_a_relic_is_loaded_from_the_bridge():
     assert list(pl.relics) == [RelicId.STRIKE_DUMMY]
 
 def test_relics_without_a_combat_effect_are_ignored():
-    pl = Player.from_dict(bridge_player([bridge_relic("BURNING_BLOOD"), bridge_relic("STRIKE_DUMMY"),
+    pl = Player.from_dict(bridge_player([bridge_relic("FISHING_ROD"), bridge_relic("STRIKE_DUMMY"),
                                          bridge_relic("SOME_NEW_RELIC")]))
     assert list(pl.relics) == [RelicId.STRIKE_DUMMY]
 

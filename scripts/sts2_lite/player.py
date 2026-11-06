@@ -6,9 +6,11 @@ if TYPE_CHECKING:
 
 from sts2_lite import rng
 from sts2_lite.creature import Creature
-from sts2_lite.card import Card, CardId, CardType
+from sts2_lite.card import Card, CardId, CardType, CardKeyword
 from sts2_lite.status import StatusInstance, StatusId
-from sts2_lite.relic import RelicId, RelicInstance, strength_received, lizard_tail_revive, hand_draw_bonus
+from sts2_lite.relic import RelicId, RelicInstance, strength_received, lizard_tail_revive, hand_draw_bonus, blocks_draw
+
+GHOST_SEED_CARDS = frozenset({CardId.STRIKE_IRONCLAD, CardId.DEFEND_IRONCLAD})     # Basic rarity, Strike or Defend tag
 
 class Player(Creature):
     plating_at_turn_start = False
@@ -22,6 +24,7 @@ class Player(Creature):
     inferno_plays : int      # times Inferno has been played this combat: its HP loss each turn
     shuffle_hook = None      # called when the discard pile is shuffled into the draw pile (set by the simulator)
     draw_hook = None         # called with each card drawn into the hand (set by the simulator for Hellraiser)
+    block_cleared_hook = None    # called after block is cleared, before the hand draw (AfterBlockCleared)
     known_top : int         # how many cards at the end of draw_pile (the top) the agent knows the identity and order of
     cards_exhausted_this_turn : int
 
@@ -36,8 +39,11 @@ class Player(Creature):
         self.unknown_draws = 0
         self.known_top = 0
         self.inferno_plays = 0
+        self.crimson_mantle_plays = 0   # Crimson Mantle self-damage per turn
         self.attacks_played_this_turn = 0
         self.card_blocks_this_turn = 0    # block gains from cards, for Unmovable
+        self.block_play = None            # play_id of the latest card block gain
+        self.block_play_gains = 0         # gains made by that play
         self.cards_exhausted_this_turn = 0
 
     @classmethod
@@ -63,9 +69,20 @@ class Player(Creature):
         for relic in map(RelicInstance.from_dict, player.get("relics", [])):
             if relic is not None:
                 pl.relics[relic.relic_id] = relic
+        if RelicId.GHOST_SEED in pl.relics:
+            pl._apply_ghost_seed()
         pl.inferno_plays = max(1, round(pl.status_amount(StatusId.INFERNO) / 7.5)) if StatusId.INFERNO in pl.status else 0
+        # copies inferred from block amount (8 or 10 each)
+        pl.crimson_mantle_plays = max(1, round(pl.status_amount(StatusId.CRIMSON_MANTLE) / 9)) if StatusId.CRIMSON_MANTLE in pl.status else 0
         pl._read_growing_cards()
         return pl
+
+    def _apply_ghost_seed(self):
+        """GhostSeed.CanAffect: basic Strikes and Defends are Ethereal (idempotent if the bridge already sent it)."""
+        for pile in (self.hand, self.draw_pile, self.discard_pile, self.exhaust_pile):
+            for i, c in enumerate(pile):
+                if c.card_id in GHOST_SEED_CARDS:
+                    pile[i] = c.with_keyword(CardKeyword.ETHEREAL)
 
     def _read_growing_cards(self):
         """Rampage and Thrash remember the damage they gained, which the bridge only shows in the card text.
@@ -118,6 +135,9 @@ class Player(Creature):
         new_pl.unknown_draws = player.unknown_draws
         new_pl.known_top = player.known_top
         new_pl.inferno_plays = player.inferno_plays
+        new_pl.crimson_mantle_plays = player.crimson_mantle_plays
+        new_pl.block_play = player.block_play
+        new_pl.block_play_gains = player.block_play_gains
         new_pl.cards_exhausted_this_turn = player.cards_exhausted_this_turn
         new_pl.lost_hp_this_turn = player.lost_hp_this_turn
         new_pl.hp_loss_events = player.hp_loss_events
@@ -134,11 +154,14 @@ class Player(Creature):
         self.cards_exhausted_this_turn = 0
         self.attacks_played_this_turn = 0
         self.card_blocks_this_turn = 0
+        self.block_play, self.block_play_gains = None, 0
+        if self.block_cleared_hook is not None:
+            self.block_cleared_hook()
         self.draw_cards(5 + hand_draw_bonus(self) if self.relics else 5, from_hand_draw=True)
 
         if StatusId.CRIMSON_MANTLE in self.status:
+            self.lose_hp(max(1, self.crimson_mantle_plays))
             self.apply_block(self.status[StatusId.CRIMSON_MANTLE].amount)
-            self.lose_hp(1)
     
     def apply_status(self, status : StatusId, amount : int, bypass_artifact : bool = False):
         if status is StatusId.STRENGTH and amount > 0 and self.relics:
@@ -155,8 +178,8 @@ class Player(Creature):
             self.draw_card(from_hand_draw)
 
     def draw_card(self, from_hand_draw : bool = False) -> Card | None:
-        """Draw one card and return it (None if nothing was drawn). Battle Trance stops every draw except the start-of-turn hand."""
-        if StatusId.NO_DRAW in self.status and not from_hand_draw:
+        """Draw one card and return it (None if nothing was drawn). Battle Trance and Fiddle stop every draw except the start-of-turn hand."""
+        if not from_hand_draw and (StatusId.NO_DRAW in self.status or (self.relics and blocks_draw(self))):
             return None
         if len(self.hand) >= 10:
             return None

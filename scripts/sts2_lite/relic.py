@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Callable
 from enum import Enum, auto
 
 from sts2_lite import rng
-from sts2_lite.events import EventType
+from sts2_lite.events import EventType, HandlerTable
 from sts2_lite.status import StatusId
 
 if TYPE_CHECKING:
@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 
 
 class RelicId(Enum):
+    __hash__ = object.__hash__      # members are singletons; Enum.__hash__ is pure Python
     STRIKE_DUMMY = auto()
     MINIATURE_CANNON = auto()
     PAPER_PHROG = auto()
@@ -71,6 +72,35 @@ class RelicId(Enum):
     DEMON_TONGUE = auto()
     RED_SKULL = auto()
     SELF_FORMING_CLAY = auto()
+    BREAD = auto()
+    MEAT_ON_THE_BONE = auto()
+    BURNING_BLOOD = auto()
+    BLACK_BLOOD = auto()
+    GHOST_SEED = auto()
+    SAI = auto()
+    MR_STRUGGLES = auto()
+    PAELS_TEARS = auto()
+    PAELS_FLESH = auto()
+    LOST_WISP = auto()
+    FORGOTTEN_SOUL = auto()
+    IRON_CLUB = auto()
+    HAND_DRILL = auto()
+    THE_BOOT = auto()
+    FAKE_ORICHALCUM = auto()
+    FAKE_STRIKE_DUMMY = auto()
+    FAKE_HAPPY_FLOWER = auto()
+    PAELS_BLOOD = auto()
+    RING_OF_THE_DRAKE = auto()
+    POLLINOUS_CORE = auto()
+    FIDDLE = auto()
+    SNECKO_EYE = auto()
+    BRILLIANT_SCARF = auto()
+    VELVET_CHOKER = auto()
+    THROWING_AXE = auto()
+    MUSIC_BOX = auto()
+    DIAMOND_DIADEM = auto()
+    CROSSBOW = auto()
+    BIIIG_HUG = auto()
 
 
 # What the bridge calls a relic's state (if it reports one) when `used` is true.
@@ -87,10 +117,12 @@ USED_STATUS : dict[RelicId, frozenset[str]] = {
     RelicId.RIPPLE_BASIN : frozenset({"Normal"}),
     RelicId.RAINBOW_RING : frozenset({"Active"}),
     RelicId.RED_SKULL : frozenset({"Active"}),       # the Strength is on
+    RelicId.THROWING_AXE : frozenset({"Normal"}),    # Active until the first card is played twice
 }
 
 # `used` of these means "this turn" (it is cleared when the next turn starts), so it is only carried within a turn.
-PER_TURN_FLAG = frozenset({RelicId.ART_OF_WAR, RelicId.RIPPLE_BASIN, RelicId.RAINBOW_RING, RelicId.DEMON_TONGUE})
+PER_TURN_FLAG = frozenset({RelicId.ART_OF_WAR, RelicId.RIPPLE_BASIN, RelicId.RAINBOW_RING, RelicId.DEMON_TONGUE,
+                           RelicId.MUSIC_BOX})
 
 # The bridge reports these every time, so a state that was read is never overruled by one the simulator remembers.
 ALWAYS_REPORTED = frozenset({RelicId.RED_SKULL})
@@ -117,7 +149,10 @@ class RelicInstance:
         if relic_id is None:
             return None
         used = relic.get("status") in USED_STATUS.get(relic_id, ()) or bool(relic.get("spent"))
-        return cls(relic_id, relic.get("counter"), used, relic.get("types_played") or 0)
+        counter = relic.get("counter")
+        if relic_id is RelicId.BRILLIANT_SCARF and counter is None:
+            counter = BRILLIANT_SCARF_CARDS         # ShowCounter is false once 5 cards are played
+        return cls(relic_id, counter, used, relic.get("types_played") or 0)
 
     @classmethod
     def deepcopy(cls, relic : RelicInstance) -> RelicInstance:
@@ -130,16 +165,21 @@ class RelicInstance:
 # Damage: function(relic, card) -> extra damage. `card` is the card being played, None for damage that is not from a card.
 # ---
 STRIKE_DUMMY_BONUS = 3
+FAKE_STRIKE_DUMMY_BONUS = 1
 MINIATURE_CANNON_BONUS = 3
 
 def _strike_dummy_damage(relic : RelicInstance, card : Card | None) -> int:
     return STRIKE_DUMMY_BONUS if card is not None and card.is_strike else 0
+
+def _fake_strike_dummy_damage(relic : RelicInstance, card : Card | None) -> int:
+    return FAKE_STRIKE_DUMMY_BONUS if card is not None and card.is_strike else 0
 
 def _miniature_cannon_damage(relic : RelicInstance, card : Card | None) -> int:
     return MINIATURE_CANNON_BONUS if card is not None and card.is_upgraded else 0
 
 DAMAGE_ADDITIVE : dict[RelicId, Callable[[RelicInstance, Card | None], int]] = {
     RelicId.STRIKE_DUMMY : _strike_dummy_damage,
+    RelicId.FAKE_STRIKE_DUMMY : _fake_strike_dummy_damage,
     RelicId.MINIATURE_CANNON : _miniature_cannon_damage,
 }
 
@@ -204,8 +244,8 @@ def block_gained(owner : Creature, card : Card | None, amount : int):
 # ---
 def debuff_multiplier(owner : Creature, card : Card | None, target : Creature) -> int:
     lamp = owner.relics.get(RelicId.UNSETTLING_LAMP)
-    if lamp is None or lamp.used or card is None or target is owner:
-        return 1
+    if lamp is None or lamp.used or card is None or target is owner or target.current_hp <= 0:
+        return 1                    # a dead target is never debuffed, so it doesn't trigger the Lamp
     if lamp.triggering is None:
         lamp.triggering = card
     return 2 if lamp.triggering is card else 1
@@ -279,6 +319,53 @@ def lizard_tail_revive(owner : Creature) -> bool:
 
 
 # ---
+# Damage the player deals (CreatureCmd.Damage, dealer = player).
+# ---
+THE_BOOT_MINIMUM = 5
+HAND_DRILL_VULNERABLE = 2
+
+def dealt_hp_loss(dealer : Creature, amount : int) -> int:
+    """TheBoot.ModifyHpLostAfterOstyLate: powered attack HP loss in [1, 4] becomes 5."""
+    if 0 < amount < THE_BOOT_MINIMUM and RelicId.THE_BOOT in dealer.relics:
+        return THE_BOOT_MINIMUM
+    return amount
+
+def after_damage_given(dealer : Creature, target : Creature, block_broken : bool):
+    """HandDrill.AfterDamageGiven: 2 Vulnerable on block break; no card source (no Lamp), applier is the player (Vicious)."""
+    if block_broken and RelicId.HAND_DRILL in dealer.relics and target.current_hp > 0:
+        before = target.status_amount(StatusId.VULNERABLE)
+        target.apply_status(StatusId.VULNERABLE, HAND_DRILL_VULNERABLE)
+        if target.status_amount(StatusId.VULNERABLE) > before:
+            dealer.draw_cards(dealer.status_amount(StatusId.VICIOUS))
+
+
+# ---
+# Card play rules.
+# ---
+BRILLIANT_SCARF_CARDS = 5
+VELVET_CHOKER_CARDS = 6
+DIAMOND_DIADEM_CARDS = 2
+
+def free_by_relic(owner : Creature) -> bool:
+    """BrilliantScarf: the 5th card played (not auto-played) this turn costs 0."""
+    scarf = owner.relics.get(RelicId.BRILLIANT_SCARF)
+    return scarf is not None and _count(scarf) == BRILLIANT_SCARF_CARDS - 1
+
+def blocks_play(owner : Creature) -> bool:
+    """VelvetChoker.ShouldPlay: no cards after 6 in a turn (auto-plays too)."""
+    choker = owner.relics.get(RelicId.VELVET_CHOKER)
+    return choker is not None and _count(choker) >= VELVET_CHOKER_CARDS
+
+def extra_plays(owner : Creature) -> int:
+    """ThrowingAxe.ModifyCardPlayCount: the first card of the fight is played twice."""
+    axe = owner.relics.get(RelicId.THROWING_AXE)
+    if axe is None or axe.used:
+        return 0
+    axe.used = True
+    return 1
+
+
+# ---
 # After a card has been played.
 # ---
 def _vambrace_card_played(relic : RelicInstance, card : Card):
@@ -328,9 +415,17 @@ def _living(combat : CombatSimulator):
 
 def _hurt_all(combat : CombatSimulator, amount : int):
     """Damage that ignores Strength, Vulnerable and the like (the game's Unpowered damage)."""
+    player = combat.combat_state.player
     for enemy in _living(combat):
-        enemy.apply_damage(amount)
+        enemy.apply_damage(amount, player)
     combat.resolve_deaths()
+
+def _hurt_random(combat : CombatSimulator, amount : int):
+    """Unpowered damage to one random hittable enemy (Rng.CombatTargets)."""
+    living = _living(combat)
+    if living:
+        (living[0] if len(living) == 1 else rng.choice(living)).apply_damage(amount, combat.combat_state.player)
+        combat.resolve_deaths()
 
 
 # --- before a card is played: function(combat, relic, card, energy_spent)
@@ -349,7 +444,12 @@ def _intimidating_helmet_before(combat, relic, card, energy_spent):
     if energy_spent >= INTIMIDATING_HELMET_ENERGY:
         combat.gain_block(combat.combat_state.player, INTIMIDATING_HELMET_BLOCK)
 
+def _music_box_before(combat, relic, card, energy_spent):
+    if relic.triggering is None and not relic.used and card.type is _card_types()[0]:
+        relic.triggering = card
+
 BEFORE_CARD_PLAYED : dict[RelicId, Callable] = {
+    RelicId.MUSIC_BOX : _music_box_before,
     RelicId.PEN_NIB : _pen_nib_before,
     RelicId.INTIMIDATING_HELMET : _intimidating_helmet_before,
 }
@@ -361,18 +461,23 @@ def before_card_played(combat : CombatSimulator, card : Card, energy_spent : int
 
 
 # --- damage multipliers: function(relic, card) -> factor
-def _pen_nib_damage(relic : RelicInstance, card : Card | None) -> int:
-    return 2 if card is not None and relic.triggering is card else 1
+def _pen_nib_damage(relic : RelicInstance, card : Card | None, in_play : bool) -> int:
+    """PenNib.ModifyDamageMultiplicative: doubles the triggering card, or a previewed card when the counter is 9."""
+    if card is None:
+        return 1
+    if relic.triggering is None:
+        return 2 if not in_play and _count(relic) == PEN_NIB_EVERY - 1 else 1
+    return 2 if relic.triggering is card else 1
 
-DAMAGE_MULTIPLIER : dict[RelicId, Callable[[RelicInstance, Card | None], int]] = {
+DAMAGE_MULTIPLIER : dict[RelicId, Callable[[RelicInstance, Card | None, bool], int]] = {
     RelicId.PEN_NIB : _pen_nib_damage,
 }
 
-def damage_multiplier(attacker : Creature, card : Card | None) -> int:
+def damage_multiplier(attacker : Creature, card : Card | None, in_play : bool = True) -> int:
     factor = 1
     for relic_id, relic in attacker.relics.items():
         if relic_id in DAMAGE_MULTIPLIER:
-            factor *= DAMAGE_MULTIPLIER[relic_id](relic, card)
+            factor *= DAMAGE_MULTIPLIER[relic_id](relic, card, in_play)
     return factor
 
 
@@ -429,10 +534,7 @@ def _shuriken(combat, relic):
 
 def _kusarigama(combat, relic):
     if _every(relic, KUSARIGAMA_EVERY):
-        living = _living(combat)
-        if living:
-            (living[0] if len(living) == 1 else rng.choice(living)).apply_damage(KUSARIGAMA_DAMAGE)
-            combat.resolve_deaths()
+        _hurt_random(combat, KUSARIGAMA_DAMAGE)
 
 def _ornamental_fan(combat, relic):
     if _every(relic, FAN_EVERY):
@@ -474,9 +576,35 @@ def _pocketwatch_turn(combat, relic):
     relic.value = POCKETWATCH_DRAW if _count(relic) <= POCKETWATCH_LIMIT else 0
     relic.counter = 0
 
+HAND_DRAW_FIXED : dict[RelicId, int] = {RelicId.PAELS_BLOOD : 1, RelicId.SNECKO_EYE : 2, RelicId.FIDDLE : 2}
+HAND_DRAW_SET = frozenset({RelicId.POCKETWATCH, RelicId.RING_OF_THE_DRAKE, RelicId.POLLINOUS_CORE})   # `value`, set at BEFORE_PLAYER_TURN
+
 def hand_draw_bonus(owner : Creature) -> int:
-    relic = owner.relics.get(RelicId.POCKETWATCH)
-    return relic.value if relic is not None else 0
+    """Hook.ModifyHandDraw (all additive, so ModifyHandDrawLate order doesn't matter)."""
+    bonus = 0
+    for relic_id, relic in owner.relics.items():
+        if relic_id in HAND_DRAW_FIXED:
+            bonus += HAND_DRAW_FIXED[relic_id]
+        elif relic_id in HAND_DRAW_SET:
+            bonus += relic.value
+    return bonus
+
+def blocks_draw(owner : Creature) -> bool:
+    """Fiddle.ShouldDraw: no draws outside the hand draw (the enemy-turn exception never draws in the sim)."""
+    return RelicId.FIDDLE in owner.relics
+
+RING_OF_THE_DRAKE_TURNS, RING_OF_THE_DRAKE_DRAW = 3, 2
+POLLINOUS_CORE_TURNS, POLLINOUS_CORE_DRAW = 4, 2
+
+def _ring_of_the_drake_turn(combat, relic):
+    relic.value = RING_OF_THE_DRAKE_DRAW if combat.combat_state.turn_number <= RING_OF_THE_DRAKE_TURNS else 0
+
+def _pollinous_core_turn(combat, relic):
+    """TurnsSeen++ before the draw; +2 and reset at 4. Reads 4 while flashing, which is 0."""
+    relic.counter = _count(relic) % POLLINOUS_CORE_TURNS + 1
+    relic.value = 0
+    if relic.counter == POLLINOUS_CORE_TURNS:
+        relic.counter, relic.value = 0, POLLINOUS_CORE_DRAW
 
 # an Attack played this turn: `used`
 def _attack_seen(combat, relic):
@@ -505,16 +633,30 @@ def _game_piece(combat, relic):
     _player(combat).draw_cards(1)
 
 def _mummified_hand(combat, relic):
-    """A random card in the hand that costs energy is free this turn."""
+    """MummifiedHand.AfterCardPlayed: first non-empty of base>0 and costs now, costs now, base>0, any."""
     from sts2_lite.card import Card
-    hand = _player(combat).hand
-    candidates = [i for i, c in enumerate(hand) if c.energy_cost != "X" and c.energy_cost > 0]
+    player = _player(combat)
+    hand = player.hand
+    def base(c):
+        cost = c.restore_cost if c.restore_cost is not None else c.energy_cost
+        return 0 if cost == "X" else cost
+    def now(c):
+        cost = c.current_cost(player)
+        return 0 if cost == "X" else cost
+    candidates = ([i for i, c in enumerate(hand) if base(c) > 0 and now(c) > 0]
+                  or [i for i, c in enumerate(hand) if now(c) > 0]
+                  or [i for i, c in enumerate(hand) if base(c) > 0]
+                  or list(range(len(hand))))
     if not candidates:
         return
     index = candidates[0] if len(candidates) == 1 else rng.choice(candidates)
     card = hand[index]
+    if card.energy_cost == "X" or card.energy_cost == 0:
+        return                  # already free
     free = Card.create_copy(card)
-    free.restore_cost, free.energy_cost = card.energy_cost, 0
+    if free.restore_cost is None:
+        free.restore_cost = card.energy_cost
+    free.energy_cost = 0
     hand[index] = free
 
 # Attacks and Skills
@@ -557,6 +699,42 @@ def _burning_sticks(combat, relic, card):
 def _charons_ashes(combat, relic, card):
     _hurt_all(combat, CHARONS_ASHES_DAMAGE)
 
+LOST_WISP_DAMAGE, FORGOTTEN_SOUL_DAMAGE = 8, 1
+IRON_CLUB_EVERY = 4
+
+def _lost_wisp(combat, relic):
+    _hurt_all(combat, LOST_WISP_DAMAGE)
+
+def _forgotten_soul(combat, relic, card):
+    _hurt_random(combat, FORGOTTEN_SOUL_DAMAGE)
+
+def _iron_club(combat, relic, card):
+    """Counter = CardsPlayed % 4; reads 4 while flashing, which is 0."""
+    relic.counter = _count(relic) % IRON_CLUB_EVERY + 1
+    if relic.counter == IRON_CLUB_EVERY:
+        relic.counter = 0
+        _player(combat).draw_cards(1)
+
+def _music_box(combat, relic, card):
+    """MusicBox: the first Attack each turn adds an Ethereal clone of itself to the hand."""
+    if relic.triggering is card:
+        from sts2_lite.card import Card, CardKeyword
+        _player(combat).add_to_hand(Card.create_copy(card).with_keyword(CardKeyword.ETHEREAL))
+        relic.used = True
+        relic.triggering = None
+
+def _count_card(combat, relic, card):
+    relic.counter = _count(relic) + 1
+
+def _count_manual_card(combat, relic, card):
+    if not combat.auto_playing:
+        relic.counter = _count(relic) + 1
+
+def _diamond_diadem(combat, relic):
+    if _count(relic) <= DIAMOND_DIADEM_CARDS and StatusId.DIAMOND_DIADEM not in _player(combat).status:
+        _player(combat).apply_status(StatusId.DIAMOND_DIADEM, 1)
+    relic.counter = 0
+
 def _reset_counter(combat, relic):
     relic.counter = 0
 
@@ -576,14 +754,14 @@ def _turn(combat) -> int:
 
 CANDELABRA_TURN, CANDELABRA_ENERGY = 2, 2
 CHANDELIER_TURN, CHANDELIER_ENERGY = 3, 3
-HAPPY_FLOWER_TURNS = 3
+HAPPY_FLOWER_TURNS = {RelicId.HAPPY_FLOWER : 3, RelicId.FAKE_HAPPY_FLOWER : 5}
 HORN_CLEAT_TURN, HORN_CLEAT_BLOCK = 2, 14
 CAPTAINS_WHEEL_TURN, CAPTAINS_WHEEL_BLOCK = 3, 18
 SPARKLING_ROUGE_TURN = 3
 MERCURY_HOURGLASS_DAMAGE = 3
 STONE_CALENDAR_TURN, STONE_CALENDAR_DAMAGE = 7, 52
 BRIMSTONE_SELF, BRIMSTONE_ENEMY = 2, 1
-ORICHALCUM_BLOCK = 6
+ORICHALCUM_BLOCK = {RelicId.ORICHALCUM : 6, RelicId.FAKE_ORICHALCUM : 3}
 SCREAMING_FLAGON_DAMAGE = 20
 PARRYING_SHIELD_BLOCK, PARRYING_SHIELD_DAMAGE = 10, 6
 
@@ -597,7 +775,8 @@ def _chandelier(combat, relic):
 
 def _happy_flower(combat, relic):
     """The counter is the turns seen since the last energy. It reads 3 for a moment while the relic flashes, which is 0."""
-    relic.counter = (_count(relic) % HAPPY_FLOWER_TURNS + 1) % HAPPY_FLOWER_TURNS
+    turns = HAPPY_FLOWER_TURNS[relic.relic_id]
+    relic.counter = (_count(relic) % turns + 1) % turns
     if relic.counter == 0:
         combat.gain_energy(1)
 
@@ -632,7 +811,7 @@ def _orichalcum_check(combat, relic):
 
 def _orichalcum(combat, relic):
     if relic.value:
-        combat.gain_block(_player(combat), ORICHALCUM_BLOCK)
+        combat.gain_block(_player(combat), ORICHALCUM_BLOCK[relic.relic_id])
     relic.value = 0
 
 def _cloak_clasp(combat, relic):
@@ -643,14 +822,35 @@ def _screaming_flagon(combat, relic):
     if not _player(combat).hand:
         _hurt_all(combat, SCREAMING_FLAGON_DAMAGE)
 
+SAI_BLOCK = 7
+PAELS_TEARS_ENERGY = 2
+
+def _crossbow(combat, relic):
+    """Crossbow.AfterSideTurnStart: a random Attack from the character pool, free this turn."""
+    from sts2_lite.card import Card, INFERNAL_BLADE_POOL
+    new_card = Card.create_generated(rng.choice(INFERNAL_BLADE_POOL))
+    new_card.restore_cost, new_card.energy_cost = new_card.energy_cost, 0
+    _player(combat).add_to_hand(new_card)
+
+def _sai(combat, relic):
+    combat.gain_block(_player(combat), SAI_BLOCK)
+
+def _mr_struggles(combat, relic):
+    _hurt_all(combat, _turn(combat))
+
+def _paels_tears_check(combat, relic):
+    """PaelsTears.BeforeSideTurnEnd: `value` = energy was left over."""
+    relic.value = 1 if combat.combat_state.energy > 0 else 0
+
+def _paels_tears(combat, relic):
+    if relic.value:
+        combat.gain_energy(PAELS_TEARS_ENERGY)
+
 def _parrying_shield(combat, relic):
     if _player(combat).block >= PARRYING_SHIELD_BLOCK:
-        living = _living(combat)
-        if living:
-            (living[0] if len(living) == 1 else rng.choice(living)).apply_damage(PARRYING_SHIELD_DAMAGE)
-            combat.resolve_deaths()
+        _hurt_random(combat, PARRYING_SHIELD_DAMAGE)
 
-EVENT_HANDLERS : dict[tuple[RelicId, EventType], Callable] = {
+EVENT_HANDLERS : dict[tuple[RelicId, EventType], Callable] = HandlerTable({
     (RelicId.PEN_NIB, EventType.CARD_PLAYED) : _pen_nib_played,
     (RelicId.NUNCHAKU, EventType.CARD_PLAYED) : _on_attack(_nunchaku),
     (RelicId.KUNAI, EventType.CARD_PLAYED) : _on_attack(_kunai),
@@ -671,18 +871,38 @@ EVENT_HANDLERS : dict[tuple[RelicId, EventType], Callable] = {
     (RelicId.JOSS_PAPER, EventType.ETHEREAL_EXHAUSTED) : _joss_paper_ethereal,
     (RelicId.BURNING_STICKS, EventType.CARD_EXHAUSTED) : _burning_sticks,
     (RelicId.CHARONS_ASHES, EventType.CARD_EXHAUSTED) : _charons_ashes,
+    (RelicId.FORGOTTEN_SOUL, EventType.CARD_EXHAUSTED) : _forgotten_soul,
+    (RelicId.LOST_WISP, EventType.CARD_PLAYED) : _on_power(_lost_wisp),
+    (RelicId.IRON_CLUB, EventType.CARD_PLAYED) : _iron_club,
+    (RelicId.MUSIC_BOX, EventType.CARD_PLAYED) : _music_box,
+    (RelicId.BRILLIANT_SCARF, EventType.CARD_PLAYED) : _count_manual_card,
+    (RelicId.VELVET_CHOKER, EventType.CARD_PLAYED) : _count_card,
+    (RelicId.DIAMOND_DIADEM, EventType.CARD_PLAYED) : _count_card,
+    (RelicId.DIAMOND_DIADEM, EventType.END_TURN) : _diamond_diadem,
+    (RelicId.MUSIC_BOX, EventType.BEFORE_PLAYER_TURN) : _new_turn_flag,
+    (RelicId.BRILLIANT_SCARF, EventType.BEFORE_PLAYER_TURN) : _reset_counter,
+    (RelicId.VELVET_CHOKER, EventType.BEFORE_PLAYER_TURN) : _reset_counter,
     # the start of the turn, after the hand is drawn
     (RelicId.CANDELABRA, EventType.PLAYER_TURN_START) : _candelabra,
     (RelicId.CHANDELIER, EventType.PLAYER_TURN_START) : _chandelier,
     (RelicId.HAPPY_FLOWER, EventType.PLAYER_TURN_START) : _happy_flower,
-    (RelicId.HORN_CLEAT, EventType.PLAYER_TURN_START) : _horn_cleat,
-    (RelicId.CAPTAINS_WHEEL, EventType.PLAYER_TURN_START) : _captains_wheel,
-    (RelicId.SPARKLING_ROUGE, EventType.PLAYER_TURN_START) : _sparkling_rouge,
     (RelicId.MERCURY_HOURGLASS, EventType.PLAYER_TURN_START) : _mercury_hourglass,
     (RelicId.BRIMSTONE, EventType.PLAYER_TURN_START) : _brimstone,
+    (RelicId.FAKE_HAPPY_FLOWER, EventType.PLAYER_TURN_START) : _happy_flower,
+    (RelicId.SAI, EventType.PLAYER_TURN_START) : _sai,
+    (RelicId.CROSSBOW, EventType.PLAYER_TURN_START) : _crossbow,
+    (RelicId.MR_STRUGGLES, EventType.PLAYER_TURN_START) : _mr_struggles,
+    (RelicId.PAELS_TEARS, EventType.PLAYER_TURN_START) : _paels_tears,
+    # after block is cleared, before the hand draw
+    (RelicId.HORN_CLEAT, EventType.BLOCK_CLEARED) : _horn_cleat,
+    (RelicId.CAPTAINS_WHEEL, EventType.BLOCK_CLEARED) : _captains_wheel,
+    (RelicId.SPARKLING_ROUGE, EventType.BLOCK_CLEARED) : _sparkling_rouge,
     # the end of the player's turn
     (RelicId.ORICHALCUM, EventType.PLAY_PHASE_END) : _orichalcum_check,
     (RelicId.ORICHALCUM, EventType.END_TURN) : _orichalcum,
+    (RelicId.FAKE_ORICHALCUM, EventType.PLAY_PHASE_END) : _orichalcum_check,
+    (RelicId.FAKE_ORICHALCUM, EventType.END_TURN) : _orichalcum,
+    (RelicId.PAELS_TEARS, EventType.END_TURN) : _paels_tears_check,
     (RelicId.CLOAK_CLASP, EventType.END_TURN) : _cloak_clasp,
     (RelicId.SCREAMING_FLAGON, EventType.END_TURN) : _screaming_flagon,
     (RelicId.STONE_CALENDAR, EventType.END_TURN) : _stone_calendar,
@@ -696,9 +916,11 @@ EVENT_HANDLERS : dict[tuple[RelicId, EventType], Callable] = {
     (RelicId.LETTER_OPENER, EventType.BEFORE_PLAYER_TURN) : _reset_counter,
     (RelicId.RAINBOW_RING, EventType.BEFORE_PLAYER_TURN) : _new_turn_rainbow,
     (RelicId.POCKETWATCH, EventType.BEFORE_PLAYER_TURN) : _pocketwatch_turn,
+    (RelicId.RING_OF_THE_DRAKE, EventType.BEFORE_PLAYER_TURN) : _ring_of_the_drake_turn,
+    (RelicId.POLLINOUS_CORE, EventType.BEFORE_PLAYER_TURN) : _pollinous_core_turn,
     (RelicId.ART_OF_WAR, EventType.BEFORE_PLAYER_TURN) : _art_of_war_turn,
     (RelicId.RIPPLE_BASIN, EventType.BEFORE_PLAYER_TURN) : _new_turn_flag,
-}
+})
 
 
 # ---
@@ -726,6 +948,12 @@ def _pendulum(combat, relic):
     relic.counter = (_count(relic) % PENDULUM_TURNS + 1) % PENDULUM_TURNS    # it reads 3 for a moment while it flashes, which is 0
     if relic.counter == 0:
         _player(combat).draw_cards(1)
+
+def _biiig_hug(combat, relic):
+    """BiiigHug.AfterShuffle: a Soot at a random place in the new draw pile."""
+    from sts2_lite.card import Card
+    pile = _player(combat).draw_pile
+    pile.insert(rng.randrange(len(pile) + 1), Card.create_soot())
 
 def _abacus(combat, relic):
     combat.gain_block(_player(combat), ABACUS_BLOCK)
@@ -762,6 +990,7 @@ EVENT_HANDLERS.update({
     (RelicId.GREMLIN_HORN, EventType.CREATURE_KILLED) : _gremlin_horn,
     (RelicId.PENDULUM, EventType.PLAYER_TURN_START) : _pendulum,
     (RelicId.THE_ABACUS, EventType.SHUFFLED) : _abacus,
+    (RelicId.BIIIG_HUG, EventType.SHUFFLED) : _biiig_hug,
     (RelicId.UNCEASING_TOP, EventType.HAND_EMPTIED) : _unceasing_top,
     (RelicId.DEMON_TONGUE, EventType.HP_LOST) : _demon_tongue,
     (RelicId.DEMON_TONGUE, EventType.BEFORE_PLAYER_TURN) : _demon_tongue_reset,
@@ -769,9 +998,37 @@ EVENT_HANDLERS.update({
     (RelicId.SELF_FORMING_CLAY, EventType.HP_LOST) : _self_forming_clay,
 })
 
+# ---
+# Max energy and victory.
+# ---
+BREAD_ENERGY = 1
+PAELS_FLESH_ENERGY = 1
+MEAT_ON_THE_BONE_HEAL = 12
+VICTORY_HEAL : dict[RelicId, int] = {RelicId.BURNING_BLOOD : 6, RelicId.BLACK_BLOOD : 12}     # AfterCombatVictory
+
+def max_energy_gain(owner : Creature, turn : int) -> int:
+    """ModifyMaxEnergy: Bread +1 from turn 2, Pael's Flesh +1 from turn 3. The bridge already includes them once
+    active, so each is added only on the turn it starts."""
+    if turn == 2 and RelicId.BREAD in owner.relics:
+        return BREAD_ENERGY
+    if turn == 3 and RelicId.PAELS_FLESH in owner.relics:
+        return PAELS_FLESH_ENERGY
+    return 0
+
+def victory_heal(owner : Creature):
+    """Meat on the Bone (victory early: +12 if HP <= floor(max / 2)), then Burning Blood / Black Blood."""
+    if RelicId.MEAT_ON_THE_BONE in owner.relics and owner.current_hp <= owner.max_hp // 2:
+        owner.current_hp = min(owner.max_hp, owner.current_hp + MEAT_ON_THE_BONE_HEAL)
+    for relic_id, heal in VICTORY_HEAL.items():
+        if relic_id in owner.relics:
+            owner.current_hp = min(owner.max_hp, owner.current_hp + heal)
+
 def fire_relics(combat : CombatSimulator, event : EventType, *args):
+    handlers = EVENT_HANDLERS.by_event.get(event)
+    if handlers is None:
+        return
     for relic_id, relic in list(combat.combat_state.player.relics.items()):
-        handler = EVENT_HANDLERS.get((relic_id, event))
+        handler = handlers.get(relic_id)
         if handler is not None:
             handler(combat, relic, *args)
 

@@ -1,4 +1,5 @@
 from __future__ import annotations
+import itertools
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -8,10 +9,11 @@ from sts2_lite.creature import Creature
 from sts2_lite.player import Player
 from sts2_lite.enemy import Enemy
 from sts2_lite.card import TargetType, CardType, Card, CardId, STRIKE_CARDS
-from sts2_lite.damage import modify_damage, base_from_displayed
+from sts2_lite.damage import modify_damage, base_from_displayed, EPSILON
 from sts2_lite import rng
 from sts2_lite.events import EventType
-from sts2_lite.relic import RelicId, PER_TURN_FLAG, ALWAYS_REPORTED, after_card_played, release_card, fire_relics, upgraded_after_play
+from sts2_lite.relic import RelicId, PER_TURN_FLAG, ALWAYS_REPORTED, after_card_played, release_card, fire_relics, blocks_play, upgraded_after_play, \
+    max_energy_gain, victory_heal
 
 from sts2_lite.status import StatusId, StatusBehaviour, STATUS_HANDLERS
 from sts2_lite.enemy_moves import SUMMONS
@@ -43,6 +45,7 @@ class CombatState:
         self.cards_played = 0   # this player turn
         self.revivals = []      # (monster, slot) killed enemies that return after the enemy turn
         self.pending_choice = None
+        self.won = False         # victory heals applied
 
     @classmethod
     def from_dict(cls, combat_state : dict):
@@ -108,7 +111,7 @@ class CombatState:
 
     def carry_combat_counters(self, previous : CombatState | None):
         """Counters that last the whole fight and that the bridge does not report: the times the player has lost
-        HP (Tear Asunder) and the times Inferno was played. Unlike the turn counters they carry across turns."""
+        HP (Tear Asunder) and the times Inferno and Crimson Mantle were played. Unlike the turn counters they carry across turns."""
         if previous is None:
             return
         old, new = previous.player, self.player
@@ -119,6 +122,8 @@ class CombatState:
                 relic.used = True       # the bridge does not say that a once-only relic has been spent
         if StatusId.INFERNO in new.status and old.inferno_plays > 0:
             new.inferno_plays = old.inferno_plays
+        if StatusId.CRIMSON_MANTLE in new.status and old.crimson_mantle_plays > 0:
+            new.crimson_mantle_plays = old.crimson_mantle_plays
 
     def carry_known_top(self, previous : CombatState | None):
         """The bridge lists the draw pile in no particular order, so the cards the agent put on top (Headbutt)
@@ -177,6 +182,7 @@ class CombatState:
         new_cs.revivals = list(combat_state.revivals)
         new_cs.cards_played = combat_state.cards_played
         new_cs.pending_choice = combat_state.pending_choice.deepcopy() if combat_state.pending_choice else None
+        new_cs.won = combat_state.won
         return new_cs
         
     def readable(self) -> str:
@@ -192,20 +198,23 @@ class CombatState:
 class IllegalActionError(ValueError):
     """Raised when an action is not legal in the current state."""
 
+_PLAY_IDS = itertools.count(1)      # unique across simulators
+
 class _CardInPlay:
     """Context manager behind CombatSimulator._playing; a plain class because it runs on every card played."""
-    __slots__ = ("simulator", "card", "previous")
+    __slots__ = ("simulator", "card", "previous", "previous_id")
 
     def __init__(self, simulator : CombatSimulator, card : Card):
         self.simulator = simulator
         self.card = card
 
     def __enter__(self):
-        self.previous = self.simulator.card_in_play
+        self.previous, self.previous_id = self.simulator.card_in_play, self.simulator.play_id
         self.simulator.card_in_play = self.card
+        self.simulator.play_id = next(_PLAY_IDS)
 
     def __exit__(self, *exc):
-        self.simulator.card_in_play = self.previous
+        self.simulator.card_in_play, self.simulator.play_id = self.previous, self.previous_id
 
 
 class CombatSimulator:
@@ -218,8 +227,12 @@ class CombatSimulator:
     def __init__(self, combat_state : CombatState):
         self.combat_state = combat_state
         self.card_in_play = None        # the card whose effect is being resolved, for relics that care which card dealt damage
+        self.play_id = None             # id of the current play; card objects can repeat
+        self.vigor_pending = None       # Vigor the current attack command adds (VigorPower.BeforeAttack)
+        self.auto_playing = False       # CardPlay.IsAutoPlay of the play being resolved
         combat_state.player.draw_hook = self._card_drawn
         combat_state.player.shuffle_hook = self._shuffled
+        combat_state.player.block_cleared_hook = self._block_cleared
         self._check_is_over()
 
     ###
@@ -235,13 +248,15 @@ class CombatSimulator:
     def fire(self, event : EventType, *args):
         """Call the status handler for each (status, event) pair in the state."""
         cs = self.combat_state
-        if event == EventType.CARD_EXHAUSTED and args and args[0].card_id == CardId.DRUM_OF_BATTLE:
+        if event is EventType.CARD_EXHAUSTED and args and args[0].card_id is CardId.DRUM_OF_BATTLE:
             self.gain_energy(3 if args[0].is_upgraded else 2)
-        for creature in [cs.player, *cs.enemies]:
-            for status_id, inst in list(creature.status.items()):  # copy: handlers add statuses
-                handler = STATUS_HANDLERS.get((status_id, event))
-                if handler is not None:
-                    handler(self, creature, inst.amount, *args)
+        handlers = STATUS_HANDLERS.by_event.get(event)
+        if handlers is not None:
+            for creature in [cs.player, *cs.enemies]:
+                for status_id, inst in list(creature.status.items()):  # copy: handlers add statuses
+                    handler = handlers.get(status_id)
+                    if handler is not None:
+                        handler(self, creature, inst.amount, *args)
         if cs.player.relics:
             fire_relics(self, event, *args)
 
@@ -291,6 +306,7 @@ class CombatSimulator:
             raise IllegalActionError(f"card_index {card_index} is not one of {pending.indices}")
         self.combat_state.pending_choice = None
         self._apply_choice(pending, card_index)
+        self._check_hand_emptied()
 
     def _apply_choice(self, choice : PendingChoice, index : int):
         player = self.combat_state.player
@@ -321,7 +337,6 @@ class CombatSimulator:
 
         # the card leaves the hand first; it reaches its pile after the card-played hooks
         hand.pop(card_index)
-        emptied = not hand
         original, card = card, self.private_copy(card)
         try:
             with self._playing(card):
@@ -331,10 +346,13 @@ class CombatSimulator:
             release_card(self.combat_state.player)
             raise
         self.combat_state.cards_played += 1
-        if emptied:
-            self.fire(EventType.HAND_EMPTIED)         # after the play succeeded: a refused play must not draw
-
         self._finish_card_play(card, hp_loss_mark)
+        self._check_hand_emptied()
+
+    def _check_hand_emptied(self):
+        """CombatManager.CheckForEmptyHand: after a manual play fully resolves, never during auto-plays."""
+        if not self.is_over and self.combat_state.pending_choice is None and not self.combat_state.player.hand:
+            self.fire(EventType.HAND_EMPTIED)
 
     def _playing(self, card : Card) -> _CardInPlay:
         """Marks `card` as the one being played (cards can play other cards, so the previous one is put back)."""
@@ -346,8 +364,32 @@ class CombatSimulator:
         simulated states, so the played one must not be changed in place. The copy goes to the discard pile."""
         return Card.create_copy(card) if card.card_id in (CardId.RAMPAGE, CardId.THRASH) else card
 
+    def vigor_bonus(self) -> int:
+        """VigorPower: the first attack command takes the whole amount for all its hits."""
+        if self.vigor_pending is None:
+            amount = self.combat_state.player.status_amount(StatusId.VIGOR)
+            if amount <= 0:
+                return 0
+            self.vigor_pending = amount
+        return self.vigor_pending
+
+    def finish_vigor(self):
+        """VigorPower.AfterAttack: spend the amount the command started with."""
+        if self.vigor_pending is None:
+            return
+        player = self.combat_state.player
+        vigor = player.status.get(StatusId.VIGOR)
+        if vigor is not None:
+            vigor.amount -= self.vigor_pending
+            if vigor.amount <= 0:
+                del player.status[StatusId.VIGOR]
+        self.vigor_pending = None
+
     def _shuffled(self):
         self.fire(EventType.SHUFFLED)
+
+    def _block_cleared(self):
+        self.fire(EventType.BLOCK_CLEARED)
 
     def _sync_hp(self):
         """Relics that react to hit points hear about what happened since the last time (they cannot react on the spot: the
@@ -368,7 +410,8 @@ class CombatSimulator:
                 and any(c is card for c in player.hand):
             self.auto_play(card)
 
-    def _finish_card_play(self, card : Card, hp_loss_mark : int, force_exhaust : bool = False):
+    def card_played_hooks(self, card : Card):
+        """Everything that follows one play of a card (a card played twice runs it twice)."""
         player = self.combat_state.player
         if card.type == CardType.Attack:
             player.attacks_played_this_turn += 1
@@ -376,6 +419,10 @@ class CombatSimulator:
         if player.relics:
             after_card_played(player, card)
         self.fire(EventType.CARD_PLAYED, card)
+
+    def _finish_card_play(self, card : Card, hp_loss_mark : int, force_exhaust : bool = False):
+        player = self.combat_state.player
+        self.card_played_hooks(card)
         if player.relics:
             card = upgraded_after_play(player, card)        # Razor Tooth
         self._move_played_card(card, force_exhaust)
@@ -405,9 +452,17 @@ class CombatSimulator:
             player.exhaust_pile.remove(card)
         hp_loss_mark = player.hp_loss_events
         card = self.private_copy(card)
-        with self._playing(card):
-            card.play_card(self, target, free=True)
-        self._finish_card_play(card, hp_loss_mark, force_exhaust)
+        self.finish_vigor()             # an attack that led here (Pommel Strike's draw) has finished
+        if player.relics and blocks_play(player):
+            self._move_played_card(card, force_exhaust)     # Velvet Choker: ShouldPlay false -> result pile unplayed
+            return
+        auto_playing, self.auto_playing = self.auto_playing, True
+        try:
+            with self._playing(card):
+                card.play_card(self, target, free=True)
+            self._finish_card_play(card, hp_loss_mark, force_exhaust)
+        finally:
+            self.auto_playing = auto_playing
 
     def _rupture(self, hp_loss_mark : int):
         """Strength for each time hit points were lost since the mark."""
@@ -430,7 +485,7 @@ class CombatSimulator:
             return
         for _ in range(lost):
             for enemy in [e for e in self.combat_state.enemies if e.current_hp > 0]:
-                enemy.apply_damage(player.status_amount(StatusId.INFERNO))
+                enemy.apply_damage(player.status_amount(StatusId.INFERNO), player)
         self.resolve_deaths()
 
     def gain_block(self, creature : Creature, amount : int):
@@ -518,13 +573,15 @@ class CombatSimulator:
                 self.ethereal_exhaust = False
                 exhausted += 1
         if not (RelicId.RINGING_TRIANGLE in player.relics and self.combat_state.turn_number <= 1):
-            player.discard_pile.extend(player.hand)     # Ringing Triangle keeps the hand after the first turn
-            player.hand.clear()
+            player.discard_pile.extend(c for c in player.hand if not c.retains)    # Ringing Triangle keeps the hand after the first turn
+            player.hand[:] = [c for c in player.hand if c.retains]
         if exhausted:
             self.fire(EventType.ETHEREAL_EXHAUSTED, exhausted)
 
     def _start_player_turn(self):
         player = self.combat_state.player
+        if player.relics:
+            self.combat_state.max_energy += max_energy_gain(player, self.combat_state.turn_number)
         if RelicId.ICE_CREAM in player.relics and self.combat_state.turn_number > 1:
             self.combat_state.energy += self.combat_state.max_energy        # Ice Cream: unspent energy is kept
         else:
@@ -535,10 +592,11 @@ class CombatSimulator:
         hp_loss_mark = player.hp_loss_events
         self._announced_block = 0
         player.turn_start()
-        # Plating and Crimson Mantle gave block without anyone being told; block given through gain_block (The Abacus,
-        # when the draw shuffles) has already been announced
-        self.gain_block(player, player.block - retained_block - self._announced_block)
+        # announce Crimson Mantle's block (already applied); gain_block block was announced already
+        unannounced = player.block - retained_block - self._announced_block
         self._announced_block = None
+        if unannounced > 0:
+            self.fire(EventType.BLOCK_GAINED, player, unannounced)
         self._after_hp_loss(hp_loss_mark)
         self.fire(EventType.PLAYER_TURN_START)
         self._check_is_over()           # Mercury Hourglass can end the fight
@@ -618,6 +676,10 @@ class CombatSimulator:
                 return
 
         self.is_over = True
+        if not self.combat_state.won:
+            self.combat_state.won = True
+            if self.combat_state.player.relics:
+                victory_heal(self.combat_state.player)      # final HP includes it
 
     ###
     ### Calculators
@@ -652,4 +714,4 @@ class CombatSimulator:
         block = initial_block + owner.status_amount(StatusId.DEXTERITY)
         if StatusId.FRAIL in owner.status:
             block *= 0.75
-        return max(0, int(block * multiplier))
+        return max(0, int(block * multiplier + EPSILON))
