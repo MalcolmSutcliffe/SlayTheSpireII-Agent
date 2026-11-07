@@ -123,7 +123,7 @@ def test_headbutt_deals_its_damage_before_the_choice():
     assert hps(cs) == [91]
 
 def test_game_index_matches_by_card_identity():
-    raw = json.loads((Path(__file__).parent / "data" / "headbutt_example.json").read_text())
+    raw = json.loads((Path(__file__).parent / "data" / "cards" / "ironclad" / "headbutt_example.json").read_text())
     cards = raw["cards"]
     assert game_index({"card_id": "STRIKE_IRONCLAD", "is_upgraded": False}, cards) == 4
     assert game_index({"card_id": "STRIKE_IRONCLAD", "is_upgraded": True}, cards) == 3
@@ -132,7 +132,7 @@ def test_game_index_matches_by_card_identity():
     assert game_index({"card_id": "BASH", "is_upgraded": False}, cards) is None
 
 def test_actions_from_a_pile_choice_can_be_matched_to_the_game_list():
-    raw = json.loads((Path(__file__).parent / "data" / "headbutt_example.json").read_text())
+    raw = json.loads((Path(__file__).parent / "data" / "cards" / "ironclad" / "headbutt_example.json").read_text())
     cs = state([headbutt()])
     cs.player.discard_pile = [defend(), make_card(CardId.ARMAMENTS, "Armaments", CardType.Skill, 1, TargetType.Self),
                               strike(upgraded=True), strike()]

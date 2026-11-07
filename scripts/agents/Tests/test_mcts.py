@@ -2,7 +2,9 @@
 import math
 import random
 import sys
+import time
 from collections import Counter
+from unittest import mock
 
 import pytest
 
@@ -12,7 +14,9 @@ from sts2_lite.combat import CombatState, CombatSimulator
 from sts2_lite.enemy import Enemy
 from sts2_lite.enemy_moves import nibbit
 from sts2_lite.player import Player
+import agents.MCTS as mcts_module
 from agents.MCTS import (
+    MIN_SIMS,
     sts2_MCTS, sts2_DeterministicNode, sts2_ChanceNode, expand_node, backpropagate,
     outcome_key, OUTCOME_C, OUTCOME_ALPHA, MAX_ROLLOUT_TURNS,
 )
@@ -340,12 +344,15 @@ def test_traverse_resolves_an_unvisited_chance_child():
     assert not leaf.is_chance_node
     assert leaf.parent.is_chance_node and leaf.parent.parent is root
 
-def search(cs, sims, seed=0):
+NO_TIME_LIMIT = 1e9
+
+def search(cs, sims, seed=0, time_budget=NO_TIME_LIMIT):
+    """Search capped at `sims` simulations; the time budget is effectively off unless given."""
     import contextlib, io
     rng.seed(seed)
     mcts = sts2_MCTS()
-    with contextlib.redirect_stdout(io.StringIO()):
-        action = mcts.monte_carlo_tree_search(cs, sims)
+    with mock.patch.object(mcts_module, "DEFAULT_MAX_SIMS", sims), contextlib.redirect_stdout(io.StringIO()):
+        action = mcts.monte_carlo_tree_search(cs, time_budget)
     return action, mcts
 
 def draw_fight():
@@ -530,14 +537,31 @@ def test_search_leaves_the_recursion_limit_alone():
 
 
 # ---------------------------------------------------------------- search settings
-@pytest.mark.parametrize("requested", [0, 1, 3, 99])
-def test_small_max_sims_is_raised_to_the_minimum(requested):
-    _, mcts = search(draw_fight(), requested)
-    assert mcts._root_node.visits == 100
-
-def test_larger_max_sims_is_respected():
+def test_sim_cap_ends_the_search():
     _, mcts = search(draw_fight(), 130)
     assert mcts._root_node.visits == 130
+
+@pytest.mark.parametrize("budget", [0, 1e-9])
+def test_an_exhausted_time_budget_still_runs_the_minimum_sims(budget):
+    _, mcts = search(draw_fight(), 5000, time_budget=budget)
+    assert mcts._root_node.visits == MIN_SIMS
+
+def test_time_budget_ends_the_search_before_the_sim_cap():
+    start = time.perf_counter()
+    _, mcts = search(draw_fight(), 10**9, time_budget=0.3)
+    elapsed = time.perf_counter() - start
+    assert MIN_SIMS <= mcts._root_node.visits < 10**9
+    assert 0.3 <= elapsed < 3.0
+
+def test_a_longer_budget_allows_more_sims():
+    _, short = search(draw_fight(), 10**9, time_budget=0.1)
+    _, long_ = search(draw_fight(), 10**9, time_budget=0.6)
+    assert long_._root_node.visits > short._root_node.visits
+
+def test_time_budget_defaults_to_the_module_constant():
+    import inspect
+    default = inspect.signature(sts2_MCTS.monte_carlo_tree_search).parameters["time_budget"].default
+    assert default == mcts_module.DEFAULT_TIME_BUDGET
 
 
 # ---------------------------------------------------------------- rollouts
@@ -704,7 +728,7 @@ def test_damaged_enemy_rates_better_when_unfinished():
     assert mcts._rate_outcome(hurt) > mcts._rate_outcome(stalled_fight())
 
 def test_search_terminates_on_a_stalled_fight():
-    action = sts2_MCTS().monte_carlo_tree_search(stalled_fight(), 100)
+    action = sts2_MCTS().monte_carlo_tree_search(stalled_fight(), 0.2)
     assert action["action"] in ("play_card", "end_turn")
 
 

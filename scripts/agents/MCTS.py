@@ -1,4 +1,5 @@
 import math
+import time
 
 from sts2_lite import rng
 from sts2_lite.combat import CombatState, CombatSimulator
@@ -7,11 +8,17 @@ from sts2_lite.enemy import Enemy
 
 EXPLORATION_CONSTANT = 0.5
 TURN_DECAY_CONSTANT = 0.01
-WIN_BONUS = 1.0     # keeps every win above every loss
+WIN_BONUS = 1.0
 MAX_ROLLOUT_TURNS = 50
 
 OUTCOME_C = 2.0
 OUTCOME_ALPHA = 0.5
+HP_SCALE = 80
+
+MIN_SIMS = 100 # always searches at least 100 simulations
+
+DEFAULT_TIME_BUDGET = 3.0
+DEFAULT_MAX_SIMS = 3000
 
 class sts2_Node:
     parent : sts2_Node
@@ -58,23 +65,30 @@ class sts2_ChanceNode(sts2_Node):
 class sts2_MCTS:
     _root_node : sts2_Node = None
     _expected_total_hp : int
+    _starting_hp : int
     _num_sims: int = 0
-    _max_sims: int = 1000
 
     def __init__(self):
         pass
 
-    def monte_carlo_tree_search(self, combat_state : CombatState, max_sims : int) -> dict:
-        max_sims = max(100, max_sims)
+    def monte_carlo_tree_search(self, 
+                                combat_state : CombatState, 
+                                time_budget : float = DEFAULT_TIME_BUDGET    # time budget for move decision (may return earlier)
+                                ) -> dict:
         self._root_node = sts2_DeterministicNode(None, CombatState.deepcopy(combat_state), None)
         self._expected_total_hp = self._calculate_expected_total_hp(combat_state)
+        self._starting_hp = combat_state.player.current_hp
         self._num_sims = 0
-        self._max_sims = max_sims
+        start_time = time.perf_counter()
 
-        while self._num_sims < self._max_sims:
+        while self._num_sims < DEFAULT_MAX_SIMS:
+            if self._num_sims >= MIN_SIMS and time.perf_counter() >= (start_time + time_budget):
+                break
             leaf = self.traverse_node(self._root_node) # find optimal leaf node to simulate from
             sim_result = self._simulate_random_combat(leaf) # simulate
             backpropagate(leaf, sim_result)
+
+        print("Ran " + str(self._num_sims) + " sims in " + str(time.perf_counter() - start_time) + " seconds.")
 
         for node in self._root_node.children:
             print(str(node.action) + ": " + str(node.total_reward/node.visits) + ", " + str(node.visits))
@@ -165,7 +179,8 @@ class sts2_MCTS:
         # if won fight: outcome is best max hp with slight bias towards less turns
         if won:
             turn_penalty = min(TURN_DECAY_CONSTANT*num_turns, WIN_BONUS)
-            outcome = WIN_BONUS + (float(current_hp) / max_hp) - turn_penalty
+            hp_lost = self._starting_hp - current_hp
+            outcome = WIN_BONUS + math.sqrt(hp_lost / HP_SCALE) - turn_penalty
         # lost or unfinished: minimize enemy effective HP
         else:
             total_enemy_effective_hp = 0

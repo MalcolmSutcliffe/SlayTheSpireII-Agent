@@ -12,15 +12,15 @@ import subprocess
 import time
 from datetime import datetime
 
-DO_INTERNAL = False
-
 POLL_SECONDS = 0.4              # between state reads while the game is busy or it is not the agent's turn
 TURN_CHANGE_TIMEOUT = 10.0      # seconds to wait for the round number to advance after End Turn
-SETTLE_READS = 3               # identical reads in a row before a state is trusted
+SETTLE_READS = 3                # identical reads in a row before a state is trusted
 SETTLE_INTERVAL = 0.25          # seconds between those reads
 LOCKED_READS = 8                # reads of locked-looking cards (about 3 s) before the agent acts anyway
 ACTION_TIMEOUT = 8.0            # seconds to wait for the game to react to a play_card / end_turn
 DEFAULT_LOG = "engine_mismatches.jsonl"
+
+TIME_BUDGET_SECONDS = 5.0       # Max time allocated for agent to think
 
 def get_state() -> dict:
     result = subprocess.run(["cli-anything-sts2", "state"], capture_output=True, text=True)
@@ -194,16 +194,6 @@ def verify_combat_end(batch : dict, game_state : dict, log_path : str):
 ###
 
 def run_agent(agent : BaseAgent, step : bool = False, verify : bool = True, log_path : str = DEFAULT_LOG):
-    if DO_INTERNAL:
-        with open("example_output.json", "r") as f:
-            game_state = json.load(f)
-        combat_state = CombatState.from_dict(game_state)
-        c = CombatSimulator(combat_state)
-        # c.perform_action({'action': 'play_card', 'card_index': 3, 'target': 1, 'target_name': 'PHANTASMAL_GARDENER_1'})
-        action = agent.get_action(c.combat_state)
-        print(action)
-        return
-
     previous = None     # state after the last action: the bridge reports no per-turn history
     batch = None        # actions since the last point the sim and the game could be compared
     waiting_for = None  # what the loop last said it was waiting on, so it says so once
@@ -284,8 +274,7 @@ def run_agent(agent : BaseAgent, step : bool = False, verify : bool = True, log_
 
             if step:
                 input("waiting for input ... \n")
-            action = agent.get_action(combat_state, 5000)
-            print(action)
+            action = agent.get_action(combat_state, TIME_BUDGET_SECONDS)
 
             if batch is None:
                 batch = {"before": game_state, "actions": [], "before_sim": CombatState.deepcopy(combat_state)}

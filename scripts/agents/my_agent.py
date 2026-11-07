@@ -21,12 +21,12 @@ class MyAgent(BaseAgent):
     def __init__(self):
         self.name = "MCTS combat agent"
 
-    def get_action(self, combat_state : CombatState, num_sims = 100):
+    def get_action(self, combat_state : CombatState, time_budget):
         mcts = sts2_MCTS()
         c = CombatSimulator(combat_state)
         actions = c.get_available_actions()
         if len(actions) == 1:
             return actions[0]
-        return mcts.monte_carlo_tree_search(combat_state, num_sims)
+        return mcts.monte_carlo_tree_search(combat_state, time_budget)
 
     
