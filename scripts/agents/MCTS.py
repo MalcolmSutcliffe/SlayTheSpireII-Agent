@@ -20,6 +20,8 @@ MIN_SIMS = 100 # always searches at least 100 simulations
 DEFAULT_TIME_BUDGET = 3.0
 DEFAULT_MAX_SIMS = 3000
 
+CULLABLE_PILES = ("hand", "discard") # draw pile is not neccessarily cullable because of known_top cards
+
 class sts2_Node:
     parent : sts2_Node
     action : dict
@@ -220,6 +222,7 @@ def get_unvisited_child(node : sts2_Node):
 def expand_node(node : sts2_Node):
     c = CombatSimulator(node.state)
     actions = c.get_available_actions()
+    actions = cull_identical_actions(c, actions)
 
     # expand node
     for a in actions:
@@ -253,10 +256,27 @@ def _effective_hp(enemy : Enemy):
         effective_hp += 4 * (17 + 21) / 2
     return effective_hp
 
+def _action_key(c : CombatSimulator, action : dict) -> tuple:
+    if action["action"] == "play_card":
+        return ("play_card", c.combat_state.player.hand[action["card_index"]].signature(), action["target"])
+    if action["action"] == "choose_card" and action["pile"] in CULLABLE_PILES:
+        return ("choose_card", action["pile"], c._pile(action["pile"])[action["card_index"]].signature())
+    return (id(action),)
+
 def outcome_key(state):
-    """Canonical key: hand and draw pile contents (order ignored), who is on the field and their next moves."""
+    """outcome key: hand and draw pile contents (order ignored), enemies and their next moves."""
     p = state.player
     ids = lambda cards: tuple(sorted((c.card_id.value, c.is_upgraded) for c in cards))
     n = p.known_top
     known = tuple((c.card_id.value, c.is_upgraded) for c in p.draw_pile[len(p.draw_pile) - n:]) if n else ()
     return ids(p.hand), ids(p.draw_pile), known, tuple((e.enemy_id, e.move_id) for e in state.enemies)
+
+def cull_identical_actions(c : CombatSimulator, actions : list[dict]) -> list[dict]:
+    seen = set()
+    kept = []
+    for a in actions:
+        key = _action_key(c,a)
+        if key not in seen:
+            seen.add(key)
+            kept.append(a)
+    return kept

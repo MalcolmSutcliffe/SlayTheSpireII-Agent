@@ -75,12 +75,12 @@ Add enchantments
 
  - [ ] Better rollout policy 
  - [x] Time based max search rather than branch limit
- - [ ] Optimize outcome scoring function
+ - [x] Optimize outcome scoring function
  - [ ] Confidence exit (If the agent is confident enough in a move, finish the search)
  - [ ] Information preference (The agent should prioritize learning the outcome of random events e.g. draws, to perform subsequent moves with more information)
  - [ ] Better outcome scoring 
  - [ ] Concurrent search caching
- - [ ] Identical move culling
+ - [x] Identical move culling
  - [ ] Better node traversal heuristics (i.e. powers/non-starter cards first,)
  - [ ] Gimme move culling (i.e if fight ends with one card play dont waste time searching deep : consider meta-scaling)
  - [ ] Benchmark harness. Create a fixed set of fights to play, use this to fine tune constants.

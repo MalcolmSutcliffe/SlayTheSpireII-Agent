@@ -580,6 +580,12 @@ class Card:
         new_card._keywords = card._keywords
         return new_card
 
+    def signature(self) -> tuple:
+        """Everything that decides how this card plays: two cards with equal signatures are interchangeable
+        (the fields create_copy carries over, minus name/type/target which follow from the id)."""
+        return (self.card_id, self.is_upgraded, self.energy_cost, self.is_unplayable, self.restore_cost,
+                self.bonus_damage, self.replay, self.enchantment, self.enchant_amount, self.enchant_bonus, self._mask)
+
     def current_cost(self, player) -> int | str:
         """Energy cost now: the base cost plus Tangled on attacks."""
         if self.energy_cost == "X":
