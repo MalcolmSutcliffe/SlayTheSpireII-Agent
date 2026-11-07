@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 from sts2_lite.creature import Creature
 from sts2_lite.player import Player
 from sts2_lite.enemy import Enemy
-from sts2_lite.card import TargetType, CardType, Card, CardId, STRIKE_CARDS, NORMALITY_CARD_LIMIT
+from sts2_lite.card import TargetType, CardType, Card, CardId, STRIKE_CARDS, NORMALITY_CARD_LIMIT, CHANGED_ON_PLAY
 from sts2_lite.damage import modify_damage, base_from_displayed, EPSILON
 from sts2_lite import rng
 from sts2_lite.events import EventType
@@ -425,9 +425,11 @@ class CombatSimulator:
 
     @staticmethod
     def private_copy(card : Card) -> Card:
-        """Cards that grow when played (Rampage, Thrash) are played as a copy: card objects are shared between
+        """Cards that change when played (Rampage, Thrash, Swift/Sown/Vigorous/Momentum/Glam) are played as a copy: card objects are shared between
         simulated states, so the played one must not be changed in place. The copy goes to the discard pile."""
-        return Card.create_copy(card) if card.card_id in (CardId.RAMPAGE, CardId.THRASH) else card
+        if card.card_id in (CardId.RAMPAGE, CardId.THRASH) or card.enchantment in CHANGED_ON_PLAY:
+            return Card.create_copy(card)
+        return card
 
     def vigor_bonus(self) -> int:
         """VigorPower: the first attack command takes the whole amount for all its hits."""

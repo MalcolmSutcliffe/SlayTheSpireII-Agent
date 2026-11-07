@@ -17,7 +17,7 @@ def _statuses(creature) -> dict[str, int]:
     return {s.name: inst.amount for s, inst in creature.status.items()}
 
 def _cards(pile) -> Counter:
-    return Counter((c.card_id.name, c.is_upgraded) for c in pile)
+    return Counter((c.card_id.name + (f"[{c.enchantment.name}]" if c.enchantment else ""), c.is_upgraded) for c in pile)
 
 def snapshot(cs : CombatState) -> dict:
     """The comparable parts of a state as plain data (also what a log entry stores)."""
@@ -27,7 +27,7 @@ def snapshot(cs : CombatState) -> dict:
         "energy": cs.energy,
         "player": {"hp": p.current_hp, "max_hp": p.max_hp, "block": p.block, "status": _statuses(p)},
         "relics": {r.name: {"counter": inst.counter, "used": inst.used} for r, inst in p.relics.items()},
-        "hand": sorted((c.card_id.name, c.is_upgraded, c.energy_cost) for c in p.hand),
+        "hand": sorted((c.card_id.name, c.is_upgraded, c.energy_cost, c.enchantment.name if c.enchantment else None) for c in p.hand),
         "draw": sorted(f"{i}{'+' if u else ''}" for (i, u) in _cards(p.draw_pile).elements()),
         "discard": sorted(f"{i}{'+' if u else ''}" for (i, u) in _cards(p.discard_pile).elements()),
         "exhaust": sorted(f"{i}{'+' if u else ''}" for (i, u) in _cards(p.exhaust_pile).elements()),

@@ -529,10 +529,25 @@ public static partial class BridgeMod
             ["can_play"] = unplayableReason == UnplayableReason.None,
             ["unplayable_reason"] = unplayableReason != UnplayableReason.None ? unplayableReason.ToString() : null,
             ["is_upgraded"] = card.IsUpgraded,
-            ["keywords"] = BuildHoverTips(card.HoverTips),
-            // the card's actual keywords (all sources); "keywords" above is hover tips, which also lists keywords only mentioned
-            ["card_keywords"] = card.Keywords.Select(k => k.ToString()).ToList()
+            // null, or {"id": "SHARP", "amount": 2}: the hover tips only carry the localized text
+            ["enchantment"] = BuildEnchantment(card),
+            ["keywords"] = BuildHoverTips(card.HoverTips)
         };
+    }
+
+    private static Dictionary<string, object?>? BuildEnchantment(CardModel card)
+    {
+        try
+        {
+            var enchantment = card.Enchantment;
+            if (enchantment == null) return null;
+            return new Dictionary<string, object?>
+            {
+                ["id"] = enchantment.Id.Entry,
+                ["amount"] = (int)enchantment.Amount
+            };
+        }
+        catch { return null; }
     }
 
     private static List<Dictionary<string, object?>> BuildPileCardList(IEnumerable<CardModel> cards, PileType pile)

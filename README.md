@@ -10,7 +10,7 @@ https://github.com/HKUDS/CLI-Anything/blob/main/skills/cli-anything-slay-the-spi
     changes: 
     - added relic "status" field to state ouput
     - changed draw pile, discard pile, and exhaust pile to have full card information
-    - expose various extra exposes for important relic functionality between card plays
+    - expose various extra fields such as active, spent, cardsPlayedThisTurn, etc, for important relic functionality
 
 https://github.com/zhiyue/sts2-rl-agent -> headless sts2_env used for cross-referencing game behaviour
 
@@ -40,10 +40,13 @@ Add Enemy Ais (Currently assumes enemy will make the same move when looking ahea
  - [ ] Act 1 Underdocks
  - [ ] Act 2
  - [ ] Act 3
- - + Many more
 
 Card pools (multiplayer ignored)
  - [ ] Colourless
+ - [x] Curse
+    - [ ] Enthralled
+    - [ ] Bad luck
+    - [ ] Debt
  - [ ] Status
  - [ ] Ancient
  - [x] Ironclad
@@ -57,6 +60,9 @@ Add In-combat relics
  - [ ]
 
 Add potions
+ - [ ]
+
+Add enchantments
  - [ ]
 
  ## MCTS :
