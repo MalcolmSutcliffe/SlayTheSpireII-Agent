@@ -3,6 +3,8 @@ import math
 from sts2_lite import rng
 from sts2_lite.combat import CombatState, CombatSimulator
 
+from sts2_lite.enemy import Enemy
+
 EXPLORATION_CONSTANT = 0.5
 TURN_DECAY_CONSTANT = 0.01
 WIN_BONUS = 1.0     # keeps every win above every loss
@@ -55,6 +57,7 @@ class sts2_ChanceNode(sts2_Node):
 
 class sts2_MCTS:
     _root_node : sts2_Node = None
+    _expected_total_hp : int
     _num_sims: int = 0
     _max_sims: int = 1000
 
@@ -64,6 +67,7 @@ class sts2_MCTS:
     def monte_carlo_tree_search(self, combat_state : CombatState, max_sims : int) -> dict:
         max_sims = max(100, max_sims)
         self._root_node = sts2_DeterministicNode(None, CombatState.deepcopy(combat_state), None)
+        self._expected_total_hp = self._calculate_expected_total_hp(combat_state)
         self._num_sims = 0
         self._max_sims = max_sims
 
@@ -158,18 +162,18 @@ class sts2_MCTS:
         max_hp = combat_state.player.max_hp
         num_turns = combat_state.turn_number
         won = current_hp > 0 and all(e.is_minion or e.current_hp <= 0 for e in combat_state.enemies)
-        # if won fight: outcome is best max hp with slight bias towars less turns
+        # if won fight: outcome is best max hp with slight bias towards less turns
         if won:
             turn_penalty = min(TURN_DECAY_CONSTANT*num_turns, WIN_BONUS)
             outcome = WIN_BONUS + (float(current_hp) / max_hp) - turn_penalty
-        # lost or unfinished: minimize enemy HP
+        # lost or unfinished: minimize enemy effective HP
         else:
-            total_enemy_hp = 0
-            total_enemy_max_hp = 0
+            total_enemy_effective_hp = 0
             for enemy in combat_state.enemies:
-                total_enemy_max_hp += enemy.max_hp
-                total_enemy_hp += enemy.current_hp
-            outcome  = -float(total_enemy_hp)/total_enemy_max_hp
+                total_enemy_effective_hp += _effective_hp(enemy)
+            if total_enemy_effective_hp == 0:     # every enemy died and so did the player: no better than a plain loss
+                return -1.0
+            outcome  = -float(total_enemy_effective_hp)/max(1,self._expected_total_hp)
         return outcome
 
     # uct score 
@@ -182,6 +186,17 @@ class sts2_MCTS:
         if len(node.children) == 0:
             return node
         return max(node.children, key = lambda x: self.get_uct_score(x))
+
+    def _calculate_expected_total_hp(self, combat_state : CombatState):
+        expected_total_hp = 0
+        for e in combat_state.enemies:
+            if e.is_minion:
+                continue
+            expected_total_hp += e.max_hp
+            # edge cases
+            if e.enemy_id.startswith("PHROG_PARASITE"):
+                expected_total_hp += 4*(17+21)/2
+        return expected_total_hp
 
 def get_unvisited_child(node : sts2_Node):
     for child in node.children:
@@ -215,6 +230,15 @@ def backpropagate(node, result):
         node.total_reward += result
         node.visits += 1
         node = node.parent
+
+def _effective_hp(enemy : Enemy):
+    if enemy.is_minion:
+        return 0
+    effective_hp = enemy.current_hp
+    # edge cases
+    if enemy.enemy_id.startswith("PHROG_PARASITE"):
+        effective_hp += 4 * (17 + 21) / 2
+    return effective_hp
 
 def outcome_key(state):
     """Canonical key: hand and draw pile contents (order ignored), who is on the field and their next moves."""

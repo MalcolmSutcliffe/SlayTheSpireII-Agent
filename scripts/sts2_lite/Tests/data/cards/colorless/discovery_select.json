@@ -1,0 +1,128 @@
+{
+  "type": "decision",
+  "decision": "card_select",
+  "context": {
+    "act": 1,
+    "floor": 24,
+    "ascension": 0
+  },
+  "run": {
+    "act": 1,
+    "floor": 24,
+    "ascension": 0
+  },
+  "screen_type": "choose",
+  "prompt": "Choose a card.",
+  "cards": [
+    {
+      "index": 0,
+      "id": "HEADBUTT",
+      "name": "Headbutt",
+      "type": "Attack",
+      "cost": "1",
+      "description": "Deal 9 damage. Put a card from your Discard Pile on top of your Draw Pile.",
+      "rarity": "Common",
+      "is_upgraded": false,
+      "keywords": []
+    },
+    {
+      "index": 1,
+      "id": "STONE_ARMOR",
+      "name": "Stone Armor",
+      "type": "Power",
+      "cost": "1",
+      "description": "Gain 4 Plating.",
+      "rarity": "Uncommon",
+      "is_upgraded": false,
+      "keywords": [
+        {
+          "name": "Plating",
+          "description": "At the end of your turn, gain Block. Plating is reduced by 1 at the start of your turn."
+        },
+        {
+          "name": "Block",
+          "description": "Until next turn, prevents damage."
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "id": "WHIRLWIND",
+      "name": "Whirlwind",
+      "type": "Attack",
+      "cost": "X",
+      "description": "Deal 5 damage to ALL enemies X times.",
+      "rarity": "Uncommon",
+      "is_upgraded": false,
+      "keywords": []
+    }
+  ],
+  "player": {
+    "character": "The Ironclad",
+    "hp": 80,
+    "max_hp": 80,
+    "gold": 99
+  },
+  "preview_showing": false,
+  "can_skip": true,
+  "can_confirm": false,
+  "can_cancel": true,
+  "card_select": {
+    "screen_type": "choose",
+    "player": {
+      "character": "The Ironclad",
+      "hp": 80,
+      "max_hp": 80,
+      "gold": 99
+    },
+    "prompt": "Choose a card.",
+    "cards": [
+      {
+        "index": 0,
+        "id": "HEADBUTT",
+        "name": "Headbutt",
+        "type": "Attack",
+        "cost": "1",
+        "description": "Deal 9 damage. Put a card from your Discard Pile on top of your Draw Pile.",
+        "rarity": "Common",
+        "is_upgraded": false,
+        "keywords": []
+      },
+      {
+        "index": 1,
+        "id": "STONE_ARMOR",
+        "name": "Stone Armor",
+        "type": "Power",
+        "cost": "1",
+        "description": "Gain 4 Plating.",
+        "rarity": "Uncommon",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Plating",
+            "description": "At the end of your turn, gain Block. Plating is reduced by 1 at the start of your turn."
+          },
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 2,
+        "id": "WHIRLWIND",
+        "name": "Whirlwind",
+        "type": "Attack",
+        "cost": "X",
+        "description": "Deal 5 damage to ALL enemies X times.",
+        "rarity": "Uncommon",
+        "is_upgraded": false,
+        "keywords": []
+      }
+    ],
+    "can_skip": true,
+    "preview_showing": false,
+    "can_confirm": false,
+    "can_cancel": true
+  }
+}

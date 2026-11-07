@@ -167,12 +167,8 @@ public static partial class BridgeMod
             }
             else
             {
-                // Auto-open the shopkeeper's inventory if not already open
-                var merchUI = NMerchantRoom.Instance;
-                if (merchUI != null && !merchUI.Inventory.IsOpen)
-                {
-                    merchUI.OpenInventory();
-                }
+                // The inventory is not opened here: reading the state must not cover the Proceed button.
+                // shop_purchase opens it when it buys something.
                 result["state_type"] = "shop";
                 result["shop"] = BuildShopState(merchantRoom, runState);
             }

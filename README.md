@@ -42,11 +42,15 @@ Add Enemy Ais (Currently assumes enemy will make the same move when looking ahea
  - [ ] Act 3
 
 Card pools (multiplayer ignored)
- - [ ] Colourless
+ - [x] Colourless
+    Not implemented:
+    - [ ] Strategem (Sim doesnt have events in between turns)
+    - [ ] Splash (need other character card pools)
+    - [ ] Alchemize (potions not modeled yet)
  - [x] Curse
-    - [ ] Enthralled
-    - [ ] Bad luck
-    - [ ] Debt
+    Not implemented:
+    - [ ] Enthralled (Enforcing play order not implemented in engine)
+ 
  - [ ] Status
  - [ ] Ancient
  - [x] Ironclad
@@ -57,7 +61,9 @@ Card pools (multiplayer ignored)
 
 
 Add In-combat relics
- - [ ]
+ - [x]
+    - Missing:
+    - Potion relics
 
 Add potions
  - [ ]

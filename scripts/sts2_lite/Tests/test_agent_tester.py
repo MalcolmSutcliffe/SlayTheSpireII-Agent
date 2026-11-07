@@ -58,6 +58,8 @@ def test_kind_of_classifies_states(tester):
     assert tester.kind_of(play) == "play"
     assert tester.kind_of({**play, "turn": "enemy"}) == "busy"
     assert tester.kind_of({**play, "is_play_phase": False}) == "busy"
+    assert tester.kind_of({**play, "enemies": []}) == "busy"        # between a kill and the spawns it triggers
+    assert tester.kind_of({**play, "enemies": [{"hp": 5}]}) == "play"
     assert tester.kind_of({"type": "decision", "decision": "map_select"}) == "away"
     assert tester.kind_of({"type": "decision", "decision": "hand_select"}) == "pick"
     assert tester.kind_of({"type": "decision", "decision": "card_select", "screen_type": "NCombatPileCardSelectScreen"}) == "pick"
@@ -224,3 +226,27 @@ def test_a_pick_the_sim_already_made_is_clicked_for_it(tester, monkeypatch):
             return case["actions"][0]
     tester.run_agent(Armaments(), log_path="/dev/null")
     assert ["combat-select-card", "0"] in commands.run
+
+def choose_screen():
+    return {"type": "decision", "decision": "card_select", "screen_type": "choose", "can_confirm": False, "can_skip": True,
+            "cards": [{"index": i, "id": c, "is_upgraded": False} for i, c in enumerate(["HEADBUTT", "STONE_ARMOR", "WHIRLWIND"])]}
+
+def test_a_choose_screen_is_a_pick_and_is_skipped_with_cancel(tester, monkeypatch):
+    """Discovery's offer: pick = select-card (no confirm on this screen), the sim's skip = cancel-selection."""
+    commands = Commands()
+    monkeypatch.setattr(tester.subprocess, "run", commands)
+    monkeypatch.setattr(tester, "get_state", choose_screen)
+    assert tester.kind_of(choose_screen()) == "away"         # rewards and events use this screen too
+    assert tester.kind_of(choose_screen(), expecting_choice=True) == "pick"
+    tester.act({"action": "choose_card", "card_index": 2, "pile": "offer", "card_id": "WHIRLWIND", "is_upgraded": False}, choose_screen())
+    assert ["select-card", "2"] in commands.run and not any("confirm" in c[0] for c in commands.run)
+    commands.run.clear()
+    tester.act({"action": "confirm_choice"}, choose_screen())
+    assert commands.run == [["cancel-selection"]] or ["cancel-selection"] in [c[1:] if c[0] == "cli-anything-sts2" else c for c in commands.run]
+
+def test_toolbox_screen_is_a_pick_without_skip_and_the_sim_has_no_state_for_it(tester):
+    """Toolbox offers 3 colorless cards before the first hand is drawn (no skip): there is no combat state yet, so the
+    tester can only recognise the screen and leave the pick to the player."""
+    screen = json.loads((DATA / "relics" / "toolbox_select.json").read_text())
+    assert tester.kind_of(screen, expecting_choice=True) == "pick" and not screen["can_skip"] and not screen["can_cancel"]
+    assert [c["id"] for c in screen["cards"]] == ["BEAT_DOWN", "IMPATIENCE", "OMNISLICE"]

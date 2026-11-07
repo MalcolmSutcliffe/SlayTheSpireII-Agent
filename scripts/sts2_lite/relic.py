@@ -160,6 +160,8 @@ class RelicInstance:
         counter = relic.get("counter")
         if relic_id is RelicId.BRILLIANT_SCARF and counter is None:
             counter = BRILLIANT_SCARF_CARDS         # ShowCounter is false once 5 cards are played
+        if counter is not None and counter == HAPPY_FLOWER_TURNS.get(relic_id):
+            counter = 0         # Happy Flower shows its full count while the relic flashes, which is a reset to 0
         return cls(relic_id, counter, used, relic.get("types_played") or 0)
 
     @classmethod

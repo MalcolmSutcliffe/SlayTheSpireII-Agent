@@ -1,0 +1,110 @@
+{
+  "type": "decision",
+  "decision": "card_select",
+  "context": {
+    "act": 1,
+    "floor": 26,
+    "ascension": 0
+  },
+  "run": {
+    "act": 1,
+    "floor": 26,
+    "ascension": 0
+  },
+  "screen_type": "choose",
+  "prompt": "Choose a card.",
+  "cards": [
+    {
+      "index": 0,
+      "id": "BEAT_DOWN",
+      "name": "Beat Down",
+      "type": "Skill",
+      "cost": "3",
+      "description": "Play 3 random Attacks from your Discard Pile.",
+      "rarity": "Rare",
+      "is_upgraded": false,
+      "keywords": []
+    },
+    {
+      "index": 1,
+      "id": "IMPATIENCE",
+      "name": "Impatience",
+      "type": "Skill",
+      "cost": "0",
+      "description": "If you have no Attacks in your Hand, draw 2 cards.",
+      "rarity": "Uncommon",
+      "is_upgraded": false,
+      "keywords": []
+    },
+    {
+      "index": 2,
+      "id": "OMNISLICE",
+      "name": "Omnislice",
+      "type": "Attack",
+      "cost": "0",
+      "description": "Deal 8 damage. Damage ALL other enemies equal to the damage dealt.",
+      "rarity": "Uncommon",
+      "is_upgraded": false,
+      "keywords": []
+    }
+  ],
+  "player": {
+    "character": "The Ironclad",
+    "hp": 80,
+    "max_hp": 80,
+    "gold": 99
+  },
+  "preview_showing": false,
+  "can_skip": false,
+  "can_confirm": false,
+  "can_cancel": false,
+  "card_select": {
+    "screen_type": "choose",
+    "player": {
+      "character": "The Ironclad",
+      "hp": 80,
+      "max_hp": 80,
+      "gold": 99
+    },
+    "prompt": "Choose a card.",
+    "cards": [
+      {
+        "index": 0,
+        "id": "BEAT_DOWN",
+        "name": "Beat Down",
+        "type": "Skill",
+        "cost": "3",
+        "description": "Play 3 random Attacks from your Discard Pile.",
+        "rarity": "Rare",
+        "is_upgraded": false,
+        "keywords": []
+      },
+      {
+        "index": 1,
+        "id": "IMPATIENCE",
+        "name": "Impatience",
+        "type": "Skill",
+        "cost": "0",
+        "description": "If you have no Attacks in your Hand, draw 2 cards.",
+        "rarity": "Uncommon",
+        "is_upgraded": false,
+        "keywords": []
+      },
+      {
+        "index": 2,
+        "id": "OMNISLICE",
+        "name": "Omnislice",
+        "type": "Attack",
+        "cost": "0",
+        "description": "Deal 8 damage. Damage ALL other enemies equal to the damage dealt.",
+        "rarity": "Uncommon",
+        "is_upgraded": false,
+        "keywords": []
+      }
+    ],
+    "can_skip": false,
+    "preview_showing": false,
+    "can_confirm": false,
+    "can_cancel": false
+  }
+}
