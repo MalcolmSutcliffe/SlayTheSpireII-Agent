@@ -5,6 +5,7 @@ if TYPE_CHECKING:
     from sts2_lite.creature import Creature
     from sts2_lite.combat import CombatSimulator
 
+import re
 from enum import Enum, auto
 
 from sts2_lite import rng
@@ -68,6 +69,21 @@ class StatusId(Enum):
     INFERNO = auto()
     SELF_FORMING_CLAY = auto()
     CONFUSED = auto()
+    RETAIN_HAND = auto()
+    NO_BLOCK = auto()
+    BLOCK_NEXT_TURN = auto()
+    FASTEN = auto()
+    PREP_TIME = auto()
+    DARK_SHACKLES = auto()
+    AUTOMATION = auto()
+    PANACHE = auto()
+    ROLLING_BOULDER = auto()
+    THE_BOMB = auto()
+    THE_GAMBIT = auto()
+    MAYHEM = auto()
+    NOSTALGIA = auto()
+    CALAMITY = auto()
+    ENTROPY = auto()
 
 INFESTED_SPAWNS = 4
 
@@ -133,32 +149,77 @@ STATUS_BEAVIOURS : dict[StatusId, StatusBehaviour] = {
     StatusId.INFERNO : StatusBehaviour.STATIC,
     StatusId.SELF_FORMING_CLAY : StatusBehaviour.STATIC,     # paid out and removed at the start of the next turn
     StatusId.CONFUSED : StatusBehaviour.STATIC,     # Snecko Eye; rolls drawn cards' costs (Player.draw_card)
+    StatusId.RETAIN_HAND : StatusBehaviour.STATIC,      # one less each time the player's turn ends (CombatSimulator.end_turn)
+    StatusId.NO_BLOCK : StatusBehaviour.DECREASE_BY_ONE,    # ticks when the enemies' turn ends
+    StatusId.BLOCK_NEXT_TURN : StatusBehaviour.STATIC,
+    StatusId.FASTEN : StatusBehaviour.STATIC,
+    StatusId.PREP_TIME : StatusBehaviour.STATIC,
+    StatusId.DARK_SHACKLES : StatusBehaviour.STATIC,    # the Strength is returned when the owner's turn ends
+    StatusId.AUTOMATION : StatusBehaviour.STATIC,
+    StatusId.PANACHE : StatusBehaviour.STATIC,
+    StatusId.ROLLING_BOULDER : StatusBehaviour.STATIC,
+    StatusId.THE_BOMB : StatusBehaviour.STATIC,
+    StatusId.THE_GAMBIT : StatusBehaviour.STATIC,
+    StatusId.MAYHEM : StatusBehaviour.STATIC,
+    StatusId.NOSTALGIA : StatusBehaviour.STATIC,
+    StatusId.CALAMITY : StatusBehaviour.STATIC,
+    StatusId.ENTROPY : StatusBehaviour.STATIC,
 }
 
 DEBUFFS = frozenset({StatusId.WEAK, StatusId.VULNERABLE, StatusId.FRAIL, StatusId.SHRINK,
                      StatusId.CONSTRICT, StatusId.TANGLED, StatusId.RINGING,
-                     StatusId.NO_DRAW, StatusId.NO_ENERGY_GAIN, StatusId.MANGLE, StatusId.CONFUSED})
+                     StatusId.NO_DRAW, StatusId.NO_ENERGY_GAIN, StatusId.MANGLE, StatusId.CONFUSED,
+                     StatusId.NO_BLOCK, StatusId.THE_GAMBIT, StatusId.DARK_SHACKLES})
 
 def is_debuff(status_id : StatusId, amount : int) -> bool:
     return status_id in DEBUFFS or (status_id == StatusId.STRENGTH and amount < 0)
+
+# Powers that every play adds a separate copy of (PowerInstanceType.Instanced). The bridge lists each copy; the
+# state keeps one status whose `records` hold one list per copy: [shown amount, ...what else the copy remembers].
+INSTANCED = {
+    StatusId.AUTOMATION : (),                   # [cards left until the energy]
+    StatusId.PANACHE : (10, 1),                 # [cards left, damage, 1 once the Panache card itself has been played]
+    StatusId.THE_BOMB : (40,),                  # [turns left, damage]
+    StatusId.ROLLING_BOULDER : (),              # [damage of the next hit]
+}
+AUTOMATION_CARDS, PANACHE_CARDS = 10, 5
+ROLLING_BOULDER_STEP = 5
 
 class StatusInstance:
     status_id : StatusId
     amount : int
     behaviour : StatusBehaviour
+    records : list[list[int]]
 
-    def __init__(self, status_id : StatusId, amount : int):
+    def __init__(self, status_id : StatusId, amount : int, records : list[list[int]] | None = None):
         self.status_id = status_id
         self.amount = amount
         self.behaviour = STATUS_BEAVIOURS[status_id]
+        self.records = records if records is not None else []
 
     @classmethod
     def from_dict(cls, status : dict):
-        return cls(StatusId[status["id"][:-6]], status["amount"])
+        status_id = StatusId[status["id"][:-6]]
+        amount = status["amount"]
+        if status_id in INSTANCED:      # what the copy remembers beyond its shown amount is read from the text
+            damage = re.search(r"(\d+)\s+damage", status.get("description") or "")
+            extra = (int(damage.group(1)),) if damage and INSTANCED[status_id] else INSTANCED[status_id]
+            if status_id == StatusId.PANACHE:
+                extra = (extra[0], 1)       # the card that applied it has been played if it is on the board
+            return cls(status_id, amount, [[amount, *extra]])
+        return cls(status_id, amount)
 
     @classmethod
     def deepcopy(cls, status : StatusInstance):
-        return cls(status.status_id, status.amount)
+        return cls(status.status_id, status.amount, [r[:] for r in status.records] if status.records else None)
+
+    def merge(self, other : StatusInstance):
+        """A further copy of an instanced power."""
+        self.records.extend(other.records)
+        self.sync()
+
+    def sync(self):
+        self.amount = sum(r[0] for r in self.records)
 
 
 # ---
@@ -295,6 +356,77 @@ def _inferno_on_turn_start(combat : CombatSimulator, owner : Creature, amount : 
     owner.lose_hp(max(1, owner.inferno_plays))
     combat._after_hp_loss(mark)
 
+def _block_next_turn_on_block_cleared(combat : CombatSimulator, owner : Creature, amount : int):
+    # Prolong: the block comes back as soon as the old block is gone, unpowered
+    if _own(combat, owner):
+        del owner.status[StatusId.BLOCK_NEXT_TURN]
+        combat.gain_block(owner, amount)
+
+def _prep_time_on_turn_start(combat : CombatSimulator, owner : Creature, amount : int):
+    if _own(combat, owner):
+        owner.apply_status(StatusId.VIGOR, amount)
+
+def _hit_all_enemies(combat : CombatSimulator, owner : Creature, damage : int):
+    """Unpowered damage from the player to every enemy still alive."""
+    for enemy in [e for e in combat.combat_state.enemies if e.current_hp > 0]:
+        enemy.apply_damage(damage, owner)
+
+def _rolling_boulder_on_turn_start(combat : CombatSimulator, owner : Creature, amount : int):
+    # every copy hits all enemies, then grows
+    inst = owner.status[StatusId.ROLLING_BOULDER]
+    for record in inst.records:
+        _hit_all_enemies(combat, owner, record[0])
+        record[0] += ROLLING_BOULDER_STEP
+    inst.sync()
+    combat.resolve_deaths()
+
+def _panache_on_card_played(combat : CombatSimulator, owner : Creature, amount : int, card):
+    inst = owner.status[StatusId.PANACHE]
+    for record in inst.records:
+        if not record[2]:       # the card that applied this copy is not counted by it
+            record[2] = 1
+            continue
+        record[0] -= 1
+        if record[0] <= 0:
+            _hit_all_enemies(combat, owner, record[1])
+            record[0] = PANACHE_CARDS
+    inst.sync()
+
+def _panache_on_player_turn_ended(combat : CombatSimulator, owner : Creature, amount : int):
+    inst = owner.status[StatusId.PANACHE]
+    for record in inst.records:
+        record[0] = PANACHE_CARDS
+    inst.sync()
+
+def _the_bomb_on_end_turn(combat : CombatSimulator, owner : Creature, amount : int):
+    inst = owner.status[StatusId.THE_BOMB]
+    kept = []
+    for record in inst.records:
+        if record[0] > 1:
+            record[0] -= 1
+            kept.append(record)
+        else:
+            _hit_all_enemies(combat, owner, record[1])
+    inst.records = kept
+    if kept:
+        inst.sync()
+    else:
+        del owner.status[StatusId.THE_BOMB]
+
+def _mayhem_on_auto_pre_play(combat : CombatSimulator, owner : Creature, amount : int):
+    combat.auto_play_from_top(amount)
+
+def _calamity_on_card_played(combat : CombatSimulator, owner : Creature, amount : int, card):
+    # every Attack played adds random Attacks to the hand
+    from sts2_lite.card import Card, CardType, INFERNAL_BLADE_POOL     # card.py imports this module
+    if card.type == CardType.Attack:
+        for _ in range(amount):
+            owner.add_to_hand(Card.create_generated(rng.choice(INFERNAL_BLADE_POOL)))
+
+def _entropy_on_turn_start(combat : CombatSimulator, owner : Creature, amount : int):
+    if _own(combat, owner):
+        combat.request_transform(amount)
+
 STATUS_HANDLERS : dict[tuple[StatusId, EventType], Callable] = HandlerTable({
     (StatusId.INFERNO, EventType.PLAYER_TURN_START) : _inferno_on_turn_start,
     (StatusId.RITUAL, EventType.ENEMY_TURN_END) : _ritual_on_enemy_turn_end,
@@ -322,4 +454,13 @@ STATUS_HANDLERS : dict[tuple[StatusId, EventType], Callable] = HandlerTable({
     (StatusId.JUGGLING, EventType.CARD_PLAYED) : _juggling_on_card_played,
     (StatusId.AGGRESSION, EventType.BEFORE_PLAYER_TURN) : _aggression_on_before_player_turn,
     (StatusId.STAMPEDE, EventType.PLAY_PHASE_END) : _stampede_on_end_turn,
+    (StatusId.BLOCK_NEXT_TURN, EventType.BLOCK_CLEARED) : _block_next_turn_on_block_cleared,
+    (StatusId.PREP_TIME, EventType.PLAYER_TURN_START) : _prep_time_on_turn_start,
+    (StatusId.ROLLING_BOULDER, EventType.PLAYER_TURN_START) : _rolling_boulder_on_turn_start,
+    (StatusId.PANACHE, EventType.CARD_PLAYED) : _panache_on_card_played,
+    (StatusId.PANACHE, EventType.PLAYER_TURN_ENDED) : _panache_on_player_turn_ended,
+    (StatusId.THE_BOMB, EventType.END_TURN) : _the_bomb_on_end_turn,
+    (StatusId.MAYHEM, EventType.AUTO_PRE_PLAY) : _mayhem_on_auto_pre_play,
+    (StatusId.CALAMITY, EventType.CARD_PLAYED) : _calamity_on_card_played,
+    (StatusId.ENTROPY, EventType.PLAYER_TURN_START) : _entropy_on_turn_start,
 })

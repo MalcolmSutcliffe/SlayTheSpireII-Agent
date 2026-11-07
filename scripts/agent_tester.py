@@ -55,9 +55,12 @@ def act(action, game_state=None, picking_more=False):
             picked_on_screen.clear()
             confirm_if_ready()
     if action["action"] == "confirm_choice":
-        # stop an "up to N" pick with what is selected so far
+        # stop an "up to N" pick with what is selected so far; a "choose a card" screen (Discovery) has no confirm: skip it
         picked_on_screen.clear()
-        confirm_if_ready()
+        if game_state is not None and game_state.get("screen_type") == "choose":
+            subprocess.run(["cli-anything-sts2", "cancel-selection"])
+        else:
+            confirm_if_ready()
     if action["action"] == "play_card":
         if "target_name" in action:
             subprocess.run(["cli-anything-sts2",
@@ -73,7 +76,7 @@ def act(action, game_state=None, picking_more=False):
 ### Reading the game
 ###
 
-def kind_of(game_state : dict) -> str:
+def kind_of(game_state : dict, expecting_choice : bool = False) -> str:
     """What the loop should do with a state: "play" (agent's turn), "pick" (a card choice during combat),
     "busy" (combat, but the game is animating or it is the enemies' turn) or "away" (not in combat)."""
     if game_state.get("type") != "decision":
@@ -82,10 +85,14 @@ def kind_of(game_state : dict) -> str:
     if decision == "combat_play":
         if game_state.get("turn") != "player" or game_state.get("is_play_phase") is False:
             return "busy"
+        if game_state.get("enemies") == []:
+            return "busy"       # the killed enemy is gone but its spawns (Phrog Parasite's Wrigglers) are not there yet, or the fight is ending
         return "play"
     if decision == "hand_select":
         return "pick"
     if decision == "card_select" and game_state.get("screen_type") == "NCombatPileCardSelectScreen":
+        return "pick"
+    if decision == "card_select" and game_state.get("screen_type") == "choose" and expecting_choice:     # Discovery's offer
         return "pick"
     return "away"
 
@@ -206,7 +213,7 @@ def run_agent(agent : BaseAgent, step : bool = False, verify : bool = True, log_
     try:
         while True:
             game_state = get_state()
-            kind = kind_of(game_state)
+            kind = kind_of(game_state, previous is not None and previous.pending_choice is not None)
 
             if kind == "away":
                 if batch is not None and verify and batch["predicted"] is not None:
@@ -251,6 +258,7 @@ def run_agent(agent : BaseAgent, step : bool = False, verify : bool = True, log_
             if kind == "pick" and previous is not None and previous.pending_choice is not None:
                 # the sim knows what this pick is for; a pile screen has no fight data to load
                 combat_state = CombatState.deepcopy(previous)
+                combat_state.adopt_offer(game_state.get("cards") or [])     # options the sim drew at random (Seeker Strike)
             elif kind == "pick" and decision != "hand_select":
                 print("cannot read this card selection - pick it in the game")
                 time.sleep(1.0)

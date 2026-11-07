@@ -1,7 +1,7 @@
 """Curse cards. Run from scripts/: python -m pytest sts2_lite/Tests"""
 import pytest
 
-from sts2_lite.card import Card, CardId, CardType, CardKeyword, CURSE_CARDS, GENERATED_CARDS
+from sts2_lite.card import Card, CardId, CardType, CardKeyword, CURSE_CARDS, GENERATED_CARDS, ETERNAL_CARDS
 from sts2_lite.combat import CombatSimulator
 from sts2_lite.status import StatusId
 from test_cards import make_card, make_state, TargetType
@@ -22,7 +22,7 @@ def end_turn(hand):
 
 
 def test_every_curse_is_a_curse_type_and_generatable():
-    assert len(CURSE_CARDS) == 15
+    assert len(CURSE_CARDS) == 17
     for cid in CURSE_CARDS:
         assert GENERATED_CARDS[cid]().type == CardType.Curse
 
@@ -205,3 +205,43 @@ def test_normality_not_inferred_for_a_dead_hand():
 def test_no_inference_without_normality():
     cs = loaded_hand(bridge_card("STRIKE_IRONCLAD", False))
     assert cs.cards_played == 0
+
+def test_bad_luck_loses_13_hp_that_block_cannot_stop():
+    assert end_turn([curse(CardId.BAD_LUCK)]).player.current_hp == 50 - 13
+    cs = make_state([curse(CardId.BAD_LUCK)], enemy_count=1)
+    cs.player.block = 20
+    CombatSimulator(cs).end_turn()
+    assert cs.player.current_hp == 37
+
+def test_bad_luck_is_eternal_and_unplayable_and_two_stack():
+    c = curse(CardId.BAD_LUCK)
+    assert c.type == CardType.Curse and c.unplayable and c.card_id in ETERNAL_CARDS
+    assert end_turn([curse(CardId.BAD_LUCK), curse(CardId.BAD_LUCK)]).player.current_hp == 50 - 26
+
+def test_debt_does_nothing_in_the_sim_but_cannot_be_played():
+    c = curse(CardId.DEBT)
+    assert c.unplayable and end_turn([c]).player.current_hp == 50
+
+# ------------------------------------------------------------ cards the sim does not know
+RAW = {"id": "FAKE_NEW_CARD", "name": "Fake New Card", "type": "Skill", "cost": "2", "can_play": True, "is_upgraded": True,
+       "target_type": "None", "description": "Does something."}
+
+def test_unknown_card_becomes_a_wound_that_keeps_its_name(capsys):
+    c = Card.from_dict(RAW)
+    assert c.card_id == CardId.NOT_IMPLEMENTED and c.name == "Fake New Card" and c.is_upgraded
+    assert c.type == CardType.Status and c.unplayable and c.energy_cost == 0
+    Card.from_dict(RAW)
+    assert capsys.readouterr().out.count("not implemented") == 1       # said once
+
+def test_unknown_card_does_nothing_at_turn_end_and_cannot_be_played():
+    c = Card.from_dict(RAW)
+    assert end_turn([c]).player.current_hp == 50
+    with pytest.raises(Exception):
+        CombatSimulator(make_state([Card.from_dict(RAW)], enemy_count=1)).play_card(0, 0)
+
+def test_unknown_offered_card_keeps_its_place_on_the_screen():
+    cs = make_state([Card.create(CardId.DECAY)], enemy_count=1)
+    from sts2_lite.combat import PendingChoice
+    cs.pending_choice = PendingChoice("discover", [0, 1, 2], "offer", hidden=True, offers=[])
+    cs.adopt_offer([{"id": "HEADBUTT", "is_upgraded": False}, {"id": "FAKE_NEW_CARD", "name": "Fake", "is_upgraded": False}])
+    assert [c.card_id for c in cs.pending_choice.offers] == [CardId.HEADBUTT, CardId.NOT_IMPLEMENTED] and cs.pending_choice.indices == [0, 1]

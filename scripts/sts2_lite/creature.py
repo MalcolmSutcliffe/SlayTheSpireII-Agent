@@ -26,6 +26,7 @@ class Creature:
         self.has_been_attacked_this_turn = False
         self.lost_hp_this_turn = False
         self.hp_loss_events = 0     # running total of times hit points were lost
+        self.damage_taken = 0       # running total of damage received, blocked or not (DamageResult.TotalDamage + Overkill)
         self.hp_lost_log = []       # amounts lost since the simulator last reacted (relics that react to damage)
 
     plating_at_turn_start = True    # the player's Plating pays out at end of turn instead
@@ -87,8 +88,10 @@ class Creature:
         if self.block > 0:
             if self.block > damage:
                 self.block -= damage
+                self.damage_taken += damage
                 return
             damage -= self.block
+            self.damage_taken += self.block
             self.block = 0
             broken = True
         if damage > 0:
@@ -110,11 +113,15 @@ class Creature:
         if powered and dealer is not None and dealer.relics and dealer is not self:
             damage = dealt_hp_loss(dealer, damage)        # The Boot (AfterOstyLate: after Slippery)
 
+        self.damage_taken += damage
         self.current_hp -= damage
         self.lost_hp_this_turn = True
         self.hp_loss_events += 1
         
-        if self.current_hp <= 0:
+        if powered and StatusId.THE_GAMBIT in self.status:      # The Gambit: any unblocked attack damage kills
+            del self.status[StatusId.THE_GAMBIT]
+            self.die()
+        elif self.current_hp <= 0:
             self.die()
         elif StatusId.PLOW in self.status and self.current_hp <= self.status[StatusId.PLOW].amount:
             self.lose_plow()

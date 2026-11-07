@@ -18,6 +18,12 @@ from agents.MCTS import (
 )
 
 
+def primed(state, mcts=None):
+    """A searcher as monte_carlo_tree_search leaves it at the root: the fight's total enemy HP is known."""
+    mcts = mcts or sts2_MCTS()
+    mcts._expected_total_hp = mcts._calculate_expected_total_hp(state)
+    return mcts
+
 @pytest.fixture(autouse=True)
 def seeded():
     rng.seed(0)
@@ -544,7 +550,7 @@ def random_fight():
 
 def test_rollouts_from_one_node_vary():
     node = sts2_DeterministicNode(None, random_fight(), None)
-    mcts = sts2_MCTS()
+    mcts = primed(node.state)
     results = {round(mcts._simulate_random_combat(node), 6) for _ in range(40)}
     assert len(results) > 1
 
@@ -552,13 +558,13 @@ def test_rollout_does_not_modify_the_node_state():
     node = sts2_DeterministicNode(None, random_fight(), None)
     before = (outcome_key(node.state), node.state.player.current_hp,
               node.state.turn_number, [id(c) for c in node.state.player.draw_pile])
-    sts2_MCTS()._simulate_random_combat(node)
+    primed(node.state)._simulate_random_combat(node)
     assert before == (outcome_key(node.state), node.state.player.current_hp,
                       node.state.turn_number, [id(c) for c in node.state.player.draw_pile])
 
 def test_rollouts_are_reproducible_from_a_seed():
     node = sts2_DeterministicNode(None, random_fight(), None)
-    mcts = sts2_MCTS()
+    mcts = primed(node.state)
     rng.seed(9)
     a = [mcts._simulate_random_combat(node) for _ in range(10)]
     rng.seed(9)
@@ -573,7 +579,7 @@ def win_score(hp, max_hp=80, turns=3):
     cs = make_state([])
     cs.player.max_hp, cs.player.current_hp, cs.turn_number = max_hp, hp, turns
     cs.enemies[0].current_hp = 0
-    return sts2_MCTS()._rate_outcome(cs)
+    return primed(cs)._rate_outcome(cs)
 
 def loss_score(enemy_hps, enemy_maxes=None):
     cs = make_state([])
@@ -586,7 +592,7 @@ def loss_score(enemy_hps, enemy_maxes=None):
         e.enemy_id = f"E{i}"
         e.attack_damage, e.num_attacks = 0, 0
         cs.enemies.append(e)
-    return sts2_MCTS()._rate_outcome(cs)
+    return primed(cs)._rate_outcome(cs)
 
 def test_every_win_scores_above_every_loss():
     wins = [win_score(hp, 100, turns) for hp in (1, 10, 50, 100) for turns in (1, 5, 30, 100, 10_000)]
@@ -670,20 +676,20 @@ def stalled_fight():
 
 def test_rollout_stops_at_the_turn_cap():
     node = sts2_DeterministicNode(None, stalled_fight(), None)
-    sts2_MCTS()._simulate_random_combat(node)  # would hang without the cap
+    primed(node.state)._simulate_random_combat(node)  # would hang without the cap
 
 def test_rollout_cap_counts_from_the_starting_turn():
     cs = stalled_fight()
     cs.turn_number = 30
-    sts2_MCTS()._simulate_random_combat(sts2_DeterministicNode(None, cs, None))
+    primed(cs)._simulate_random_combat(sts2_DeterministicNode(None, cs, None))
 
 def test_unfinished_rollout_is_not_rated_as_a_win():
     cs = stalled_fight()
     cs.turn_number += MAX_ROLLOUT_TURNS
-    assert sts2_MCTS()._rate_outcome(cs) <= 0
+    assert primed(cs)._rate_outcome(cs) <= 0
 
 def test_unfinished_rollout_rates_below_any_win():
-    mcts = sts2_MCTS()
+    mcts = primed(stalled_fight())
     unfinished = mcts._rate_outcome(stalled_fight())
     won = make_state([])
     won.enemies[0].current_hp = 0
@@ -692,7 +698,7 @@ def test_unfinished_rollout_rates_below_any_win():
     assert unfinished < mcts._rate_outcome(won)
 
 def test_damaged_enemy_rates_better_when_unfinished():
-    mcts = sts2_MCTS()
+    mcts = primed(stalled_fight())
     hurt = stalled_fight()
     hurt.enemies[0].current_hp = 30
     assert mcts._rate_outcome(hurt) > mcts._rate_outcome(stalled_fight())
@@ -818,3 +824,63 @@ def test_sampled_outcomes_never_reshuffle_the_known_top_card():
         chance = sts2_ChanceNode(None, cs, {"action": "end_turn"})
         child, _ = sts2_MCTS()._sample_outcome(chance)
         assert any(c.card_id == CardId.BASH for c in child.state.player.hand)
+
+
+# ---------------------------------------------------------------- effective HP (enemies that spawn others)
+from agents.MCTS import _effective_hp
+
+def phrog_fight(count=1):
+    cs = make_state([])
+    cs.enemies = []
+    for i in range(count):
+        e = Enemy()
+        e.max_hp = e.current_hp = 61
+        e.enemy_id = f"PHROG_PARASITE_{i}"
+        e.attack_damage, e.num_attacks = 0, 0
+        cs.enemies.append(e)
+    return cs
+
+def wrigglers(hps):
+    out = []
+    for i, hp in enumerate(hps):
+        e = Enemy()
+        e.max_hp = e.current_hp = hp
+        e.enemy_id = f"WRIGGLER_{i}"
+        e.attack_damage, e.num_attacks = 0, 0
+        out.append(e)
+    return out
+
+def test_phrog_parasite_counts_its_wrigglers_in_the_total():
+    assert primed(phrog_fight())._expected_total_hp == 61 + 4 * 19
+
+def test_killing_the_phrog_never_rates_worse():
+    """The 4 Wrigglers it leaves behind replace the HP it was carrying: the score is continuous across the kill."""
+    root = phrog_fight()
+    mcts = primed(root)
+    alive, hurt = phrog_fight(), phrog_fight()
+    hurt.enemies[0].current_hp = 1
+    after_kill = phrog_fight()
+    after_kill.enemies = wrigglers([19, 19, 20, 18])
+    for cs in (alive, hurt, after_kill):
+        cs.player.current_hp = 0
+    assert mcts._rate_outcome(alive) < mcts._rate_outcome(hurt) < mcts._rate_outcome(after_kill)
+
+def test_every_phrog_adds_its_own_wrigglers_to_both_sides():
+    root = phrog_fight(2)
+    mcts = primed(root)
+    root.player.current_hp = 0
+    assert mcts._expected_total_hp == 2 * (61 + 76) and mcts._rate_outcome(root) == -1.0
+
+def test_minions_do_not_count():
+    cs = phrog_fight()
+    minion = wrigglers([10])[0]
+    minion.is_minion = True
+    cs.enemies.append(minion)
+    assert primed(cs)._expected_total_hp == 61 + 76
+    assert _effective_hp(minion) == 0
+
+def test_a_root_without_enemies_does_not_divide_by_zero():
+    cs = phrog_fight()
+    cs.enemies = []
+    cs.player.current_hp = 0
+    assert primed(cs)._rate_outcome(cs) <= 0

@@ -401,7 +401,7 @@ def test_neows_fury_is_always_optional():
     assert cs.pending_choice is None and ids(cs.player.hand) == []
 
 def test_neows_fury_can_stop_after_one_pick():
-    cs = with_discard([neows_fury()], [bash(), headbutt()])
+    cs = with_discard([neows_fury()], [bash(), headbutt(), strike_card()])
     sim = play(cs)
     sim.choose_card(0)
     assert ids(cs.player.hand) == [CardId.BASH]
@@ -417,6 +417,23 @@ def test_neows_fury_with_two_identical_cards_offers_one_option_twice():
     assert len(choices(sim)) == 1
     sim.choose_card(choices(sim)[0]["card_index"])
     assert ids(cs.player.hand) == [CardId.STRIKE_IRONCLAD] * 2 and cs.pending_choice is None
+
+def test_neows_fury_with_a_single_discard_card_still_lets_the_player_decline():
+    cs = with_discard([neows_fury()], [bash()])
+    sim = play(cs)
+    assert cs.pending_choice is not None and ids(cs.player.hand) == []
+    sim.confirm_choice()
+    assert ids(cs.player.hand) == [] and cs.pending_choice is None
+
+def test_upgraded_neows_fury_deals_14_and_offers_three_cards():
+    f = neows_fury().upgraded_copy()
+    cs = with_discard([f], [bash(), headbutt(), strike_card(), bash().upgraded_copy()])
+    hp = cs.enemies[0].current_hp
+    sim = play(cs)
+    assert hp - cs.enemies[0].current_hp == 14
+    for _ in range(3):
+        sim.choose_card(choices(sim)[0]["card_index"])
+    assert len(cs.player.hand) == 3 and cs.pending_choice is None
 
 def test_neows_fury_with_an_empty_discard_asks_nothing():
     cs = state([neows_fury()])

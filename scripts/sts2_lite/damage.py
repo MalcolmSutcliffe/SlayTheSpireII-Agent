@@ -44,6 +44,11 @@ def modify_damage(base : int, attacker : Creature, target : Creature, card : Car
     return max(0, int(damage + EPSILON))
 
 
+def bases_from_displayed(displayed : int, attacker : Creature, target : Creature) -> set[int]:
+    """Every base damage that modify_damage turns into `displayed` (truncation maps several bases to one value)."""
+    limit = 2 * displayed + abs(attacker.status_amount(StatusId.STRENGTH)) + 10
+    return {base for base in range(limit + 1) if modify_damage(base, attacker, target) == displayed}
+
 def base_from_displayed(displayed : int, attacker : Creature, target : Creature) -> int:
     """Base damage that modify_damage turns into `displayed`.
     Truncation can map several bases to one value (only when the net multiplier

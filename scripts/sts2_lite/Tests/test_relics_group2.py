@@ -326,3 +326,10 @@ def test_slippery_then_boot_capture():
     CombatSimulator(cs).play_card(card, 0)
     assert hps(cs) == hp_after == [6, 16, 14]
     assert StatusId.SLIPPERY not in cs.enemies[0].status and status_after == []
+
+def test_happy_flower_flash_reading_loads_as_zero():
+    """From a live run: after the energy was gained the game still showed counter 3 while the relic flashed."""
+    from sts2_lite.relic import RelicInstance
+    assert RelicInstance.from_dict({"id": "HAPPY_FLOWER", "counter": 3}).counter == 0
+    assert RelicInstance.from_dict({"id": "HAPPY_FLOWER", "counter": 2}).counter == 2
+    assert RelicInstance.from_dict({"id": "FAKE_HAPPY_FLOWER", "counter": 5}).counter == 0

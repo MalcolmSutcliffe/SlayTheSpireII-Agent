@@ -12,7 +12,7 @@ from enum import Enum, auto
 
 from sts2_lite import rng
 from sts2_lite.events import EventType
-from sts2_lite.status import StatusId
+from sts2_lite.status import StatusId, is_debuff, AUTOMATION_CARDS, PANACHE_CARDS
 from sts2_lite.relic import block_multiplier, block_gained, debuff_multiplier, x_bonus, before_card_played, snapshot, restore, RelicId, extra_plays, free_by_relic, blocks_play
 
 
@@ -49,6 +49,7 @@ class CardId(Enum):
     TWIN_STRIKE = auto()
     DAZED = auto()
     WOUND = auto()
+    NOT_IMPLEMENTED = auto()    # stand-in for a card the sim does not model: behaves like Wound
     SOOT = auto()
     REGRET = auto()
     DECAY = auto()
@@ -62,6 +63,8 @@ class CardId(Enum):
     CURSE_OF_THE_BELL = auto()
     WRITHE = auto()
     FOLLY = auto()
+    BAD_LUCK = auto()
+    DEBT = auto()
     GUILTY = auto()
     SPORE_MIND = auto()
     ASCENDERS_BANE = auto()
@@ -87,6 +90,57 @@ class CardId(Enum):
     AGGRESSION = auto()
     HEADBUTT = auto()
     NEOWS_FURY = auto()
+    # colorless
+    FINESSE = auto()
+    FLASH_OF_STEEL = auto()
+    ULTIMATE_STRIKE = auto()
+    ULTIMATE_DEFEND = auto()
+    PRODUCTION = auto()
+    MASTER_OF_STRATEGY = auto()
+    DRAMATIC_ENTRANCE = auto()
+    SHOCKWAVE = auto()
+    PROWESS = auto()
+    IMPATIENCE = auto()
+    RESTLESSNESS = auto()
+    SCRAWL = auto()
+    FISTICUFFS = auto()
+    MIND_BLAST = auto()
+    GOLD_AXE = auto()
+    REND = auto()
+    OMNISLICE = auto()
+    VOLLEY = auto()
+    ETERNAL_ARMOR = auto()
+    HAND_OF_GREED = auto()
+    PURITY = auto()
+    SECRET_TECHNIQUE = auto()
+    SECRET_WEAPON = auto()
+    SEEKER_STRIKE = auto()
+    THINKING_AHEAD = auto()
+    EQUILIBRIUM = auto()
+    SALVO = auto()
+    PANIC_BUTTON = auto()
+    PROLONG = auto()
+    FASTEN = auto()
+    PREP_TIME = auto()
+    DARK_SHACKLES = auto()
+    AUTOMATION = auto()
+    PANACHE = auto()
+    ROLLING_BOULDER = auto()
+    THE_BOMB = auto()
+    THE_GAMBIT = auto()
+    MAYHEM = auto()
+    NOSTALGIA = auto()
+    BOLAS = auto()
+    THRUMMING_HATCHET = auto()
+    JACKPOT = auto()
+    CALAMITY = auto()
+    JACK_OF_ALL_TRADES = auto()
+    CATASTROPHE = auto()
+    BEAT_DOWN = auto()
+    ANOINTED = auto()
+    DISCOVERY = auto()
+    ENTROPY = auto()
+    HIDDEN_GEM = auto()
     TRUE_GRIT = auto()
     BURNING_PACT = auto()
     HAVOC = auto()
@@ -140,14 +194,20 @@ INFECTION_DAMAGE = 3
 UPGRADE_COST_CHANGE = {
     CardId.BARRICADE : -1, CardId.CORRUPTION : -1, CardId.DARK_EMBRACE : -1, CardId.STAMPEDE : -1,
     CardId.UNMOVABLE : -1, CardId.HAVOC : -1, CardId.EXPECT_A_FIGHT : -1, CardId.INFERNAL_BLADE : -1,
-    CardId.BODY_SLAM : -1, CardId.HELLRAISER : -1,
+    CardId.BODY_SLAM : -1, CardId.HELLRAISER : -1, CardId.MIND_BLAST : -1,
+    CardId.AUTOMATION : -1, CardId.MAYHEM : -1, CardId.NOSTALGIA : -1, CardId.CALAMITY : -1,
 }
 # CardModel base cost of the cards above (an upgrade caps a rolled Confused cost at base + change)
 UPGRADE_BASE_COST = {
     CardId.BARRICADE : 3, CardId.CORRUPTION : 3, CardId.DARK_EMBRACE : 2, CardId.STAMPEDE : 2,
     CardId.UNMOVABLE : 2, CardId.HAVOC : 1, CardId.EXPECT_A_FIGHT : 2, CardId.INFERNAL_BLADE : 1,
-    CardId.BODY_SLAM : 1, CardId.HELLRAISER : 2,
+    CardId.BODY_SLAM : 1, CardId.HELLRAISER : 2, CardId.MIND_BLAST : 1,
+    CardId.AUTOMATION : 1, CardId.MAYHEM : 2, CardId.NOSTALGIA : 1, CardId.CALAMITY : 3,
 }
+# keyword an upgrade removes (Exhaust)
+UPGRADE_REMOVED_KEYWORD = {CardId.SECRET_TECHNIQUE : 1, CardId.SECRET_WEAPON : 1, CardId.THINKING_AHEAD : 1, CardId.PROLONG : 1, CardId.DISCOVERY : 1}
+# keyword an upgrade adds
+UPGRADE_KEYWORD = {CardId.SCRAWL : 16, CardId.GOLD_AXE : 16, CardId.ANOINTED : 16, CardId.ENTROPY : 4}       # Retain, Retain, Retain, Innate
 CONFUSED_MAX_COST = 3
 
 class CardKeyword(Enum):
@@ -166,28 +226,32 @@ _EXHAUST, _ETHEREAL, _INNATE, _UNPLAYABLE, _RETAIN, _ETERNAL, _REPLAY = 1, 2, 4,
 # cards with the Exhaust keyword
 EXHAUSTING_CARDS = frozenset({CardId.SLIMED, CardId.TREMBLE, CardId.IMPERVIOUS, CardId.MOLTEN_FIST,
                               CardId.FEED, CardId.DOMINATE, CardId.FIEND_FIRE, CardId.FORGOTTEN_RITUAL,
-                              CardId.INFERNAL_BLADE, CardId.NOT_YET, CardId.OFFERING, CardId.SPORE_MIND})
+                              CardId.INFERNAL_BLADE, CardId.NOT_YET, CardId.OFFERING, CardId.SPORE_MIND,
+                              CardId.PRODUCTION, CardId.MASTER_OF_STRATEGY, CardId.DRAMATIC_ENTRANCE, CardId.SHOCKWAVE,
+                              CardId.SCRAWL, CardId.PURITY, CardId.SECRET_TECHNIQUE, CardId.SECRET_WEAPON, CardId.THINKING_AHEAD,
+                              CardId.PANIC_BUTTON, CardId.PROLONG, CardId.DARK_SHACKLES, CardId.JACK_OF_ALL_TRADES, CardId.ANOINTED, CardId.DISCOVERY})
 
-# curses (Bad Luck, Debt and Enthralled cannot appear in Act 1 and are not modelled)
-CURSE_CARDS = frozenset({CardId.REGRET, CardId.DECAY, CardId.SHAME, CardId.DOUBT, CardId.NORMALITY, CardId.INJURY,
+# curses (Enthralled is not modelled; Debt's gold loss is not either: the sim does not track gold)
+CURSE_CARDS = frozenset({CardId.BAD_LUCK, CardId.DEBT, CardId.REGRET, CardId.DECAY, CardId.SHAME, CardId.DOUBT, CardId.NORMALITY, CardId.INJURY,
                          CardId.POOR_SLEEP, CardId.GREED, CardId.CLUMSY, CardId.CURSE_OF_THE_BELL, CardId.WRITHE,
                          CardId.FOLLY, CardId.GUILTY, CardId.SPORE_MIND, CardId.ASCENDERS_BANE})
 
 # cards with the Unplayable keyword
-UNPLAYABLE_CARDS = frozenset({CardId.DAZED, CardId.WOUND, CardId.INFECTION, CardId.SOOT}
+UNPLAYABLE_CARDS = frozenset({CardId.DAZED, CardId.WOUND, CardId.NOT_IMPLEMENTED, CardId.INFECTION, CardId.SOOT}
                              | (CURSE_CARDS - {CardId.SPORE_MIND}))
 
 # cards with the Ethereal keyword: exhausted instead of discarded if still in hand at end of turn
 ETHEREAL_CARDS = frozenset({CardId.DAZED, CardId.CLUMSY, CardId.FOLLY, CardId.ASCENDERS_BANE})
 
 # Retain / Innate / Eternal: only Retain acts in combat (Innate and Eternal are deck-level)
-RETAINING_CARDS = frozenset({CardId.POOR_SLEEP})
-INNATE_CARDS = frozenset({CardId.WRITHE, CardId.FOLLY})
-ETERNAL_CARDS = frozenset({CardId.ASCENDERS_BANE, CardId.CURSE_OF_THE_BELL, CardId.GREED, CardId.FOLLY})
+RETAINING_CARDS = frozenset({CardId.POOR_SLEEP, CardId.RESTLESSNESS, CardId.PURITY})
+INNATE_CARDS = frozenset({CardId.WRITHE, CardId.FOLLY, CardId.DRAMATIC_ENTRANCE, CardId.MIND_BLAST})
+ETERNAL_CARDS = frozenset({CardId.BAD_LUCK, CardId.ASCENDERS_BANE, CardId.CURSE_OF_THE_BELL, CardId.GREED, CardId.FOLLY})
 
 NORMALITY_CARD_LIMIT = 3
-NEOWS_FURY_CARDS = 2
+NEOWS_FURY_CARDS = (2, 3)       # cards returned to the hand, by upgrade
 DECAY_DAMAGE = 2
+BAD_LUCK_HP_LOSS = 13
 CURSE_STATUS_AMOUNT = 1         # Shame (Frail), Doubt (Weak)
 
 def _set_canonical_keywords():
@@ -234,6 +298,7 @@ SLITHER_MAX_COST = 3
 CONSUMED_ON_PLAY = frozenset({EnchantmentId.SWIFT, EnchantmentId.SOWN, EnchantmentId.VIGOROUS})
 CHANGED_ON_PLAY = CONSUMED_ON_PLAY | {EnchantmentId.MOMENTUM, EnchantmentId.GLAM, EnchantmentId.GOOPY}
 _unknown_enchantments : set[str] = set()
+_unknown_cards : set[str] = set()
 
 def keyword_mask(keywords) -> int:
     mask = 0
@@ -261,6 +326,7 @@ class Card:
     is_upgraded : bool
     is_unplayable : bool
     restore_cost : int | str | None = None     # set while the cost is changed for this turn: the cost it gets back
+    replay : int = 0                           # extra plays the card has for good (Hidden Gem); Glam's is the REPLAY keyword
     bonus_damage : int = 0                     # damage Rampage and Thrash have gained this combat
     shown_damage : int | None = None           # the damage printed on the card when it was loaded from the game
     enchantment : EnchantmentId | None = None  # at most one per card
@@ -289,6 +355,16 @@ class Card:
         new_card._keywords = mask | keyword.value
         return new_card
 
+    def with_replay(self, extra : int) -> Card:
+        """A copy that plays `extra` more times for good (BaseReplayCount)."""
+        new_card = Card.create_copy(self)
+        new_card.replay = self.replay + extra
+        return new_card
+
+    @property
+    def has_glam_replay(self) -> bool:
+        return bool(self._mask & _REPLAY)
+
     @property
     def exhausts(self) -> bool:
         return bool(self._mask & _EXHAUST) or self.enchantment == EnchantmentId.GOOPY
@@ -307,6 +383,13 @@ class Card:
 
     @classmethod
     def from_dict(cls, card : dict):
+        if card["id"] not in CardId.__members__ or card["id"] == "NOT_IMPLEMENTED":
+            if card["id"] not in _unknown_cards:
+                _unknown_cards.add(card["id"])
+                print(f"card {card['id']} is not implemented in the sim: treated as a Wound")
+            placeholder = cls.create_not_implemented(card.get("name") or card["id"])
+            placeholder.is_upgraded = bool(card.get("is_upgraded"))
+            return placeholder
         new_card = cls()
         new_card.card_id = CardId[card["id"]]
         new_card.type = CardType[card["type"]]
@@ -323,8 +406,10 @@ class Card:
             new_card._read_enchantment(card["enchantment"])
         if new_card.card_id == CardId.STOMP and new_card.energy_cost < 3:
             new_card.restore_cost = 3           # the shown cost already includes this turn's Attacks
-        match = re.search(r"Deal\s+(\d+)", card.get("description") or "")
+        match = re.search(r"Deals?\s+(\d+)", card.get("description") or "")
         new_card.shown_damage = int(match.group(1)) if match else None
+        replay = re.search(r"Replay (\d+)\.", card.get("description") or "")       # Hidden Gem (Glam prints "Replay 1." too, but it is the keyword)
+        new_card.replay = int(replay.group(1)) if replay and new_card.card_id != CardId.HIDDEN_GEM and new_card.enchantment != EnchantmentId.GLAM else 0
         if card["target_type"] == "None":
             new_card.target_type = TargetType.NONE
         else:
@@ -383,6 +468,13 @@ class Card:
         return c
 
     @classmethod
+    def create_not_implemented(cls, name : str = "Not implemented") -> Card:
+        """A card the sim does not know: a Wound, so that the agent neither plays it nor counts on it."""
+        c = cls.create_wound()
+        c.card_id, c.name = CardId.NOT_IMPLEMENTED, name
+        return c
+
+    @classmethod
     def create_soot(cls) -> Card:
         c = cls()
         c.card_id, c.name, c.type = CardId.SOOT, "Soot", CardType.Status
@@ -410,7 +502,7 @@ class Card:
     @classmethod
     def create_generated(cls, card_id : CardId, upgraded : bool = False) -> Card:
         """A fresh copy of a card that a card effect adds to the player's piles (Infernal Blade, Stoke)."""
-        name, card_type, cost, target = GENERATABLE_CARDS.get(card_id) or TOKEN_CARDS[card_id]
+        name, card_type, cost, target = GENERATABLE_CARDS.get(card_id) or COLORLESS_CARDS.get(card_id) or TOKEN_CARDS[card_id]
         c = cls()
         c.card_id, c.name, c.type = card_id, name, card_type
         c.energy_cost, c.target_type = cost, target
@@ -455,6 +547,12 @@ class Card:
             new_card.energy_cost = max(0, self.energy_cost - (kept - upgraded))
             if self.restore_cost is not None:
                 new_card.restore_cost = upgraded
+        keyword = UPGRADE_KEYWORD.get(self.card_id)
+        if keyword:
+            new_card._keywords = new_card._mask | keyword
+        removed = UPGRADE_REMOVED_KEYWORD.get(self.card_id)
+        if removed:
+            new_card._keywords = new_card._mask & ~removed
         return new_card
 
     def on_turn_end_in_hand(self, combat : CombatSimulator):
@@ -477,6 +575,7 @@ class Card:
         new_card.is_unplayable = card.is_unplayable
         new_card.restore_cost = card.restore_cost
         new_card.bonus_damage = card.bonus_damage
+        new_card.replay = card.replay
         new_card.enchantment, new_card.enchant_amount, new_card.enchant_bonus = card.enchantment, card.enchant_amount, card.enchant_bonus
         new_card._keywords = card._keywords
         return new_card
@@ -487,6 +586,8 @@ class Card:
             return self.energy_cost
         if self.type == CardType.Skill and StatusId.CORRUPTION in player.status:
             return 0
+        if self.type == CardType.Attack and StatusId.FREE_ATTACK in player.status and player.status[StatusId.FREE_ATTACK].amount > 0:
+            return 0                # FreeAttackPower.TryModifyEnergyCostInCombatLate: the game shows these at 0
         cost = self.energy_cost if self.type != CardType.Attack else self.energy_cost + player.status_amount(StatusId.TANGLED)
         if player.relics and _SCARF in player.relics and free_by_relic(player):
             return 0                # Brilliant Scarf (TryModifyEnergyCostInCombatLate)
@@ -504,6 +605,9 @@ class Card:
         saved = snapshot(player) if player.relics else None
         punch = player.status.get(StatusId.ONE_TWO_PUNCH) if self.type == CardType.Attack else None
         x = None
+        counted = self.type == CardType.Attack or self.type == CardType.Skill
+        if counted:
+            player.plays_started_this_turn += 1         # CardPlayStarted: Nostalgia counts these
 
         try:
             extra = self._extra_plays(player, punch)
@@ -532,6 +636,8 @@ class Card:
                 self._enchantment_on_play(combat)
         except ValueError:
             combat.combat_state.energy = energy
+            if counted:
+                player.plays_started_this_turn -= 1
             if free_attack:
                 free_attack.amount = free_attack_amount
             if saved:
@@ -584,6 +690,7 @@ class Card:
             punch.amount -= 1
             if punch.amount <= 0:
                 del player.status[StatusId.ONE_TWO_PUNCH]
+        extra += self.replay
         if self._mask & _REPLAY:        # Replay 1 (Glam); it is spent after this play, but this count is fixed before it
             extra += 1
         if player.relics and _AXE in player.relics:
@@ -594,6 +701,8 @@ class Card:
         """A further play (each fires Before/AfterCardPlayed); a dead target's effect is skipped."""
         if self.target_type == TargetType.AnyEnemy and combat.combat_state.enemies[target_index].current_hp <= 0:
             return
+        if self.type == CardType.Attack or self.type == CardType.Skill:
+            combat.combat_state.player.plays_started_this_turn += 1
         if x is None:
             GET_CARD_FUNCTION[self.card_id](self, combat, target_index, self.is_upgraded)
         else:
@@ -658,12 +767,18 @@ def _enchanted_damage(card : Card, base):
         return base + ENCHANT_EMBER_DAMAGE
     return base
 
+def owner_has_fasten(combat : CombatSimulator, card : Card | None) -> bool:
+    """FastenPower.ModifyBlockAdditive: only Defends get the extra block."""
+    return card is not None and card.card_id in DEFEND_CARDS and StatusId.FASTEN in combat.combat_state.player.status
+
 def _gain_block(combat : CombatSimulator, base : int):
     card = combat.card_in_play
     if card is not None and card.enchantment == EnchantmentId.NIMBLE:      # adds to the card's own Block, before Dexterity and Frail
         base += card.enchant_amount
     elif card is not None and card.enchantment == EnchantmentId.GOOPY:    # printed block + permanent gains
         base += card.enchant_amount - 1
+    if owner_has_fasten(combat, card):
+        base += combat.combat_state.player.status_amount(StatusId.FASTEN)
     # Unmovable: doubled while gains from *other* plays this turn < amount (UnmovablePower)
     owner = combat.combat_state.player
     play = combat.play_id
@@ -676,6 +791,8 @@ def _gain_block(combat : CombatSimulator, base : int):
     else:
         owner.block_play, owner.block_play_gains = play, 1
     multiplier = 2 if doubled else 1
+    if card is not None and StatusId.NO_BLOCK in owner.status:      # NoBlockPower: block from cards (not unpowered block) is nothing
+        multiplier = 0
     if owner.relics:
         multiplier *= block_multiplier(owner, combat.card_in_play)     # Vambrace
     block = combat.calculate_block(base, owner, multiplier)
@@ -708,7 +825,10 @@ PLAIN_DAMAGE = {        # id : (damage, damage upgraded) of the cards that print
     CardId.DISMANTLE : (8, 10), CardId.FEED : (10, 12), CardId.FIEND_FIRE : (7, 10), CardId.FIGHT_ME : (5, 6),
     CardId.GIANT_ROCK : (16, 20), CardId.HEADBUTT : (9, 12), CardId.HEMOKINESIS : (15, 20),
     CardId.HOWL_FROM_BEYOND : (16, 21), CardId.IRON_WAVE : (5, 7), CardId.MANGLE : (15, 20),
-    CardId.MOLTEN_FIST : (10, 14), CardId.NEOWS_FURY : (10, 10), CardId.PACTS_END : (17, 23), CardId.PILLAGE : (6, 9), CardId.POMMEL_STRIKE : (9, 10),
+    CardId.FISTICUFFS : (7, 9), CardId.FLASH_OF_STEEL : (5, 8), CardId.HAND_OF_GREED : (20, 25), CardId.OMNISLICE : (8, 11),
+    CardId.ULTIMATE_STRIKE : (14, 20), CardId.SEEKER_STRIKE : (9, 12), CardId.VOLLEY : (10, 14), CardId.DRAMATIC_ENTRANCE : (11, 15),
+    CardId.MOLTEN_FIST : (10, 14), CardId.NEOWS_FURY : (10, 14), CardId.PACTS_END : (17, 23), CardId.PILLAGE : (6, 9), CardId.POMMEL_STRIKE : (9, 10),
+    CardId.BOLAS : (3, 4), CardId.SALVO : (12, 16), CardId.THRUMMING_HATCHET : (11, 14), CardId.JACKPOT : (25, 30),
     CardId.SETUP_STRIKE : (7, 9), CardId.SPITE : (5, 5), CardId.STOMP : (12, 15), CardId.STRIKE_IRONCLAD : (6, 9),
     CardId.SWORD_BOOMERANG : (3, 3), CardId.TEAR_ASUNDER : (5, 7), CardId.THUNDERCLAP : (4, 7),
     CardId.TWIN_STRIKE : (5, 7), CardId.UNRELENTING : (14, 20), CardId.UPPERCUT : (13, 13), CardId.WHIRLWIND : (5, 8),
@@ -824,21 +944,119 @@ def play_burning_pact(card: Card, combat : CombatSimulator, target_index=0, is_u
     combat.request_choice("exhaust", list(range(len(hand))), amount=3 if is_upgraded else 2)
 
 def play_cascade(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False, x=0):
+    combat.auto_play_from_top(x + (1 if is_upgraded else 0))
+
+def play_equilibrium(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    _gain_block(combat, 16 if is_upgraded else 13)
+    combat.combat_state.player.apply_status(StatusId.RETAIN_HAND, 1)
+
+def play_salvo(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], _enemy(combat, target_index))
+    combat.combat_state.player.apply_status(StatusId.RETAIN_HAND, 1)
+
+def play_panic_button(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    _gain_block(combat, 40 if is_upgraded else 30)
+    combat.combat_state.player.apply_status(StatusId.NO_BLOCK, 2)       # after the block: this and the next turn's cards give none
+
+def play_prolong(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     player = combat.combat_state.player
-    # the cards are all taken off the top first, then played in that order
-    taken = []
-    for _ in range(x + (1 if is_upgraded else 0)):
-        top = player.take_top()
-        if top is None:
+    if player.block > 0:
+        player.apply_status(StatusId.BLOCK_NEXT_TURN, player.block)
+
+def play_fasten(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    combat.combat_state.player.apply_status(StatusId.FASTEN, 6 if is_upgraded else 4)
+
+def play_prep_time(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    combat.combat_state.player.apply_status(StatusId.PREP_TIME, 6 if is_upgraded else 4)
+
+def play_dark_shackles(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    _temp_strength(_enemy(combat, target_index), StatusId.DARK_SHACKLES, 15 if is_upgraded else 9, -1, combat)
+
+def play_automation(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    combat.combat_state.player.add_instance(StatusId.AUTOMATION, [AUTOMATION_CARDS])
+
+def play_panache(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    combat.combat_state.player.add_instance(StatusId.PANACHE, [PANACHE_CARDS, 14 if is_upgraded else 10, 0])
+
+def play_rolling_boulder(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    combat.combat_state.player.add_instance(StatusId.ROLLING_BOULDER, [10 if is_upgraded else 5])
+
+def play_the_bomb(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    combat.combat_state.player.add_instance(StatusId.THE_BOMB, [3, 50 if is_upgraded else 40])
+
+def play_the_gambit(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    _gain_block(combat, 75 if is_upgraded else 50)
+    combat.combat_state.player.apply_status(StatusId.THE_GAMBIT, 1)
+
+def play_mayhem(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    combat.combat_state.player.apply_status(StatusId.MAYHEM, 1)
+
+def play_nostalgia(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    combat.combat_state.player.apply_status(StatusId.NOSTALGIA, 1)
+
+def play_bolas(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], _enemy(combat, target_index))
+
+def play_thrumming_hatchet(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], _enemy(combat, target_index))
+
+def play_jackpot(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], _enemy(combat, target_index))
+    for _ in range(3):      # CardFactory.GetForCombat: with repeats
+        combat.combat_state.player.add_to_hand(Card.create_generated(rng.choice(ZERO_COST_POOL), is_upgraded))
+
+def play_calamity(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    combat.combat_state.player.apply_status(StatusId.CALAMITY, 1)
+
+def play_jack_of_all_trades(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    for card_id in rng.sample(JACK_POOL, 2 if is_upgraded else 1):       # distinct
+        combat.combat_state.player.add_to_hand(Card.create_generated(card_id))
+
+def play_catastrophe(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    player = combat.combat_state.player
+    for _ in range(3 if is_upgraded else 2):
+        if combat.is_over or not player.draw_pile:
             break
-        taken.append(top)
-    for top in taken:
+        playable = [c for c in player.draw_pile if not c.unplayable]
+        pick = rng.choice(playable or player.draw_pile)             # a random playable card, any card if none is
+        if pick.unplayable:
+            player.remove_from_draw_pile(pick)
+            player.discard_pile.append(pick)
+        else:
+            combat.auto_play(pick)
+
+def play_beat_down(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    player = combat.combat_state.player
+    attacks = [c for c in player.discard_pile if c.type == CardType.Attack and not c.unplayable]
+    for pick in rng.sample(attacks, min(len(attacks), 4 if is_upgraded else 3)):       # all chosen before the first is played
         if combat.is_over:
             break
-        if top.unplayable:
-            player.discard_pile.append(top)         # an unplayable card goes to the discard pile unplayed
-        else:
-            combat.auto_play(top)
+        combat.auto_play(pick)
+
+def play_anointed(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    player = combat.combat_state.player
+    rares = [c for c in player.draw_pile if c.card_id in RARE_CARDS]
+    for pick in rng.sample(rares, min(len(rares), MAX_HAND_SIZE - len(player.hand))):
+        player.remove_from_draw_pile(pick)
+        player.hand.append(pick)
+
+def play_discovery(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    # CardFactory.GetDistinctForCombat: three different cards; the game shows its own three (see CombatState.adopt_offer)
+    combat.request_discovery([Card.create_generated(card_id) for card_id in rng.sample(list(GENERATABLE_CARDS), 3)])
+
+def play_entropy(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    combat.combat_state.player.apply_status(StatusId.ENTROPY, 1)
+
+def play_hidden_gem(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    player = combat.combat_state.player
+    # a playable card without Replay that is not a Curse; Attacks, Skills and Powers first
+    candidates = [i for i, c in enumerate(player.draw_pile) if not c.unplayable and c.type != CardType.Curse and c.replay == 0 and not c.has_glam_replay]
+    preferred = [i for i in candidates if player.draw_pile[i].type != CardType.Status]
+    if not candidates:
+        return
+    i = rng.choice(preferred or candidates)
+    gained = player.draw_pile[i].with_replay(3 if is_upgraded else 2)
+    player.draw_pile[i] = gained            # in place: a known top card stays where it is
 
 def play_cinder(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     target = _enemy(combat, target_index)
@@ -967,7 +1185,7 @@ def play_neows_fury(card: Card, combat : CombatSimulator, target_index=0, is_upg
     _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], target)
     player = combat.combat_state.player
     discard = player.discard_pile
-    combat.request_choice("to_hand", list(range(len(discard))), pile="discard", amount=NEOWS_FURY_CARDS, source=card)
+    combat.request_choice("to_hand", list(range(len(discard))), pile="discard", amount=NEOWS_FURY_CARDS[is_upgraded], source=card)
 
 def play_hellraiser(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     player = combat.combat_state.player
@@ -1223,24 +1441,159 @@ def play_whirlwind(card: Card, combat : CombatSimulator, target_index=0, is_upgr
 ### map to get function from card id
 ###
 
+# ---------------------------------------------------------------- colorless
+MAX_HAND_SIZE = 10
+
+def play_finesse(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    _gain_block(combat, 7 if is_upgraded else 4)
+    combat.combat_state.player.draw_cards(1)
+
+def play_flash_of_steel(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], _enemy(combat, target_index))
+    combat.combat_state.player.draw_cards(1)
+
+def play_ultimate_strike(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], _enemy(combat, target_index))
+
+def play_ultimate_defend(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    _gain_block(combat, 15 if is_upgraded else 11)
+
+def play_production(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    combat.gain_energy(3 if is_upgraded else 2)
+
+def play_master_of_strategy(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    combat.combat_state.player.draw_cards(4 if is_upgraded else 3)
+
+def play_dramatic_entrance(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    for target in list(combat.combat_state.enemies):
+        _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], target)
+
+def play_shockwave(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    player = combat.combat_state.player
+    amount = 5 if is_upgraded else 3
+    for target in _living(combat):
+        target.apply_status(StatusId.WEAK, amount * debuff_multiplier(player, combat.card_in_play, target) if player.relics else amount)
+        _vulnerable(combat, target, amount)
+
+def play_prowess(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    player = combat.combat_state.player
+    player.apply_status(StatusId.STRENGTH, 2 if is_upgraded else 1)
+    player.apply_status(StatusId.DEXTERITY, 2 if is_upgraded else 1)
+
+def play_impatience(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    player = combat.combat_state.player
+    if not any(c.type == CardType.Attack for c in player.hand):
+        player.draw_cards(3 if is_upgraded else 2)
+
+def play_restlessness(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    player = combat.combat_state.player
+    if not player.hand:         # the card being played has left the hand
+        player.draw_cards(3 if is_upgraded else 2)
+        combat.gain_energy(3 if is_upgraded else 2)
+
+def play_scrawl(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    player = combat.combat_state.player
+    player.draw_cards(MAX_HAND_SIZE - len(player.hand))
+
+def play_fisticuffs(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    target = _enemy(combat, target_index)
+    before = target.damage_taken
+    _attack(combat, 9 if is_upgraded else 7, target)
+    dealt = target.damage_taken - before
+    if dealt > 0:
+        _gain_block(combat, dealt)       # powered block: Dexterity and Frail apply
+
+def play_mind_blast(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    _attack(combat, len(combat.combat_state.player.draw_pile), _enemy(combat, target_index))
+
+def play_gold_axe(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    _attack(combat, combat.combat_state.player.cards_played_total, _enemy(combat, target_index))
+
+def play_rend(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    target = _enemy(combat, target_index)
+    debuffs = sum(1 for status_id, inst in target.status.items() if is_debuff(status_id, inst.amount) and status_id not in (StatusId.MANGLE, StatusId.DARK_SHACKLES))
+    _attack(combat, (18 if is_upgraded else 15) + (8 if is_upgraded else 5) * debuffs, target)    # temporary debuffs do not count
+
+def play_omnislice(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    target = _enemy(combat, target_index)
+    before = target.damage_taken
+    _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], target)
+    dealt = target.damage_taken - before
+    if dealt > 0:       # the rest take what the first hit dealt, unpowered (no Strength or Vulnerable)
+        for other in _living(combat):
+            if other is not target:
+                other.apply_damage(dealt, combat.combat_state.player)
+
+def play_volley(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False, x=0):
+    for _ in range(x):
+        living = _living(combat)
+        if not living:
+            break
+        _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], living[0] if len(living) == 1 else rng.choice(living))
+        combat.resolve_deaths()
+
+def play_eternal_armor(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    combat.combat_state.player.apply_status(StatusId.PLATING, 12 if is_upgraded else 9)
+
+def play_hand_of_greed(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    target = _enemy(combat, target_index)
+    _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], target)
+    if target.current_hp <= 0 and StatusId.MINION not in target.status:
+        combat.combat_state.player.gold += 25 if is_upgraded else 20
+
+def play_purity(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    hand = combat.combat_state.player.hand
+    combat.request_choice("exhaust_any", list(range(len(hand))), amount=5 if is_upgraded else 3)
+
+def _pick_from_draw_pile(combat : CombatSimulator, card_type : CardType):
+    """Secret Technique / Secret Weapon: take a Skill / Attack of your choice from the draw pile."""
+    draw = combat.combat_state.player.draw_pile
+    combat.request_choice("draw_to_hand", [i for i, c in enumerate(draw) if c.type == card_type], pile="draw")
+
+def play_secret_technique(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    _pick_from_draw_pile(combat, CardType.Skill)
+
+def play_secret_weapon(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    _pick_from_draw_pile(combat, CardType.Attack)
+
+SEEKER_STRIKE_OPTIONS = 3
+
+def play_seeker_strike(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], _enemy(combat, target_index))
+    draw = combat.combat_state.player.draw_pile
+    if draw:        # three random cards of the draw pile (the game's own three are adopted when its screen appears)
+        offered = rng.sample(range(len(draw)), min(SEEKER_STRIKE_OPTIONS, len(draw)))
+        combat.request_choice("draw_to_hand", offered, pile="draw", hidden=True)
+
+def play_thinking_ahead(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    player = combat.combat_state.player
+    player.draw_cards(2)
+    combat.request_choice("to_draw_pile", list(range(len(player.hand))), pile="hand")
+
 GET_CARD_FUNCTION : dict[CardId, function] = {
     CardId.AGGRESSION : play_aggression,
     CardId.ANGER : play_anger,
+    CardId.ANOINTED : play_anointed,
     CardId.ARMAMENTS : play_armaments,
     CardId.ASHEN_STRIKE : play_ashen_strike,
+    CardId.AUTOMATION : play_automation,
     CardId.BARRICADE : play_barricade,
     CardId.BASH : play_bash,
     CardId.BATTLE_TRANCE : play_battle_trance,
+    CardId.BEAT_DOWN : play_beat_down,
     CardId.BLOODLETTING : play_bloodletting,
     CardId.BLOOD_WALL : play_blood_wall,
     CardId.BLUDGEON : play_bludgeon,
     CardId.BODY_SLAM : play_body_slam,
+    CardId.BOLAS : play_bolas,
     CardId.BRAND : play_brand,
     CardId.BREAK : play_break,
     CardId.BREAKTHROUGH : play_breakthrough,
     CardId.BULLY : play_bully,
     CardId.BURNING_PACT : play_burning_pact,
+    CardId.CALAMITY : play_calamity,
     CardId.CASCADE : play_cascade,
+    CardId.CATASTROPHE : play_catastrophe,
     CardId.CINDER : play_cinder,
     CardId.COLOSSUS : play_colossus,
     CardId.CONFLAGRATION : play_conflagration,
@@ -1248,49 +1601,86 @@ GET_CARD_FUNCTION : dict[CardId, function] = {
     CardId.CRIMSON_MANTLE : play_crimson_mantle,
     CardId.CRUELTY : play_cruelty,
     CardId.DARK_EMBRACE : play_dark_embrace,
+    CardId.DARK_SHACKLES : play_dark_shackles,
     CardId.DEFEND_IRONCLAD : play_defend,
     CardId.DEMON_FORM : play_demon_form,
+    CardId.DISCOVERY : play_discovery,
     CardId.DISMANTLE : play_dismantle,
     CardId.DOMINATE : play_dominate,
+    CardId.DRAMATIC_ENTRANCE : play_dramatic_entrance,
     CardId.DRUM_OF_BATTLE : play_drum_of_battle,
+    CardId.ENTROPY : play_entropy,
+    CardId.EQUILIBRIUM : play_equilibrium,
+    CardId.ETERNAL_ARMOR : play_eternal_armor,
     CardId.EVIL_EYE : play_evil_eye,
     CardId.EXPECT_A_FIGHT : play_expect_a_fight,
+    CardId.FASTEN : play_fasten,
     CardId.FEED : play_feed,
     CardId.FEEL_NO_PAIN : play_feel_no_pain,
     CardId.FIEND_FIRE : play_fiend_fire,
     CardId.FIGHT_ME : play_fight_me,
+    CardId.FINESSE : play_finesse,
+    CardId.FISTICUFFS : play_fisticuffs,
     CardId.FLAME_BARRIER : play_flame_barrier,
+    CardId.FLASH_OF_STEEL : play_flash_of_steel,
     CardId.FORGOTTEN_RITUAL : play_forgotten_ritual,
     CardId.GIANT_ROCK : play_giant_rock,
+    CardId.GOLD_AXE : play_gold_axe,
+    CardId.HAND_OF_GREED : play_hand_of_greed,
     CardId.HAVOC : play_havoc,
     CardId.HEADBUTT : play_headbutt,
     CardId.HELLRAISER : play_hellraiser,
     CardId.HEMOKINESIS : play_hemokinesis,
+    CardId.HIDDEN_GEM : play_hidden_gem,
     CardId.HOWL_FROM_BEYOND : play_howl_from_beyond,
+    CardId.IMPATIENCE : play_impatience,
     CardId.IMPERVIOUS : play_impervious,
     CardId.INFERNAL_BLADE : play_infernal_blade,
     CardId.INFERNO : play_inferno,
     CardId.INFLAME : play_inflame,
     CardId.IRON_WAVE : play_iron_wave,
+    CardId.JACKPOT : play_jackpot,
+    CardId.JACK_OF_ALL_TRADES : play_jack_of_all_trades,
     CardId.JUGGERNAUT : play_juggernaut,
     CardId.JUGGLING : play_juggling,
     CardId.MANGLE : play_mangle,
+    CardId.MASTER_OF_STRATEGY : play_master_of_strategy,
+    CardId.MAYHEM : play_mayhem,
+    CardId.MIND_BLAST : play_mind_blast,
     CardId.MOLTEN_FIST : play_molten_fist,
     CardId.NEOWS_FURY : play_neows_fury,
+    CardId.NOSTALGIA : play_nostalgia,
     CardId.NOT_YET : play_not_yet,
     CardId.OFFERING : play_offering,
+    CardId.OMNISLICE : play_omnislice,
     CardId.ONE_TWO_PUNCH : play_one_two_punch,
     CardId.PACTS_END : play_pacts_end,
+    CardId.PANACHE : play_panache,
+    CardId.PANIC_BUTTON : play_panic_button,
     CardId.PERFECTED_STRIKE : play_perfected_strike,
     CardId.PILLAGE : play_pillage,
     CardId.POMMEL_STRIKE : play_pommel_strike,
+    CardId.PREP_TIME : play_prep_time,
     CardId.PRIMAL_FORCE : play_primal_force,
+    CardId.PRODUCTION : play_production,
+    CardId.PROLONG : play_prolong,
+    CardId.PROWESS : play_prowess,
+    CardId.PURITY : play_purity,
     CardId.PYRE : play_pyre,
     CardId.RAGE : play_rage,
     CardId.RAMPAGE : play_rampage,
+    CardId.REND : play_rend,
+    CardId.RESTLESSNESS : play_restlessness,
+    CardId.ROLLING_BOULDER : play_rolling_boulder,
     CardId.RUPTURE : play_rupture,
+    CardId.SALVO : play_salvo,
+    CardId.SCRAWL : play_scrawl,
     CardId.SECOND_WIND : play_second_wind,
+    CardId.SECRET_TECHNIQUE : play_secret_technique,
+    CardId.SECRET_WEAPON : play_secret_weapon,
+    CardId.SEEKER_STRIKE : play_seeker_strike,
     CardId.SETUP_STRIKE : play_setup_strike,
+    CardId.SHOCKWAVE : play_shockwave,
     CardId.SHRUG_IT_OFF : play_shrug_it_off,
     CardId.SLIMED : play_slimed,
     CardId.SPITE : play_spite,
@@ -1303,15 +1693,22 @@ GET_CARD_FUNCTION : dict[CardId, function] = {
     CardId.SWORD_BOOMERANG : play_sword_boomerang,
     CardId.TAUNT : play_taunt,
     CardId.TEAR_ASUNDER : play_tear_asunder,
+    CardId.THE_BOMB : play_the_bomb,
+    CardId.THE_GAMBIT : play_the_gambit,
+    CardId.THINKING_AHEAD : play_thinking_ahead,
     CardId.THRASH : play_thrash,
+    CardId.THRUMMING_HATCHET : play_thrumming_hatchet,
     CardId.THUNDERCLAP : play_thunderclap,
     CardId.TREMBLE : play_tremble,
     CardId.TRUE_GRIT : play_true_grit,
     CardId.TWIN_STRIKE : play_twin_strike,
+    CardId.ULTIMATE_DEFEND : play_ultimate_defend,
+    CardId.ULTIMATE_STRIKE : play_ultimate_strike,
     CardId.UNMOVABLE : play_unmovable,
     CardId.UNRELENTING : play_unrelenting,
     CardId.UPPERCUT : play_uppercut,
     CardId.VICIOUS : play_vicious,
+    CardId.VOLLEY : play_volley,
     CardId.WHIRLWIND : play_whirlwind,
 }
 
@@ -1399,11 +1796,68 @@ GENERATABLE_CARDS = {
     CardId.WHIRLWIND : ("Whirlwind", CardType.Attack, "X", ALL),
 }
 TOKEN_CARDS = {CardId.GIANT_ROCK : ("Giant Rock", CardType.Attack, 1, A)}      # made by Primal Force
+# colorless cards that card effects can add (Jack of All Trades, Toolbox): (name, type, cost, target). Multiplayer-only
+# cards are left out; Alchemize and Splash are not modelled; Alchemize, Hand of Greed and Hidden Gem are never generated in combat.
+COLORLESS_CARDS = {
+    CardId.FINESSE : ("Finesse", CardType.Skill, 0, S), CardId.FLASH_OF_STEEL : ("Flash of Steel", CardType.Attack, 0, A),
+    CardId.ULTIMATE_STRIKE : ("Ultimate Strike", CardType.Attack, 1, A), CardId.ULTIMATE_DEFEND : ("Ultimate Defend", CardType.Skill, 1, S),
+    CardId.PRODUCTION : ("Production", CardType.Skill, 0, S), CardId.MASTER_OF_STRATEGY : ("Master of Strategy", CardType.Skill, 0, S),
+    CardId.DRAMATIC_ENTRANCE : ("Dramatic Entrance", CardType.Attack, 0, ALL), CardId.SHOCKWAVE : ("Shockwave", CardType.Skill, 2, ALL),
+    CardId.PROWESS : ("Prowess", CardType.Power, 1, S), CardId.IMPATIENCE : ("Impatience", CardType.Skill, 0, S),
+    CardId.RESTLESSNESS : ("Restlessness", CardType.Skill, 0, S), CardId.SCRAWL : ("Scrawl", CardType.Skill, 1, S),
+    CardId.FISTICUFFS : ("Fisticuffs", CardType.Attack, 1, A), CardId.MIND_BLAST : ("Mind Blast", CardType.Attack, 1, A),
+    CardId.GOLD_AXE : ("Gold Axe", CardType.Attack, 1, A), CardId.REND : ("Rend", CardType.Attack, 2, A),
+    CardId.OMNISLICE : ("Omnislice", CardType.Attack, 0, A), CardId.VOLLEY : ("Volley", CardType.Attack, "X", RAND),
+    CardId.ETERNAL_ARMOR : ("Eternal Armor", CardType.Power, 3, S), CardId.HAND_OF_GREED : ("Hand of Greed", CardType.Attack, 2, A),
+    CardId.PURITY : ("Purity", CardType.Skill, 0, S),
+    CardId.SECRET_TECHNIQUE : ("Secret Technique", CardType.Skill, 0, S), CardId.SECRET_WEAPON : ("Secret Weapon", CardType.Skill, 0, S),
+    CardId.SEEKER_STRIKE : ("Seeker Strike", CardType.Attack, 1, A), CardId.THINKING_AHEAD : ("Thinking Ahead", CardType.Skill, 0, S),
+    CardId.EQUILIBRIUM : ("Equilibrium", CardType.Skill, 2, S), CardId.SALVO : ("Salvo", CardType.Attack, 1, A),
+    CardId.PANIC_BUTTON : ("Panic Button", CardType.Skill, 0, S), CardId.PROLONG : ("Prolong", CardType.Skill, 0, S),
+    CardId.FASTEN : ("Fasten", CardType.Power, 1, S), CardId.PREP_TIME : ("Prep Time", CardType.Power, 1, S),
+    CardId.DARK_SHACKLES : ("Dark Shackles", CardType.Skill, 0, A), CardId.AUTOMATION : ("Automation", CardType.Power, 1, S),
+    CardId.PANACHE : ("Panache", CardType.Power, 0, S), CardId.ROLLING_BOULDER : ("Rolling Boulder", CardType.Power, 3, S),
+    CardId.THE_BOMB : ("The Bomb", CardType.Skill, 2, S), CardId.THE_GAMBIT : ("The Gambit", CardType.Skill, 0, S),
+    CardId.MAYHEM : ("Mayhem", CardType.Power, 2, S), CardId.NOSTALGIA : ("Nostalgia", CardType.Power, 1, S),
+    CardId.BOLAS : ("Bolas", CardType.Attack, 0, A), CardId.THRUMMING_HATCHET : ("Thrumming Hatchet", CardType.Attack, 1, A),
+    CardId.JACKPOT : ("Jackpot", CardType.Attack, 3, A), CardId.CALAMITY : ("Calamity", CardType.Power, 3, S),
+    CardId.JACK_OF_ALL_TRADES : ("Jack of All Trades", CardType.Skill, 0, S), CardId.CATASTROPHE : ("Catastrophe", CardType.Skill, 2, S),
+    CardId.BEAT_DOWN : ("Beat Down", CardType.Skill, 3, RAND), CardId.ANOINTED : ("Anointed", CardType.Skill, 1, S),
+    CardId.DISCOVERY : ("Discovery", CardType.Skill, 1, S), CardId.ENTROPY : ("Entropy", CardType.Power, 1, S),
+    CardId.HIDDEN_GEM : ("Hidden Gem", CardType.Skill, 1, S),
+}
+
+# what Jack of All Trades can make: Hand of Greed (and Alchemize and Hidden Gem) cannot be generated in combat, and it makes no Jack of All Trades
+NOT_GENERATED_COLORLESS = frozenset({CardId.HAND_OF_GREED, CardId.HIDDEN_GEM, CardId.JACK_OF_ALL_TRADES})
+JACK_POOL = [cid for cid in COLORLESS_CARDS if cid not in NOT_GENERATED_COLORLESS]
+# what a card can be transformed into: generatable colorless cards (Jack of All Trades included), or generatable Ironclad cards
+TRANSFORM_COLORLESS = [cid for cid in COLORLESS_CARDS if cid not in (CardId.HAND_OF_GREED, CardId.HIDDEN_GEM)]
+
+def transform_options(card : Card) -> list[CardId]:
+    """CardFactory.GetFilteredTransformationOptions: Common to Rare cards of the card's own pool (Neow's Fury is colorless), never the same card.
+    Empty for Statuses and Curses, which cannot be transformed here."""
+    if card.type in (CardType.Status, CardType.Curse):
+        return []
+    colorless = card.card_id in COLORLESS_CARDS or card.card_id == CardId.NEOWS_FURY
+    return [cid for cid in (TRANSFORM_COLORLESS if colorless else GENERATABLE_CARDS) if cid != card.card_id]
+# Rare cards (Anointed takes them from the draw pile)
+RARE_CARDS = frozenset(CardId[name] for name in (
+    "AGGRESSION BARRICADE BOLAS BRAND CASCADE CONFLAGRATION CRIMSON_MANTLE CRUELTY DARK_EMBRACE DEMON_FORM ETERNAL_ARMOR FEED FIEND_FIRE "
+    "GOLD_AXE HAND_OF_GREED HELLRAISER IMPERVIOUS JUGGERNAUT MANGLE MASTER_OF_STRATEGY MAYHEM NOSTALGIA NOT_YET OFFERING ONE_TWO_PUNCH PACTS_END "
+    "PRIMAL_FORCE PYRE REND ROLLING_BOULDER SALVO SCRAWL SECRET_TECHNIQUE SECRET_WEAPON STOKE TEAR_ASUNDER THE_GAMBIT THRASH UNMOVABLE "
+    "JACKPOT CALAMITY BEAT_DOWN ANOINTED").split())
+
 INFERNAL_BLADE_POOL = [cid for cid, (_, card_type, _, _) in GENERATABLE_CARDS.items() if card_type == CardType.Attack]
 STOKE_POOL = list(GENERATABLE_CARDS)
+ZERO_COST_POOL = [cid for cid, (_, _, cost, _) in GENERATABLE_CARDS.items() if cost == 0]       # Jackpot: canonical cost 0, not X
+
+# cards that return to the hand at the start of the next turn if they were played this one (BeforeHandDraw)
+RETURNING_CARDS = frozenset({CardId.BOLAS, CardId.THRUMMING_HATCHET})
+# cards with the Defend tag (Fasten)
+DEFEND_CARDS = frozenset({CardId.DEFEND_IRONCLAD, CardId.ULTIMATE_DEFEND})
 
 # cards with the Strike tag (Hellraiser plays them when they are drawn)
-STRIKE_CARDS = frozenset({CardId.STRIKE_IRONCLAD, CardId.PERFECTED_STRIKE, CardId.POMMEL_STRIKE, CardId.TWIN_STRIKE,
+STRIKE_CARDS = frozenset({CardId.ULTIMATE_STRIKE, CardId.SEEKER_STRIKE, CardId.STRIKE_IRONCLAD, CardId.PERFECTED_STRIKE, CardId.POMMEL_STRIKE, CardId.TWIN_STRIKE,
                           CardId.ASHEN_STRIKE, CardId.SETUP_STRIKE})
 
 def _curse_debuff(player, status : StatusId):
@@ -1414,6 +1868,7 @@ def _curse_debuff(player, status : StatusId):
 HAND_CURSE_EFFECTS = {
     CardId.REGRET : lambda player: player.lose_hp(len(player.hand)),        # 1 HP per card in hand, itself included
     CardId.DECAY : lambda player: player.apply_damage(DECAY_DAMAGE),
+    CardId.BAD_LUCK : lambda player: player.lose_hp(BAD_LUCK_HP_LOSS),     # Unblockable | Unpowered
     CardId.SHAME : lambda player: _curse_debuff(player, StatusId.FRAIL),
     CardId.DOUBT : lambda player: _curse_debuff(player, StatusId.WEAK),
 }

@@ -1,0 +1,673 @@
+{
+  "type": "decision",
+  "decision": "hand_select",
+  "context": {
+    "act": 1,
+    "floor": 6,
+    "ascension": 0
+  },
+  "run": {
+    "act": 1,
+    "floor": 6,
+    "ascension": 0
+  },
+  "mode": "simple_select",
+  "prompt": "Choose up to 3 cards to Exhaust.",
+  "cards": [
+    {
+      "index": 0,
+      "id": "STRIKE_IRONCLAD",
+      "name": "Strike",
+      "type": "Attack",
+      "cost": "1",
+      "description": "Deal 9 damage.",
+      "is_upgraded": false,
+      "keywords": []
+    },
+    {
+      "index": 1,
+      "id": "STRIKE_IRONCLAD",
+      "name": "Strike",
+      "type": "Attack",
+      "cost": "1",
+      "description": "Deal 9 damage.",
+      "is_upgraded": false,
+      "keywords": []
+    },
+    {
+      "index": 2,
+      "id": "BASH",
+      "name": "Bash",
+      "type": "Attack",
+      "cost": "2",
+      "description": "Deal 11 damage. Apply 2 Vulnerable.",
+      "is_upgraded": false,
+      "keywords": [
+        {
+          "name": "Vulnerable",
+          "description": "Vulnerable creatures take 50% more damage from Attacks."
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "id": "GOLD_AXE",
+      "name": "Gold Axe",
+      "type": "Attack",
+      "cost": "1",
+      "description": "Deal damage equal to the number of cards played this combat. (Deals 6 damage)",
+      "is_upgraded": false,
+      "keywords": []
+    }
+  ],
+  "selected_cards": [
+    {
+      "index": 0,
+      "name": "Strike"
+    },
+    {
+      "index": 1,
+      "name": "Defend"
+    }
+  ],
+  "can_confirm": true,
+  "player": {
+    "character": "The Ironclad",
+    "hp": 80,
+    "max_hp": 80,
+    "block": 0,
+    "energy": 3,
+    "max_energy": 3,
+    "hand": [
+      {
+        "index": 0,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 9 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "enchantment": null,
+        "keywords": []
+      },
+      {
+        "index": 1,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 9 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "enchantment": null,
+        "keywords": []
+      },
+      {
+        "index": 2,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 3,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 9 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "enchantment": null,
+        "keywords": []
+      },
+      {
+        "index": 4,
+        "id": "BASH",
+        "name": "Bash",
+        "type": "Attack",
+        "cost": "2",
+        "star_cost": null,
+        "description": "Deal 11 damage. Apply 2 Vulnerable.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Vulnerable",
+            "description": "Vulnerable creatures take 50% more damage from Attacks."
+          }
+        ]
+      },
+      {
+        "index": 5,
+        "id": "GOLD_AXE",
+        "name": "Gold Axe",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal damage equal to the number of cards played this combat. (Deals 6 damage)",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "enchantment": null,
+        "keywords": []
+      }
+    ],
+    "draw_pile_count": 0,
+    "discard_pile_count": 6,
+    "exhaust_pile_count": 0,
+    "draw_pile": [],
+    "discard_pile": [
+      {
+        "index": 0,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 2,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "enchantment": null,
+        "keywords": []
+      },
+      {
+        "index": 3,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "enchantment": null,
+        "keywords": []
+      },
+      {
+        "index": 4,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 5,
+        "id": "OMNISLICE",
+        "name": "Omnislice",
+        "type": "Attack",
+        "cost": "0",
+        "star_cost": null,
+        "description": "Deal 11 damage. Damage ALL other enemies equal to the damage dealt.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "enchantment": null,
+        "keywords": []
+      }
+    ],
+    "exhaust_pile": [],
+    "gold": 99,
+    "status": [
+      {
+        "id": "STRENGTH_POWER",
+        "name": "Strength",
+        "amount": 3,
+        "type": "Buff",
+        "description": "Increases attack damage by 3.",
+        "keywords": []
+      }
+    ],
+    "relics": [
+      {
+        "id": "BURNING_BLOOD",
+        "name": "Burning Blood",
+        "description": "At the end of combat, heal 6 HP.",
+        "counter": null,
+        "status": "Normal",
+        "keywords": []
+      }
+    ],
+    "potions": []
+  },
+  "battle": {
+    "round": 2,
+    "turn": "player",
+    "player": {
+      "character": "The Ironclad",
+      "hp": 80,
+      "max_hp": 80,
+      "block": 0,
+      "energy": 3,
+      "max_energy": 3,
+      "hand": [
+        {
+          "index": 0,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 9 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "enchantment": null,
+          "keywords": []
+        },
+        {
+          "index": 1,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 9 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "enchantment": null,
+          "keywords": []
+        },
+        {
+          "index": 2,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        },
+        {
+          "index": 3,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 9 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "enchantment": null,
+          "keywords": []
+        },
+        {
+          "index": 4,
+          "id": "BASH",
+          "name": "Bash",
+          "type": "Attack",
+          "cost": "2",
+          "star_cost": null,
+          "description": "Deal 11 damage. Apply 2 Vulnerable.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Vulnerable",
+              "description": "Vulnerable creatures take 50% more damage from Attacks."
+            }
+          ]
+        },
+        {
+          "index": 5,
+          "id": "GOLD_AXE",
+          "name": "Gold Axe",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal damage equal to the number of cards played this combat. (Deals 6 damage)",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "enchantment": null,
+          "keywords": []
+        }
+      ],
+      "draw_pile_count": 0,
+      "discard_pile_count": 6,
+      "exhaust_pile_count": 0,
+      "draw_pile": [],
+      "discard_pile": [
+        {
+          "index": 0,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "enchantment": null,
+          "keywords": []
+        },
+        {
+          "index": 3,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "enchantment": null,
+          "keywords": []
+        },
+        {
+          "index": 4,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        },
+        {
+          "index": 5,
+          "id": "OMNISLICE",
+          "name": "Omnislice",
+          "type": "Attack",
+          "cost": "0",
+          "star_cost": null,
+          "description": "Deal 11 damage. Damage ALL other enemies equal to the damage dealt.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "enchantment": null,
+          "keywords": []
+        }
+      ],
+      "exhaust_pile": [],
+      "gold": 99,
+      "status": [
+        {
+          "id": "STRENGTH_POWER",
+          "name": "Strength",
+          "amount": 3,
+          "type": "Buff",
+          "description": "Increases attack damage by 3.",
+          "keywords": []
+        }
+      ],
+      "relics": [
+        {
+          "id": "BURNING_BLOOD",
+          "name": "Burning Blood",
+          "description": "At the end of combat, heal 6 HP.",
+          "counter": null,
+          "status": "Normal",
+          "keywords": []
+        }
+      ],
+      "potions": []
+    },
+    "enemies": [
+      {
+        "entity_id": "NIBBIT_0",
+        "combat_id": 1,
+        "name": "Nibbit",
+        "hp": 37,
+        "max_hp": 43,
+        "block": 0,
+        "status": [],
+        "intents": [
+          {
+            "type": "Buff",
+            "label": "",
+            "title": "Empower",
+            "description": "This enemy intends to use a Buff."
+          }
+        ]
+      },
+      {
+        "entity_id": "NIBBIT_1",
+        "combat_id": 2,
+        "name": "Nibbit",
+        "hp": 31,
+        "max_hp": 42,
+        "block": 0,
+        "status": [
+          {
+            "id": "STRENGTH_POWER",
+            "name": "Strength",
+            "amount": 2,
+            "type": "Buff",
+            "description": "Increases attack damage by 2.",
+            "keywords": []
+          }
+        ],
+        "intents": [
+          {
+            "type": "Attack",
+            "label": "14",
+            "title": "Aggressive",
+            "description": "This enemy intends to Attack for 14 damage."
+          }
+        ]
+      }
+    ]
+  },
+  "hand_select": {
+    "mode": "simple_select",
+    "prompt": "Choose up to 3 cards to Exhaust.",
+    "cards": [
+      {
+        "index": 0,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "description": "Deal 9 damage.",
+        "is_upgraded": false,
+        "keywords": []
+      },
+      {
+        "index": 1,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "description": "Deal 9 damage.",
+        "is_upgraded": false,
+        "keywords": []
+      },
+      {
+        "index": 2,
+        "id": "BASH",
+        "name": "Bash",
+        "type": "Attack",
+        "cost": "2",
+        "description": "Deal 11 damage. Apply 2 Vulnerable.",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Vulnerable",
+            "description": "Vulnerable creatures take 50% more damage from Attacks."
+          }
+        ]
+      },
+      {
+        "index": 3,
+        "id": "GOLD_AXE",
+        "name": "Gold Axe",
+        "type": "Attack",
+        "cost": "1",
+        "description": "Deal damage equal to the number of cards played this combat. (Deals 6 damage)",
+        "is_upgraded": false,
+        "keywords": []
+      }
+    ],
+    "selected_cards": [
+      {
+        "index": 0,
+        "name": "Strike"
+      },
+      {
+        "index": 1,
+        "name": "Defend"
+      }
+    ],
+    "can_confirm": true
+  }
+}

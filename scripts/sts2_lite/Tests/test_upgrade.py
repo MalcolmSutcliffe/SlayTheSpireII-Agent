@@ -43,7 +43,8 @@ def test_upgraded_card_hits_harder_when_played():
 @pytest.mark.parametrize("card_id", sorted(UPGRADE_COST_CHANGE, key=lambda c: c.name))
 def test_cards_that_get_cheaper_when_upgraded(card_id):
     base = {CardId.BARRICADE: 3, CardId.CORRUPTION: 3, CardId.DARK_EMBRACE: 2, CardId.STAMPEDE: 2, CardId.UNMOVABLE: 2, CardId.HAVOC: 1,
-            CardId.EXPECT_A_FIGHT: 2, CardId.INFERNAL_BLADE: 1, CardId.BODY_SLAM: 1, CardId.HELLRAISER: 2}[card_id]
+            CardId.EXPECT_A_FIGHT: 2, CardId.INFERNAL_BLADE: 1, CardId.BODY_SLAM: 1, CardId.HELLRAISER: 2, CardId.MIND_BLAST: 1,
+            CardId.AUTOMATION: 1, CardId.MAYHEM: 2, CardId.NOSTALGIA: 1, CardId.CALAMITY: 3}[card_id]
     assert power(card_id, base).upgraded_copy().energy_cost == base - 1
 
 def test_cost_never_goes_below_zero():

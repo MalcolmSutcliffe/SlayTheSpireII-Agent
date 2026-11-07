@@ -6,8 +6,10 @@ if TYPE_CHECKING:
 
 from sts2_lite import rng
 from sts2_lite.creature import Creature
-from sts2_lite.card import Card, CardId, CardType, CardKeyword, CONFUSED_MAX_COST, EnchantmentId, SLITHER_MAX_COST, PLAIN_DAMAGE
-from sts2_lite.status import StatusInstance, StatusId
+from sts2_lite.card import Card, CardId, CardType, CardKeyword, CONFUSED_MAX_COST, EnchantmentId, SLITHER_MAX_COST, PLAIN_DAMAGE, GENERATABLE_CARDS
+
+BASIC_ATTACK_COSTS = {CardId.STRIKE_IRONCLAD: 1, CardId.BASH: 2}      # the starter Attacks are not in the generated-card table
+from sts2_lite.status import StatusInstance, StatusId, INSTANCED
 from sts2_lite.relic import RelicId, RelicInstance, strength_received, lizard_tail_revive, hand_draw_bonus, blocks_draw
 
 GHOST_SEED_CARDS = frozenset({CardId.STRIKE_IRONCLAD, CardId.DEFEND_IRONCLAD})     # Basic rarity, Strike or Defend tag
@@ -40,8 +42,11 @@ class Player(Creature):
         self.unknown_draws = 0
         self.known_top = 0
         self.inferno_plays = 0
+        self.cards_played_total = 0     # finished plays this combat (Gold Axe)
         self.crimson_mantle_plays = 0   # Crimson Mantle self-damage per turn
         self.attacks_played_this_turn = 0
+        self.plays_started_this_turn = 0  # Attack and Skill plays begun this turn, replays and auto-plays included (Nostalgia)
+        self.returning = []               # (card id, upgraded) of the Bolas and Thrumming Hatchets played this turn: back in the hand next turn
         self.card_blocks_this_turn = 0    # block gains from cards, for Unmovable
         self.block_play = None            # play_id of the latest card block gain
         self.block_play_gains = 0         # gains made by that play
@@ -58,7 +63,12 @@ class Player(Creature):
         pl.is_minion = False
         pl.status = {}
         for s in player["status"]:
-            pl.status[StatusId[s["id"][:-6]]] = StatusInstance.from_dict(s)
+            inst = StatusInstance.from_dict(s)
+            kept = pl.status.get(inst.status_id)
+            if kept is not None and inst.status_id in INSTANCED:        # one entry per copy
+                kept.merge(inst)
+            else:
+                pl.status[inst.status_id] = inst
         pl.hand = []
         for card in player["hand"]:
             pl.hand.append(Card.from_dict(card))
@@ -80,6 +90,8 @@ class Player(Creature):
         # copies inferred from block amount (8 or 10 each)
         pl.crimson_mantle_plays = max(1, round(pl.status_amount(StatusId.CRIMSON_MANTLE) / 9)) if StatusId.CRIMSON_MANTLE in pl.status else 0
         pl._read_growing_cards()
+        if StatusId.FREE_ATTACK in pl.status:
+            pl._read_free_attack_costs()
         return pl
 
     def _read_confused_stomps(self):
@@ -95,12 +107,30 @@ class Player(Creature):
                 if c.card_id in GHOST_SEED_CARDS:
                     pile[i] = c.with_keyword(CardKeyword.ETHEREAL)
 
+    def _read_free_attack_costs(self):
+        """Free Attack makes the game show every Attack in the hand at 0 (TryModifyEnergyCostInCombatLate), so the shown
+        cost is not the card's own: take that from the card tables. current_cost applies the 0 while the power lasts."""
+        for i, card in enumerate(self.hand):
+            if card.type != CardType.Attack or card.energy_cost != 0:
+                continue
+            base = BASIC_ATTACK_COSTS.get(card.card_id)
+            if base is None and card.card_id in GENERATABLE_CARDS:
+                base = Card.create_generated(card.card_id, card.is_upgraded).energy_cost
+            if base is not None and base != 0:
+                own = Card.create_copy(card)
+                own.energy_cost = base
+                self.hand[i] = own
+
     def _read_growing_cards(self):
         """Rampage and Thrash remember the damage they gained, which the bridge only shows in the card text.
         Cards in the hand print their damage with Strength and Weak included, so that is taken back out."""
         from sts2_lite.damage import base_from_displayed
         for pile in (self.hand, self.draw_pile, self.discard_pile, self.exhaust_pile):
             for card in pile:
+                if card.card_id == CardId.GOLD_AXE and card.shown_damage is not None:     # prints one damage per play so far
+                    shown = card.shown_damage
+                    self.cards_played_total = max(self.cards_played_total, base_from_displayed(shown, self, Creature()) if pile is self.hand else shown)
+                    continue
                 momentum = card.enchantment == EnchantmentId.MOMENTUM and card.card_id in PLAIN_DAMAGE
                 if card.shown_damage is None or not (momentum or card.card_id in (CardId.RAMPAGE, CardId.THRASH)):
                     continue
@@ -149,6 +179,7 @@ class Player(Creature):
         new_pl.unknown_draws = player.unknown_draws
         new_pl.known_top = player.known_top
         new_pl.inferno_plays = player.inferno_plays
+        new_pl.cards_played_total = player.cards_played_total
         new_pl.crimson_mantle_plays = player.crimson_mantle_plays
         new_pl.block_play = player.block_play
         new_pl.block_play_gains = player.block_play_gains
@@ -157,6 +188,8 @@ class Player(Creature):
         new_pl.hp_loss_events = player.hp_loss_events
         new_pl.hp_lost_log = list(player.hp_lost_log)
         new_pl.attacks_played_this_turn = player.attacks_played_this_turn
+        new_pl.plays_started_this_turn = player.plays_started_this_turn
+        new_pl.returning = list(player.returning)
         new_pl.card_blocks_this_turn = player.card_blocks_this_turn
         new_pl.gold = player.gold
         return new_pl
@@ -168,16 +201,46 @@ class Player(Creature):
         super().turn_start()
         self.cards_exhausted_this_turn = 0
         self.attacks_played_this_turn = 0
+        self.plays_started_this_turn = 0
         self.card_blocks_this_turn = 0
         self.block_play, self.block_play_gains = None, 0
         if self.block_cleared_hook is not None:
             self.block_cleared_hook()
+        if self.returning:
+            self.return_played_cards()
         self.draw_cards(5 + hand_draw_bonus(self) if self.relics else 5, from_hand_draw=True)
 
         if StatusId.CRIMSON_MANTLE in self.status:
             self.lose_hp(max(1, self.crimson_mantle_plays))
             self.apply_block(self.status[StatusId.CRIMSON_MANTLE].amount)
     
+    def return_played_cards(self):
+        """Bolas and Thrumming Hatchet (BeforeHandDraw): the ones played last turn go to the hand from wherever they are."""
+        returning, self.returning = self.returning, []
+        for card_id, upgraded in returning:
+            for pile in (self.discard_pile, self.exhaust_pile, self.draw_pile):
+                card = next((c for c in pile if c.card_id == card_id and c.is_upgraded == upgraded), None)
+                if card is not None:
+                    break
+            else:
+                continue            # already in the hand
+            if len(self.hand) >= 10:
+                continue
+            if pile is self.draw_pile:
+                self.remove_from_draw_pile(card)
+            else:
+                pile.remove(card)
+            self.hand.append(card)
+
+    def add_instance(self, status : StatusId, record : list[int]):
+        """Apply an instanced power: every play is a separate copy with its own state."""
+        inst = self.status.get(status)
+        if inst is None:
+            self.status[status] = StatusInstance(status, record[0], [record])
+        else:
+            inst.records.append(record)
+            inst.sync()
+
     def apply_status(self, status : StatusId, amount : int, bypass_artifact : bool = False):
         if status is StatusId.STRENGTH and amount > 0 and self.relics:
             amount = strength_received(self, amount)

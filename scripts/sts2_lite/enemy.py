@@ -22,6 +22,7 @@ class Enemy(Creature):
     moves : MoveTable | None = None    # None: repeats attack_damage x num_attacks forever
     move_id : str | None = None
     move_streak : int = 1    # times in a row the current move has been chosen
+    damage_candidates : set[int] | None = None     # every base damage that shows as the intent (Weak and Strength truncate)
     slot : int = 0           # position among enemies of its kind (the number in its entity id)
 
     def __init__(self):
@@ -87,7 +88,8 @@ class Enemy(Creature):
         types = frozenset(i["type"].lower() for i in intents)
         found = [m for m, move in self.moves.items() if move.from_bridge and move.intents == types]
         if len(found) > 1:
-            found = [m for m in found if self.moves[m].damage == self.attack_damage] or found
+            damages = self.damage_candidates if self.damage_candidates else {self.attack_damage}
+            found = [m for m in found if self.moves[m].damage in damages] or found
         if len(found) > 1:
             found = [m for m in found if self._in_round(self.moves[m], round_number)] or found
         if len(found) == 1:
@@ -114,6 +116,7 @@ class Enemy(Creature):
         for s in enemy.status.values():
             new_e.status[s.status_id] = StatusInstance.deepcopy(s)
         new_e.attack_damage = enemy.attack_damage
+        new_e.damage_candidates = enemy.damage_candidates
         new_e.num_attacks = enemy.num_attacks
         new_e.moves = enemy.moves
         new_e.move_id = enemy.move_id

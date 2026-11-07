@@ -3,14 +3,16 @@ from __future__ import annotations
 from collections import Counter
 from typing import TYPE_CHECKING
 
-from sts2_lite.card import CardId
+from sts2_lite.card import CardId, CardType
+from sts2_lite.status import StatusId
 
 if TYPE_CHECKING:
     from sts2_lite.combat import CombatState
 
 # cards whose result depends on something the bridge hides (the draw order) or on the RNG: what they
 # generate or play cannot be predicted, so their mismatches are tagged rather than trusted
-RANDOM_CARDS = frozenset({CardId.INFERNAL_BLADE, CardId.STOKE, CardId.HAVOC})
+RANDOM_CARDS = frozenset({CardId.INFERNAL_BLADE, CardId.STOKE, CardId.HAVOC, CardId.SEEKER_STRIKE, CardId.JACKPOT, CardId.JACK_OF_ALL_TRADES,
+                          CardId.CATASTROPHE, CardId.BEAT_DOWN, CardId.ANOINTED, CardId.DISCOVERY, CardId.HIDDEN_GEM})
 
 
 def _statuses(creature) -> dict[str, int]:
@@ -44,7 +46,7 @@ def is_random_step(before : CombatState, predicted : CombatState, actions : list
     for a in actions:
         if a["action"] == "play_card":
             card = before.player.hand[a["card_index"]] if a["card_index"] < len(before.player.hand) else None
-            if card is not None and card.card_id in RANDOM_CARDS:
+            if card is not None and (card.card_id in RANDOM_CARDS or (card.type == CardType.Attack and StatusId.CALAMITY in before.player.status)):
                 return True
     return False
 
@@ -100,7 +102,7 @@ def compare(predicted : CombatState, actual : CombatState, random_step : bool = 
         diffs += _multiset_diff("hand", _cards(pp.hand), _cards(ap.hand))
         diffs += _multiset_diff("discard pile", _cards(pp.discard_pile), _cards(ap.discard_pile))
         diffs += _multiset_diff("draw pile", _cards(pp.draw_pile), _cards(ap.draw_pile))
-        sim_costs = Counter((c.card_id.name, c.energy_cost) for c in pp.hand)
-        game_costs = Counter((c.card_id.name, c.energy_cost) for c in ap.hand)
+        sim_costs = Counter((c.card_id.name, c.current_cost(pp)) for c in pp.hand)
+        game_costs = Counter((c.card_id.name, c.current_cost(ap)) for c in ap.hand)
         diffs += _multiset_diff("hand costs", sim_costs, game_costs)
     return diffs
