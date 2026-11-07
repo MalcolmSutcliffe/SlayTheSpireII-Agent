@@ -159,8 +159,9 @@ class CardKeyword(Enum):
     RETAIN = 16
     SLY = 32
     ETERNAL = 64
+    REPLAY = 128        # Glam: the card is played one extra time (Replay 1, once per combat)
 
-_EXHAUST, _ETHEREAL, _INNATE, _UNPLAYABLE, _RETAIN, _ETERNAL = 1, 2, 4, 8, 16, 64
+_EXHAUST, _ETHEREAL, _INNATE, _UNPLAYABLE, _RETAIN, _ETERNAL, _REPLAY = 1, 2, 4, 8, 16, 64, 128
 
 # cards with the Exhaust keyword
 EXHAUSTING_CARDS = frozenset({CardId.SLIMED, CardId.TREMBLE, CardId.IMPERVIOUS, CardId.MOLTEN_FIST,
@@ -198,6 +199,42 @@ def _set_canonical_keywords():
 
 _set_canonical_keywords()
 
+class EnchantmentId(Enum):
+    """Models.Enchantments, by the bridge's id (the card's "enchantment": {"id", "amount"}). A card holds at most one."""
+    __hash__ = object.__hash__
+    ADROIT = auto()             # X Block after the card's own effects, as a separate gain
+    CLONE = auto()
+    CORRUPTED = auto()          # Attack: +50% damage, lose 2 HP after its effects
+    GLAM = auto()               # Replay 1 (placeholder keyword), lost on play
+    GOOPY = auto()              # Defend: Exhaust, +1 Block per play (the state carries it)
+    IMBUED = auto()
+    INKY = auto()
+    INSTINCT = auto()           # Attack: +100% damage
+    MOMENTUM = auto()           # Attack: +X damage for the rest of the combat each play
+    NIMBLE = auto()             # Skill: +X Block
+    PERFECT_FIT = auto()        # goes on top of the draw pile when shuffled
+    ROYALLY_APPROVED = auto()   # Innate and Retain
+    SHARP = auto()              # Attack: +X damage
+    SLITHER = auto()            # cost 0-3 whenever drawn
+    SWIFT = auto()              # draw X cards on play, then lost
+    SOULS_POWER = auto()
+    SOWN = auto()               # +1 energy on play, then lost
+    SPIRAL = auto()
+    STEADY = auto()
+    TEZCATARAS_EMBER = auto()   # basic Strike: costs 0 (the state's cost), +3 damage
+    VIGOROUS = auto()           # Attack: +X damage on the first play, then lost
+
+ENCHANT_CORRUPTED_DAMAGE = 1.5
+ENCHANT_INSTINCT_DAMAGE = 2.0
+ENCHANT_CORRUPTED_HP_LOSS = 2
+ENCHANT_SOWN_ENERGY = 1
+ENCHANT_EMBER_DAMAGE = 3
+SLITHER_MAX_COST = 3
+# enchantments a play changes on the card: the card is played as a private copy (Card.create_copy shares nothing mutable)
+CONSUMED_ON_PLAY = frozenset({EnchantmentId.SWIFT, EnchantmentId.SOWN, EnchantmentId.VIGOROUS})
+CHANGED_ON_PLAY = CONSUMED_ON_PLAY | {EnchantmentId.MOMENTUM, EnchantmentId.GLAM, EnchantmentId.GOOPY}
+_unknown_enchantments : set[str] = set()
+
 def keyword_mask(keywords) -> int:
     mask = 0
     for k in keywords:
@@ -226,6 +263,9 @@ class Card:
     restore_cost : int | str | None = None     # set while the cost is changed for this turn: the cost it gets back
     bonus_damage : int = 0                     # damage Rampage and Thrash have gained this combat
     shown_damage : int | None = None           # the damage printed on the card when it was loaded from the game
+    enchantment : EnchantmentId | None = None  # at most one per card
+    enchant_amount : int = 0                   # the enchantment's X (Sharp 2, Adroit 3, ...)
+    enchant_bonus : int = 0                    # damage Momentum has added this combat
     _keywords : int | None = None              # keyword mask; None: the card's canonical keywords
 
     def __init__(self):
@@ -251,7 +291,7 @@ class Card:
 
     @property
     def exhausts(self) -> bool:
-        return bool(self._mask & _EXHAUST)
+        return bool(self._mask & _EXHAUST) or self.enchantment == EnchantmentId.GOOPY
 
     @property
     def ethereal(self) -> bool:
@@ -279,6 +319,8 @@ class Card:
         new_card.is_upgraded = card["is_upgraded"]
         if card.get("card_keywords") is not None:       # CardModel.Keywords; older bridges only send hover tips
             new_card._keywords = keyword_mask(CardKeyword[k.upper()] for k in card["card_keywords"] if k.upper() in CardKeyword.__members__)
+        if card.get("enchantment"):
+            new_card._read_enchantment(card["enchantment"])
         if new_card.card_id == CardId.STOMP and new_card.energy_cost < 3:
             new_card.restore_cost = 3           # the shown cost already includes this turn's Attacks
         match = re.search(r"Deal\s+(\d+)", card.get("description") or "")
@@ -288,6 +330,22 @@ class Card:
         else:
             new_card.target_type = TargetType[card["target_type"]]
         return new_card
+
+    def _read_enchantment(self, raw : dict):
+        """The enchantment the bridge reports, with the keywords it grants (they are not in the card's keyword list)."""
+        enchantment = EnchantmentId.__members__.get(raw["id"])
+        if enchantment is None:
+            if raw["id"] not in _unknown_enchantments:
+                _unknown_enchantments.add(raw["id"])
+                print(f"unknown enchantment {raw['id']} on {self.name}: ignored")
+            return
+        self.enchantment, self.enchant_amount = enchantment, int(raw.get("amount") or 0)
+        if enchantment == EnchantmentId.ROYALLY_APPROVED:
+            self._keywords = self._mask | _INNATE | _RETAIN
+        elif enchantment == EnchantmentId.GLAM:
+            self._keywords = self._mask | _REPLAY
+        elif enchantment == EnchantmentId.GOOPY:
+            self._keywords = self._mask | CardKeyword.EXHAUST.value
 
     @classmethod
     def create_slimed(cls) -> Card:
@@ -419,6 +477,7 @@ class Card:
         new_card.is_unplayable = card.is_unplayable
         new_card.restore_cost = card.restore_cost
         new_card.bonus_damage = card.bonus_damage
+        new_card.enchantment, new_card.enchant_amount, new_card.enchant_bonus = card.enchantment, card.enchant_amount, card.enchant_bonus
         new_card._keywords = card._keywords
         return new_card
 
@@ -459,6 +518,7 @@ class Card:
                 if not free:
                     combat.combat_state.energy = 0
                 play(self, combat, target_index, self.is_upgraded, x)
+                self._enchantment_on_play(combat)
             else:
                 spent = cost
                 if self.type == CardType.Attack and free_attack_amount > 0:
@@ -469,6 +529,7 @@ class Card:
                     before_card_played(combat, self, spent)
                 combat.combat_state.energy -= cost
                 play(self, combat, target_index, self.is_upgraded)
+                self._enchantment_on_play(combat)
         except ValueError:
             combat.combat_state.energy = energy
             if free_attack:
@@ -491,6 +552,30 @@ class Card:
             self._replay(combat, target_index, x)
             combat.finish_vigor()           # each play is its own attack command
 
+    def _enchantment_on_play(self, combat : CombatSimulator):
+        """EnchantmentModel.OnPlay: after the card's own effects, once for every play (replays included)."""
+        enchantment = self.enchantment
+        if enchantment is None:
+            return
+        player = combat.combat_state.player
+        amount = self.enchant_amount
+        if enchantment == EnchantmentId.ADROIT:
+            _gain_block(combat, amount)
+        elif enchantment == EnchantmentId.CORRUPTED:
+            player.lose_hp(ENCHANT_CORRUPTED_HP_LOSS)
+        elif enchantment == EnchantmentId.MOMENTUM:
+            self.enchant_bonus += amount
+        elif enchantment == EnchantmentId.GLAM:
+            self._keywords = self._mask & ~_REPLAY          # Replay is spent
+        elif enchantment == EnchantmentId.GOOPY:
+            self.enchant_amount += 1                        # the amount is the card's permanent block gain + 1
+        elif enchantment in CONSUMED_ON_PLAY and amount > 0:    # spent: the game keeps the enchantment with amount 0
+            if enchantment == EnchantmentId.SWIFT:
+                player.draw_cards(amount)
+            elif enchantment == EnchantmentId.SOWN:
+                combat.gain_energy(ENCHANT_SOWN_ENERGY)
+            self.enchant_amount = 0
+
     def _extra_plays(self, player, punch) -> int:
         """CardModel.GeneratePlayCount: One-Two Punch (decremented), Throwing Axe. Before the first play."""
         extra = 0
@@ -499,6 +584,8 @@ class Card:
             punch.amount -= 1
             if punch.amount <= 0:
                 del player.status[StatusId.ONE_TWO_PUNCH]
+        if self._mask & _REPLAY:        # Replay 1 (Glam); it is spent after this play, but this count is fixed before it
+            extra += 1
         if player.relics and _AXE in player.relics:
             extra += extra_plays(player)
         return extra
@@ -511,6 +598,7 @@ class Card:
             GET_CARD_FUNCTION[self.card_id](self, combat, target_index, self.is_upgraded)
         else:
             GET_CARD_FUNCTION[self.card_id](self, combat, target_index, self.is_upgraded, x)
+        self._enchantment_on_play(combat)
 
     def can_play_card(self, combat : CombatSimulator, target_index):
         if self.is_unplayable or self.unplayable:
@@ -546,13 +634,36 @@ def _living(combat : CombatSimulator) -> list[Enemy]:
 
 def _attack(combat : CombatSimulator, base : int, target : Creature, hits : int = 1):
     owner = combat.combat_state.player
+    card = combat.card_in_play
+    if card is not None and card.enchantment is not None:
+        base = _enchanted_damage(card, base)
     base += combat.vigor_bonus()
     recompute = None
     if hits > 1 and RelicId.HAND_DRILL in owner.relics:     # a broken block makes later hits Vulnerable
         recompute = lambda: combat.calculate_damage(base, owner, target)
     target.apply_attack_damage(combat.calculate_damage(base, owner, target), owner, hits, recompute)
 
+def _enchanted_damage(card : Card, base):
+    """A card's damage enchantment, before Strength and the other modifiers (a float: Corrupted halves are kept)."""
+    enchantment = card.enchantment
+    if enchantment == EnchantmentId.CORRUPTED:
+        return base * ENCHANT_CORRUPTED_DAMAGE
+    if enchantment == EnchantmentId.INSTINCT:
+        return base * ENCHANT_INSTINCT_DAMAGE
+    if enchantment == EnchantmentId.SHARP or enchantment == EnchantmentId.VIGOROUS:
+        return base + card.enchant_amount
+    if enchantment == EnchantmentId.MOMENTUM:
+        return base + card.enchant_bonus
+    if enchantment == EnchantmentId.TEZCATARAS_EMBER:
+        return base + ENCHANT_EMBER_DAMAGE
+    return base
+
 def _gain_block(combat : CombatSimulator, base : int):
+    card = combat.card_in_play
+    if card is not None and card.enchantment == EnchantmentId.NIMBLE:      # adds to the card's own Block, before Dexterity and Frail
+        base += card.enchant_amount
+    elif card is not None and card.enchantment == EnchantmentId.GOOPY:    # printed block + permanent gains
+        base += card.enchant_amount - 1
     # Unmovable: doubled while gains from *other* plays this turn < amount (UnmovablePower)
     owner = combat.combat_state.player
     play = combat.play_id

@@ -6,7 +6,7 @@ if TYPE_CHECKING:
 
 from sts2_lite import rng
 from sts2_lite.creature import Creature
-from sts2_lite.card import Card, CardId, CardType, CardKeyword, CONFUSED_MAX_COST
+from sts2_lite.card import Card, CardId, CardType, CardKeyword, CONFUSED_MAX_COST, EnchantmentId, SLITHER_MAX_COST, PLAIN_DAMAGE
 from sts2_lite.status import StatusInstance, StatusId
 from sts2_lite.relic import RelicId, RelicInstance, strength_received, lizard_tail_revive, hand_draw_bonus, blocks_draw
 
@@ -101,12 +101,15 @@ class Player(Creature):
         from sts2_lite.damage import base_from_displayed
         for pile in (self.hand, self.draw_pile, self.discard_pile, self.exhaust_pile):
             for card in pile:
-                if card.card_id not in (CardId.RAMPAGE, CardId.THRASH) or card.shown_damage is None:
+                momentum = card.enchantment == EnchantmentId.MOMENTUM and card.card_id in PLAIN_DAMAGE
+                if card.shown_damage is None or not (momentum or card.card_id in (CardId.RAMPAGE, CardId.THRASH)):
                     continue
                 shown = card.shown_damage
                 if pile is self.hand:
                     shown = base_from_displayed(shown, self, Creature())
-                if card.card_id == CardId.RAMPAGE:
+                if momentum:     # the text carries the accumulated bonus; the enchantment's X is only the per-play step
+                    card.enchant_bonus = max(0, shown - PLAIN_DAMAGE[card.card_id][card.is_upgraded])
+                elif card.card_id == CardId.RAMPAGE:
                     step = 9 if card.is_upgraded else 5
                     card.bonus_damage = max(0, round((shown - 9) / step)) * step
                 else:
@@ -200,6 +203,8 @@ class Player(Creature):
         if len(self.draw_pile) == 0:
             return None
         card = self.draw_pile.pop()
+        if card.enchantment == EnchantmentId.SLITHER and card.energy_cost != "X" and not card.unplayable:
+            card = card.confused_copy(rng.randrange(SLITHER_MAX_COST + 1))     # a new random cost each time it is drawn
         if StatusId.CONFUSED in self.status and card.energy_cost != "X" and not card.unplayable:
             card = card.confused_copy(rng.randrange(CONFUSED_MAX_COST + 1))    # Canonical < 0 (Unplayable) and X keep theirs
         self.hand.append(card)
@@ -282,6 +287,10 @@ class Player(Creature):
         self.discard_pile = []
         self.known_top = 0
         self.shuffle_draw_pile()
+        fitted = [c for c in self.draw_pile if c.enchantment == EnchantmentId.PERFECT_FIT]
+        if fitted:      # Perfect Fit: placed on top instead of being shuffled, and the agent knows them
+            self.draw_pile = [c for c in self.draw_pile if c.enchantment != EnchantmentId.PERFECT_FIT] + fitted
+            self.known_top = len(fitted)
         if self.shuffle_hook is not None:
             self.shuffle_hook()
 
