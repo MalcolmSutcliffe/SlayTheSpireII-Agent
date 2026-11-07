@@ -1,24 +1,46 @@
 import math
 import time
 
+from enum import Enum, auto
+
 from sts2_lite import rng
 from sts2_lite.combat import CombatState, CombatSimulator
 
 from sts2_lite.enemy import Enemy
 
-EXPLORATION_CONSTANT = 0.5
-MAX_ROLLOUT_TURNS = 50
+class RolloutPolicies(Enum):
+    FirstAction = auto()            # just play first action
+    RandomAction = auto()                 # random choice from all abailable actions
+    RandomPlayble = auto()          # random choice that prefers playable cards first, then end turn
+    RandomPlayblePEndTurn = auto()  # random playable, with P_End_TURN
 
-WIN_BONUS = 1.0
+## constants
+MAX_ROLLOUT_TURNS = 50
+MIN_SIMS = 100                  # always searches at least 100 simulations
+DEFAULT_TIME_BUDGET = 3.0
+DEFAULT_MAX_SIMS = 3000
+
+# uct constants
+EXPLORATION_CONSTANT = 0.5
+
+# random sampling constants
 OUTCOME_C = 2.0
 OUTCOME_ALPHA = 0.5
+
+# outcome rating constants
+WIN_BONUS = 1.0
 HP_SCALE = 1.0
 GAMMA = 0.999
 
-MIN_SIMS = 100 # always searches at least 100 simulations
+# move confidence constants
+EPSILON = 0.005
+Z_SCORE = 2.33
 
-DEFAULT_TIME_BUDGET = 3.0
-DEFAULT_MAX_SIMS = 3000
+# rollout policy constants
+ROLLOUT_POLICY = RolloutPolicies.RandomPlayblePEndTurn
+P_END_TURN = 0.05
+
+
 
 CULLABLE_PILES = ("hand", "discard") # draw pile is not neccessarily cullable because of known_top cards
 
@@ -27,6 +49,7 @@ class sts2_Node:
     action : dict
     visits : int
     total_reward: float
+    total_reward_squared : float
     depth :int = 0
     is_chance_node : bool
 
@@ -35,6 +58,7 @@ class sts2_Node:
         self.action = action
         self.visits = 0
         self.total_reward = 0.0
+        self.total_reward_squared = 0.0
         if parent:
             self.depth = parent.depth + 1
 
@@ -65,7 +89,7 @@ class sts2_ChanceNode(sts2_Node):
         self.outcome_counts = {}
 
 class sts2_MCTS:
-    _root_node : sts2_Node = None
+    _root_node : sts2_DeterministicNode = None
     _expected_total_hp : int
     _starting_hp : int
     _num_sims: int = 0
@@ -84,7 +108,11 @@ class sts2_MCTS:
         start_time = time.perf_counter()
 
         while self._num_sims < DEFAULT_MAX_SIMS:
+            # check time budget
             if self._num_sims >= MIN_SIMS and time.perf_counter() >= (start_time + time_budget):
+                break
+            # check for statistical confidence (every 50)
+            if self._num_sims%50 == 0 and self._check_statistical_exit():
                 break
             leaf = self.traverse_node(self._root_node) # find optimal leaf node to simulate from
             sim_result = self._simulate_random_combat(leaf) # simulate
@@ -165,13 +193,14 @@ class sts2_MCTS:
 
             if len(actions) == 0:
                 break
+
+            action = rollout_policy(actions)
             
-            c.perform_action(actions[0])
+            c.perform_action(action)
 
         self._num_sims += 1
         outcome = self._rate_outcome(c.combat_state)
         return outcome
-
 
     def _rate_outcome(self, combat_state : CombatState) -> float:
         current_hp = combat_state.player.current_hp
@@ -213,6 +242,50 @@ class sts2_MCTS:
                 expected_total_hp += 4*(17+21)/2
         return expected_total_hp
 
+    def _check_statistical_exit(self)-> bool:
+        # ensure minimum sims has been reached
+        if self._num_sims < MIN_SIMS:
+            return False
+
+        # if only one child (can also exit)
+        if len(self._root_node.children) < 2:
+            return True
+
+        # get the top two scoring children
+        children_sorted = sorted(self._root_node.children, key=lambda c: c.visits)
+        node_a = children_sorted[-1]
+        node_b = children_sorted[-2]
+
+        # ensure enough visits have been made
+        if node_a.visits <= 30 or node_b.visits <= 30:
+            return False
+
+        # calculate variance (sample variance)
+        n_a = node_a.visits
+        n_b = node_b.visits
+
+        S_a = node_a.total_reward
+        S_b = node_b.total_reward
+
+        Q_a = node_a.total_reward_squared
+        Q_b = node_b.total_reward_squared
+
+        s_a = max(0.0, (Q_a - S_a**2/ n_a) / (n_a - 1))
+        s_b = max(0.0, (Q_b - S_b**2/ n_b) / (n_b - 1))
+        
+        # calculate standard error
+        SE_diff = math.sqrt(s_a/n_a + s_b/n_b)
+
+        # if difference is large enough:
+        if (S_a/n_a - S_b/n_b) > Z_SCORE * SE_diff:
+            return True
+
+        # if difference is small enough
+        if Z_SCORE*SE_diff < EPSILON:
+            return True
+        
+        return False
+
 def get_unvisited_child(node : sts2_Node):
     for child in node.children:
         if child.visits == 0:
@@ -241,11 +314,19 @@ def expand_node(node : sts2_Node):
 
     node.is_expanded = True
 
-def backpropagate(node, result):
+def backpropagate(node : sts2_Node, result : float):
     while node is not None:
         node.total_reward += result
+        node.total_reward_squared += result*result
         node.visits += 1
         node = node.parent
+
+def rollout_policy(actions):
+    if len(actions) == 0:
+        return None
+    if len(actions) == 1:   
+        return actions[0]
+    return ROLLOUT_POLICY_DICT[ROLLOUT_POLICY](actions)
 
 def _effective_hp(enemy : Enemy):
     if enemy.is_minion:
@@ -280,3 +361,30 @@ def cull_identical_actions(c : CombatSimulator, actions : list[dict]) -> list[di
             seen.add(key)
             kept.append(a)
     return kept
+
+### 
+### Rollout Policy functions
+###
+
+def first_action(actions : list[dict]) -> dict:
+    return actions[0]
+
+def random_action(actions : list[dict]) -> dict:
+    return rng.choice(actions)
+
+def random_playable(actions : list[dict]) -> dict:
+    playable_actions = [a for a in actions if a["action"] != "end_turn"] or actions
+    return rng.choice(playable_actions)
+
+def random_playable_p_end_turn(actions : list[dict]) -> dict:
+    end_turn = next((a for a in actions if a["action"] == "end_turn"), None)
+    if end_turn is not None and rng.random_float() < P_END_TURN:
+        return end_turn
+    return random_playable(actions)
+
+ROLLOUT_POLICY_DICT = {
+    RolloutPolicies.FirstAction : first_action,
+    RolloutPolicies.RandomAction : random_action,
+    RolloutPolicies.RandomPlayble : random_playable,
+    RolloutPolicies.RandomPlayblePEndTurn : random_playable_p_end_turn
+}

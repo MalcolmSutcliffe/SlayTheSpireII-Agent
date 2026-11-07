@@ -73,12 +73,13 @@ Add enchantments
 
  ## MCTS :
 
- - [ ] Better rollout policy 
+ - [x] Rollout policies
+ - [ ] Enhanced rollout policy
  - [x] Time based max search rather than branch limit
  - [x] Optimize outcome scoring function
- - [ ] Confidence exit (If the agent is confident enough in a move, finish the search)
+ - [x] Confidence exit (If the agent is confident enough in a move, finish the search)
  - [ ] Information preference (The agent should prioritize learning the outcome of random events e.g. draws, to perform subsequent moves with more information)
- - [ ] Better outcome scoring 
+ - [x] Better outcome scoring 
  - [ ] Concurrent search caching
  - [x] Identical move culling
  - [ ] Better node traversal heuristics (i.e. powers/non-starter cards first,)
