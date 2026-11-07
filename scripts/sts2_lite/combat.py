@@ -93,13 +93,18 @@ class CombatState:
         if kind is None:
             raise ValueError(f"unknown card selection mode {state['mode']}")
         hand = self.player.hand
-        indices, seen = [], set()
+        indices, seen, used = [], set(), set()
         for c in state["cards"]:
-            card = hand[c["index"]]
-            key = (card.card_id, card.is_upgraded, card.energy_cost)
+            # "index" counts the selectable cards only, not the hand: find the hand card it is
+            i = next((i for i, card in enumerate(hand) if i not in used and card.card_id.name == c["id"]
+                      and card.is_upgraded == c["is_upgraded"]), None)
+            if i is None:
+                raise ValueError(f"selectable card {c['id']} is not in the hand")
+            used.add(i)
+            key = (hand[i].card_id, hand[i].is_upgraded, hand[i].energy_cost)
             if key not in seen:
                 seen.add(key)
-                indices.append(c["index"])
+                indices.append(i)
         self.pending_choice = PendingChoice(kind, indices)
 
     def _read_paels_eye(self, eye, raw_relics : list[dict]):
