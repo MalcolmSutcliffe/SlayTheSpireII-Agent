@@ -75,6 +75,7 @@ Add enchantments
 
  - [ ] Better rollout policy 
  - [x] Time based max search rather than branch limit
+ - [ ] Optimize outcome scoring function
  - [ ] Confidence exit (If the agent is confident enough in a move, finish the search)
  - [ ] Information preference (The agent should prioritize learning the outcome of random events e.g. draws, to perform subsequent moves with more information)
  - [ ] Better outcome scoring 
@@ -86,6 +87,7 @@ Add enchantments
  - [ ] Improve sim speed
  - [ ] MCTS-Solver: proven win/loss propagation. If there is gaurenteed lethal, or a forced loss, mark node as solved and propagate. NOTE: gaurenteed wins overlook meta-scaling cards
  - [ ] Root parallelization
+
  
  Waiting on engine:
  - [ ] Potion use

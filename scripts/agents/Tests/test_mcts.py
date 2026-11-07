@@ -22,10 +22,11 @@ from agents.MCTS import (
 )
 
 
-def primed(state, mcts=None):
-    """A searcher as monte_carlo_tree_search leaves it at the root: the fight's total enemy HP is known."""
+def primed(state, mcts=None, starting_hp=None):
+    """A searcher as monte_carlo_tree_search leaves it at the root: the fight's total enemy HP and the player's starting HP are known."""
     mcts = mcts or sts2_MCTS()
     mcts._expected_total_hp = mcts._calculate_expected_total_hp(state)
+    mcts._starting_hp = starting_hp or state.player.current_hp
     return mcts
 
 @pytest.fixture(autouse=True)
@@ -486,7 +487,7 @@ def test_traversal_returns_a_terminal_node_without_expanding_it():
 def test_rollout_from_a_terminal_node_returns_its_rating_immediately():
     root = expanded(winning_fight())
     kill = child_for(root, "play_card", 0)
-    mcts = sts2_MCTS()
+    mcts = primed(kill.state)
     assert mcts._simulate_random_combat(kill) == mcts._rate_outcome(kill.state)
 
 
@@ -597,13 +598,14 @@ def test_rollouts_are_reproducible_from_a_seed():
 
 
 # ---------------------------------------------------------------- reward
-from agents.MCTS import TURN_DECAY_CONSTANT, WIN_BONUS
+from agents.MCTS import GAMMA, WIN_BONUS
 
-def win_score(hp, max_hp=80, turns=3):
+def win_score(hp, max_hp=80, turns=3, start=None):
+    """Score of a win ending at `hp`, for a fight that began at `start` HP (default: full HP)."""
     cs = make_state([])
     cs.player.max_hp, cs.player.current_hp, cs.turn_number = max_hp, hp, turns
     cs.enemies[0].current_hp = 0
-    return primed(cs)._rate_outcome(cs)
+    return primed(cs, starting_hp=start or max_hp)._rate_outcome(cs)
 
 def loss_score(enemy_hps, enemy_maxes=None):
     cs = make_state([])
@@ -630,6 +632,10 @@ def test_a_narrow_slow_win_beats_a_near_win_loss():
 def test_wins_are_always_positive():
     assert win_score(1, 1000, 100_000) > 0
 
+def test_a_slow_one_hp_win_still_beats_a_near_win_loss():
+    """MAX_ROLLOUT_TURNS-long wins at the edge of death must not rank below losing."""
+    assert win_score(1, 80, 50, start=80) > loss_score([1], [90])
+
 def test_losses_are_never_positive():
     assert loss_score([1], [1000]) < 0
 
@@ -639,13 +645,34 @@ def test_more_hp_left_scores_higher():
 def test_fewer_turns_scores_higher():
     assert win_score(40, turns=3) > win_score(40, turns=8)
 
-def test_turn_penalty_is_small_next_to_hp():
-    one_turn = win_score(40, turns=4) - win_score(40, turns=5)
-    assert one_turn == pytest.approx(TURN_DECAY_CONSTANT)
-    assert one_turn < 0.25 * (win_score(60) - win_score(40))      # 20 HP of 80 outweighs a turn
+def test_each_turn_discounts_a_win_by_gamma():
+    assert win_score(40, turns=5) == pytest.approx(win_score(40, turns=4) * GAMMA)
 
-def test_win_score_has_the_expected_form():
-    assert win_score(40, max_hp=80, turns=5) == pytest.approx(WIN_BONUS + 0.5 - 5 * TURN_DECAY_CONSTANT)
+def test_turn_discount_is_small_next_to_hp():
+    one_turn = win_score(40, turns=4) - win_score(40, turns=5)
+    assert 0 < one_turn < 0.25 * (win_score(60) - win_score(40))      # 20 HP of 80 outweighs a turn
+
+def test_discounting_keeps_wins_positive_and_above_losses_at_the_rollout_limit():
+    from agents.MCTS import MAX_ROLLOUT_TURNS
+    assert win_score(1, 80, MAX_ROLLOUT_TURNS) > 0 > loss_score([1], [90])
+
+def test_a_win_without_losing_hp_scores_best():
+    assert win_score(80, max_hp=80, turns=0) > win_score(79, max_hp=80, turns=0)
+
+def test_healing_during_the_fight_is_rewarded():
+    assert win_score(60, max_hp=80, start=40) > win_score(40, max_hp=80, start=40) > win_score(30, max_hp=80, start=40)
+
+def test_ending_above_the_starting_hp_does_not_fail():
+    assert win_score(70, max_hp=80, start=10) > WIN_BONUS - 0.01 * 3
+
+def test_hp_matters_more_when_low():
+    """Concave in remaining HP: the same 10 HP is worth more near death than at high HP."""
+    near_death = win_score(20, start=80) - win_score(10, start=80)
+    healthy = win_score(80, start=80) - win_score(70, start=80)
+    assert near_death > healthy
+
+def test_the_same_hp_lost_costs_more_from_a_lower_start():
+    assert win_score(20, start=30) < win_score(70, start=80)
 
 def test_less_enemy_health_left_scores_higher_in_a_loss():
     assert loss_score([10]) > loss_score([30]) > loss_score([60])

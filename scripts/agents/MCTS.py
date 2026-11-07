@@ -7,13 +7,13 @@ from sts2_lite.combat import CombatState, CombatSimulator
 from sts2_lite.enemy import Enemy
 
 EXPLORATION_CONSTANT = 0.5
-TURN_DECAY_CONSTANT = 0.01
-WIN_BONUS = 1.0
 MAX_ROLLOUT_TURNS = 50
 
+WIN_BONUS = 1.0
 OUTCOME_C = 2.0
 OUTCOME_ALPHA = 0.5
-HP_SCALE = 80
+HP_SCALE = 1.0
+GAMMA = 0.999
 
 MIN_SIMS = 100 # always searches at least 100 simulations
 
@@ -173,14 +173,12 @@ class sts2_MCTS:
 
     def _rate_outcome(self, combat_state : CombatState) -> float:
         current_hp = combat_state.player.current_hp
-        max_hp = combat_state.player.max_hp
         num_turns = combat_state.turn_number
         won = current_hp > 0 and all(e.is_minion or e.current_hp <= 0 for e in combat_state.enemies)
         # if won fight: outcome is best max hp with slight bias towards less turns
         if won:
-            turn_penalty = min(TURN_DECAY_CONSTANT*num_turns, WIN_BONUS)
-            hp_lost = self._starting_hp - current_hp
-            outcome = WIN_BONUS + math.sqrt(hp_lost / HP_SCALE) - turn_penalty
+            hp_ratio = current_hp/self._starting_hp
+            outcome = (WIN_BONUS - HP_SCALE*(1.0-math.sqrt(hp_ratio)))*(GAMMA**num_turns)
         # lost or unfinished: minimize enemy effective HP
         else:
             total_enemy_effective_hp = 0
