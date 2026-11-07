@@ -1,0 +1,1108 @@
+{
+  "type": "decision",
+  "decision": "combat_play",
+  "room_type": "monster",
+  "context": {
+    "act": 1,
+    "floor": 2,
+    "ascension": 0
+  },
+  "run": {
+    "act": 1,
+    "floor": 2,
+    "ascension": 0
+  },
+  "round": 1,
+  "turn": "player",
+  "is_play_phase": null,
+  "energy": 44,
+  "max_energy": 3,
+  "hand": [
+    {
+      "index": 0,
+      "id": "STRIKE_IRONCLAD",
+      "name": "Strike",
+      "type": "Attack",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Deal 12 damage.",
+      "target_type": "AnyEnemy",
+      "can_play": true,
+      "unplayable_reason": null,
+      "is_upgraded": false,
+      "keywords": []
+    },
+    {
+      "index": 1,
+      "id": "STRIKE_IRONCLAD",
+      "name": "Strike",
+      "type": "Attack",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Deal 12 damage.",
+      "target_type": "AnyEnemy",
+      "can_play": true,
+      "unplayable_reason": null,
+      "is_upgraded": false,
+      "keywords": []
+    },
+    {
+      "index": 2,
+      "id": "BASH",
+      "name": "Bash",
+      "type": "Attack",
+      "cost": "2",
+      "star_cost": null,
+      "description": "Deal 16 damage. Apply 2 Vulnerable.",
+      "target_type": "AnyEnemy",
+      "can_play": true,
+      "unplayable_reason": null,
+      "is_upgraded": false,
+      "keywords": [
+        {
+          "name": "Vulnerable",
+          "description": "Vulnerable creatures take 50% more damage from Attacks."
+        }
+      ]
+    }
+  ],
+  "enemies": [
+    {
+      "entity_id": "SHRINKER_BEETLE_0",
+      "combat_id": 1,
+      "name": "Shrinker Beetle",
+      "hp": 38,
+      "max_hp": 38,
+      "block": 0,
+      "status": [],
+      "intents": [
+        {
+          "type": "DebuffStrong",
+          "label": "",
+          "title": "Strategic",
+          "description": "This enemy intends to apply a Debuff to you."
+        }
+      ]
+    }
+  ],
+  "player": {
+    "character": "The Ironclad",
+    "hp": 80,
+    "max_hp": 80,
+    "block": 45,
+    "energy": 44,
+    "max_energy": 3,
+    "hand": [
+      {
+        "index": 0,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 12 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": []
+      },
+      {
+        "index": 1,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 12 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": []
+      },
+      {
+        "index": 2,
+        "id": "BASH",
+        "name": "Bash",
+        "type": "Attack",
+        "cost": "2",
+        "star_cost": null,
+        "description": "Deal 16 damage. Apply 2 Vulnerable.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Vulnerable",
+            "description": "Vulnerable creatures take 50% more damage from Attacks."
+          }
+        ]
+      }
+    ],
+    "draw_pile_count": 5,
+    "discard_pile_count": 18,
+    "exhaust_pile_count": 0,
+    "draw_pile": [
+      {
+        "index": 0,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": []
+      },
+      {
+        "index": 1,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": []
+      },
+      {
+        "index": 2,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 3,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 4,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": []
+      }
+    ],
+    "discard_pile": [
+      {
+        "index": 0,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 2,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 3,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 4,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 5,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 6,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 7,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 8,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 9,
+        "id": "PACTS_END",
+        "name": "Pact's End",
+        "type": "Attack",
+        "cost": "0",
+        "star_cost": null,
+        "description": "If you have 3 or more cards in your Exhaust Pile, deal 17 damage to ALL enemies.",
+        "target_type": "AllEnemies",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": []
+      },
+      {
+        "index": 10,
+        "id": "PACTS_END",
+        "name": "Pact's End",
+        "type": "Attack",
+        "cost": "0",
+        "star_cost": null,
+        "description": "If you have 3 or more cards in your Exhaust Pile, deal 17 damage to ALL enemies.",
+        "target_type": "AllEnemies",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": []
+      },
+      {
+        "index": 11,
+        "id": "PACTS_END",
+        "name": "Pact's End",
+        "type": "Attack",
+        "cost": "0",
+        "star_cost": null,
+        "description": "If you have 3 or more cards in your Exhaust Pile, deal 17 damage to ALL enemies.",
+        "target_type": "AllEnemies",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": []
+      },
+      {
+        "index": 12,
+        "id": "PACTS_END",
+        "name": "Pact's End",
+        "type": "Attack",
+        "cost": "0",
+        "star_cost": null,
+        "description": "If you have 3 or more cards in your Exhaust Pile, deal 17 damage to ALL enemies.",
+        "target_type": "AllEnemies",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": []
+      },
+      {
+        "index": 13,
+        "id": "PACTS_END",
+        "name": "Pact's End",
+        "type": "Attack",
+        "cost": "0",
+        "star_cost": null,
+        "description": "If you have 3 or more cards in your Exhaust Pile, deal 17 damage to ALL enemies.",
+        "target_type": "AllEnemies",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": []
+      },
+      {
+        "index": 14,
+        "id": "PACTS_END",
+        "name": "Pact's End",
+        "type": "Attack",
+        "cost": "0",
+        "star_cost": null,
+        "description": "If you have 3 or more cards in your Exhaust Pile, deal 17 damage to ALL enemies.",
+        "target_type": "AllEnemies",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": []
+      },
+      {
+        "index": 15,
+        "id": "PACTS_END",
+        "name": "Pact's End",
+        "type": "Attack",
+        "cost": "0",
+        "star_cost": null,
+        "description": "If you have 3 or more cards in your Exhaust Pile, deal 17 damage to ALL enemies.",
+        "target_type": "AllEnemies",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": []
+      },
+      {
+        "index": 16,
+        "id": "PACTS_END",
+        "name": "Pact's End",
+        "type": "Attack",
+        "cost": "0",
+        "star_cost": null,
+        "description": "If you have 3 or more cards in your Exhaust Pile, deal 17 damage to ALL enemies.",
+        "target_type": "AllEnemies",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": []
+      },
+      {
+        "index": 17,
+        "id": "PACTS_END",
+        "name": "Pact's End",
+        "type": "Attack",
+        "cost": "0",
+        "star_cost": null,
+        "description": "If you have 3 or more cards in your Exhaust Pile, deal 17 damage to ALL enemies.",
+        "target_type": "AllEnemies",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": []
+      }
+    ],
+    "exhaust_pile": [],
+    "gold": 99,
+    "status": [],
+    "relics": [
+      {
+        "id": "BURNING_BLOOD",
+        "name": "Burning Blood",
+        "description": "At the end of combat, heal 6 HP.",
+        "counter": null,
+        "status": "Normal",
+        "keywords": []
+      },
+      {
+        "id": "FISHING_ROD",
+        "name": "Fishing Rod",
+        "description": "Every 3 normal combats, Upgrade a random card in your Deck.",
+        "counter": 0,
+        "status": "Normal",
+        "keywords": []
+      },
+      {
+        "id": "PEN_NIB",
+        "name": "Pen Nib",
+        "description": "Every 10th Attack you play deals double damage.",
+        "counter": 9,
+        "status": "Active",
+        "keywords": []
+      },
+      {
+        "id": "NUNCHAKU",
+        "name": "Nunchaku",
+        "description": "Every time you play 10 Attacks, gain [ironclad_energy_icon.png].",
+        "counter": 9,
+        "status": "Active",
+        "keywords": [
+          {
+            "name": "Energy",
+            "description": "Energy is used to play cards from your Hand."
+          }
+        ]
+      },
+      {
+        "id": "TUNING_FORK",
+        "name": "Tuning Fork",
+        "description": "Every time you play 10 Skills, gain 7 Block.",
+        "counter": 9,
+        "status": "Active",
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      }
+    ],
+    "potions": []
+  },
+  "draw_pile_count": 5,
+  "discard_pile_count": 18,
+  "exhaust_pile_count": 0,
+  "battle": {
+    "round": 1,
+    "turn": "player",
+    "player": {
+      "character": "The Ironclad",
+      "hp": 80,
+      "max_hp": 80,
+      "block": 45,
+      "energy": 44,
+      "max_energy": 3,
+      "hand": [
+        {
+          "index": 0,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 12 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": []
+        },
+        {
+          "index": 1,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 12 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": []
+        },
+        {
+          "index": 2,
+          "id": "BASH",
+          "name": "Bash",
+          "type": "Attack",
+          "cost": "2",
+          "star_cost": null,
+          "description": "Deal 16 damage. Apply 2 Vulnerable.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Vulnerable",
+              "description": "Vulnerable creatures take 50% more damage from Attacks."
+            }
+          ]
+        }
+      ],
+      "draw_pile_count": 5,
+      "discard_pile_count": 18,
+      "exhaust_pile_count": 0,
+      "draw_pile": [
+        {
+          "index": 0,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": []
+        },
+        {
+          "index": 1,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": []
+        },
+        {
+          "index": 2,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        },
+        {
+          "index": 3,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        },
+        {
+          "index": 4,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": []
+        }
+      ],
+      "discard_pile": [
+        {
+          "index": 0,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        },
+        {
+          "index": 3,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        },
+        {
+          "index": 4,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        },
+        {
+          "index": 5,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        },
+        {
+          "index": 6,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        },
+        {
+          "index": 7,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        },
+        {
+          "index": 8,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        },
+        {
+          "index": 9,
+          "id": "PACTS_END",
+          "name": "Pact's End",
+          "type": "Attack",
+          "cost": "0",
+          "star_cost": null,
+          "description": "If you have 3 or more cards in your Exhaust Pile, deal 17 damage to ALL enemies.",
+          "target_type": "AllEnemies",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": []
+        },
+        {
+          "index": 10,
+          "id": "PACTS_END",
+          "name": "Pact's End",
+          "type": "Attack",
+          "cost": "0",
+          "star_cost": null,
+          "description": "If you have 3 or more cards in your Exhaust Pile, deal 17 damage to ALL enemies.",
+          "target_type": "AllEnemies",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": []
+        },
+        {
+          "index": 11,
+          "id": "PACTS_END",
+          "name": "Pact's End",
+          "type": "Attack",
+          "cost": "0",
+          "star_cost": null,
+          "description": "If you have 3 or more cards in your Exhaust Pile, deal 17 damage to ALL enemies.",
+          "target_type": "AllEnemies",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": []
+        },
+        {
+          "index": 12,
+          "id": "PACTS_END",
+          "name": "Pact's End",
+          "type": "Attack",
+          "cost": "0",
+          "star_cost": null,
+          "description": "If you have 3 or more cards in your Exhaust Pile, deal 17 damage to ALL enemies.",
+          "target_type": "AllEnemies",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": []
+        },
+        {
+          "index": 13,
+          "id": "PACTS_END",
+          "name": "Pact's End",
+          "type": "Attack",
+          "cost": "0",
+          "star_cost": null,
+          "description": "If you have 3 or more cards in your Exhaust Pile, deal 17 damage to ALL enemies.",
+          "target_type": "AllEnemies",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": []
+        },
+        {
+          "index": 14,
+          "id": "PACTS_END",
+          "name": "Pact's End",
+          "type": "Attack",
+          "cost": "0",
+          "star_cost": null,
+          "description": "If you have 3 or more cards in your Exhaust Pile, deal 17 damage to ALL enemies.",
+          "target_type": "AllEnemies",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": []
+        },
+        {
+          "index": 15,
+          "id": "PACTS_END",
+          "name": "Pact's End",
+          "type": "Attack",
+          "cost": "0",
+          "star_cost": null,
+          "description": "If you have 3 or more cards in your Exhaust Pile, deal 17 damage to ALL enemies.",
+          "target_type": "AllEnemies",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": []
+        },
+        {
+          "index": 16,
+          "id": "PACTS_END",
+          "name": "Pact's End",
+          "type": "Attack",
+          "cost": "0",
+          "star_cost": null,
+          "description": "If you have 3 or more cards in your Exhaust Pile, deal 17 damage to ALL enemies.",
+          "target_type": "AllEnemies",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": []
+        },
+        {
+          "index": 17,
+          "id": "PACTS_END",
+          "name": "Pact's End",
+          "type": "Attack",
+          "cost": "0",
+          "star_cost": null,
+          "description": "If you have 3 or more cards in your Exhaust Pile, deal 17 damage to ALL enemies.",
+          "target_type": "AllEnemies",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": []
+        }
+      ],
+      "exhaust_pile": [],
+      "gold": 99,
+      "status": [],
+      "relics": [
+        {
+          "id": "BURNING_BLOOD",
+          "name": "Burning Blood",
+          "description": "At the end of combat, heal 6 HP.",
+          "counter": null,
+          "status": "Normal",
+          "keywords": []
+        },
+        {
+          "id": "FISHING_ROD",
+          "name": "Fishing Rod",
+          "description": "Every 3 normal combats, Upgrade a random card in your Deck.",
+          "counter": 0,
+          "status": "Normal",
+          "keywords": []
+        },
+        {
+          "id": "PEN_NIB",
+          "name": "Pen Nib",
+          "description": "Every 10th Attack you play deals double damage.",
+          "counter": 9,
+          "status": "Active",
+          "keywords": []
+        },
+        {
+          "id": "NUNCHAKU",
+          "name": "Nunchaku",
+          "description": "Every time you play 10 Attacks, gain [ironclad_energy_icon.png].",
+          "counter": 9,
+          "status": "Active",
+          "keywords": [
+            {
+              "name": "Energy",
+              "description": "Energy is used to play cards from your Hand."
+            }
+          ]
+        },
+        {
+          "id": "TUNING_FORK",
+          "name": "Tuning Fork",
+          "description": "Every time you play 10 Skills, gain 7 Block.",
+          "counter": 9,
+          "status": "Active",
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        }
+      ],
+      "potions": []
+    },
+    "enemies": [
+      {
+        "entity_id": "SHRINKER_BEETLE_0",
+        "combat_id": 1,
+        "name": "Shrinker Beetle",
+        "hp": 38,
+        "max_hp": 38,
+        "block": 0,
+        "status": [],
+        "intents": [
+          {
+            "type": "DebuffStrong",
+            "label": "",
+            "title": "Strategic",
+            "description": "This enemy intends to apply a Debuff to you."
+          }
+        ]
+      }
+    ]
+  }
+}

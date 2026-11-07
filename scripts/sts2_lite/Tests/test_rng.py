@@ -26,7 +26,6 @@ def make_state(n_discard=20):
     cs.player, cs.enemies = p, [e]
     cs.energy = cs.max_energy = 3
     cs.turn_number = 1
-    cs.deck = []
     return cs
 
 def draw_order(cs):

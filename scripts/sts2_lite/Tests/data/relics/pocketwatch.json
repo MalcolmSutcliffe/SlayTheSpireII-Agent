@@ -1,0 +1,898 @@
+{
+  "type": "decision",
+  "decision": "combat_play",
+  "room_type": "monster",
+  "context": {
+    "act": 1,
+    "floor": 3,
+    "ascension": 0
+  },
+  "run": {
+    "act": 1,
+    "floor": 3,
+    "ascension": 0
+  },
+  "round": 2,
+  "turn": "player",
+  "is_play_phase": null,
+  "energy": 1,
+  "max_energy": 3,
+  "hand": [
+    {
+      "index": 0,
+      "id": "STRIKE_IRONCLAD",
+      "name": "Strike",
+      "type": "Attack",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Deal 4 damage.",
+      "target_type": "AnyEnemy",
+      "can_play": true,
+      "unplayable_reason": null,
+      "is_upgraded": false,
+      "keywords": []
+    },
+    {
+      "index": 1,
+      "id": "STRIKE_IRONCLAD",
+      "name": "Strike",
+      "type": "Attack",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Deal 4 damage.",
+      "target_type": "AnyEnemy",
+      "can_play": true,
+      "unplayable_reason": null,
+      "is_upgraded": false,
+      "keywords": []
+    },
+    {
+      "index": 2,
+      "id": "DEFEND_IRONCLAD",
+      "name": "Defend",
+      "type": "Skill",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Gain 5 Block.",
+      "target_type": "Self",
+      "can_play": true,
+      "unplayable_reason": null,
+      "is_upgraded": false,
+      "keywords": [
+        {
+          "name": "Block",
+          "description": "Until next turn, prevents damage."
+        }
+      ]
+    }
+  ],
+  "enemies": [
+    {
+      "entity_id": "SHRINKER_BEETLE_0",
+      "combat_id": 1,
+      "name": "Shrinker Beetle",
+      "hp": 28,
+      "max_hp": 40,
+      "block": 0,
+      "status": [
+        {
+          "id": "VULNERABLE_POWER",
+          "name": "Vulnerable",
+          "amount": 11,
+          "type": "Debuff",
+          "description": "Receive 50% more damage from Attacks for 11 turns.",
+          "keywords": []
+        }
+      ],
+      "intents": [
+        {
+          "type": "Attack",
+          "label": "7",
+          "title": "Aggressive",
+          "description": "This enemy intends to Attack for 7 damage."
+        }
+      ]
+    }
+  ],
+  "player": {
+    "character": "The Ironclad",
+    "hp": 80,
+    "max_hp": 80,
+    "block": 10,
+    "energy": 1,
+    "max_energy": 3,
+    "hand": [
+      {
+        "index": 0,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 4 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": []
+      },
+      {
+        "index": 1,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 4 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": []
+      },
+      {
+        "index": 2,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      }
+    ],
+    "draw_pile_count": 0,
+    "discard_pile_count": 10,
+    "exhaust_pile_count": 4,
+    "draw_pile": [],
+    "discard_pile": [
+      {
+        "index": 0,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 2,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": []
+      },
+      {
+        "index": 3,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": []
+      },
+      {
+        "index": 4,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 5,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": []
+      },
+      {
+        "index": 6,
+        "id": "BASH",
+        "name": "Bash",
+        "type": "Attack",
+        "cost": "2",
+        "star_cost": null,
+        "description": "Deal 8 damage. Apply 2 Vulnerable.",
+        "target_type": "AnyEnemy",
+        "can_play": false,
+        "unplayable_reason": "EnergyCostTooHigh",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Vulnerable",
+            "description": "Vulnerable creatures take 50% more damage from Attacks."
+          }
+        ]
+      },
+      {
+        "index": 7,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 8,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 9,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      }
+    ],
+    "exhaust_pile": [
+      {
+        "index": 0,
+        "id": "TREMBLE",
+        "name": "Tremble",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Apply 3 Vulnerable. Exhaust.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Vulnerable",
+            "description": "Vulnerable creatures take 50% more damage from Attacks."
+          },
+          {
+            "name": "Exhaust",
+            "description": "Removed until the end of combat."
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "id": "TREMBLE",
+        "name": "Tremble",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Apply 3 Vulnerable. Exhaust.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Vulnerable",
+            "description": "Vulnerable creatures take 50% more damage from Attacks."
+          },
+          {
+            "name": "Exhaust",
+            "description": "Removed until the end of combat."
+          }
+        ]
+      },
+      {
+        "index": 2,
+        "id": "TREMBLE",
+        "name": "Tremble",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Apply 3 Vulnerable. Exhaust.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Vulnerable",
+            "description": "Vulnerable creatures take 50% more damage from Attacks."
+          },
+          {
+            "name": "Exhaust",
+            "description": "Removed until the end of combat."
+          }
+        ]
+      },
+      {
+        "index": 3,
+        "id": "TREMBLE",
+        "name": "Tremble",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Apply 3 Vulnerable. Exhaust.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Vulnerable",
+            "description": "Vulnerable creatures take 50% more damage from Attacks."
+          },
+          {
+            "name": "Exhaust",
+            "description": "Removed until the end of combat."
+          }
+        ]
+      }
+    ],
+    "gold": 99,
+    "status": [
+      {
+        "id": "SHRINK_POWER",
+        "name": "Shrink",
+        "amount": -1,
+        "type": "Debuff",
+        "description": "While Shrinker Beetle is alive, your Attacks deal 30% less damage.",
+        "keywords": []
+      }
+    ],
+    "relics": [
+      {
+        "id": "BURNING_BLOOD",
+        "name": "Burning Blood",
+        "description": "At the end of combat, heal 6 HP.",
+        "counter": null,
+        "status": "Normal",
+        "keywords": []
+      },
+      {
+        "id": "FISHING_ROD",
+        "name": "Fishing Rod",
+        "description": "Every 3 normal combats, Upgrade a random card in your Deck.",
+        "counter": 0,
+        "status": "Normal",
+        "keywords": []
+      },
+      {
+        "id": "POCKETWATCH",
+        "name": "Pocketwatch",
+        "description": "Whenever you play 3 or fewer cards during your turn, draw 3 additional cards at the start of your next turn.",
+        "counter": 2,
+        "status": "Active",
+        "keywords": []
+      },
+      {
+        "id": "JOSS_PAPER",
+        "name": "Joss Paper",
+        "description": "Every 5 times you Exhaust a card, draw 1 card.",
+        "counter": 4,
+        "status": "Active",
+        "keywords": [
+          {
+            "name": "Exhaust",
+            "description": "Removed until the end of combat."
+          }
+        ]
+      }
+    ],
+    "potions": []
+  },
+  "draw_pile_count": 0,
+  "discard_pile_count": 10,
+  "exhaust_pile_count": 4,
+  "battle": {
+    "round": 2,
+    "turn": "player",
+    "player": {
+      "character": "The Ironclad",
+      "hp": 80,
+      "max_hp": 80,
+      "block": 10,
+      "energy": 1,
+      "max_energy": 3,
+      "hand": [
+        {
+          "index": 0,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 4 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": []
+        },
+        {
+          "index": 1,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 4 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": []
+        },
+        {
+          "index": 2,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        }
+      ],
+      "draw_pile_count": 0,
+      "discard_pile_count": 10,
+      "exhaust_pile_count": 4,
+      "draw_pile": [],
+      "discard_pile": [
+        {
+          "index": 0,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": []
+        },
+        {
+          "index": 3,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": []
+        },
+        {
+          "index": 4,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        },
+        {
+          "index": 5,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": []
+        },
+        {
+          "index": 6,
+          "id": "BASH",
+          "name": "Bash",
+          "type": "Attack",
+          "cost": "2",
+          "star_cost": null,
+          "description": "Deal 8 damage. Apply 2 Vulnerable.",
+          "target_type": "AnyEnemy",
+          "can_play": false,
+          "unplayable_reason": "EnergyCostTooHigh",
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Vulnerable",
+              "description": "Vulnerable creatures take 50% more damage from Attacks."
+            }
+          ]
+        },
+        {
+          "index": 7,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        },
+        {
+          "index": 8,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        },
+        {
+          "index": 9,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        }
+      ],
+      "exhaust_pile": [
+        {
+          "index": 0,
+          "id": "TREMBLE",
+          "name": "Tremble",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Apply 3 Vulnerable. Exhaust.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Vulnerable",
+              "description": "Vulnerable creatures take 50% more damage from Attacks."
+            },
+            {
+              "name": "Exhaust",
+              "description": "Removed until the end of combat."
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "id": "TREMBLE",
+          "name": "Tremble",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Apply 3 Vulnerable. Exhaust.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Vulnerable",
+              "description": "Vulnerable creatures take 50% more damage from Attacks."
+            },
+            {
+              "name": "Exhaust",
+              "description": "Removed until the end of combat."
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "id": "TREMBLE",
+          "name": "Tremble",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Apply 3 Vulnerable. Exhaust.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Vulnerable",
+              "description": "Vulnerable creatures take 50% more damage from Attacks."
+            },
+            {
+              "name": "Exhaust",
+              "description": "Removed until the end of combat."
+            }
+          ]
+        },
+        {
+          "index": 3,
+          "id": "TREMBLE",
+          "name": "Tremble",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Apply 3 Vulnerable. Exhaust.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Vulnerable",
+              "description": "Vulnerable creatures take 50% more damage from Attacks."
+            },
+            {
+              "name": "Exhaust",
+              "description": "Removed until the end of combat."
+            }
+          ]
+        }
+      ],
+      "gold": 99,
+      "status": [
+        {
+          "id": "SHRINK_POWER",
+          "name": "Shrink",
+          "amount": -1,
+          "type": "Debuff",
+          "description": "While Shrinker Beetle is alive, your Attacks deal 30% less damage.",
+          "keywords": []
+        }
+      ],
+      "relics": [
+        {
+          "id": "BURNING_BLOOD",
+          "name": "Burning Blood",
+          "description": "At the end of combat, heal 6 HP.",
+          "counter": null,
+          "status": "Normal",
+          "keywords": []
+        },
+        {
+          "id": "FISHING_ROD",
+          "name": "Fishing Rod",
+          "description": "Every 3 normal combats, Upgrade a random card in your Deck.",
+          "counter": 0,
+          "status": "Normal",
+          "keywords": []
+        },
+        {
+          "id": "POCKETWATCH",
+          "name": "Pocketwatch",
+          "description": "Whenever you play 3 or fewer cards during your turn, draw 3 additional cards at the start of your next turn.",
+          "counter": 2,
+          "status": "Active",
+          "keywords": []
+        },
+        {
+          "id": "JOSS_PAPER",
+          "name": "Joss Paper",
+          "description": "Every 5 times you Exhaust a card, draw 1 card.",
+          "counter": 4,
+          "status": "Active",
+          "keywords": [
+            {
+              "name": "Exhaust",
+              "description": "Removed until the end of combat."
+            }
+          ]
+        }
+      ],
+      "potions": []
+    },
+    "enemies": [
+      {
+        "entity_id": "SHRINKER_BEETLE_0",
+        "combat_id": 1,
+        "name": "Shrinker Beetle",
+        "hp": 28,
+        "max_hp": 40,
+        "block": 0,
+        "status": [
+          {
+            "id": "VULNERABLE_POWER",
+            "name": "Vulnerable",
+            "amount": 11,
+            "type": "Debuff",
+            "description": "Receive 50% more damage from Attacks for 11 turns.",
+            "keywords": []
+          }
+        ],
+        "intents": [
+          {
+            "type": "Attack",
+            "label": "7",
+            "title": "Aggressive",
+            "description": "This enemy intends to Attack for 7 damage."
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <OutputType>Library</OutputType>
+    <Nullable>enable</Nullable>
+    <LangVersion>12.0</LangVersion>
+    <AssemblyName>STS2_Bridge</AssemblyName>
+    <RootNamespace>STS2_Bridge</RootNamespace>
+    <!-- build.sh passes the folder it found; a plain `dotnet build` looks in the usual places (see ../game_paths.sh) -->
+    <STS2GameDataDir Condition="'$(STS2GameDataDir)' == ''">$(STS2_GAME_DATA_DIR)</STS2GameDataDir>
+    <STS2GameDataDir Condition="'$(STS2GameDataDir)' == '' And Exists('$(STS2_GAME_DIR)/data_sts2_linuxbsd_x86_64/sts2.dll')">$(STS2_GAME_DIR)/data_sts2_linuxbsd_x86_64</STS2GameDataDir>
+    <STS2GameDataDir Condition="'$(STS2GameDataDir)' == '' And Exists('$(HOME)/snap/steam/common/.local/share/Steam/steamapps/common/Slay the Spire 2/data_sts2_linuxbsd_x86_64/sts2.dll')">$(HOME)/snap/steam/common/.local/share/Steam/steamapps/common/Slay the Spire 2/data_sts2_linuxbsd_x86_64</STS2GameDataDir>
+    <STS2GameDataDir Condition="'$(STS2GameDataDir)' == '' And Exists('$(HOME)/.local/share/Steam/steamapps/common/Slay the Spire 2/data_sts2_linuxbsd_x86_64/sts2.dll')">$(HOME)/.local/share/Steam/steamapps/common/Slay the Spire 2/data_sts2_linuxbsd_x86_64</STS2GameDataDir>
+    <STS2GameDataDir Condition="'$(STS2GameDataDir)' == '' And Exists('$(HOME)/.steam/steam/steamapps/common/Slay the Spire 2/data_sts2_linuxbsd_x86_64/sts2.dll')">$(HOME)/.steam/steam/steamapps/common/Slay the Spire 2/data_sts2_linuxbsd_x86_64</STS2GameDataDir>
+    <STS2GameDataDir Condition="'$(STS2GameDataDir)' == '' And Exists('$(HOME)/.var/app/com.valvesoftware.Steam/.local/share/Steam/steamapps/common/Slay the Spire 2/data_sts2_linuxbsd_x86_64/sts2.dll')">$(HOME)/.var/app/com.valvesoftware.Steam/.local/share/Steam/steamapps/common/Slay the Spire 2/data_sts2_linuxbsd_x86_64</STS2GameDataDir>
+  </PropertyGroup>
+
+  <Target Name="ValidateGameDir" BeforeTargets="ResolveReferences">
+    <Error Condition="'$(STS2GameDataDir)' == ''" Text="Slay the Spire 2 was not found. Use ./build.sh, or set STS2_GAME_DATA_DIR (or pass -p:STS2GameDataDir=...) to the folder that holds sts2.dll." />
+    <Error Condition="!Exists('$(STS2GameDataDir)/sts2.dll')" Text="STS2GameDataDir is invalid. Expected sts2.dll at $(STS2GameDataDir)/sts2.dll" />
+    <Error Condition="!Exists('$(STS2GameDataDir)/GodotSharp.dll')" Text="STS2GameDataDir is invalid. Expected GodotSharp.dll at $(STS2GameDataDir)/GodotSharp.dll" />
+    <Error Condition="!Exists('$(STS2GameDataDir)/0Harmony.dll')" Text="STS2GameDataDir is invalid. Expected 0Harmony.dll at $(STS2GameDataDir)/0Harmony.dll" />
+  </Target>
+
+  <ItemGroup>
+    <Reference Include="sts2">
+      <HintPath>$(STS2GameDataDir)/sts2.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="GodotSharp">
+      <HintPath>$(STS2GameDataDir)/GodotSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="0Harmony">
+      <HintPath>$(STS2GameDataDir)/0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+</Project>

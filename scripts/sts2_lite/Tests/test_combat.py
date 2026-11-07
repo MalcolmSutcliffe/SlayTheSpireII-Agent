@@ -40,7 +40,6 @@ def make_state(hand=None, draw=None, discard=None, energy=3):
     cs.player, cs.enemies = p, [e]
     cs.energy = cs.max_energy = energy
     cs.turn_number = 1
-    cs.deck = [strike() for _ in range(5)]
     return cs
 
 def all_cards(player):

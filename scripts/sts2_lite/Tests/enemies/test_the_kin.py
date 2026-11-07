@@ -63,6 +63,7 @@ def test_cycles_follow_the_captures():
 
 def test_orb_of_frailty_and_weakness_debuff_the_player():
     cs = kin("turn_5")
+    cs.player.current_hp = cs.player.max_hp = 200      # survive both turns; the dead get no debuffs
     enemy_turn(cs)
     assert cs.player.status_amount(StatusId.FRAIL) == 1
     assert moves(cs)[2] == "ORB_OF_WEAKNESS"

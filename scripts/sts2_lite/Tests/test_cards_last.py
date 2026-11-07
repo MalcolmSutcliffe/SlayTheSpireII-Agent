@@ -206,12 +206,33 @@ def test_two_setup_strikes_stack_and_both_are_returned():
     sim.end_turn()
     assert st(cs.player, StatusId.STRENGTH) == 0
 
-def test_setup_strike_counts_as_a_strike_for_perfected_strike():  # by its name, like the other Strikes
-    cs = state([card(CardId.PERFECTED_STRIKE, 2, CardType.Attack, TargetType.AnyEnemy)])
-    cs.deck = [Card.create_generated(CardId.SETUP_STRIKE)]
-    cs.deck[0].name = "Setup Strike"
+def perfected_strike(up=False):
+    return card(CardId.PERFECTED_STRIKE, 2, CardType.Attack, TargetType.AnyEnemy, up)
+
+def test_perfected_strike_counts_itself():
+    cs = state([perfected_strike()])
     play(cs)
     assert hps(cs) == [100 - 8]
+
+def test_perfected_strike_counts_strikes_in_every_pile():
+    cs = state([perfected_strike(), card(CardId.STRIKE_IRONCLAD, 1, CardType.Attack, TargetType.AnyEnemy)])
+    cs.player.draw_pile = [card(CardId.TWIN_STRIKE, 1, CardType.Attack, TargetType.AnyEnemy)]
+    cs.player.discard_pile = [card(CardId.POMMEL_STRIKE, 1, CardType.Attack, TargetType.AnyEnemy)]
+    cs.player.exhaust_pile = [card(CardId.ASHEN_STRIKE, 1, CardType.Attack, TargetType.AnyEnemy)]
+    play(cs)
+    assert hps(cs) == [100 - (6 + 2 * 5)]       # itself, hand, draw, discard and exhaust
+
+def test_perfected_strike_counts_a_generated_strike_and_ignores_other_cards():
+    cs = state([perfected_strike(True), card(CardId.DEFEND_IRONCLAD, 1, CardType.Skill, TargetType.Self)])
+    cs.player.discard_pile = [Card.create_generated(CardId.SETUP_STRIKE)]
+    play(cs)
+    assert hps(cs) == [100 - (6 + 3 * 2)]
+
+def test_perfected_strike_counts_a_strike_exhausted_during_the_fight():
+    cs = state([perfected_strike()])
+    cs.player.exhaust_pile = [card(CardId.STRIKE_IRONCLAD, 1, CardType.Attack, TargetType.AnyEnemy)]
+    play(cs)
+    assert hps(cs) == [100 - (6 + 2 * 2)]
 
 
 # ---------------------------------------------------------------- Mangle

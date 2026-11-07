@@ -1,11 +1,17 @@
 **/__pycache__/
-/cli-anything-sts2/
+*.pyc
+*.cache
 /docs/
 **/sts2_env/
 **/sts2_rl_agent.eg-info/
 SlayTheSpireII-Agent.sln
-*.pyc
-/cli-anything-sts2/agent-harness/bridge/plugin/obj/Debug
-*.cache
 sts2_decompiled/
 
+# The bridge mod (cli-anything-sts2/) is tracked: only what builds and installs generate is left out.
+.venv/
+*.egg-info/
+/cli-anything-sts2/agent-harness/bridge/plugin/bin/
+/cli-anything-sts2/agent-harness/bridge/plugin/obj/
+/cli-anything-sts2/agent-harness/bridge/plugin/out/
+/cli-anything-sts2/agent-harness/bridge/plugin/.dotnet-cli-home/
+/cli-anything-sts2/agent-harness/bridge/install/bridge_plugin/

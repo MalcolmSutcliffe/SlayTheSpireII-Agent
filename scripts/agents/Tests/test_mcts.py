@@ -55,7 +55,6 @@ def make_state(hand, draw=(), discard=()):
     cs.player, cs.enemies = p, [e]
     cs.energy = cs.max_energy = 3
     cs.turn_number = 1
-    cs.deck = []
     return cs
 
 def expanded(cs):
@@ -635,7 +634,6 @@ def hard_fight(seed):
     rng.seed(seed)
     deck = [strike() for _ in range(5)] + [defend() for _ in range(4)] + [bash()]
     cs = make_state([], draw=deck)
-    cs.deck = list(deck)
     cs.player.max_hp = cs.player.current_hp = 70
     cs.enemies[0].max_hp = cs.enemies[0].current_hp = 90
     cs.enemies[0].attack_damage = 16

@@ -1,0 +1,695 @@
+{
+  "type": "decision",
+  "decision": "combat_play",
+  "room_type": "monster",
+  "context": {
+    "act": 1,
+    "floor": 9,
+    "ascension": 0
+  },
+  "run": {
+    "act": 1,
+    "floor": 9,
+    "ascension": 0
+  },
+  "round": 3,
+  "turn": "player",
+  "is_play_phase": null,
+  "energy": 4,
+  "max_energy": 4,
+  "hand": [
+    {
+      "index": 0,
+      "id": "DEFEND_IRONCLAD",
+      "name": "Defend",
+      "type": "Skill",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Gain 5 Block.",
+      "target_type": "Self",
+      "can_play": true,
+      "unplayable_reason": null,
+      "is_upgraded": false,
+      "keywords": [
+        {
+          "name": "Block",
+          "description": "Until next turn, prevents damage."
+        }
+      ],
+      "card_keywords": []
+    },
+    {
+      "index": 1,
+      "id": "STRIKE_IRONCLAD",
+      "name": "Strike",
+      "type": "Attack",
+      "cost": "2",
+      "star_cost": null,
+      "description": "Deal 6 damage.",
+      "target_type": "AnyEnemy",
+      "can_play": true,
+      "unplayable_reason": null,
+      "is_upgraded": false,
+      "keywords": [
+        {
+          "name": "Entangled",
+          "description": "Costs an additional [ironclad_energy_icon.png]."
+        }
+      ],
+      "card_keywords": []
+    },
+    {
+      "index": 2,
+      "id": "DEFEND_IRONCLAD",
+      "name": "Defend",
+      "type": "Skill",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Gain 5 Block.",
+      "target_type": "Self",
+      "can_play": true,
+      "unplayable_reason": null,
+      "is_upgraded": false,
+      "keywords": [
+        {
+          "name": "Block",
+          "description": "Until next turn, prevents damage."
+        }
+      ],
+      "card_keywords": []
+    },
+    {
+      "index": 3,
+      "id": "DEFEND_IRONCLAD",
+      "name": "Defend",
+      "type": "Skill",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Gain 5 Block.",
+      "target_type": "Self",
+      "can_play": true,
+      "unplayable_reason": null,
+      "is_upgraded": false,
+      "keywords": [
+        {
+          "name": "Block",
+          "description": "Until next turn, prevents damage."
+        }
+      ],
+      "card_keywords": []
+    },
+    {
+      "index": 4,
+      "id": "STRIKE_IRONCLAD",
+      "name": "Strike",
+      "type": "Attack",
+      "cost": "2",
+      "star_cost": null,
+      "description": "Deal 6 damage.",
+      "target_type": "AnyEnemy",
+      "can_play": true,
+      "unplayable_reason": null,
+      "is_upgraded": false,
+      "keywords": [
+        {
+          "name": "Entangled",
+          "description": "Costs an additional [ironclad_energy_icon.png]."
+        }
+      ],
+      "card_keywords": []
+    }
+  ],
+  "enemies": [
+    {
+      "entity_id": "VINE_SHAMBLER_0",
+      "combat_id": 1,
+      "name": "Vine Shambler",
+      "hp": 61,
+      "max_hp": 61,
+      "block": 0,
+      "status": [],
+      "intents": [
+        {
+          "type": "Attack",
+          "label": "16",
+          "title": "Aggressive",
+          "description": "This enemy intends to Attack for 16 damage."
+        }
+      ]
+    }
+  ],
+  "player": {
+    "character": "The Ironclad",
+    "hp": 75,
+    "max_hp": 80,
+    "block": 0,
+    "energy": 4,
+    "max_energy": 4,
+    "hand": [
+      {
+        "index": 0,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ],
+        "card_keywords": []
+      },
+      {
+        "index": 1,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "2",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Entangled",
+            "description": "Costs an additional [ironclad_energy_icon.png]."
+          }
+        ],
+        "card_keywords": []
+      },
+      {
+        "index": 2,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ],
+        "card_keywords": []
+      },
+      {
+        "index": 3,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ],
+        "card_keywords": []
+      },
+      {
+        "index": 4,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "2",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Entangled",
+            "description": "Costs an additional [ironclad_energy_icon.png]."
+          }
+        ],
+        "card_keywords": []
+      }
+    ],
+    "draw_pile_count": 5,
+    "discard_pile_count": 0,
+    "exhaust_pile_count": 0,
+    "draw_pile": [
+      {
+        "index": 0,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "2",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Entangled",
+            "description": "Costs an additional [ironclad_energy_icon.png]."
+          }
+        ],
+        "card_keywords": []
+      },
+      {
+        "index": 1,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "2",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Entangled",
+            "description": "Costs an additional [ironclad_energy_icon.png]."
+          }
+        ],
+        "card_keywords": []
+      },
+      {
+        "index": 2,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "2",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Entangled",
+            "description": "Costs an additional [ironclad_energy_icon.png]."
+          }
+        ],
+        "card_keywords": []
+      },
+      {
+        "index": 3,
+        "id": "BASH",
+        "name": "Bash",
+        "type": "Attack",
+        "cost": "3",
+        "star_cost": null,
+        "description": "Deal 8 damage. Apply 2 Vulnerable.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Vulnerable",
+            "description": "Vulnerable creatures take 50% more damage from Attacks."
+          },
+          {
+            "name": "Entangled",
+            "description": "Costs an additional [ironclad_energy_icon.png]."
+          }
+        ],
+        "card_keywords": []
+      },
+      {
+        "index": 4,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ],
+        "card_keywords": []
+      }
+    ],
+    "discard_pile": [],
+    "exhaust_pile": [],
+    "gold": 99,
+    "status": [
+      {
+        "id": "TANGLED_POWER",
+        "name": "Tangled",
+        "amount": 1,
+        "type": "Debuff",
+        "description": "Attacks cost an additional [ironclad_energy_icon.png] this turn.",
+        "keywords": []
+      }
+    ],
+    "relics": [
+      {
+        "id": "BURNING_BLOOD",
+        "name": "Burning Blood",
+        "description": "At the end of combat, heal 6 HP.",
+        "counter": null,
+        "status": "Normal",
+        "keywords": []
+      },
+      {
+        "id": "FISHING_ROD",
+        "name": "Fishing Rod",
+        "description": "Every 3 normal combats, Upgrade a random card in your Deck.",
+        "counter": 1,
+        "status": "Normal",
+        "keywords": []
+      },
+      {
+        "id": "SPIKED_GAUNTLETS",
+        "name": "Spiked Gauntlets",
+        "description": "Gain [ironclad_energy_icon.png] at the start of each turn. Powers cost 1 more [ironclad_energy_icon.png].",
+        "counter": null,
+        "status": "Normal",
+        "keywords": [
+          {
+            "name": "Energy",
+            "description": "Energy is used to play cards from your Hand."
+          }
+        ]
+      }
+    ],
+    "potions": []
+  },
+  "draw_pile_count": 5,
+  "discard_pile_count": 0,
+  "exhaust_pile_count": 0,
+  "battle": {
+    "round": 3,
+    "turn": "player",
+    "player": {
+      "character": "The Ironclad",
+      "hp": 75,
+      "max_hp": 80,
+      "block": 0,
+      "energy": 4,
+      "max_energy": 4,
+      "hand": [
+        {
+          "index": 0,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ],
+          "card_keywords": []
+        },
+        {
+          "index": 1,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "2",
+          "star_cost": null,
+          "description": "Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Entangled",
+              "description": "Costs an additional [ironclad_energy_icon.png]."
+            }
+          ],
+          "card_keywords": []
+        },
+        {
+          "index": 2,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ],
+          "card_keywords": []
+        },
+        {
+          "index": 3,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ],
+          "card_keywords": []
+        },
+        {
+          "index": 4,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "2",
+          "star_cost": null,
+          "description": "Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Entangled",
+              "description": "Costs an additional [ironclad_energy_icon.png]."
+            }
+          ],
+          "card_keywords": []
+        }
+      ],
+      "draw_pile_count": 5,
+      "discard_pile_count": 0,
+      "exhaust_pile_count": 0,
+      "draw_pile": [
+        {
+          "index": 0,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "2",
+          "star_cost": null,
+          "description": "Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Entangled",
+              "description": "Costs an additional [ironclad_energy_icon.png]."
+            }
+          ],
+          "card_keywords": []
+        },
+        {
+          "index": 1,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "2",
+          "star_cost": null,
+          "description": "Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Entangled",
+              "description": "Costs an additional [ironclad_energy_icon.png]."
+            }
+          ],
+          "card_keywords": []
+        },
+        {
+          "index": 2,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "2",
+          "star_cost": null,
+          "description": "Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Entangled",
+              "description": "Costs an additional [ironclad_energy_icon.png]."
+            }
+          ],
+          "card_keywords": []
+        },
+        {
+          "index": 3,
+          "id": "BASH",
+          "name": "Bash",
+          "type": "Attack",
+          "cost": "3",
+          "star_cost": null,
+          "description": "Deal 8 damage. Apply 2 Vulnerable.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Vulnerable",
+              "description": "Vulnerable creatures take 50% more damage from Attacks."
+            },
+            {
+              "name": "Entangled",
+              "description": "Costs an additional [ironclad_energy_icon.png]."
+            }
+          ],
+          "card_keywords": []
+        },
+        {
+          "index": 4,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ],
+          "card_keywords": []
+        }
+      ],
+      "discard_pile": [],
+      "exhaust_pile": [],
+      "gold": 99,
+      "status": [
+        {
+          "id": "TANGLED_POWER",
+          "name": "Tangled",
+          "amount": 1,
+          "type": "Debuff",
+          "description": "Attacks cost an additional [ironclad_energy_icon.png] this turn.",
+          "keywords": []
+        }
+      ],
+      "relics": [
+        {
+          "id": "BURNING_BLOOD",
+          "name": "Burning Blood",
+          "description": "At the end of combat, heal 6 HP.",
+          "counter": null,
+          "status": "Normal",
+          "keywords": []
+        },
+        {
+          "id": "FISHING_ROD",
+          "name": "Fishing Rod",
+          "description": "Every 3 normal combats, Upgrade a random card in your Deck.",
+          "counter": 1,
+          "status": "Normal",
+          "keywords": []
+        },
+        {
+          "id": "SPIKED_GAUNTLETS",
+          "name": "Spiked Gauntlets",
+          "description": "Gain [ironclad_energy_icon.png] at the start of each turn. Powers cost 1 more [ironclad_energy_icon.png].",
+          "counter": null,
+          "status": "Normal",
+          "keywords": [
+            {
+              "name": "Energy",
+              "description": "Energy is used to play cards from your Hand."
+            }
+          ]
+        }
+      ],
+      "potions": []
+    },
+    "enemies": [
+      {
+        "entity_id": "VINE_SHAMBLER_0",
+        "combat_id": 1,
+        "name": "Vine Shambler",
+        "hp": 61,
+        "max_hp": 61,
+        "block": 0,
+        "status": [],
+        "intents": [
+          {
+            "type": "Attack",
+            "label": "16",
+            "title": "Aggressive",
+            "description": "This enemy intends to Attack for 16 damage."
+          }
+        ]
+      }
+    ]
+  }
+}

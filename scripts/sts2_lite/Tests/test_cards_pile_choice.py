@@ -373,3 +373,113 @@ def test_random_playouts_with_all_four_cards_never_get_stuck():
             if sim.is_over:
                 break
             sim.perform_action(rng.choice(sim.get_available_actions()))
+
+
+# ---------------------------------------------------------------- Neow's Fury
+def strike_card():
+    return make_card(CardId.STRIKE_IRONCLAD, "Strike", CardType.Attack, 1, TargetType.AnyEnemy)
+
+def neows_fury():
+    return make_card(CardId.NEOWS_FURY, "Neow's Fury", CardType.Attack, 1, TargetType.AnyEnemy)
+
+def with_discard(hand, discard):
+    cs = state(hand)
+    cs.player.discard_pile = list(discard)
+    return cs
+
+def test_neows_fury_deals_ten():
+    cs = state([neows_fury()])
+    play(cs)
+    assert hps(cs) == [90]
+
+def test_neows_fury_is_always_optional():
+    """Captured: "Choose up to 2 cards" is asked even when the discard pile holds only two."""
+    cs = with_discard([neows_fury()], [bash(), headbutt()])
+    sim = play(cs)
+    assert {a["action"] for a in sim.get_available_actions()} == {"choose_card", "confirm_choice"}
+    sim.perform_action({"action": "confirm_choice"})
+    assert cs.pending_choice is None and ids(cs.player.hand) == []
+
+def test_neows_fury_can_stop_after_one_pick():
+    cs = with_discard([neows_fury()], [bash(), headbutt()])
+    sim = play(cs)
+    sim.choose_card(0)
+    assert ids(cs.player.hand) == [CardId.BASH]
+    assert {a["action"] for a in sim.get_available_actions()} == {"choose_card", "confirm_choice"}
+    sim.confirm_choice()
+    assert cs.pending_choice is None and CardId.HEADBUTT in ids(cs.player.discard_pile)
+
+def test_neows_fury_with_two_identical_cards_offers_one_option_twice():
+    cs = with_discard([neows_fury()], [strike_card(), strike_card()])
+    sim = play(cs)
+    assert len(choices(sim)) == 1
+    sim.choose_card(choices(sim)[0]["card_index"])
+    assert len(choices(sim)) == 1
+    sim.choose_card(choices(sim)[0]["card_index"])
+    assert ids(cs.player.hand) == [CardId.STRIKE_IRONCLAD] * 2 and cs.pending_choice is None
+
+def test_neows_fury_with_an_empty_discard_asks_nothing():
+    cs = state([neows_fury()])
+    play(cs)
+    assert cs.pending_choice is None
+
+def test_confirm_choice_without_an_optional_choice_is_illegal():
+    cs = state([neows_fury()])
+    with pytest.raises(IllegalActionError):
+        CombatSimulator(cs).confirm_choice()
+
+def test_headbutt_is_not_optional():
+    cs = with_discard([headbutt()], [bash(), true_grit()])
+    sim = play(cs)
+    assert "confirm_choice" not in {a["action"] for a in sim.get_available_actions()}
+
+def test_neows_fury_picks_two_cards_into_the_hand():
+    cs = with_discard([neows_fury()], [bash(), headbutt(), true_grit()])
+    sim = play(cs)
+    assert {a["card_id"] for a in choices(sim)} == {"BASH", "HEADBUTT", "TRUE_GRIT"}
+    sim.choose_card(0)
+    assert ids(cs.player.hand) == [CardId.BASH] and cs.pending_choice is not None
+    assert {a["card_id"] for a in choices(sim)} == {"HEADBUTT", "TRUE_GRIT"}
+    sim.choose_card(1)
+    assert ids(cs.player.hand) == [CardId.BASH, CardId.TRUE_GRIT]
+    assert ids(cs.player.discard_pile) == [CardId.HEADBUTT, CardId.NEOWS_FURY]
+    assert cs.pending_choice is None
+
+def test_neows_fury_identical_cards_are_one_choice_each_time():
+    cs = with_discard([neows_fury()], [bash(), bash(), bash(), headbutt()])
+    sim = play(cs)
+    assert len(choices(sim)) == 2
+    sim.choose_card(choices(sim)[0]["card_index"])
+    assert len(choices(sim)) == 2          # Bash x2 and Headbutt remain
+
+def test_neows_fury_does_not_touch_the_draw_pile():
+    cs = with_discard([neows_fury()], [bash(), headbutt(), true_grit()])
+    cs.player.draw_pile = [havoc()]
+    sim = play(cs)
+    sim.choose_card(0)
+    sim.choose_card(0)
+    assert ids(cs.player.draw_pile) == [CardId.HAVOC]
+
+def test_neows_fury_with_a_full_hand_leaves_the_cards():
+    cs = with_discard([neows_fury()] + [true_grit() for _ in range(9)], [bash(), headbutt(), havoc()])
+    sim = play(cs)          # the played card leaves a hand of 9
+    sim.choose_card(0)
+    assert len(cs.player.hand) == 9 + 1 and cs.pending_choice is None
+    assert len(cs.player.discard_pile) >= 3     # Fury itself + the two unpicked
+
+def test_neows_fury_capture_matches_the_sim_choice():
+    """Captured screen: "Choose up to 2 cards", two identical Strikes, confirm allowed with nothing picked."""
+    raw = json.loads((Path(__file__).parent / "data" / "neows_fury_example.json").read_text())
+    assert raw["prompt"] == "Choose up to 2 cards to put into your Hand." and raw["can_confirm"] and not raw["can_skip"]
+    cs = with_discard([neows_fury()], [Card.from_dict({**c, "can_play": True, "target_type": "AnyEnemy"}) for c in raw["cards"]])
+    sim = play(cs)
+    options = choices(sim)
+    assert len(options) == 1
+    assert game_index(options[0], raw["cards"]) == 0
+
+def test_game_index_skips_indices_already_picked():
+    raw = json.loads((Path(__file__).parent / "data" / "neows_fury_example.json").read_text())
+    action = {"card_id": "STRIKE_IRONCLAD", "is_upgraded": False}
+    assert game_index(action, raw["cards"]) == 0
+    assert game_index(action, raw["cards"], skip=[0]) == 1
+    assert game_index(action, raw["cards"], skip=[0, 1]) is None

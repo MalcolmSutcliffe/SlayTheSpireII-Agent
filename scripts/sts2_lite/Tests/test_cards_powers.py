@@ -778,15 +778,16 @@ def test_unmovable_does_not_double_unpowered_block():
     play_index(sim, 0)
     assert cs.player.block == 3 + 10
 
-def test_unmovable_counts_each_block_of_a_card():
+def test_unmovable_doubles_every_block_of_the_same_play_and_counts_each_one_after():
+    # UnmovablePower counts only gains from other plays
     cs = one_enemy([card(CardId.EVIL_EYE, 1, CardType.Skill, TargetType.Self), defend()])
     cs.player.cards_exhausted_this_turn = 1
     cs.player.apply_status(StatusId.UNMOVABLE, 1)
     sim = CombatSimulator(cs)
     play_index(sim, 0)
-    assert cs.player.block == 16 + 8
+    assert cs.player.block == 16 + 16
     play_index(sim, 0)
-    assert cs.player.block == 16 + 8 + 5
+    assert cs.player.block == 16 + 16 + 5
 
 
 # ---------------------------------------------------------------- Colossus
@@ -966,11 +967,12 @@ def test_auto_play_is_free_and_not_counted_as_a_card_play():
     assert hps(cs) == [94] and cs.energy == 0 and cs.cards_played == 0
     assert cs.player.hand == [] and len(cs.player.discard_pile) == 1
 
-def test_auto_play_does_not_use_up_free_attack():
+def test_auto_play_uses_up_free_attack():
+    # FreeAttackPower.BeforeCardPlayed: auto-plays pass through the Play pile
     cs = one_enemy([strike()])
     cs.player.apply_status(StatusId.FREE_ATTACK, 1)
     CombatSimulator(cs).auto_play(cs.player.hand[0])
-    assert status(cs.player, StatusId.FREE_ATTACK) == 1
+    assert status(cs.player, StatusId.FREE_ATTACK) == 0
 
 def test_auto_play_takes_the_card_from_the_draw_pile():
     cs = one_enemy([])
