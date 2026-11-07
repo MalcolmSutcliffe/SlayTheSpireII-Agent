@@ -317,7 +317,7 @@ NEW_POWER_CARDS = tuple(CardId[n] for n in (
 def test_every_single_target_card_rejects_a_bad_target():
     from sts2_lite.card import GET_CARD_FUNCTION
     targeted = [cid for cid, f in GET_CARD_FUNCTION.items()
-                if cid not in (CardId.DEFEND_IRONCLAD, CardId.BLOOD_WALL, CardId.SLIMED,
+                if cid not in (CardId.DEFEND_IRONCLAD, CardId.BLOOD_WALL, CardId.SLIMED, CardId.SPORE_MIND,
                                CardId.BREAKTHROUGH, CardId.SHRUG_IT_OFF, CardId.THUNDERCLAP,
                                CardId.INFLAME, CardId.CRIMSON_MANTLE, CardId.IMPERVIOUS, CardId.EVIL_EYE,
                                    CardId.SECOND_WIND, CardId.BLOODLETTING, CardId.WHIRLWIND,

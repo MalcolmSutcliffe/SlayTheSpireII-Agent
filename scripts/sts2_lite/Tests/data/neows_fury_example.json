@@ -1,0 +1,87 @@
+{
+  "type": "decision",
+  "decision": "card_select",
+  "context": {
+    "act": 1,
+    "floor": 10,
+    "ascension": 0
+  },
+  "run": {
+    "act": 1,
+    "floor": 10,
+    "ascension": 0
+  },
+  "screen_type": "NCombatPileCardSelectScreen",
+  "prompt": "Choose up to 2 cards to put into your Hand.",
+  "cards": [
+    {
+      "index": 0,
+      "id": "STRIKE_IRONCLAD",
+      "name": "Strike",
+      "type": "Attack",
+      "cost": "1",
+      "description": "Deal 6 damage.",
+      "rarity": "Basic",
+      "is_upgraded": false,
+      "keywords": []
+    },
+    {
+      "index": 1,
+      "id": "STRIKE_IRONCLAD",
+      "name": "Strike",
+      "type": "Attack",
+      "cost": "1",
+      "description": "Deal 6 damage.",
+      "rarity": "Basic",
+      "is_upgraded": false,
+      "keywords": []
+    }
+  ],
+  "player": {
+    "character": "The Ironclad",
+    "hp": 75,
+    "max_hp": 80,
+    "gold": 99
+  },
+  "preview_showing": false,
+  "can_skip": false,
+  "can_confirm": true,
+  "can_cancel": false,
+  "card_select": {
+    "screen_type": "NCombatPileCardSelectScreen",
+    "player": {
+      "character": "The Ironclad",
+      "hp": 75,
+      "max_hp": 80,
+      "gold": 99
+    },
+    "prompt": "Choose up to 2 cards to put into your Hand.",
+    "cards": [
+      {
+        "index": 0,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "description": "Deal 6 damage.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": []
+      },
+      {
+        "index": 1,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "description": "Deal 6 damage.",
+        "rarity": "Basic",
+        "is_upgraded": false,
+        "keywords": []
+      }
+    ],
+    "preview_showing": false,
+    "can_cancel": false,
+    "can_confirm": true
+  }
+}

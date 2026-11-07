@@ -66,7 +66,7 @@ public static partial class BridgeMod
 
     /// <summary>
     /// Whether a once-per-fight relic has already done its job, for the relics whose Status never says so: Permafrost
-    /// (block on the first Power), Ruined Helmet (the one doubled Strength), Music Box and Throwing Axe. Null for any other relic.
+    /// (block on the first Power), Ruined Helmet (the one doubled Strength), Music Box, Throwing Axe and Pael's Eye (the extra turn). Null for any other relic.
     /// </summary>
     internal static bool? RelicSpent(object relic)
     {
@@ -80,6 +80,7 @@ public static partial class BridgeMod
                 "DemonTongue" => "_triggeredThisTurn",
                 "MusicBox" => "_wasUsedThisTurn",
                 "ThrowingAxe" => "_usedThisCombat",
+                "PaelsEye" => "_usedThisCombat",
                 _ => null
             };
             if (field == null) return null;

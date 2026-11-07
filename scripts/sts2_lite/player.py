@@ -6,7 +6,7 @@ if TYPE_CHECKING:
 
 from sts2_lite import rng
 from sts2_lite.creature import Creature
-from sts2_lite.card import Card, CardId, CardType, CardKeyword
+from sts2_lite.card import Card, CardId, CardType, CardKeyword, CONFUSED_MAX_COST
 from sts2_lite.status import StatusInstance, StatusId
 from sts2_lite.relic import RelicId, RelicInstance, strength_received, lizard_tail_revive, hand_draw_bonus, blocks_draw
 
@@ -27,6 +27,7 @@ class Player(Creature):
     block_cleared_hook = None    # called after block is cleared, before the hand draw (AfterBlockCleared)
     known_top : int         # how many cards at the end of draw_pile (the top) the agent knows the identity and order of
     cards_exhausted_this_turn : int
+    gold : int              # Player.Gold; spent in combat by Seal of Gold
 
     def __init__(self):
         super().__init__()
@@ -45,6 +46,7 @@ class Player(Creature):
         self.block_play = None            # play_id of the latest card block gain
         self.block_play_gains = 0         # gains made by that play
         self.cards_exhausted_this_turn = 0
+        self.gold = 0
 
     @classmethod
     def from_dict(cls, player : dict):
@@ -52,6 +54,7 @@ class Player(Creature):
         pl.max_hp = player["max_hp"]
         pl.current_hp = player["hp"]
         pl.block = player["block"]
+        pl.gold = player.get("gold", 0)
         pl.is_minion = False
         pl.status = {}
         for s in player["status"]:
@@ -71,11 +74,19 @@ class Player(Creature):
                 pl.relics[relic.relic_id] = relic
         if RelicId.GHOST_SEED in pl.relics:
             pl._apply_ghost_seed()
+        if StatusId.CONFUSED in pl.status:
+            pl._read_confused_stomps()
         pl.inferno_plays = max(1, round(pl.status_amount(StatusId.INFERNO) / 7.5)) if StatusId.INFERNO in pl.status else 0
         # copies inferred from block amount (8 or 10 each)
         pl.crimson_mantle_plays = max(1, round(pl.status_amount(StatusId.CRIMSON_MANTLE) / 9)) if StatusId.CRIMSON_MANTLE in pl.status else 0
         pl._read_growing_cards()
         return pl
+
+    def _read_confused_stomps(self):
+        """A shown Stomp cost under Confused is the roll (minus Attacks played since the draw), not 3 minus Attacks."""
+        for card in self.hand + self.draw_pile + self.discard_pile + self.exhaust_pile:
+            if card.card_id == CardId.STOMP:
+                card.restore_cost = None
 
     def _apply_ghost_seed(self):
         """GhostSeed.CanAffect: basic Strikes and Defends are Ethereal (idempotent if the bridge already sent it)."""
@@ -144,6 +155,7 @@ class Player(Creature):
         new_pl.hp_lost_log = list(player.hp_lost_log)
         new_pl.attacks_played_this_turn = player.attacks_played_this_turn
         new_pl.card_blocks_this_turn = player.card_blocks_this_turn
+        new_pl.gold = player.gold
         return new_pl
     
     def turn_start(self):
@@ -188,6 +200,8 @@ class Player(Creature):
         if len(self.draw_pile) == 0:
             return None
         card = self.draw_pile.pop()
+        if StatusId.CONFUSED in self.status and card.energy_cost != "X" and not card.unplayable:
+            card = card.confused_copy(rng.randrange(CONFUSED_MAX_COST + 1))    # Canonical < 0 (Unplayable) and X keep theirs
         self.hand.append(card)
         self.cards_drawn += 1
         if self.known_top > 0:

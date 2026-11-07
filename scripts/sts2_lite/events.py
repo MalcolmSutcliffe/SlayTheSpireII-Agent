@@ -5,6 +5,7 @@ from enum import Enum, auto
 class EventType(Enum):
     __hash__ = object.__hash__      # members are singletons; Enum.__hash__ is pure Python
     PLAY_PHASE_END = auto()    # player ends their turn, before anything else happens
+    TURN_END_EARLY = auto()    # after the end-of-turn auto-plays, before END_TURN (BeforeSideTurnEndEarly)
     END_TURN = auto()          # player ends their turn
     PLAYER_TURN_ENDED = auto() # the hand is discarded; the enemies have not acted yet
     ENEMY_TURN_END = auto()    # after every enemy has acted
@@ -15,6 +16,7 @@ class EventType(Enum):
     BEFORE_PLAYER_TURN = auto()  # the new turn has begun but nothing has been drawn yet
     BLOCK_CLEARED = auto()     # block cleared, hand not drawn yet (AfterBlockCleared)
     PLAYER_TURN_START = auto() # after the new hand is drawn
+    AUTO_PRE_PLAY = auto()     # turn setup is done, before the player can act (AfterAutoPrePlayPhaseEntered)
     BLOCK_GAINED = auto()      # args: (creature, amount)
     HP_LOST = auto()           # args: (amount,); the player lost hit points (reported after the action that did it)
     HP_CHANGED = auto()        # after any action, whether the player's hit points moved or not

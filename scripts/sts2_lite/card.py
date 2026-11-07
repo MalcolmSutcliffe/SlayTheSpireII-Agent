@@ -22,6 +22,7 @@ class CardType(Enum):
     Skill = auto()
     Attack = auto()
     Status = auto()
+    Curse = auto()
 
 class CardId(Enum):
     __hash__ = object.__hash__      # members are singletons; Enum.__hash__ is pure Python
@@ -49,6 +50,21 @@ class CardId(Enum):
     DAZED = auto()
     WOUND = auto()
     SOOT = auto()
+    REGRET = auto()
+    DECAY = auto()
+    SHAME = auto()
+    DOUBT = auto()
+    NORMALITY = auto()
+    INJURY = auto()
+    POOR_SLEEP = auto()
+    GREED = auto()
+    CLUMSY = auto()
+    CURSE_OF_THE_BELL = auto()
+    WRITHE = auto()
+    FOLLY = auto()
+    GUILTY = auto()
+    SPORE_MIND = auto()
+    ASCENDERS_BANE = auto()
     BREAK = auto()
     HEMOKINESIS = auto()
     DISMANTLE = auto()
@@ -70,6 +86,7 @@ class CardId(Enum):
     ARMAMENTS = auto()
     AGGRESSION = auto()
     HEADBUTT = auto()
+    NEOWS_FURY = auto()
     TRUE_GRIT = auto()
     BURNING_PACT = auto()
     HAVOC = auto()
@@ -125,6 +142,13 @@ UPGRADE_COST_CHANGE = {
     CardId.UNMOVABLE : -1, CardId.HAVOC : -1, CardId.EXPECT_A_FIGHT : -1, CardId.INFERNAL_BLADE : -1,
     CardId.BODY_SLAM : -1, CardId.HELLRAISER : -1,
 }
+# CardModel base cost of the cards above (an upgrade caps a rolled Confused cost at base + change)
+UPGRADE_BASE_COST = {
+    CardId.BARRICADE : 3, CardId.CORRUPTION : 3, CardId.DARK_EMBRACE : 2, CardId.STAMPEDE : 2,
+    CardId.UNMOVABLE : 2, CardId.HAVOC : 1, CardId.EXPECT_A_FIGHT : 2, CardId.INFERNAL_BLADE : 1,
+    CardId.BODY_SLAM : 1, CardId.HELLRAISER : 2,
+}
+CONFUSED_MAX_COST = 3
 
 class CardKeyword(Enum):
     """Entities.Cards.CardKeyword (None omitted). Values are bits: cards store keywords as an int mask (Enum hashing is slow)."""
@@ -136,24 +160,41 @@ class CardKeyword(Enum):
     SLY = 32
     ETERNAL = 64
 
-_EXHAUST, _ETHEREAL, _UNPLAYABLE, _RETAIN = 1, 2, 8, 16
+_EXHAUST, _ETHEREAL, _INNATE, _UNPLAYABLE, _RETAIN, _ETERNAL = 1, 2, 4, 8, 16, 64
 
 # cards with the Exhaust keyword
 EXHAUSTING_CARDS = frozenset({CardId.SLIMED, CardId.TREMBLE, CardId.IMPERVIOUS, CardId.MOLTEN_FIST,
                               CardId.FEED, CardId.DOMINATE, CardId.FIEND_FIRE, CardId.FORGOTTEN_RITUAL,
-                              CardId.INFERNAL_BLADE, CardId.NOT_YET, CardId.OFFERING})
+                              CardId.INFERNAL_BLADE, CardId.NOT_YET, CardId.OFFERING, CardId.SPORE_MIND})
+
+# curses (Bad Luck, Debt and Enthralled cannot appear in Act 1 and are not modelled)
+CURSE_CARDS = frozenset({CardId.REGRET, CardId.DECAY, CardId.SHAME, CardId.DOUBT, CardId.NORMALITY, CardId.INJURY,
+                         CardId.POOR_SLEEP, CardId.GREED, CardId.CLUMSY, CardId.CURSE_OF_THE_BELL, CardId.WRITHE,
+                         CardId.FOLLY, CardId.GUILTY, CardId.SPORE_MIND, CardId.ASCENDERS_BANE})
 
 # cards with the Unplayable keyword
-UNPLAYABLE_CARDS = frozenset({CardId.DAZED, CardId.WOUND, CardId.INFECTION, CardId.SOOT})
+UNPLAYABLE_CARDS = frozenset({CardId.DAZED, CardId.WOUND, CardId.INFECTION, CardId.SOOT}
+                             | (CURSE_CARDS - {CardId.SPORE_MIND}))
 
 # cards with the Ethereal keyword: exhausted instead of discarded if still in hand at end of turn
-ETHEREAL_CARDS = frozenset({CardId.DAZED})
+ETHEREAL_CARDS = frozenset({CardId.DAZED, CardId.CLUMSY, CardId.FOLLY, CardId.ASCENDERS_BANE})
+
+# Retain / Innate / Eternal: only Retain acts in combat (Innate and Eternal are deck-level)
+RETAINING_CARDS = frozenset({CardId.POOR_SLEEP})
+INNATE_CARDS = frozenset({CardId.WRITHE, CardId.FOLLY})
+ETERNAL_CARDS = frozenset({CardId.ASCENDERS_BANE, CardId.CURSE_OF_THE_BELL, CardId.GREED, CardId.FOLLY})
+
+NORMALITY_CARD_LIMIT = 3
+NEOWS_FURY_CARDS = 2
+DECAY_DAMAGE = 2
+CURSE_STATUS_AMOUNT = 1         # Shame (Frail), Doubt (Weak)
 
 def _set_canonical_keywords():
     """CardModel.CanonicalKeywords, stored as a mask on each CardId member."""
     for card_id in CardId:
         card_id.keyword_mask = ((_EXHAUST if card_id in EXHAUSTING_CARDS else 0) | (_ETHEREAL if card_id in ETHEREAL_CARDS else 0)
-                                | (_UNPLAYABLE if card_id in UNPLAYABLE_CARDS else 0))
+                                | (_UNPLAYABLE if card_id in UNPLAYABLE_CARDS else 0) | (_RETAIN if card_id in RETAINING_CARDS else 0)
+                                | (_INNATE if card_id in INNATE_CARDS else 0) | (_ETERNAL if card_id in ETERNAL_CARDS else 0))
 
 _set_canonical_keywords()
 
@@ -162,6 +203,9 @@ def keyword_mask(keywords) -> int:
     for k in keywords:
         mask |= k.value
     return mask
+
+CURSE_NAMES = {CardId.CURSE_OF_THE_BELL: "Curse of the Bell", CardId.ASCENDERS_BANE: "Ascender's Bane", CardId.POOR_SLEEP: "Poor Sleep",
+               CardId.SPORE_MIND: "Spore Mind"}
 
 class TargetType(Enum):
     __hash__ = object.__hash__      # members are singletons; Enum.__hash__ is pure Python
@@ -290,6 +334,17 @@ class Card:
         return c
 
     @classmethod
+    def create_curse(cls, card_id : CardId) -> Card:
+        """A curse: cost 0 and unplayable, except Spore Mind (1 energy, Exhaust)."""
+        c = cls()
+        c.card_id, c.type = card_id, CardType.Curse
+        c.name = CURSE_NAMES.get(card_id) or card_id.name.replace("_", " ").title()
+        c.energy_cost, c.target_type = (1 if card_id == CardId.SPORE_MIND else 0), TargetType.NONE
+        c.is_upgraded = False
+        c.is_unplayable = card_id != CardId.SPORE_MIND
+        return c
+
+    @classmethod
     def create(cls, card_id : CardId) -> Card:
         """A fresh copy of a card that enemies add to the player's piles."""
         return GENERATED_CARDS[card_id]()
@@ -303,6 +358,12 @@ class Card:
         c.energy_cost, c.target_type = cost, target
         c.is_upgraded = c.is_unplayable = False
         return c.upgraded_copy() if upgraded else c
+
+    def confused_copy(self, cost : int) -> Card:
+        """ConfusedPower.AfterCardDrawn: SetThisCombat(cost), an Absolute modifier over every earlier one."""
+        new_card = Card.create_copy(self)
+        new_card.energy_cost, new_card.restore_cost = cost, None
+        return new_card
 
     def cheaper_this_turn(self, amount : int) -> Card:
         """A copy that costs `amount` less until the end of the turn (Stomp)."""
@@ -318,7 +379,7 @@ class Card:
 
     @property
     def is_upgradable(self) -> bool:
-        return not self.is_upgraded and self.type != CardType.Status
+        return not self.is_upgraded and self.type != CardType.Status and self.type != CardType.Curse
 
     def upgraded_copy(self) -> Card:
         """A new, upgraded copy; the original is left alone because piles are shared between simulated states."""
@@ -328,13 +389,23 @@ class Card:
         new_card.is_upgraded = True
         if not new_card.name.endswith("+"):
             new_card.name += "+"
-        if new_card.energy_cost != "X":
-            new_card.energy_cost = max(0, new_card.energy_cost + UPGRADE_COST_CHANGE.get(self.card_id, 0))
+        change = UPGRADE_COST_CHANGE.get(self.card_id, 0)
+        if change and new_card.energy_cost != "X":
+            # CardEnergyCost.UpgradeBy: base + change, Absolute modifiers (Confused) capped at it; this-turn offsets stay
+            kept = self.restore_cost if self.restore_cost is not None else self.energy_cost
+            upgraded = min(kept, UPGRADE_BASE_COST[self.card_id] + change)
+            new_card.energy_cost = max(0, self.energy_cost - (kept - upgraded))
+            if self.restore_cost is not None:
+                new_card.restore_cost = upgraded
         return new_card
 
     def on_turn_end_in_hand(self, combat : CombatSimulator):
-        if self.card_id == CardId.INFECTION:
+        """End-of-turn effects of cards held in hand (before the Ethereal exhaust)."""
+        card_id = self.card_id
+        if card_id == CardId.INFECTION:
             combat.combat_state.player.apply_damage(INFECTION_DAMAGE)
+        elif card_id in HAND_CURSE_EFFECTS:
+            HAND_CURSE_EFFECTS[card_id](combat.combat_state.player)
 
     @classmethod
     def create_copy(cls, card : Card) -> Card:
@@ -362,7 +433,7 @@ class Card:
             return 0                # Brilliant Scarf (TryModifyEnergyCostInCombatLate)
         return cost
 
-    def play_card(self, combat : CombatSimulator, target_index : int, free : bool = False):
+    def play_card(self, combat : CombatSimulator, target_index : int, free : bool = False, x_value : int | None = None):
         """Play the card. Raises ValueError if it cannot be played; state is restored.
         A free play (auto-play) costs nothing but still consumes Free Attack (FreeAttackPower.BeforeCardPlayed)."""
         player = combat.combat_state.player
@@ -379,6 +450,9 @@ class Card:
             extra = self._extra_plays(player, punch)
             if self.energy_cost == "X":
                 x = energy + x_bonus(player) if player.relics else energy        # Chemical X
+                if x_value is not None:
+                    x = x_value             # a dupe keeps the X of the card it copies
+                combat.card_x = x
                 spent = 0 if free else energy
                 if saved:
                     before_card_played(combat, self, spent)
@@ -443,6 +517,8 @@ class Card:
             return False
         if StatusId.RINGING in combat.combat_state.player.status and combat.combat_state.cards_played >= 1:
             return False
+        if combat.combat_state.cards_played >= NORMALITY_CARD_LIMIT and any(c.card_id == CardId.NORMALITY for c in combat.combat_state.player.hand):
+            return False            # Normality: at most 3 cards a turn while it is in hand
         if combat.combat_state.player.relics and _CHOKER in combat.combat_state.player.relics and blocks_play(combat.combat_state.player):
             return False            # Velvet Choker
         if type(self.energy_cost) is str and self.energy_cost == "X":
@@ -521,7 +597,7 @@ PLAIN_DAMAGE = {        # id : (damage, damage upgraded) of the cards that print
     CardId.DISMANTLE : (8, 10), CardId.FEED : (10, 12), CardId.FIEND_FIRE : (7, 10), CardId.FIGHT_ME : (5, 6),
     CardId.GIANT_ROCK : (16, 20), CardId.HEADBUTT : (9, 12), CardId.HEMOKINESIS : (15, 20),
     CardId.HOWL_FROM_BEYOND : (16, 21), CardId.IRON_WAVE : (5, 7), CardId.MANGLE : (15, 20),
-    CardId.MOLTEN_FIST : (10, 14), CardId.PACTS_END : (17, 23), CardId.PILLAGE : (6, 9), CardId.POMMEL_STRIKE : (9, 10),
+    CardId.MOLTEN_FIST : (10, 14), CardId.NEOWS_FURY : (10, 10), CardId.PACTS_END : (17, 23), CardId.PILLAGE : (6, 9), CardId.POMMEL_STRIKE : (9, 10),
     CardId.SETUP_STRIKE : (7, 9), CardId.SPITE : (5, 5), CardId.STOMP : (12, 15), CardId.STRIKE_IRONCLAD : (6, 9),
     CardId.SWORD_BOOMERANG : (3, 3), CardId.TEAR_ASUNDER : (5, 7), CardId.THUNDERCLAP : (4, 7),
     CardId.TWIN_STRIKE : (5, 7), CardId.UNRELENTING : (14, 20), CardId.UPPERCUT : (13, 13), CardId.WHIRLWIND : (5, 8),
@@ -775,6 +851,13 @@ def play_headbutt(card: Card, combat : CombatSimulator, target_index=0, is_upgra
     _attack(combat, 12 if is_upgraded else 9, target)
     combat.request_choice("to_draw_pile", list(range(len(combat.combat_state.player.discard_pile))), pile="discard")
 
+def play_neows_fury(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    target = _enemy(combat, target_index)
+    _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], target)
+    player = combat.combat_state.player
+    discard = player.discard_pile
+    combat.request_choice("to_hand", list(range(len(discard))), pile="discard", amount=NEOWS_FURY_CARDS, source=card)
+
 def play_hellraiser(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     player = combat.combat_state.player
     if StatusId.HELLRAISER not in player.status:
@@ -905,6 +988,9 @@ def play_shrug_it_off(card: Card, combat : CombatSimulator, target_index=0, is_u
     _gain_block(combat, 11 if is_upgraded else 8)
     combat.combat_state.player.draw_cards(1)
 
+def play_spore_mind(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    pass        # only its Exhaust keyword
+
 def play_slimed(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     combat.combat_state.player.draw_card()
 
@@ -923,7 +1009,10 @@ def play_stoke(card: Card, combat : CombatSimulator, target_index=0, is_upgraded
         player.exhaust_card(victim)
         combat.fire(EventType.CARD_EXHAUSTED, victim)
     for _ in exhausted:         # a random card (repeats allowed) for each one exhausted
-        player.add_to_hand(Card.create_generated(rng.choice(STOKE_POOL), is_upgraded))
+        new_card = Card.create_generated(rng.choice(STOKE_POOL), is_upgraded)
+        if new_card.type == CardType.Power and RelicId.SPIKED_GAUNTLETS in player.relics:
+            new_card.energy_cost += 1       # the bridge shows Spiked Gauntlets' +1; a card made here has to add it
+        player.add_to_hand(new_card)
 
 def play_stomp(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     for target in _living(combat):
@@ -1076,6 +1165,7 @@ GET_CARD_FUNCTION : dict[CardId, function] = {
     CardId.JUGGLING : play_juggling,
     CardId.MANGLE : play_mangle,
     CardId.MOLTEN_FIST : play_molten_fist,
+    CardId.NEOWS_FURY : play_neows_fury,
     CardId.NOT_YET : play_not_yet,
     CardId.OFFERING : play_offering,
     CardId.ONE_TWO_PUNCH : play_one_two_punch,
@@ -1093,6 +1183,7 @@ GET_CARD_FUNCTION : dict[CardId, function] = {
     CardId.SHRUG_IT_OFF : play_shrug_it_off,
     CardId.SLIMED : play_slimed,
     CardId.SPITE : play_spite,
+    CardId.SPORE_MIND : play_spore_mind,
     CardId.STAMPEDE : play_stampede,
     CardId.STOKE : play_stoke,
     CardId.STOMP : play_stomp,
@@ -1204,6 +1295,18 @@ STOKE_POOL = list(GENERATABLE_CARDS)
 STRIKE_CARDS = frozenset({CardId.STRIKE_IRONCLAD, CardId.PERFECTED_STRIKE, CardId.POMMEL_STRIKE, CardId.TWIN_STRIKE,
                           CardId.ASHEN_STRIKE, CardId.SETUP_STRIKE})
 
+def _curse_debuff(player, status : StatusId):
+    """Shame and Doubt: 2 stacks if the player lacks the debuff, else 1. Hack: the sim ticks it at the end of the enemy turn,
+    so a single stack would never reach the next player turn."""
+    player.apply_status(status, CURSE_STATUS_AMOUNT if status in player.status else CURSE_STATUS_AMOUNT + 1)
+
+HAND_CURSE_EFFECTS = {
+    CardId.REGRET : lambda player: player.lose_hp(len(player.hand)),        # 1 HP per card in hand, itself included
+    CardId.DECAY : lambda player: player.apply_damage(DECAY_DAMAGE),
+    CardId.SHAME : lambda player: _curse_debuff(player, StatusId.FRAIL),
+    CardId.DOUBT : lambda player: _curse_debuff(player, StatusId.WEAK),
+}
+
 GENERATED_CARDS = {
     CardId.SLIMED : Card.create_slimed,
     CardId.INFECTION : Card.create_infection,
@@ -1211,3 +1314,5 @@ GENERATED_CARDS = {
     CardId.WOUND : Card.create_wound,
     CardId.SOOT : Card.create_soot,
 }
+for _curse in CURSE_CARDS:
+    GENERATED_CARDS[_curse] = lambda _curse=_curse: Card.create_curse(_curse)

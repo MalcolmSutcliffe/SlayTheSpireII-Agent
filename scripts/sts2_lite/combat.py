@@ -8,11 +8,11 @@ if TYPE_CHECKING:
 from sts2_lite.creature import Creature
 from sts2_lite.player import Player
 from sts2_lite.enemy import Enemy
-from sts2_lite.card import TargetType, CardType, Card, CardId, STRIKE_CARDS
+from sts2_lite.card import TargetType, CardType, Card, CardId, STRIKE_CARDS, NORMALITY_CARD_LIMIT
 from sts2_lite.damage import modify_damage, base_from_displayed, EPSILON
 from sts2_lite import rng
 from sts2_lite.events import EventType
-from sts2_lite.relic import RelicId, PER_TURN_FLAG, ALWAYS_REPORTED, after_card_played, release_card, fire_relics, blocks_play, upgraded_after_play, \
+from sts2_lite.relic import RelicId, PER_TURN_FLAG, ALWAYS_REPORTED, take_extra_turn, after_card_played, release_card, fire_relics, blocks_play, PHILOSOPHERS_STONE_STRENGTH, upgraded_after_play, \
     max_energy_gain, victory_heal
 
 from sts2_lite.status import StatusId, StatusBehaviour, STATUS_HANDLERS
@@ -23,22 +23,30 @@ HAND_SELECT_MODES = {"upgrade_select" : "upgrade"}
 
 class PendingChoice:
     """A card the player must pick before anything else can happen."""
-    def __init__(self, kind : str, indices : list[int], pile : str = "hand", amount : int = 0):
+    def __init__(self, kind : str, indices : list[int], pile : str = "hand", amount : int = 0, source : Card | None = None):
         self.kind = kind            # what the pick does, see CombatSimulator._apply_choice
         self.indices = indices      # positions in the pile that may be picked
         self.pile = pile            # "hand" or "discard"
-        self.amount = amount        # cards to draw once the pick is made (Burning Pact)
+        self.optional = kind == "to_hand"       # "up to N": the player may stop picking (confirm_choice)
+        self.source = source        # to_hand: the card being played, which reaches the discard pile before the second pick
+        self.amount = amount        # Burning Pact: cards to draw after the pick; to_hand: picks still to make, this one included
 
     def deepcopy(self) -> PendingChoice:
-        return PendingChoice(self.kind, list(self.indices), self.pile, self.amount)
+        return PendingChoice(self.kind, list(self.indices), self.pile, self.amount, self.source)
 
 class CombatState:
     player : Player
     energy : int
     max_energy : int
     enemies : list[Enemy]
-    turn_number : int
+    turn_number : int       # CombatState.RoundNumber: enemies' move patterns
+    extra_turns : int = 0   # extra player turns taken (Pael's Eye); the round does not advance for them
     ascension : int = 0
+
+    @property
+    def player_turn(self) -> int:
+        """PlayerCombatState.TurnNumber: RoundNumber plus the extra turns. Relics count these."""
+        return self.turn_number + self.extra_turns
 
     def __init__(self):
         self.enemies = []
@@ -63,6 +71,9 @@ class CombatState:
         for enemy in combat_state["enemies"]:
             cs.enemies.append(Enemy.from_dict(enemy, ascension))
         cs.turn_number = combat_state["round"]
+        eye = cs.player.relics.get(RelicId.PAELS_EYE)
+        if eye is not None:
+            cs._read_paels_eye(eye, combat_state["player"].get("relics", []))
         for enemy, raw in zip(cs.enemies, combat_state["enemies"]):
             if enemy.num_attacks > 0:
                 enemy.attack_damage = base_from_displayed(enemy.attack_damage, enemy, cs.player)
@@ -71,6 +82,7 @@ class CombatState:
         cs._infer_ringing_play()
         cs.energy = combat_state["energy"]
         cs.max_energy = combat_state["max_energy"]
+        cs._infer_normality_plays()
         if combat_state.get("decision") == "hand_select":
             cs._load_hand_select(combat_state)
         return cs
@@ -90,11 +102,20 @@ class CombatState:
                 indices.append(c["index"])
         self.pending_choice = PendingChoice(kind, indices)
 
+    def _read_paels_eye(self, eye, raw_relics : list[dict]):
+        """Spent: extra turn taken (TurnNumber = round + 1). Unspent and Normal: a card was played (PaelsEye.BeforeCardPlayed)."""
+        if eye.used:
+            self.extra_turns = 1
+            return
+        raw = next((r for r in raw_relics if r.get("id") == "PAELS_EYE"), {})
+        if raw.get("status") == "Normal":
+            self.cards_played = max(self.cards_played, 1)
+
     def carry_turn_counters(self, previous : CombatState | None):
         """The bridge reports no history, so a state loaded mid-turn restarts the per-turn counters
         (attacks played, block gains, exhausts, HP lost). Pass the simulated state from after the last
         action to keep them; nothing is carried into a different turn."""
-        if previous is None or previous.turn_number != self.turn_number:
+        if previous is None or previous.player_turn != self.player_turn:
             return
         old, new = previous.player, self.player
         new.attacks_played_this_turn = old.attacks_played_this_turn
@@ -151,10 +172,23 @@ class CombatState:
         hand = self.player.hand
         if StatusId.RINGING not in self.player.status or any(not c.is_unplayable for c in hand):
             return
-        candidates = [c for c in hand if c.type != CardType.Status]
+        candidates = [c for c in hand if c.type != CardType.Status and c.type != CardType.Curse]
         if candidates:
             self.cards_played = 1
             for c in candidates:
+                c.is_unplayable = False
+
+    def _infer_normality_plays(self):
+        """Normality in hand with an affordable, non-keyword-unplayable card the bridge shows as unplayable:
+        the 3-card limit is already used up (the bridge reports no play count)."""
+        hand, energy = self.player.hand, self.energy
+        if not any(c.card_id == CardId.NORMALITY for c in hand):
+            return
+        blocked = [c for c in hand if c.is_unplayable and not c.unplayable and c.type not in (CardType.Status, CardType.Curse)
+                   and (c.energy_cost == "X" or c.energy_cost <= energy)]
+        if blocked:
+            self.cards_played = max(self.cards_played, NORMALITY_CARD_LIMIT)
+            for c in blocked:
                 c.is_unplayable = False
 
     def _infer_revivals(self):
@@ -178,6 +212,7 @@ class CombatState:
         new_cs.max_energy = combat_state.max_energy
         new_cs.energy = combat_state.energy
         new_cs.turn_number = combat_state.turn_number
+        new_cs.extra_turns = combat_state.extra_turns
         new_cs.ascension = combat_state.ascension
         new_cs.revivals = list(combat_state.revivals)
         new_cs.cards_played = combat_state.cards_played
@@ -230,6 +265,7 @@ class CombatSimulator:
         self.play_id = None             # id of the current play; card objects can repeat
         self.vigor_pending = None       # Vigor the current attack command adds (VigorPower.BeforeAttack)
         self.auto_playing = False       # CardPlay.IsAutoPlay of the play being resolved
+        self.card_x = 0                 # the X of the X-cost card last played
         combat_state.player.draw_hook = self._card_drawn
         combat_state.player.shuffle_hook = self._shuffled
         combat_state.player.block_cleared_hook = self._block_cleared
@@ -276,12 +312,15 @@ class CombatSimulator:
         if action["action"] == "choose_card":
             self.choose_card(action["card_index"])
             return
+        if action["action"] == "confirm_choice":
+            self.confirm_choice()
+            return
 
     def _pile(self, name : str) -> list[Card]:
         player = self.combat_state.player
         return player.discard_pile if name == "discard" else player.hand
 
-    def request_choice(self, kind : str, indices : list[int], pile : str = "hand", amount : int = 0):
+    def request_choice(self, kind : str, indices : list[int], pile : str = "hand", amount : int = 0, source : Card | None = None):
         """Ask the player to pick one of the cards at `indices` of a pile. Cards that are the same count
         once, and a lone option is taken without asking. With no option the pick is skipped."""
         cards = self._pile(pile)
@@ -291,12 +330,20 @@ class CombatSimulator:
             if key not in seen:
                 seen.add(key)
                 options.append(i)
-        if len(options) == 1:
-            self._apply_choice(PendingChoice(kind, options, pile, amount), options[0])
+        if len(options) == 1 and kind != "to_hand":
+            self._apply_choice(PendingChoice(kind, options, pile, amount, source), options[0])
         elif options:
-            self.combat_state.pending_choice = PendingChoice(kind, options, pile, amount)
-        elif amount:
+            self.combat_state.pending_choice = PendingChoice(kind, options, pile, amount, source)
+        elif amount and kind == "exhaust":
             self.combat_state.player.draw_cards(amount)
+
+    def confirm_choice(self):
+        """Stop picking on an \"up to N\" choice (Neow's Fury)."""
+        pending = self.combat_state.pending_choice
+        if pending is None or not pending.optional:
+            raise IllegalActionError("there is no optional card choice to confirm")
+        self.combat_state.pending_choice = None
+        self._check_hand_emptied()
 
     def choose_card(self, card_index : int):
         pending = self.combat_state.pending_choice
@@ -320,6 +367,19 @@ class CombatSimulator:
         elif choice.kind == "to_draw_pile":
             player.discard_pile.remove(card)
             player.put_on_top(card)                 # the end of the list is the top
+        elif choice.kind == "to_hand":
+            if len(player.hand) >= 10:              # a full hand leaves the cards in the discard pile
+                return
+            player.discard_pile.remove(card)
+            player.hand.append(card)
+            if choice.amount > 1 and len(player.hand) < 10:
+                discard = player.discard_pile
+                options = list(range(len(discard)))
+                for i in reversed(options):             # the card being played is not a candidate for its own effect
+                    if discard[i] is choice.source:
+                        del options[i]
+                        break
+                self.request_choice("to_hand", options, "discard", choice.amount - 1, choice.source)
 
     def play_card(self, card_index : int, target_index : int):
         if self.is_over:
@@ -420,19 +480,21 @@ class CombatSimulator:
             after_card_played(player, card)
         self.fire(EventType.CARD_PLAYED, card)
 
-    def _finish_card_play(self, card : Card, hp_loss_mark : int, force_exhaust : bool = False):
+    def _finish_card_play(self, card : Card, hp_loss_mark : int, force_exhaust : bool = False, dupe : bool = False):
         player = self.combat_state.player
         self.card_played_hooks(card)
         if player.relics:
             card = upgraded_after_play(player, card)        # Razor Tooth
-        self._move_played_card(card, force_exhaust)
+        if not dupe:
+            self._move_played_card(card, force_exhaust)     # GetResultPileTypeForCardPlay: a dupe goes nowhere
         self._after_hp_loss(hp_loss_mark)
 
         self.resolve_deaths()
         self._check_is_over()
 
-    def auto_play(self, card : Card, force_exhaust : bool = False):
-        """Play a card from any pile for free, at a random target if it needs one."""
+    def auto_play(self, card : Card, force_exhaust : bool = False, dupe : bool = False, x_value : int | None = None):
+        """Play a card from any pile for free, at a random target if it needs one. A dupe (CardModel.CreateDupe) is
+        in no pile afterwards."""
         cs = self.combat_state
         player = cs.player
         living = [i for i, e in enumerate(cs.enemies) if e.current_hp > 0]
@@ -459,8 +521,8 @@ class CombatSimulator:
         auto_playing, self.auto_playing = self.auto_playing, True
         try:
             with self._playing(card):
-                card.play_card(self, target, free=True)
-            self._finish_card_play(card, hp_loss_mark, force_exhaust)
+                card.play_card(self, target, free=True, x_value=x_value)
+            self._finish_card_play(card, hp_loss_mark, force_exhaust, dupe)
         finally:
             self.auto_playing = auto_playing
 
@@ -519,6 +581,9 @@ class CombatSimulator:
         for card in [c for c in self.combat_state.player.exhaust_pile if c.card_id == CardId.HOWL_FROM_BEYOND]:
             if not self.is_over:
                 self.auto_play(card)            # Howl from Beyond plays itself from the exhaust pile
+        if self.combat_state.player.relics:         # only relics hook it (Pael's Eye)
+            self.fire(EventType.TURN_END_EARLY)
+            self.resolve_deaths()
         self.fire(EventType.END_TURN)
         self.resolve_deaths()
         for card in list(self.combat_state.player.hand):
@@ -539,6 +604,9 @@ class CombatSimulator:
         player.status.pop(StatusId.NO_ENERGY_GAIN, None)    # until the end of the player's turn
         player.restore_free_cards()
         self._return_temporary_strength(player)
+        if player.relics and take_extra_turn(self):
+            self._take_extra_turn()
+            return
         before = set(self.combat_state.player.status)
         self._play_enemy_turn()
         for enemy in self.combat_state.enemies:
@@ -562,6 +630,18 @@ class CombatSimulator:
             if amount is not None:
                 creature.apply_status(StatusId.STRENGTH, -sign * amount.amount, bypass_artifact=True)
 
+    def _take_extra_turn(self):
+        """CombatManager.SwitchSides (extra turn): no enemy turn, RoundNumber kept, TurnNumber + 1."""
+        player = self.combat_state.player
+        # debuffs tick at the enemy side's turn end (WeakPower.AfterSideTurnEnd); Plating at its owner's turn start
+        plating = player.status.get(StatusId.PLATING)
+        if plating is not None:
+            plating.amount -= 1
+            if plating.amount <= 0:
+                del player.status[StatusId.PLATING]
+        self.combat_state.extra_turns += 1
+        self._start_player_turn(enemies_start=False)
+
     def _discard_hand(self):
         player = self.combat_state.player
         exhausted = 0
@@ -572,17 +652,19 @@ class CombatSimulator:
                 self.fire(EventType.CARD_EXHAUSTED, card)
                 self.ethereal_exhaust = False
                 exhausted += 1
-        if not (RelicId.RINGING_TRIANGLE in player.relics and self.combat_state.turn_number <= 1):
+        keeps_hand = RelicId.RUNIC_PYRAMID in player.relics or (
+            RelicId.RINGING_TRIANGLE in player.relics and self.combat_state.player_turn <= 1)    # Hook.ShouldFlush
+        if not keeps_hand:
             player.discard_pile.extend(c for c in player.hand if not c.retains)    # Ringing Triangle keeps the hand after the first turn
             player.hand[:] = [c for c in player.hand if c.retains]
         if exhausted:
             self.fire(EventType.ETHEREAL_EXHAUSTED, exhausted)
 
-    def _start_player_turn(self):
+    def _start_player_turn(self, enemies_start : bool = True):
         player = self.combat_state.player
         if player.relics:
-            self.combat_state.max_energy += max_energy_gain(player, self.combat_state.turn_number)
-        if RelicId.ICE_CREAM in player.relics and self.combat_state.turn_number > 1:
+            self.combat_state.max_energy += max_energy_gain(player, self.combat_state.player_turn)
+        if RelicId.ICE_CREAM in player.relics and self.combat_state.player_turn > 1:
             self.combat_state.energy += self.combat_state.max_energy        # Ice Cream: unspent energy is kept
         else:
             self.combat_state.energy = self.combat_state.max_energy
@@ -600,8 +682,11 @@ class CombatSimulator:
         self._after_hp_loss(hp_loss_mark)
         self.fire(EventType.PLAYER_TURN_START)
         self._check_is_over()           # Mercury Hourglass can end the fight
-        for enemy in self.combat_state.enemies:
-            enemy.turn_start()
+        if not self.is_over:
+            self.fire(EventType.AUTO_PRE_PLAY)
+        if enemies_start:
+            for enemy in self.combat_state.enemies:
+                enemy.turn_start()
 
     def _decrease_statuses(self, creature : Creature, skip : set[StatusId] = frozenset()):
         """Tick durations. `skip`: debuffs an enemy applied this turn, which start counting next turn."""
@@ -659,6 +744,8 @@ class CombatSimulator:
 
     def summon(self, enemy : Enemy, front : bool = False):
         """Add an enemy mid-fight. What it does first is up to its own moves."""
+        if RelicId.PHILOSOPHERS_STONE in self.combat_state.player.relics:
+            enemy.apply_status(StatusId.STRENGTH, PHILOSOPHERS_STONE_STRENGTH)      # AfterCreatureAddedToCombat
         if front:
             self.combat_state.enemies.insert(0, enemy)
         else:
@@ -690,9 +777,12 @@ class CombatSimulator:
         pending = self.combat_state.pending_choice
         if pending is not None:
             cards = self._pile(pending.pile)
-            return [{"action" : "choose_card", "card_index" : i, "pile" : pending.pile,
-                     "card_id" : cards[i].card_id.name, "is_upgraded" : cards[i].is_upgraded}
-                    for i in pending.indices]
+            output = [{"action" : "choose_card", "card_index" : i, "pile" : pending.pile,
+                       "card_id" : cards[i].card_id.name, "is_upgraded" : cards[i].is_upgraded}
+                      for i in pending.indices]
+            if pending.optional:
+                output.append({"action" : "confirm_choice"})        # take what has been picked so far
+            return output
 
         for c_i, c in enumerate(self.combat_state.player.hand):
             if c.target_type in (TargetType.Self, TargetType.AllEnemies, TargetType.RandomEnemy, TargetType.NONE):

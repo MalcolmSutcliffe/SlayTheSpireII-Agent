@@ -101,6 +101,14 @@ class RelicId(Enum):
     DIAMOND_DIADEM = auto()
     CROSSBOW = auto()
     BIIIG_HUG = auto()
+    RUNIC_PYRAMID = auto()
+    TOASTY_MITTENS = auto()
+    HISTORY_COURSE = auto()
+    SPIKED_GAUNTLETS = auto()
+    PHILOSOPHERS_STONE = auto()
+    SEAL_OF_GOLD = auto()
+    PAELS_EYE = auto()
+    PAELS_LEGION = auto()
 
 
 # What the bridge calls a relic's state (if it reports one) when `used` is true.
@@ -218,11 +226,25 @@ def _vambrace_block_gained(relic : RelicInstance, card : Card | None, amount : i
     if not relic.used and card is not None and amount > 0 and relic.triggering is None:
         relic.triggering = card
 
+# Pael's Legion: `counter` is the Cooldown (the bridge shows it while > 0); doubles card block while it is <= 0.
+PAELS_LEGION_COOLDOWN = 2
+
+def _paels_legion_block(relic : RelicInstance, card : Card | None) -> int:
+    """PaelsLegion.ModifyBlockMultiplicative: x2 for own card block while Cooldown <= 0."""
+    return 2 if card is not None and not relic.counter else 1
+
+def _paels_legion_block_gained(relic : RelicInstance, card : Card | None, amount : int):
+    """PaelsLegion.AfterModifyingBlockAmount: remember the first play it doubled."""
+    if card is not None and amount > 0 and not relic.counter and relic.triggering is None:
+        relic.triggering = card
+
 BLOCK_MULTIPLIER : dict[RelicId, Callable[[RelicInstance, Card | None], int]] = {
     RelicId.VAMBRACE : _vambrace_block,
+    RelicId.PAELS_LEGION : _paels_legion_block,
 }
 BLOCK_GAINED : dict[RelicId, Callable[[RelicInstance, Card | None, int], None]] = {
     RelicId.VAMBRACE : _vambrace_block_gained,
+    RelicId.PAELS_LEGION : _paels_legion_block_gained,
 }
 
 def block_multiplier(owner : Creature, card : Card | None) -> int:
@@ -378,8 +400,15 @@ def _lamp_card_played(relic : RelicInstance, card : Card):
         relic.used = True
         relic.triggering = None
 
+def _paels_legion_card_played(relic : RelicInstance, card : Card):
+    """PaelsLegion.AfterCardPlayed: the doubled play starts the Cooldown."""
+    if relic.triggering is card:
+        relic.counter = PAELS_LEGION_COOLDOWN
+        relic.triggering = None
+
 CARD_PLAYED : dict[RelicId, Callable[[RelicInstance, Card], None]] = {
     RelicId.VAMBRACE : _vambrace_card_played,
+    RelicId.PAELS_LEGION : _paels_legion_card_played,
     RelicId.UNSETTLING_LAMP : _lamp_card_played,
 }
 
@@ -597,7 +626,7 @@ RING_OF_THE_DRAKE_TURNS, RING_OF_THE_DRAKE_DRAW = 3, 2
 POLLINOUS_CORE_TURNS, POLLINOUS_CORE_DRAW = 4, 2
 
 def _ring_of_the_drake_turn(combat, relic):
-    relic.value = RING_OF_THE_DRAKE_DRAW if combat.combat_state.turn_number <= RING_OF_THE_DRAKE_TURNS else 0
+    relic.value = RING_OF_THE_DRAKE_DRAW if combat.combat_state.player_turn <= RING_OF_THE_DRAKE_TURNS else 0
 
 def _pollinous_core_turn(combat, relic):
     """TurnsSeen++ before the draw; +2 and reset at 4. Reads 4 while flashing, which is 0."""
@@ -750,7 +779,8 @@ def _new_turn_flag(combat, relic):
 # A relic that only acts on turn 1 (Lantern, Akabeko, Anchor, Bag of Preparation...) is not modelled: its effect is already in
 # the state the bridge gives us, and the simulation never plays turn 1 again.
 def _turn(combat) -> int:
-    return combat.combat_state.turn_number
+    """PlayerCombatState.TurnNumber (relics count player turns, not rounds)."""
+    return combat.combat_state.player_turn
 
 CANDELABRA_TURN, CANDELABRA_ENERGY = 2, 2
 CHANDELIER_TURN, CHANDELIER_ENERGY = 3, 3
@@ -832,6 +862,36 @@ def _crossbow(combat, relic):
     new_card.restore_cost, new_card.energy_cost = new_card.energy_cost, 0
     _player(combat).add_to_hand(new_card)
 
+TOASTY_MITTENS_STRENGTH = 1
+PHILOSOPHERS_STONE_STRENGTH = 1
+
+def _toasty_mittens(combat, relic):
+    """ToastyMittens.BeforeHandDraw: exhaust the top card of the draw pile (reshuffling first), +1 Strength."""
+    player = _player(combat)
+    top = player.take_top()
+    if top is not None:
+        player.exhaust_card(top)
+        combat.fire(EventType.CARD_EXHAUSTED, top)
+    player.apply_status(StatusId.STRENGTH, TOASTY_MITTENS_STRENGTH)
+
+def _history_course_record(combat, relic, card):
+    """Remember the last Attack or Skill of the turn; `used` is set while History Course's own dupe plays."""
+    if not relic.used and card.type in _card_types()[:2]:
+        relic.triggering = card
+        relic.value = combat.card_x if card.energy_cost == "X" else 0
+
+def _history_course(combat, relic):
+    """HistoryCourse.AfterAutoPrePlayPhaseEntered: from turn 2, play a dupe of last turn's last Attack or Skill."""
+    from sts2_lite.card import Card
+    card, relic.triggering, x = relic.triggering, None, relic.value
+    if card is None or _turn(combat) <= 1:
+        return
+    relic.used = True
+    try:
+        combat.auto_play(Card.create_copy(card), dupe=True, x_value=x if card.energy_cost == "X" else None)
+    finally:
+        relic.used = False
+
 def _sai(combat, relic):
     combat.gain_block(_player(combat), SAI_BLOCK)
 
@@ -845,6 +905,42 @@ def _paels_tears_check(combat, relic):
 def _paels_tears(combat, relic):
     if relic.value:
         combat.gain_energy(PAELS_TEARS_ENERGY)
+
+SEAL_OF_GOLD_ENERGY = 1
+SEAL_OF_GOLD_GOLD = 5
+
+def _seal_of_gold(combat, relic):
+    """SealOfGold.AfterSideTurnStart: Gold >= 5 -> GainEnergy(1), then LoseGold(5)."""
+    player = _player(combat)
+    if player.gold >= SEAL_OF_GOLD_GOLD:
+        combat.gain_energy(SEAL_OF_GOLD_ENERGY)
+        player.gold -= SEAL_OF_GOLD_GOLD
+
+def _paels_legion_turn(combat, relic):
+    """PaelsLegion.AfterSideTurnStart: Cooldown--; ready again at 0."""
+    if relic.counter:
+        relic.counter -= 1
+
+def _paels_eye_ready(combat, relic) -> bool:
+    """PaelsEye: !UsedThisCombat && !AnyCardsPlayedThisTurn (auto-plays don't count)."""
+    return not relic.used and combat.combat_state.cards_played == 0
+
+def _paels_eye_exhaust(combat, relic):
+    """PaelsEye.BeforeSideTurnEndEarly: exhaust the hand (a snapshot; cards drawn meanwhile stay)."""
+    if not _paels_eye_ready(combat, relic):
+        return
+    player = _player(combat)
+    for card in list(player.hand):
+        player.exhaust_card(card)
+        combat.fire(EventType.CARD_EXHAUSTED, card)
+
+def take_extra_turn(combat) -> bool:
+    """PaelsEye.ShouldTakeExtraTurn, then AfterTakingExtraTurn (UsedThisCombat = true)."""
+    relic = _player(combat).relics.get(RelicId.PAELS_EYE)
+    if relic is None or not _paels_eye_ready(combat, relic):
+        return False
+    relic.used = True
+    return True
 
 def _parrying_shield(combat, relic):
     if _player(combat).block >= PARRYING_SHIELD_BLOCK:
@@ -890,9 +986,14 @@ EVENT_HANDLERS : dict[tuple[RelicId, EventType], Callable] = HandlerTable({
     (RelicId.BRIMSTONE, EventType.PLAYER_TURN_START) : _brimstone,
     (RelicId.FAKE_HAPPY_FLOWER, EventType.PLAYER_TURN_START) : _happy_flower,
     (RelicId.SAI, EventType.PLAYER_TURN_START) : _sai,
+    (RelicId.TOASTY_MITTENS, EventType.BEFORE_PLAYER_TURN) : _toasty_mittens,
+    (RelicId.HISTORY_COURSE, EventType.CARD_PLAYED) : _history_course_record,
+    (RelicId.HISTORY_COURSE, EventType.AUTO_PRE_PLAY) : _history_course,
     (RelicId.CROSSBOW, EventType.PLAYER_TURN_START) : _crossbow,
     (RelicId.MR_STRUGGLES, EventType.PLAYER_TURN_START) : _mr_struggles,
     (RelicId.PAELS_TEARS, EventType.PLAYER_TURN_START) : _paels_tears,
+    (RelicId.SEAL_OF_GOLD, EventType.PLAYER_TURN_START) : _seal_of_gold,
+    (RelicId.PAELS_LEGION, EventType.PLAYER_TURN_START) : _paels_legion_turn,
     # after block is cleared, before the hand draw
     (RelicId.HORN_CLEAT, EventType.BLOCK_CLEARED) : _horn_cleat,
     (RelicId.CAPTAINS_WHEEL, EventType.BLOCK_CLEARED) : _captains_wheel,
@@ -903,6 +1004,7 @@ EVENT_HANDLERS : dict[tuple[RelicId, EventType], Callable] = HandlerTable({
     (RelicId.FAKE_ORICHALCUM, EventType.PLAY_PHASE_END) : _orichalcum_check,
     (RelicId.FAKE_ORICHALCUM, EventType.END_TURN) : _orichalcum,
     (RelicId.PAELS_TEARS, EventType.END_TURN) : _paels_tears_check,
+    (RelicId.PAELS_EYE, EventType.TURN_END_EARLY) : _paels_eye_exhaust,
     (RelicId.CLOAK_CLASP, EventType.END_TURN) : _cloak_clasp,
     (RelicId.SCREAMING_FLAGON, EventType.END_TURN) : _screaming_flagon,
     (RelicId.STONE_CALENDAR, EventType.END_TURN) : _stone_calendar,
@@ -1007,7 +1109,7 @@ MEAT_ON_THE_BONE_HEAL = 12
 VICTORY_HEAL : dict[RelicId, int] = {RelicId.BURNING_BLOOD : 6, RelicId.BLACK_BLOOD : 12}     # AfterCombatVictory
 
 def max_energy_gain(owner : Creature, turn : int) -> int:
-    """ModifyMaxEnergy: Bread +1 from turn 2, Pael's Flesh +1 from turn 3. The bridge already includes them once
+    """ModifyMaxEnergy: Bread +1 from turn 2, Pael's Flesh +1 from turn 3 (player turns). The bridge already includes them once
     active, so each is added only on the turn it starts."""
     if turn == 2 and RelicId.BREAD in owner.relics:
         return BREAD_ENERGY

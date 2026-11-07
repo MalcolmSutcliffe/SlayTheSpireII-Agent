@@ -67,6 +67,7 @@ class StatusId(Enum):
     HELLRAISER = auto()
     INFERNO = auto()
     SELF_FORMING_CLAY = auto()
+    CONFUSED = auto()
 
 INFESTED_SPAWNS = 4
 
@@ -131,11 +132,12 @@ STATUS_BEAVIOURS : dict[StatusId, StatusBehaviour] = {
     StatusId.HELLRAISER : StatusBehaviour.STATIC,
     StatusId.INFERNO : StatusBehaviour.STATIC,
     StatusId.SELF_FORMING_CLAY : StatusBehaviour.STATIC,     # paid out and removed at the start of the next turn
+    StatusId.CONFUSED : StatusBehaviour.STATIC,     # Snecko Eye; rolls drawn cards' costs (Player.draw_card)
 }
 
 DEBUFFS = frozenset({StatusId.WEAK, StatusId.VULNERABLE, StatusId.FRAIL, StatusId.SHRINK,
                      StatusId.CONSTRICT, StatusId.TANGLED, StatusId.RINGING,
-                     StatusId.NO_DRAW, StatusId.NO_ENERGY_GAIN, StatusId.MANGLE})
+                     StatusId.NO_DRAW, StatusId.NO_ENERGY_GAIN, StatusId.MANGLE, StatusId.CONFUSED})
 
 def is_debuff(status_id : StatusId, amount : int) -> bool:
     return status_id in DEBUFFS or (status_id == StatusId.STRENGTH and amount < 0)

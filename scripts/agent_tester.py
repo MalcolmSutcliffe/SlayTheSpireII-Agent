@@ -24,7 +24,10 @@ def confirm_if_ready():
     elif state.get("decision") == "card_select":
         subprocess.run(["cli-anything-sts2", "confirm-selection"])
 
-def act(action, game_state=None):
+picked_on_screen = []       # game indices already selected on an "up to N" pile screen (Neow's Fury)
+
+def act(action, game_state=None, picking_more=False):
+    """`picking_more`: the sim still waits for a pick after this action, so the screen must not be confirmed yet."""
     if action["action"] == "end_turn":
             subprocess.run(["cli-anything-sts2", "end-turn"])
     if action["action"] == "choose_card":
@@ -32,11 +35,18 @@ def act(action, game_state=None):
             subprocess.run(["cli-anything-sts2", "combat-select-card", str(action["card_index"])])
         else:
             # a pile screen lists the pile in the game's own order: find the card there
-            index = game_index(action, game_state["cards"])
+            index = game_index(action, game_state["cards"], skip=picked_on_screen)
             if index is None:
                 print("card", action["card_id"], "is not in the game's list - pick it in the game")
                 return
             subprocess.run(["cli-anything-sts2", "select-card", str(index)])
+            picked_on_screen.append(index)
+        if not picking_more:
+            picked_on_screen.clear()
+            confirm_if_ready()
+    if action["action"] == "confirm_choice":
+        # stop an "up to N" pick with what is selected so far
+        picked_on_screen.clear()
         confirm_if_ready()
     if action["action"] == "play_card":
         if "target_name" in action:
@@ -75,9 +85,11 @@ def run_agent(agent : BaseAgent):
                 continue
             if decision == "card_select" and game_state.get("screen_type") != "NCombatPileCardSelectScreen":
                 continue                # not a pick made during combat
-            if decision != "combat_play" and game_state.get("can_confirm"):
+            choosing_optionally = previous is not None and previous.pending_choice is not None and previous.pending_choice.optional
+            if decision != "combat_play" and game_state.get("can_confirm") and not choosing_optionally:
+                picked_on_screen.clear()
                 confirm_if_ready()      # a card is already picked; only the confirmation is missing
-                continue
+                continue                # (an "up to N" screen can be confirmed from the start: the agent decides)
             if decision != "combat_play" and previous is not None and previous.pending_choice is not None:
                 # the sim knows what this pick is for; a pile screen has no fight data to load
                 combat_state = CombatState.deepcopy(previous)
@@ -92,9 +104,9 @@ def run_agent(agent : BaseAgent):
             # print(combat_state.readable())
             action = agent.get_action(combat_state, 5000)
             print(action)
-            act(action, game_state)
             previous = CombatState.deepcopy(combat_state)
             CombatSimulator(previous).perform_action(action)
+            act(action, game_state, picking_more=previous.pending_choice is not None)
 
 def main():
     agent = MyAgent()
