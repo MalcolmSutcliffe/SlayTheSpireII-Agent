@@ -50,8 +50,7 @@ Card pools (multiplayer ignored)
  - [x] Curse
     Not implemented:
     - [ ] Enthralled (Enforcing play order not implemented in engine)
-    - [ ] Bad luck
-    - [ ] Debt
+ 
  - [ ] Status
  - [ ] Ancient
  - [x] Ironclad
