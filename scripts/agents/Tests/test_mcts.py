@@ -14,17 +14,25 @@ from sts2_lite.combat import CombatState, CombatSimulator
 from sts2_lite.enemy import Enemy
 from sts2_lite.enemy_moves import nibbit
 from sts2_lite.player import Player
-import agents.MCTS as mcts_module
-from agents.MCTS import (
-    MIN_SIMS,
+import agents.sts2_MCTS.MCTS as mcts_module
+from agents.sts2_MCTS.MCTS import (
+    MIN_SIMS, SearchConfig,
     sts2_MCTS, sts2_DeterministicNode, sts2_ChanceNode, expand_node, backpropagate,
-    outcome_key, OUTCOME_C, OUTCOME_ALPHA, MAX_ROLLOUT_TURNS,
+    outcome_key, OUTCOME_ALPHA, MAX_ROLLOUT_TURNS,
+    RolloutPolicy, ROLLOUT_POLICY_DICT,
 )
+
+
+def new_mcts(config=None):
+    """A searcher with a config set, as monte_carlo_tree_search would leave it; for tests that call its internals directly."""
+    mcts = sts2_MCTS()
+    mcts._search_config = config or SearchConfig()
+    return mcts
 
 
 def primed(state, mcts=None, starting_hp=None):
     """A searcher as monte_carlo_tree_search leaves it at the root: the fight's total enemy HP and the player's starting HP are known."""
-    mcts = mcts or sts2_MCTS()
+    mcts = mcts or new_mcts()
     mcts._expected_total_hp = mcts._calculate_expected_total_hp(state)
     mcts._starting_hp = starting_hp or state.player.current_hp
     return mcts
@@ -209,7 +217,7 @@ def test_random_enemy_moves_become_separate_outcomes(monkeypatch):
     chance = sts2_ChanceNode(root, cs, {"action": "end_turn"})
     chance.visits = 100
     for _ in range(40):
-        sts2_MCTS()._sample_outcome(chance)
+        new_mcts()._sample_outcome(chance)
     assert len(chance.outcomes) == 2
 
 def test_outcome_key_distinguishes_upgrades():
@@ -220,7 +228,7 @@ def test_outcome_key_distinguishes_upgrades():
 
 def test_first_sample_creates_a_deterministic_outcome():
     root, chance = pommel_chance()
-    child, is_new = sts2_MCTS()._sample_outcome(chance)
+    child, is_new = new_mcts()._sample_outcome(chance)
     assert is_new
     assert isinstance(child, sts2_DeterministicNode)
     assert child.parent is chance
@@ -229,7 +237,7 @@ def test_first_sample_creates_a_deterministic_outcome():
 
 def test_outcome_state_has_the_action_and_draw_applied():
     root, chance = pommel_chance()
-    child, _ = sts2_MCTS()._sample_outcome(chance)
+    child, _ = new_mcts()._sample_outcome(chance)
     assert len(child.state.player.draw_pile) == len(pile()) - 1
     assert len(child.state.player.hand) == 1
     assert child.state.energy == 2
@@ -239,12 +247,12 @@ def test_sampling_does_not_modify_the_pre_state():
     before = outcome_key(root.state), root.state.energy
     for i in range(30):
         chance.visits = i
-        sts2_MCTS()._sample_outcome(chance)
+        new_mcts()._sample_outcome(chance)
     assert (outcome_key(root.state), root.state.energy) == before
 
 def test_outcome_distribution_matches_the_pile():
     root, chance = pommel_chance()
-    mcts, counts, n = sts2_MCTS(), Counter(), 3000
+    mcts, counts, n = new_mcts(), Counter(), 3000
     for i in range(n):
         chance.visits = i
         child, _ = mcts._sample_outcome(chance)
@@ -255,7 +263,7 @@ def test_outcome_distribution_matches_the_pile():
 
 def test_is_new_only_when_an_outcome_is_created():
     root, chance = pommel_chance()
-    mcts, new = sts2_MCTS(), 0
+    mcts, new = new_mcts(), 0
     for i in range(200):
         chance.visits = i
         new += mcts._sample_outcome(chance)[1]
@@ -263,7 +271,7 @@ def test_is_new_only_when_an_outcome_is_created():
 
 def test_repeated_outcome_returns_the_same_node():
     root, chance = pommel_chance()
-    mcts = sts2_MCTS()
+    mcts = new_mcts()
     seen = {}
     for i in range(300):
         chance.visits = 100
@@ -273,15 +281,15 @@ def test_repeated_outcome_returns_the_same_node():
 
 def test_outcome_count_is_capped():
     root, chance = pommel_chance()
-    mcts = sts2_MCTS()
+    mcts = new_mcts()
     for _ in range(500):
         chance.visits = 1
         mcts._sample_outcome(chance)
-    assert len(chance.outcomes) <= math.ceil(OUTCOME_C * 1 ** OUTCOME_ALPHA)
+    assert len(chance.outcomes) <= math.ceil(mcts._search_config.outcome_c * 1 ** OUTCOME_ALPHA)
 
 def test_cap_grows_with_visits():
     root, chance = pommel_chance()
-    mcts = sts2_MCTS()
+    mcts = new_mcts()
     for _ in range(300):
         chance.visits = 100
         mcts._sample_outcome(chance)
@@ -289,7 +297,7 @@ def test_cap_grows_with_visits():
 
 def test_outcome_counts_add_up_to_the_samples():
     root, chance = pommel_chance()
-    mcts = sts2_MCTS()
+    mcts = new_mcts()
     for _ in range(200):
         chance.visits = 1
         mcts._sample_outcome(chance)
@@ -298,7 +306,7 @@ def test_outcome_counts_add_up_to_the_samples():
 
 def test_capped_sampling_weights_outcomes_by_their_counts(monkeypatch):
     root, chance = pommel_chance()
-    mcts = sts2_MCTS()
+    mcts = new_mcts()
     chance.visits = 1                                   # cap of 2
     for _ in range(500):
         if len(chance.outcomes) == 2:
@@ -324,7 +332,7 @@ def test_capped_sampling_weights_outcomes_by_their_counts(monkeypatch):
 
 def test_capped_sampling_follows_observed_frequencies():
     root, chance = pommel_chance()
-    mcts = sts2_MCTS()
+    mcts = new_mcts()
     for _ in range(3000):
         chance.visits = 1
         mcts._sample_outcome(chance)
@@ -341,19 +349,18 @@ def test_traverse_resolves_an_unvisited_chance_child():
     for c in root.children:                             # leave only the chance child unvisited
         if not c.is_chance_node:
             c.visits = 1
-    leaf = sts2_MCTS().traverse_node(root)
+    leaf = new_mcts().traverse_node(root)
     assert not leaf.is_chance_node
     assert leaf.parent.is_chance_node and leaf.parent.parent is root
 
-NO_TIME_LIMIT = 1e9
-
-def search(cs, sims, seed=0, time_budget=NO_TIME_LIMIT):
-    """Search capped at `sims` simulations; the time budget is effectively off unless given."""
+def search(cs, sims, seed=0, time_budget=None, early_exit=True):
+    """Search capped at `sims` simulations; sim-count mode (no time budget) unless one is given."""
     import contextlib, io
     rng.seed(seed)
-    mcts = sts2_MCTS()
-    with mock.patch.object(mcts_module, "DEFAULT_MAX_SIMS", sims), contextlib.redirect_stdout(io.StringIO()):
-        action = mcts.monte_carlo_tree_search(cs, time_budget)
+    mcts = new_mcts()
+    config = SearchConfig(max_sims=sims, time_budget=time_budget, early_exit=early_exit)
+    with contextlib.redirect_stdout(io.StringIO()):
+        action, _stats, _reason = mcts.monte_carlo_tree_search(cs, config)
     return action, mcts
 
 def draw_fight():
@@ -408,7 +415,7 @@ def test_outcome_count_stays_under_the_cap_throughout_the_tree():
     _, mcts = search(draw_fight(), 400)
     for n in walk(mcts._root_node):
         if n.is_chance_node:
-            assert len(n.outcomes) <= max(1, math.ceil(OUTCOME_C * n.visits ** OUTCOME_ALPHA))
+            assert len(n.outcomes) <= max(1, math.ceil(mcts._search_config.outcome_c * n.visits ** OUTCOME_ALPHA))
 
 
 # ---------------------------------------------------------------- terminal nodes
@@ -444,7 +451,7 @@ def test_chance_nodes_carry_no_terminal_flag():
 
 def test_lethal_end_turn_outcome_is_flagged_terminal():
     root = expanded(lethal_fight())
-    outcome, _ = sts2_MCTS()._sample_outcome(child_for(root, "end_turn"))
+    outcome, _ = new_mcts()._sample_outcome(child_for(root, "end_turn"))
     assert outcome.state.player.current_hp <= 0
     assert outcome.is_terminal
 
@@ -452,7 +459,7 @@ def test_survivable_end_turn_outcome_is_not_flagged_terminal():
     cs = lethal_fight()
     cs.player.current_hp = 50
     root = expanded(cs)
-    outcome, _ = sts2_MCTS()._sample_outcome(child_for(root, "end_turn"))
+    outcome, _ = new_mcts()._sample_outcome(child_for(root, "end_turn"))
     assert not outcome.is_terminal
 
 def test_every_finished_node_is_flagged_and_none_are_expanded():
@@ -476,7 +483,7 @@ def test_traversal_returns_a_terminal_node_without_expanding_it():
     kill.visits = 1
     for c in root.children:
         c.visits = max(c.visits, 1)
-    mcts = sts2_MCTS()
+    mcts = new_mcts()
     mcts._num_sims = 10
     root.visits = 10
     kill.total_reward = 10.0                            # make UCT prefer the kill
@@ -539,7 +546,7 @@ def test_search_leaves_the_recursion_limit_alone():
 
 # ---------------------------------------------------------------- search settings
 def test_sim_cap_ends_the_search():
-    _, mcts = search(draw_fight(), 130)
+    _, mcts = search(draw_fight(), 130, early_exit=False)
     assert mcts._root_node.visits == 130
 
 @pytest.mark.parametrize("budget", [0, 1e-9])
@@ -559,10 +566,20 @@ def test_a_longer_budget_allows_more_sims():
     _, long_ = search(draw_fight(), 10**9, time_budget=0.6)
     assert long_._root_node.visits > short._root_node.visits
 
-def test_time_budget_defaults_to_the_module_constant():
+def test_config_defaults_to_sim_count_mode():
     import inspect
-    default = inspect.signature(sts2_MCTS.monte_carlo_tree_search).parameters["time_budget"].default
-    assert default == mcts_module.DEFAULT_TIME_BUDGET
+    default = inspect.signature(sts2_MCTS.monte_carlo_tree_search).parameters["config"].default
+    assert default == SearchConfig()
+    assert default.time_budget is None
+
+def test_search_returns_root_stats_and_exit_reason():
+    rng.seed(0)
+    import contextlib, io
+    with contextlib.redirect_stdout(io.StringIO()):
+        action, stats, reason = sts2_MCTS().monte_carlo_tree_search(draw_fight(), SearchConfig(max_sims=200))
+    assert action in [s["action"] for s in stats]
+    assert sum(s["visits"] for s in stats) >= MIN_SIMS
+    assert reason in ("MAX_SIMS", "TIME_BUDGET", "STATISTICAL_CONFIDENCE")
 
 
 # ---------------------------------------------------------------- rollouts
@@ -598,7 +615,7 @@ def test_rollouts_are_reproducible_from_a_seed():
 
 
 # ---------------------------------------------------------------- reward
-from agents.MCTS import GAMMA, WIN_BONUS
+from agents.sts2_MCTS.MCTS import GAMMA, WIN_BONUS
 
 def win_score(hp, max_hp=80, turns=3, start=None):
     """Score of a win ending at `hp`, for a fight that began at `start` HP (default: full HP)."""
@@ -653,7 +670,7 @@ def test_turn_discount_is_small_next_to_hp():
     assert 0 < one_turn < 0.25 * (win_score(60) - win_score(40))      # 20 HP of 80 outweighs a turn
 
 def test_discounting_keeps_wins_positive_and_above_losses_at_the_rollout_limit():
-    from agents.MCTS import MAX_ROLLOUT_TURNS
+    from agents.sts2_MCTS.MCTS import MAX_ROLLOUT_TURNS
     assert win_score(1, 80, MAX_ROLLOUT_TURNS) > 0 > loss_score([1], [90])
 
 def test_a_win_without_losing_hp_scores_best():
@@ -755,7 +772,7 @@ def test_damaged_enemy_rates_better_when_unfinished():
     assert mcts._rate_outcome(hurt) > mcts._rate_outcome(stalled_fight())
 
 def test_search_terminates_on_a_stalled_fight():
-    action = sts2_MCTS().monte_carlo_tree_search(stalled_fight(), 0.2)
+    action, _, _ = sts2_MCTS().monte_carlo_tree_search(stalled_fight(), SearchConfig(max_sims=10**9, time_budget=0.2))
     assert action["action"] in ("play_card", "end_turn")
 
 
@@ -772,14 +789,14 @@ def _twig_m_after_clump():
     return cs
 
 def test_end_turn_is_a_chance_node_when_a_slime_picks_randomly():
-    from agents.MCTS import expand_node, sts2_DeterministicNode, sts2_ChanceNode
+    from agents.sts2_MCTS.MCTS import expand_node, sts2_DeterministicNode, sts2_ChanceNode
     node = sts2_DeterministicNode(None, _twig_m_after_clump(), None)
     expand_node(node)
     end = next(c for c in node.children if c.action["action"] == "end_turn")
     assert isinstance(end, sts2_ChanceNode)
 
 def test_end_turn_stays_deterministic_when_the_slime_is_forced():
-    from agents.MCTS import expand_node, sts2_DeterministicNode, sts2_ChanceNode
+    from agents.sts2_MCTS.MCTS import expand_node, sts2_DeterministicNode, sts2_ChanceNode
     cs = _twig_m_after_clump()
     cs.enemies[0].move_streak = 2
     node = sts2_DeterministicNode(None, cs, None)
@@ -873,12 +890,12 @@ def test_sampled_outcomes_never_reshuffle_the_known_top_card():
         cs = known_state(1, [strike() for _ in range(12)] + [bash()])
         cs.player.hand = [draw_card_in_hand()]
         chance = sts2_ChanceNode(None, cs, {"action": "end_turn"})
-        child, _ = sts2_MCTS()._sample_outcome(chance)
+        child, _ = new_mcts()._sample_outcome(chance)
         assert any(c.card_id == CardId.BASH for c in child.state.player.hand)
 
 
 # ---------------------------------------------------------------- effective HP (enemies that spawn others)
-from agents.MCTS import _effective_hp
+from agents.sts2_MCTS.MCTS import _effective_hp
 
 def phrog_fight(count=1):
     cs = make_state([])
@@ -935,3 +952,58 @@ def test_a_root_without_enemies_does_not_divide_by_zero():
     cs.enemies = []
     cs.player.current_hp = 0
     assert primed(cs)._rate_outcome(cs) <= 0
+
+
+# ---------------------------------------------------------------- search config
+def test_outcome_c_sets_the_outcome_cap():
+    for c, expected in ((1.0, 1), (4.0, 3)):                    # pommel draws one of 3 card kinds
+        root, chance = pommel_chance()
+        mcts = new_mcts(SearchConfig(outcome_c=c))
+        for _ in range(300):
+            chance.visits = 1
+            mcts._sample_outcome(chance)
+        assert len(chance.outcomes) == expected
+
+def test_exploration_scales_the_uct_bonus():
+    root = sts2_DeterministicNode(None, draw_fight(), None)
+    child = sts2_DeterministicNode(root, draw_fight(), None)
+    child.visits, child.total_reward = 4, 2.0
+    scores = {}
+    for c in (0.0, 1.0, 2.0):
+        mcts = new_mcts(SearchConfig(exploration=c))
+        mcts._num_sims = 100
+        scores[c] = mcts.get_uct_score(child)
+    assert scores[0.0] == pytest.approx(0.5)
+    assert scores[2.0] - scores[0.0] == pytest.approx(2 * (scores[1.0] - scores[0.0]))
+
+@pytest.mark.parametrize("policy", list(RolloutPolicy))
+def test_rollouts_use_the_configured_policy(policy):
+    calls = Counter()
+    spies = {p: (lambda actions, p=p, f=f: (calls.update([p]), f(actions))[1]) for p, f in ROLLOUT_POLICY_DICT.items()}
+    with mock.patch.dict(ROLLOUT_POLICY_DICT, spies):
+        mcts = primed(draw_fight(), new_mcts(SearchConfig(rollout=policy)))
+        mcts._simulate_random_combat(sts2_DeterministicNode(None, draw_fight(), None))
+    assert set(calls) == {policy}
+
+def _search_with_exit_forced(early_exit):
+    import contextlib, io
+    with mock.patch.object(sts2_MCTS, "_check_statistical_exit", lambda self: True), contextlib.redirect_stdout(io.StringIO()):
+        mcts = sts2_MCTS()
+        _, _, reason = mcts.monte_carlo_tree_search(draw_fight(), SearchConfig(max_sims=300, early_exit=early_exit))
+    return mcts, reason
+
+def test_statistical_exit_stops_the_search_when_enabled():
+    mcts, reason = _search_with_exit_forced(early_exit=True)
+    assert reason == "STATISTICAL_CONFIDENCE"
+    assert mcts._root_node.visits == MIN_SIMS
+
+def test_disabling_early_exit_runs_to_the_sim_cap():
+    mcts, reason = _search_with_exit_forced(early_exit=False)
+    assert reason == "MAX_SIMS"
+    assert mcts._root_node.visits == 300
+
+def test_an_expired_time_budget_is_reported():
+    import contextlib, io
+    with contextlib.redirect_stdout(io.StringIO()):
+        _, _, reason = sts2_MCTS().monte_carlo_tree_search(draw_fight(), SearchConfig(max_sims=10**9, time_budget=0.05, early_exit=False))
+    assert reason == "TIME_BUDGET"

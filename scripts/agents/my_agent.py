@@ -2,7 +2,7 @@ from agents.base_agent import BaseAgent
 
 from sts2_lite.combat import CombatState, CombatSimulator
 
-from agents.MCTS import sts2_MCTS
+from agents.sts2_MCTS.MCTS import sts2_MCTS, SearchConfig
     
 # Phase constants
 PHASE_MAP_CHOICE = "MAP_CHOICE"
@@ -23,10 +23,12 @@ class MyAgent(BaseAgent):
 
     def get_action(self, combat_state : CombatState, time_budget):
         mcts = sts2_MCTS()
+        search_config = SearchConfig(time_budget=time_budget)
         c = CombatSimulator(combat_state)
         actions = c.get_available_actions()
         if len(actions) == 1:
             return actions[0]
-        return mcts.monte_carlo_tree_search(combat_state, time_budget)
+        action, stats, reason = mcts.monte_carlo_tree_search(combat_state, search_config)
+        return action
 
     

@@ -2,13 +2,14 @@ import math
 import time
 
 from enum import Enum, auto
+from dataclasses import dataclass
 
 from sts2_lite import rng
 from sts2_lite.combat import CombatState, CombatSimulator
 
 from sts2_lite.enemy import Enemy
 
-class RolloutPolicies(Enum):
+class RolloutPolicy(Enum):
     FirstAction = auto()            # just play first action
     RandomAction = auto()                 # random choice from all abailable actions
     RandomPlayble = auto()          # random choice that prefers playable cards first, then end turn
@@ -24,7 +25,7 @@ DEFAULT_MAX_SIMS = 20000
 EXPLORATION_CONSTANT = 2.0
 
 # random sampling constants
-OUTCOME_C = 2.0
+DEFAULT_OUTCOME_C = 2.0
 OUTCOME_ALPHA = 0.5
 
 # outcome rating constants
@@ -37,12 +38,19 @@ EPSILON = 0.005
 Z_SCORE = 2.33
 
 # rollout policy constants
-ROLLOUT_POLICY = RolloutPolicies.RandomPlayblePEndTurn
+ROLLOUT_POLICY = RolloutPolicy.RandomPlayblePEndTurn
 P_END_TURN = 0.05
 
-
-
 CULLABLE_PILES = ("hand", "discard") # draw pile is not neccessarily cullable because of known_top cards
+
+@dataclass(frozen=True)
+class SearchConfig:
+    max_sims: int = DEFAULT_MAX_SIMS
+    time_budget: float | None = None     # None = sim-count mode
+    exploration: float = 2.0
+    outcome_c: float = 2.0
+    early_exit : bool = True             # allows the sim to exit early
+    rollout: RolloutPolicy = RolloutPolicy.RandomPlayblePEndTurn
 
 class sts2_Node:
     parent : sts2_Node
@@ -92,39 +100,44 @@ class sts2_MCTS:
     _root_node : sts2_DeterministicNode = None
     _expected_total_hp : int
     _starting_hp : int
+    _search_config : SearchConfig
     _num_sims: int = 0
+    _start_time : float
 
     def __init__(self):
         pass
 
     def monte_carlo_tree_search(self, 
                                 combat_state : CombatState, 
-                                time_budget : float = DEFAULT_TIME_BUDGET    # time budget for move decision (may return earlier)
-                                ) -> dict:
+                                config : SearchConfig = SearchConfig()
+                                ) -> tuple[dict, list[dict], str]:
+        
         self._root_node = sts2_DeterministicNode(None, CombatState.deepcopy(combat_state), None)
         self._expected_total_hp = self._calculate_expected_total_hp(combat_state)
         self._starting_hp = combat_state.player.current_hp
         self._num_sims = 0
-        start_time = time.perf_counter()
+        self._search_config = config
+        self._start_time = time.perf_counter()
 
-        while self._num_sims < DEFAULT_MAX_SIMS:
-            # check time budget
-            if self._num_sims >= MIN_SIMS and time.perf_counter() >= (start_time + time_budget):
+        exit_reason = None
+
+        while True:
+            # check exit conditions
+            do_exit, reason = self._check_exit()
+            if do_exit:
+                exit_reason = reason
                 break
-            # check for statistical confidence (every 50)
-            if self._num_sims%50 == 0 and self._check_statistical_exit():
-                break
+            # traverse and sim
             leaf = self.traverse_node(self._root_node) # find optimal leaf node to simulate from
             sim_result = self._simulate_random_combat(leaf) # simulate
             backpropagate(leaf, sim_result)
 
-        print("Ran " + str(self._num_sims) + " sims in " + str(time.perf_counter() - start_time) + " seconds.")
+        print("Ran " + str(self._num_sims) + " sims in " + str(time.perf_counter() - self._start_time) + " seconds.")
 
-        for node in self._root_node.children:
-            print(str(node.action) + ": " + str(node.total_reward/node.visits) + ", " + str(node.visits))
-
+        stats = [{"action": c.action, "visits": c.visits, "q": c.total_reward / c.visits} for c in self._root_node.children]
         best_child = max(self._root_node.children, key=lambda c: c.visits)
-        return best_child.action
+        
+        return best_child.action, stats, exit_reason
 
     # finds the optimal node to simulate from
     def traverse_node(self, node : sts2_Node) -> sts2_Node:
@@ -152,10 +165,9 @@ class sts2_MCTS:
                 # otherwise, get best utc and keep traversing
                 node = self._best_uct(node)
 
-
     # resolve a chance node
     def _sample_outcome(self, node: sts2_Node) -> tuple[sts2_Node, bool]:
-        cap = max(1, math.ceil(OUTCOME_C * node.visits ** OUTCOME_ALPHA))
+        cap = max(1, math.ceil(self._search_config.outcome_c * node.visits ** OUTCOME_ALPHA))
 
         # sample from the true distribution: randomize the draw pile, then act
         state = CombatState.deepcopy(node.pre_state)
@@ -188,13 +200,14 @@ class sts2_MCTS:
         # shuffle draw pile to inject randomness into rollout
         c.combat_state.player.shuffle_draw_pile()
         end_turn = c.combat_state.turn_number + MAX_ROLLOUT_TURNS
+        
         while not c.is_over and c.combat_state.turn_number < end_turn:
             actions = c.get_available_actions()
 
             if len(actions) == 0:
                 break
 
-            action = rollout_policy(actions)
+            action = rollout_policy(actions, self._search_config.rollout)
             
             c.perform_action(action)
 
@@ -224,7 +237,7 @@ class sts2_MCTS:
     def get_uct_score(self, node : sts2_Node):
         if node.visits == 0:
             return 0
-        return node.total_reward/node.visits + EXPLORATION_CONSTANT*math.sqrt(math.log(self._num_sims)/node.visits)
+        return node.total_reward/node.visits + self._search_config.exploration*math.sqrt(math.log(self._num_sims)/node.visits)
 
     def _best_uct(self, node : sts2_Node) -> sts2_Node:
         if len(node.children) == 0:
@@ -237,7 +250,7 @@ class sts2_MCTS:
             if e.is_minion:
                 continue
             expected_total_hp += e.max_hp
-            # edge cases
+            # edge cases, should probably implement better way to do this in future
             if e.enemy_id.startswith("PHROG_PARASITE"):
                 expected_total_hp += 4*(17+21)/2
         return expected_total_hp
@@ -286,6 +299,22 @@ class sts2_MCTS:
         
         return False
 
+    def _check_exit(self) -> tuple[bool, str]:
+        # check min sims
+        if self._num_sims < MIN_SIMS:
+            return False, None
+        # check max sims reached
+        if self._num_sims >= self._search_config.max_sims:
+            return True, "MAX_SIMS"
+        # check time limit
+        if self._num_sims >= MIN_SIMS and self._search_config.time_budget is not None and time.perf_counter() >= (self._start_time + self._search_config.time_budget):
+            return True, "TIME_BUDGET"
+        # check for statistical confidence (every 50)
+        if self._search_config.early_exit and self._num_sims >= MIN_SIMS and self._num_sims%50 == 0 and self._check_statistical_exit():
+            return True, "STATISTICAL_CONFIDENCE"
+        
+        return False, None
+
 def get_unvisited_child(node : sts2_Node):
     for child in node.children:
         if child.visits == 0:
@@ -321,12 +350,12 @@ def backpropagate(node : sts2_Node, result : float):
         node.visits += 1
         node = node.parent
 
-def rollout_policy(actions):
+def rollout_policy(actions, policy : RolloutPolicy):
     if len(actions) == 0:
         return None
     if len(actions) == 1:   
         return actions[0]
-    return ROLLOUT_POLICY_DICT[ROLLOUT_POLICY](actions)
+    return ROLLOUT_POLICY_DICT[policy](actions)
 
 def _effective_hp(enemy : Enemy):
     if enemy.is_minion:
@@ -383,8 +412,8 @@ def random_playable_p_end_turn(actions : list[dict]) -> dict:
     return random_playable(actions)
 
 ROLLOUT_POLICY_DICT = {
-    RolloutPolicies.FirstAction : first_action,
-    RolloutPolicies.RandomAction : random_action,
-    RolloutPolicies.RandomPlayble : random_playable,
-    RolloutPolicies.RandomPlayblePEndTurn : random_playable_p_end_turn
+    RolloutPolicy.FirstAction : first_action,
+    RolloutPolicy.RandomAction : random_action,
+    RolloutPolicy.RandomPlayble : random_playable,
+    RolloutPolicy.RandomPlayblePEndTurn : random_playable_p_end_turn
 }

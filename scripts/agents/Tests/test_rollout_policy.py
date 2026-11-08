@@ -8,10 +8,10 @@ import pytest
 
 from sts2_lite import rng
 from sts2_lite.combat import CombatSimulator
-from agents import MCTS as mcts_module
-from agents.MCTS import (RolloutPolicies, ROLLOUT_POLICY_DICT, rollout_policy, first_action, random_playable,
-                         random_playable_p_end_turn, sts2_MCTS, sts2_DeterministicNode)
-from agents.Tests.test_mcts import make_state, strike, defend, bash, draw_fight
+from agents.sts2_MCTS import MCTS as mcts_module
+from agents.sts2_MCTS.MCTS import (RolloutPolicy, ROLLOUT_POLICY_DICT, rollout_policy, first_action, random_playable,
+                         random_playable_p_end_turn, sts2_DeterministicNode, SearchConfig)
+from agents.Tests.test_mcts import new_mcts, make_state, strike, defend, bash, draw_fight
 
 
 def playing(state):
@@ -21,29 +21,23 @@ def pick_many(policy, actions, n=600, seed=0):
     rng.seed(seed)
     return Counter(id(policy(actions)) for _ in range(n)), {id(a): a for a in actions}
 
-def use_policy(policy):
-    return mock.patch.object(mcts_module, "ROLLOUT_POLICY", policy)
-
 
 def test_every_policy_has_an_implementation():
-    assert set(ROLLOUT_POLICY_DICT) == set(RolloutPolicies)
+    assert set(ROLLOUT_POLICY_DICT) == set(RolloutPolicy)
 
 def test_first_action_policy_plays_the_first_action():
     actions = playing(make_state([strike(), defend(), bash()]))
-    with use_policy(RolloutPolicies.FirstAction):
-        assert rollout_policy(actions) is actions[0]
+    assert rollout_policy(actions, RolloutPolicy.FirstAction) is actions[0]
 
 def test_no_actions_gives_none_and_one_action_is_returned_as_is():
-    assert rollout_policy([]) is None
     only = [{"action": "end_turn"}]
-    for policy in RolloutPolicies:
-        with use_policy(policy):
-            assert rollout_policy(only) is only[0]
+    for policy in RolloutPolicy:
+        assert rollout_policy([], policy) is None
+        assert rollout_policy(only, policy) is only[0]
 
 def test_random_policy_picks_every_action_including_end_turn():
     actions = playing(make_state([strike(), defend()]))
-    with use_policy(RolloutPolicies.RandomAction):
-        counts, _ = pick_many(rollout_policy, actions)
+    counts, _ = pick_many(lambda a: rollout_policy(a, RolloutPolicy.RandomAction), actions)
     assert set(counts) == {id(a) for a in actions}
 
 def test_random_playable_never_ends_the_turn_while_a_card_is_playable():
@@ -85,24 +79,22 @@ def test_every_option_of_a_pending_choice_can_be_picked(policy):
         counts, _ = pick_many(policy, actions)
     assert set(counts) == {id(a) for a in actions}
 
-@pytest.mark.parametrize("policy", list(RolloutPolicies))
+@pytest.mark.parametrize("policy", list(RolloutPolicy))
 def test_a_policy_always_returns_a_legal_action(policy):
     for actions in (playing(make_state([strike(), strike(), defend()])), pending_choice_actions(False), pending_choice_actions(True)):
-        with use_policy(policy):
-            rng.seed(3)
-            assert all(rollout_policy(actions) in actions for _ in range(200))
+        rng.seed(3)
+        assert all(rollout_policy(actions, policy) in actions for _ in range(200))
 
 
-@pytest.mark.parametrize("policy", list(RolloutPolicies))
+@pytest.mark.parametrize("policy", list(RolloutPolicy))
 def test_rollouts_finish_and_are_reproducible_under_a_seed(policy):
     results = []
     for _ in range(2):
         rng.seed(11)
-        mcts = sts2_MCTS()
+        mcts = new_mcts(SearchConfig(rollout=policy))
         root = sts2_DeterministicNode(None, draw_fight(), None)
         mcts._expected_total_hp = mcts._calculate_expected_total_hp(root.state)
         mcts._starting_hp = root.state.player.current_hp
-        with use_policy(policy):
-            results.append([mcts._simulate_random_combat(root) for _ in range(5)])
+        results.append([mcts._simulate_random_combat(root) for _ in range(5)])
     assert results[0] == results[1]
     assert all(-1.0 <= r <= 2.0 for r in results[0])

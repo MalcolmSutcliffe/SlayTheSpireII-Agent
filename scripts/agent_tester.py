@@ -167,7 +167,7 @@ def install_search_hook() -> dict:
     holder = {"last": None, "module": None}
     try:
         import importlib
-        module = importlib.import_module("agents.MCTS")
+        module = importlib.import_module("agents.sts2_MCTS.MCTS")
         cls = module.sts2_MCTS
     except (ImportError, AttributeError):
         return holder

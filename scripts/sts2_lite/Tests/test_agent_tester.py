@@ -353,9 +353,9 @@ def test_the_search_behind_a_decision_is_logged(tester, monkeypatch, tmp_path):
         def monte_carlo_tree_search(self, state, budget=0):
             self._root_node, self._num_sims = Root, 100
             return {"action": "play_card", "card_index": 0, "target": 0}
-    module = types.ModuleType("agents.MCTS")
+    module = types.ModuleType("agents.sts2_MCTS.MCTS")
     module.sts2_MCTS, module.DEFAULT_MAX_SIMS = FakeMCTS, 3000
-    monkeypatch.setitem(sys.modules, "agents.MCTS", module)
+    monkeypatch.setitem(sys.modules, "agents.sts2_MCTS.MCTS", module)
     class SearchAgent:
         def get_action(self, combat_state, budget=0):
             return FakeMCTS().monte_carlo_tree_search(combat_state, budget)

@@ -3,8 +3,8 @@ import math
 
 import pytest
 
-from agents import MCTS as mcts_module
-from agents.MCTS import MIN_SIMS, Z_SCORE, EPSILON, sts2_MCTS, sts2_DeterministicNode, backpropagate
+from agents.sts2_MCTS import MCTS as mcts_module
+from agents.sts2_MCTS.MCTS import SearchConfig, MIN_SIMS, Z_SCORE, EPSILON, sts2_MCTS, sts2_DeterministicNode, backpropagate
 from agents.Tests.test_mcts import make_state, strike
 
 exit_check = getattr(sts2_MCTS, "_check_statistical_exit", None) or sts2_MCTS._check_statistacl_exit
@@ -13,6 +13,7 @@ exit_check = getattr(sts2_MCTS, "_check_statistical_exit", None) or sts2_MCTS._c
 def searcher(*children, sims=500):
     """A searcher whose root has children with the given (visits, mean reward, standard deviation)."""
     mcts = sts2_MCTS()
+    mcts._search_config = SearchConfig()
     root = sts2_DeterministicNode(None, make_state([strike()]), None)
     for i, (visits, mean, std) in enumerate(children):
         child = sts2_DeterministicNode(root, make_state([strike()]), {"action": "play_card", "card_index": i, "target": 0})
