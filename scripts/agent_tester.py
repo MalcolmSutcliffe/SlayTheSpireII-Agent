@@ -8,9 +8,11 @@ from sts2_lite.verify import compare, snapshot, is_random_step
 
 import argparse
 import json
+import re
 import subprocess
 import time
 from datetime import datetime
+from pathlib import Path
 
 POLL_SECONDS = 0.4              # between state reads while the game is busy or it is not the agent's turn
 TURN_CHANGE_TIMEOUT = 10.0      # seconds to wait for the round number to advance after End Turn
@@ -140,6 +142,23 @@ def settled(game_state : dict) -> dict:
             stable, game_state = 1, again
     return game_state
 
+def capture_turn_start(game_state : dict, directory : str) -> str:
+    """Saves the state the agent is about to act on at the start of a turn (raw bridge output, as in Tests/data) so the
+    benchmark can replay it, and adds one line to index.jsonl. Returns the file name."""
+    floor = (game_state.get("context") or {}).get("floor")
+    names = [e.get("name", "?") for e in game_state.get("enemies", [])]
+    enemies = "+".join(sorted(set(re.sub(r"[^A-Za-z0-9]+", "_", n).strip("_") for n in names))) or "unknown"
+    name = f"f{floor if floor is not None else 'x'}_r{game_state.get('round')}_{enemies}_{datetime.now().strftime('%H%M%S%f')}.json"
+    folder = Path(directory)
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / name).write_text(json.dumps(game_state, indent=1))
+    player = game_state.get("player") or {}
+    with open(folder / "index.jsonl", "a") as f:
+        f.write(json.dumps({"file": name, "floor": floor, "round": game_state.get("round"), "enemies": names,
+                            "hp": player.get("hp"), "max_hp": player.get("max_hp"),
+                            "hand": [c.get("name") for c in game_state.get("hand", [])]}) + "\n")
+    return name
+
 def wait_for_change(before : str) -> bool:
     """After an action: wait until the game reports something other than `before`. False if it never does."""
     deadline = time.time() + ACTION_TIMEOUT
@@ -193,11 +212,12 @@ def verify_combat_end(batch : dict, game_state : dict, log_path : str):
 ### The loop
 ###
 
-def run_agent(agent : BaseAgent, step : bool = False, verify : bool = True, log_path : str = DEFAULT_LOG):
+def run_agent(agent : BaseAgent, step : bool = False, verify : bool = True, log_path : str = DEFAULT_LOG, capture_dir : str | None = None):
     previous = None     # state after the last action: the bridge reports no per-turn history
     batch = None        # actions since the last point the sim and the game could be compared
     waiting_for = None  # what the loop last said it was waiting on, so it says so once
     ended = None        # {"round", "time"} of the last End Turn, until the next round starts
+    captured_round = None   # round whose first state was saved to capture_dir
     locked_reads = 0
     checked = mismatched = 0
     try:
@@ -210,6 +230,7 @@ def run_agent(agent : BaseAgent, step : bool = False, verify : bool = True, log_
                     verify_combat_end(batch, game_state, log_path)
                     checked += 1
                 previous = batch = None             # nothing carries from one combat to the next
+                captured_round = None
                 ended = {"round": 0, "time": time.time()}       # the next fight's first turn is set up in stages, like any turn
                 picked_on_screen.clear()
                 message = f"not in combat ({game_state.get('decision', game_state.get('type'))}) - waiting for the next fight"
@@ -272,6 +293,10 @@ def run_agent(agent : BaseAgent, step : bool = False, verify : bool = True, log_
                             mismatched += 1
                     batch = None
 
+            if capture_dir and kind == "play" and game_state.get("round") != captured_round:
+                captured_round = game_state.get("round")
+                print("captured", capture_turn_start(game_state, capture_dir))
+
             if step:
                 input("waiting for input ... \n")
             action = agent.get_action(combat_state, TIME_BUDGET_SECONDS)
@@ -305,9 +330,10 @@ def main():
     parser.add_argument("--step", action="store_true", help="wait for Enter before every action")
     parser.add_argument("--no-verify", action="store_true", help="do not compare the sim with the game")
     parser.add_argument("--log", default=DEFAULT_LOG, help="where differences are written (JSON lines)")
+    parser.add_argument("--capture-dir", default=None, help="save the state at the start of every turn here (benchmark material)")
     args = parser.parse_args()
     agent = MyAgent()
-    run_agent(agent, step=args.step, verify=not args.no_verify, log_path=args.log)
+    run_agent(agent, step=args.step, verify=not args.no_verify, log_path=args.log, capture_dir=args.capture_dir)
 
 if __name__ == "__main__":
     main()

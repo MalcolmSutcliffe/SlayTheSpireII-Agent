@@ -250,3 +250,60 @@ def test_toolbox_screen_is_a_pick_without_skip_and_the_sim_has_no_state_for_it(t
     screen = json.loads((DATA / "relics" / "toolbox_select.json").read_text())
     assert tester.kind_of(screen, expecting_choice=True) == "pick" and not screen["can_skip"] and not screen["can_cancel"]
     assert [c["id"] for c in screen["cards"]] == ["BEAT_DOWN", "IMPATIENCE", "OMNISLICE"]
+
+
+def run_capturing(tester, monkeypatch, states, tmp_path, directory):
+    game = FakeGame(states)
+    monkeypatch.setattr(tester, "get_state", game.get_state)
+    monkeypatch.setattr(tester, "act", game.act)
+    tester.run_agent(FirstActionAgent(), log_path=str(tmp_path / "log.jsonl"), capture_dir=str(directory))
+    return game
+
+def test_the_first_state_of_every_round_is_captured(tester, monkeypatch, tmp_path):
+    first, next_round, same_round = capture(), capture(), capture()
+    first["round"] = 4
+    next_round["round"] = same_round["round"] = 5
+    out = tmp_path / "bench"
+    run_capturing(tester, monkeypatch, [first, next_round, same_round], tmp_path, out)
+    files = sorted(p for p in out.glob("*.json"))
+    assert len(files) == 2
+    assert "_r4_" in files[0].name and "_r5_" in files[1].name
+    assert json.loads(files[0].read_text()) == first
+    lines = [json.loads(l) for l in (out / "index.jsonl").read_text().splitlines()]
+    assert [l["round"] for l in lines] == [4, 5]
+    assert {l["file"] for l in lines} == {p.name for p in files}
+    assert lines[0]["hp"] == first["player"]["hp"] and lines[0]["enemies"]
+
+def test_the_file_name_holds_the_floor_and_the_enemies(tester):
+    state = capture()
+    state["context"] = {"floor": 7}
+    state["enemies"] = [{"name": "Phrog Parasite"}, {"name": "Wriggler"}, {"name": "Wriggler"}]
+    assert tester.capture_turn_start.__name__
+    import tempfile
+    with tempfile.TemporaryDirectory() as d:
+        name = tester.capture_turn_start(state, d)
+    assert name.startswith(f"f7_r{state['round']}_Phrog_Parasite+Wriggler_")
+
+def test_nothing_is_captured_unless_asked_or_when_it_is_not_the_players_turn(tester, monkeypatch, tmp_path):
+    enemy_turn = {**capture(), "turn": "enemy"}
+    out = tmp_path / "bench"
+    run_capturing(tester, monkeypatch, [enemy_turn], tmp_path, out)
+    assert not out.exists()
+    run(tester, monkeypatch, [capture()], tmp_path)
+    assert not (tmp_path / "bench").exists()
+
+def test_a_new_fight_captures_its_first_round_again(tester, monkeypatch, tmp_path):
+    class LeavesCombat(FakeGame):
+        def get_state(self):
+            state = super().get_state()
+            if state.get("decision") == "map_select":
+                self.index += 1         # nobody acts outside combat: the game moves on by itself
+            return state
+    fight_one, away, fight_two = capture(), {"type": "decision", "decision": "map_select"}, capture()
+    fight_one["round"] = fight_two["round"] = 1
+    out = tmp_path / "bench"
+    game = LeavesCombat([fight_one, away, away, away, fight_two])      # one away read goes to wait_for_change
+    monkeypatch.setattr(tester, "get_state", game.get_state)
+    monkeypatch.setattr(tester, "act", game.act)
+    tester.run_agent(FirstActionAgent(), log_path=str(tmp_path / "log.jsonl"), capture_dir=str(out))
+    assert len(list(out.glob("*.json"))) == 2

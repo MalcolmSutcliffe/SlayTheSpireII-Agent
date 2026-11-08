@@ -2,7 +2,7 @@
 
 # Agent for Slay the Spire 2.
 
-### DISCLAIMER : Claude Sonnet 5.5 and Oopus 5.5 were used for bug-fixing, writing sts2_lite (from decompiled sts2 code), and Test suites.
+### DISCLAIMER : Claude Sonnet 5.5 and Opus 5.5 were used for bug-fixing, writing sts2_lite (from decompiled sts2 code), and Test suites.
 
 ## REFERENCES:
 

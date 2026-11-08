@@ -17,11 +17,11 @@ class RolloutPolicies(Enum):
 ## constants
 MAX_ROLLOUT_TURNS = 50
 MIN_SIMS = 100                  # always searches at least 100 simulations
-DEFAULT_TIME_BUDGET = 3.0
-DEFAULT_MAX_SIMS = 3000
+DEFAULT_TIME_BUDGET = 5.0
+DEFAULT_MAX_SIMS = 20000
 
 # uct constants
-EXPLORATION_CONSTANT = 0.5
+EXPLORATION_CONSTANT = 2.0
 
 # random sampling constants
 OUTCOME_C = 2.0

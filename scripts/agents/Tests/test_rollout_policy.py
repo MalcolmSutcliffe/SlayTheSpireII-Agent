@@ -42,7 +42,7 @@ def test_no_actions_gives_none_and_one_action_is_returned_as_is():
 
 def test_random_policy_picks_every_action_including_end_turn():
     actions = playing(make_state([strike(), defend()]))
-    with use_policy(RolloutPolicies.Random):
+    with use_policy(RolloutPolicies.RandomAction):
         counts, _ = pick_many(rollout_policy, actions)
     assert set(counts) == {id(a) for a in actions}
 
