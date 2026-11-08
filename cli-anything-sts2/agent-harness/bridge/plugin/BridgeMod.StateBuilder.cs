@@ -367,6 +367,23 @@ public static partial class BridgeMod
         }
         battle["enemies"] = enemies;
 
+        // Killed Decimillipede segments are not listed above but are not dead: they reattach. Their move says
+        // which of their two turns (DEAD_MOVE, then REATTACH_MOVE) is next.
+        var reviving = new List<Dictionary<string, object?>>();
+        foreach (var creature in combatState.Enemies)
+        {
+            if (!creature.IsAlive && creature.Powers.Any(p => p.GetType().Name == "ReattachPower"))
+            {
+                reviving.Add(new Dictionary<string, object?>
+                {
+                    ["entity_id"] = $"{creature.Monster?.Id.Entry ?? "unknown"}_0",
+                    ["max_hp"] = creature.MaxHp,
+                    ["move_id"] = (creature.Monster?.NextMove as MoveState)?.StateId
+                });
+            }
+        }
+        battle["reviving"] = reviving;
+
         return battle;
     }
 
@@ -525,6 +542,8 @@ public static partial class BridgeMod
             ["can_play"] = unplayableReason == UnplayableReason.None,
             ["unplayable_reason"] = unplayableReason != UnplayableReason.None ? unplayableReason.ToString() : null,
             ["is_upgraded"] = card.IsUpgraded,
+            // true for a card made during this combat (no DeckVersion): the Thieving Hopper cannot steal it
+            ["generated"] = card.DeckVersion == null,
             // null, or {"id": "SHARP", "amount": 2}: the hover tips only carry the localized text
             ["enchantment"] = BuildEnchantment(card),
             ["keywords"] = BuildHoverTips(card.HoverTips)
@@ -623,7 +642,7 @@ public static partial class BridgeMod
                     try
                     {
                         var atkTargets = creature.CombatState?.PlayerCreatures;
-                        intentData["base_damage"] = (int)attack.DamageCalc();
+                        intentData["base_damage"] = (int)(attack.DamageCalc?.Invoke() ?? 0m);
                         intentData["hits"] = attack.Repeats;
                         if (atkTargets != null)
                         {

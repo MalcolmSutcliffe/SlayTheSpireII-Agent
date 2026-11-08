@@ -15,7 +15,11 @@ from sts2_lite.damage import modify_damage
 from sts2_lite.status import StatusInstance, StatusId
 
 log = logging.getLogger("sts2_lite")
+REATTACH_HEAL = 25
 STRICT_BRIDGE_CHECKS = False    # True: a disagreement with the game raises BridgeMismatch instead of logging a warning
+
+
+STUNNED = "STUNNED"     # the game's id for the move of a stunned creature
 
 
 class BridgeMismatch(AssertionError):
@@ -33,6 +37,9 @@ class Enemy(Creature):
     move_streak : int = 1    # times in a row the current move has been chosen
     damage_candidates : set[int] | None = None     # every base damage that shows as the intent (Weak and Strength truncate)
     slot : int = 0           # position among enemies of its kind (the number in its entity id)
+    after_stun : str | None = None    # the move to perform after the STUNNED move (set while move_id == STUNNED)
+    counter : int = 0                 # Knowledge Demon: curses cast so far (picks the set offered and when the casting stops)
+    off_balance : bool = False        # Bowlbug Rock: an attack of its was fully blocked, so its next move is DIZZY
 
     def __init__(self):
         super().__init__()
@@ -85,6 +92,11 @@ class Enemy(Creature):
         """Current move, streak and once-per-fight moves from the bridge's `move_id` and `move_log` (newest last)."""
         if self.moves is None or "move_id" not in raw:
             return
+        if raw["move_id"] == STUNNED:
+            follow = raw.get("follow_up_id")
+            self.move_id, self.after_stun = STUNNED, table_move_id(monster, follow, self.moves) if follow else None
+            self.attack_damage = self.num_attacks = 0
+            return
         current = table_move_id(monster, raw["move_id"], self.moves)
         if current is None:
             return
@@ -96,6 +108,29 @@ class Enemy(Creature):
                 streak += 1
             self.move_streak = streak
             self.used_moves = {m for m in log[:-1] if m is not None}
+        if monster == "KNOWLEDGE_DEMON":
+            performed = log[:-1] if log and log[-1] == current else log      # the current move has not been performed yet
+            self.counter = performed.count("CURSE_OF_KNOWLEDGE")
+
+    @classmethod
+    def lie_dead(cls, segment : Enemy) -> Enemy:
+        """A killed Decimillipede segment (ReattachPower): out of the fight with only Reattach left, on its dead turn."""
+        e = cls.deepcopy(segment)
+        e.current_hp, e.block = 0, 0
+        e.status = {StatusId.REATTACH : segment.status[StatusId.REATTACH]}
+        e.move_id, e.move_streak, e.attack_damage, e.num_attacks, e.after_stun, e.off_balance = "DEAD", 1, 0, 0, None, False
+        return e
+
+    @classmethod
+    def dormant_segment(cls, monster : str, ascension : int, max_hp : int) -> Enemy:
+        """A segment the bridge no longer lists: dead, and about to reattach."""
+        e = cls()
+        e.max_hp, e.current_hp, e.enemy_id = max_hp, 0, f"{monster}_0"
+        e.moves = MOVE_TABLES[monster](ascension)
+        e.move_id = "REATTACH"
+        e.attack_damage = e.num_attacks = 0
+        e.status = {StatusId.REATTACH : StatusInstance(StatusId.REATTACH, REATTACH_HEAL)}
+        return e
 
     @classmethod
     def spawn(cls, monster : str, slot : int, ascension : int) -> Enemy:
@@ -146,7 +181,10 @@ class Enemy(Creature):
                                 f"(base {self.attack_damage}, strength {self.status_amount(StatusId.STRENGTH)})")
             elif damage * self.num_attacks != intent["total_damage"]:
                 problems.append(f"{self.num_attacks} hits of {damage} but the game shows a total of {intent['total_damage']}")
-        if "move_id" in raw and self.moves is not None and self.move_id is not None:
+        if raw.get("move_id") == STUNNED or self.move_id == STUNNED:
+            if (raw.get("move_id") == STUNNED) != (self.move_id == STUNNED):
+                problems.append(f"move {self.move_id} but the game says {raw.get('move_id')}")
+        elif "move_id" in raw and self.moves is not None and self.move_id is not None:
             if table_move_id(self.enemy_id.rpartition("_")[0], raw["move_id"], self.moves) != self.move_id:
                 problems.append(f"move {self.move_id} but the game says {raw['move_id']}")
         if "move_id" in raw and self.moves is None and self.enemy_id.rpartition("_")[0] in MOVE_TABLES:
@@ -183,6 +221,9 @@ class Enemy(Creature):
         new_e.move_streak = enemy.move_streak
         new_e.used_moves = set(enemy.used_moves)
         new_e.slot = enemy.slot
+        new_e.after_stun = enemy.after_stun
+        new_e.off_balance = enemy.off_balance
+        new_e.counter = enemy.counter
         # per-turn flags: Skittish blocks on the first attack of a turn, so a copy made between two attacks must remember the first
         new_e.has_been_attacked_this_turn = enemy.has_been_attacked_this_turn
         new_e.lost_hp_this_turn = enemy.lost_hp_this_turn
@@ -196,33 +237,81 @@ class Enemy(Creature):
         self.block += block
 
     def perform_turn(self, combat : CombatSimulator):
-        self.block = 0
+        if StatusId.BURROWED not in self.status:        # Burrowed keeps its block
+            self.block = 0
+        if self.move_id == STUNNED:
+            self._wake_from_stun(combat)
+            return
         if self.num_attacks > 0:
             player = combat.combat_state.player
             damage = combat.calculate_damage(self.attack_damage, self, player)
             player.apply_attack_damage(damage, self, self.num_attacks)
         if self.moves is not None:
             player = combat.combat_state.player
-            for status_id, amount in self.moves[self.move_id].player_status:
+            move = self.moves[self.move_id]
+            for status_id, amount in move.player_status:
                 player.apply_status(status_id, amount)
-            for card_id, count in self.moves[self.move_id].cards:
+            for card_id, count in move.cards:
                 for _ in range(count):
                     player.discard_pile.append(Card.create(card_id))
-            move = self.moves[self.move_id]
+            for card_id, count in move.hand_cards:
+                for _ in range(count):
+                    player.add_to_hand(Card.create(card_id))
+            for card_id, count in move.draw_cards:
+                for _ in range(count):
+                    player.insert_into_draw_pile(Card.create(card_id))
             if move.summon is not None:
                 combat.summon(Enemy.spawn(*move.summon, combat.combat_state.ascension), front=True)
-            self._finish_move()
+            for monster, slot in move.summons:
+                combat.summon(Enemy.spawn(monster, slot, combat.combat_state.ascension), front=True)
+            for status_id, amount in move.team_status:
+                for ally in combat.combat_state.enemies:
+                    ally.apply_status(status_id, amount)
+            if move.heal:
+                self.current_hp = min(self.max_hp, self.current_hp + move.heal)
+            if move.effect is not None:
+                move.effect(self, combat)
+            performed = self.move_id
+            self._finish_move(combat)
+            if self.off_balance:        # Bowlbug Rock: the attack was fully blocked, so it is stunned and then repeats it
+                self.off_balance = False
+                self.stun(performed)
 
-    def stun(self):
-        """The move shown on the next turn is replaced by the table's STUN move."""
-        if self.moves is None or "STUN" not in self.moves:
+    def imbalanced(self):
+        """A fully blocked attack of this enemy's (Imbalanced). The Rock finishes its move before it stumbles."""
+        self.off_balance = True
+
+    def next_after_current(self) -> str | None:
+        """The move the game's state machine rolls after the current one (a stun placed now leads to it)."""
+        return self._choose_next(self.moves[self.move_id]) if self.moves is not None else None
+
+    def stun(self, after : str | None = None):
+        """The move shown on the next turn becomes STUNNED (the table's own STUN move when it has one), which does nothing.
+        `after`: the move that follows it; by default the move that was interrupted (the last one in the game's move log)."""
+        if self.moves is None:
             return
-        self.move_id = "STUN"
+        if "STUN" in self.moves:
+            self.move_id = "STUN"
+        elif self.move_id == STUNNED:
+            return
+        else:
+            self.after_stun = after or self.move_id
+            self.move_id = STUNNED
         self.move_streak = 1
         self.attack_damage = 0
         self.num_attacks = 0
 
-    def _finish_move(self):
+    def _wake_from_stun(self, combat : CombatSimulator):
+        stunned = self.moves.get(STUNNED)       # a table can give the stun an effect (the Beetle loses its Plating)
+        if stunned is not None and stunned.effect is not None:
+            stunned.effect(self, combat)
+        following = self.moves[self.after_stun]
+        self.move_id, self.after_stun = self.after_stun, None
+        self.move_streak = 1
+        self.attack_damage = following.damage
+        self.num_attacks = following.hits
+
+    def _finish_move(self, combat : CombatSimulator | None = None):
         move = self.moves[self.move_id]
         self.used_moves.add(self.move_id)
         if move.block:
@@ -230,14 +319,16 @@ class Enemy(Creature):
         for status_id, amount in move.self_status:
             self.apply_status(status_id, amount)
         # next intent is chosen now, as the game shows it during the player's turn
-        next_id = self._choose_next(move)
+        next_id = self._choose_next(move, combat)
         following = self.moves[next_id]
         self.move_streak = self.move_streak + 1 if next_id == self.move_id else 1
         self.move_id = next_id
         self.attack_damage = following.damage
         self.num_attacks = following.hits
 
-    def _choose_next(self, move) -> str:
+    def _choose_next(self, move, combat : CombatSimulator | None = None) -> str:
+        if move.choose is not None:
+            return move.choose(self, combat)
         if move.next_by_slot:
             return move.next_by_slot[self.slot % len(move.next_by_slot)]
         if not move.branches:

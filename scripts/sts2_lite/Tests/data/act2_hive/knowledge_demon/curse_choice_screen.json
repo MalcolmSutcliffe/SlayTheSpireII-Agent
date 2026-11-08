@@ -1,0 +1,88 @@
+{
+  "type": "decision",
+  "decision": "card_select",
+  "context": {
+    "act": 1,
+    "floor": 13,
+    "ascension": 0
+  },
+  "run": {
+    "act": 1,
+    "floor": 13,
+    "ascension": 0
+  },
+  "screen_type": "choose",
+  "prompt": "Choose a card.",
+  "cards": [
+    {
+      "index": 0,
+      "id": "DISINTEGRATION",
+      "name": "Disintegration",
+      "type": "Status",
+      "cost": "0",
+      "description": "At the end of your turn, take 6 damage.",
+      "rarity": "Status",
+      "is_upgraded": false,
+      "keywords": []
+    },
+    {
+      "index": 1,
+      "id": "MIND_ROT",
+      "name": "Mind Rot",
+      "type": "Status",
+      "cost": "0",
+      "description": "Draw 1 fewer card each turn.",
+      "rarity": "Status",
+      "is_upgraded": false,
+      "keywords": []
+    }
+  ],
+  "player": {
+    "character": "The Ironclad",
+    "hp": 80,
+    "max_hp": 80,
+    "gold": 99
+  },
+  "preview_showing": false,
+  "can_skip": false,
+  "can_confirm": false,
+  "can_cancel": false,
+  "card_select": {
+    "screen_type": "choose",
+    "player": {
+      "character": "The Ironclad",
+      "hp": 80,
+      "max_hp": 80,
+      "gold": 99
+    },
+    "prompt": "Choose a card.",
+    "cards": [
+      {
+        "index": 0,
+        "id": "DISINTEGRATION",
+        "name": "Disintegration",
+        "type": "Status",
+        "cost": "0",
+        "description": "At the end of your turn, take 6 damage.",
+        "rarity": "Status",
+        "is_upgraded": false,
+        "keywords": []
+      },
+      {
+        "index": 1,
+        "id": "MIND_ROT",
+        "name": "Mind Rot",
+        "type": "Status",
+        "cost": "0",
+        "description": "Draw 1 fewer card each turn.",
+        "rarity": "Status",
+        "is_upgraded": false,
+        "keywords": []
+      }
+    ],
+    "can_skip": false,
+    "preview_showing": false,
+    "can_confirm": false,
+    "can_cancel": false
+  }
+}

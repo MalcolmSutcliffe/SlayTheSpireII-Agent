@@ -50,7 +50,7 @@ def _enemy(e) -> tuple:
     candidates = None if e.damage_candidates is None else tuple(sorted(e.damage_candidates))
     return (e.enemy_id, e.slot, e.current_hp, e.max_hp, e.block, e.is_minion, _statuses(e.status),
             e.attack_damage, e.num_attacks, candidates, e.move_id, e.move_streak, tuple(sorted(e.used_moves)),
-            e.has_been_attacked_this_turn, e.lost_hp_this_turn, e.hp_loss_events)
+            e.has_been_attacked_this_turn, e.lost_hp_this_turn, e.hp_loss_events, e.after_stun, e.off_balance, e.counter)
 
 def _player(p) -> tuple:
     n = p.known_top
@@ -66,5 +66,5 @@ def _player(p) -> tuple:
 def state_key(cs : CombatState) -> tuple:
     """Hashable fingerprint of `cs`; equal for states reached by playing the same cards in a different order."""
     return (cs.energy, cs.max_energy, cs.turn_number, cs.extra_turns, cs.ascension, cs.cards_played, cs.won,
-            tuple(sorted(cs.revivals, key=repr)), _choice(cs),
+            tuple(sorted(cs.revivals, key=repr)), tuple(_enemy(e) for e in cs.dormant), _choice(cs),
             _player(cs.player), tuple(_enemy(e) for e in cs.enemies))

@@ -32,6 +32,10 @@ https://int8.io/monte-carlo-tree-search-beginners-guide/ -> used as reference fo
 
 No functionality
 
+## known issues:
+
+- Enthralled, Splash, Strategem, and Alchemize not implemented.
+
 # TODO :
 
 ## STS2_Lite

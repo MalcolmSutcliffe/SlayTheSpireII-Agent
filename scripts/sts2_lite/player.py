@@ -209,7 +209,7 @@ class Player(Creature):
             self.block_cleared_hook()
         if self.returning:
             self.return_played_cards()
-        self.draw_cards(5 + hand_draw_bonus(self) if self.relics else 5, from_hand_draw=True)
+        self.draw_cards(max(0, (5 + hand_draw_bonus(self) if self.relics else 5) - self.status_amount(StatusId.MIND_ROT)), from_hand_draw=True)
 
         if StatusId.CRIMSON_MANTLE in self.status:
             self.lose_hp(max(1, self.crimson_mantle_plays))

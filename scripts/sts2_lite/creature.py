@@ -5,7 +5,12 @@ if TYPE_CHECKING:
     from sts2_lite.combat import CombatSimulator, CombatState
 
 from sts2_lite.status import StatusInstance, StatusId, is_debuff
+from sts2_lite.card import Card, CardId
 from sts2_lite.relic import RelicId, STURDY_CLAMP_BLOCK, modify_hp_loss, dealt_hp_loss, after_damage_given
+
+# statuses whose owner reacts to being hit (see Creature._after_damage)
+REACTIVE_STATUSES = frozenset({StatusId.BURROWED, StatusId.PERSONAL_HIVE, StatusId.CURL_UP, StatusId.SLUMBER, StatusId.FLUTTER})
+
 
 class Creature:
     max_hp : int
@@ -84,11 +89,15 @@ class Creature:
         """`dealer`: who deals it (player relics react); `powered`: an attack (ValueProp.IsPoweredAttack)."""
         if damage <= 0:
             return
+        if StatusId.HARD_TO_KILL in self.status:
+            damage = min(damage, self.status[StatusId.HARD_TO_KILL].amount)       # ModifyDamageCap; also caps what block absorbs
+        hp_before = self.current_hp
         broken = False
         if self.block > 0:
             if self.block > damage:
                 self.block -= damage
                 self.damage_taken += damage
+                self._after_damage(0, False, powered, dealer)
                 return
             damage -= self.block
             self.damage_taken += self.block
@@ -98,6 +107,42 @@ class Creature:
             self._lose_hp_from_damage(damage, dealer, powered)
         if dealer is not None and dealer.relics and dealer is not self:
             after_damage_given(dealer, self, broken)
+        if self.current_hp > 0:
+            self._after_damage(hp_before - self.current_hp, broken, powered, dealer)
+
+    def _after_damage(self, unblocked : int, block_broken : bool, powered : bool, dealer : Creature | None):
+        """AfterDamageReceived / AfterBlockBroken / AfterDamageGiven: runs for fully blocked hits too, never for a kill."""
+        if unblocked == 0 and dealer is not None and dealer is not self and StatusId.IMBALANCED in dealer.status:
+            dealer.imbalanced()
+        if not self.status or REACTIVE_STATUSES.isdisjoint(self.status):
+            return
+        if block_broken and StatusId.BURROWED in self.status:
+            del self.status[StatusId.BURROWED]      # leaving it clears the block
+            self.block = 0
+            self.stun("BITE")
+        if powered and dealer is not None and StatusId.PERSONAL_HIVE in self.status:
+            add = getattr(dealer, "insert_into_draw_pile", None)
+            if add is not None:             # Osty's hits count for its owner; only the player has a draw pile
+                for _ in range(self.status[StatusId.PERSONAL_HIVE].amount):
+                    add(Card.create(CardId.DAZED))
+        if powered and dealer is not None and StatusId.CURL_UP in self.status and not self.status[StatusId.CURL_UP].records:
+            self.status[StatusId.CURL_UP].records.append([1])       # the card that did this earns the block once it finishes
+        if unblocked > 0:
+            if StatusId.SLUMBER in self.status:
+                self._lose_status_amount(StatusId.SLUMBER, 1, lambda: self.stun("ROLL_OUT"))
+            if powered and StatusId.FLUTTER in self.status:
+                self._lose_status_amount(StatusId.FLUTTER, 1, lambda: self.stun(self.next_after_current()))
+
+    def _lose_status_amount(self, status_id : StatusId, amount : int, when_gone):
+        """PowerCmd.Decrement: the power is removed at zero, and `when_gone` runs."""
+        inst = self.status[status_id]
+        inst.amount -= amount
+        if inst.amount <= 0:
+            del self.status[status_id]
+            when_gone()
+
+    def next_after_current(self) -> str | None:
+        return None
 
     def _lose_hp_from_damage(self, damage : int, dealer : Creature | None, powered : bool):
         if StatusId.SLIPPERY in self.status and self.status[StatusId.SLIPPERY].amount > 0:
@@ -132,7 +177,7 @@ class Creature:
         self.status.pop(StatusId.STRENGTH, None)
         self.stun()
 
-    def stun(self):
+    def stun(self, after : str | None = None):
         pass
 
     def apply_block(self, block: int):
@@ -148,6 +193,8 @@ class Creature:
             return
         if status in self.status:
             self.status[status].amount += amount
+            if status is StatusId.THORNS and self.status[status].amount <= 0:
+                del self.status[status]         # the Spiny Toad takes its spikes back
         else:
             self.status[status] = StatusInstance(status, amount)
 

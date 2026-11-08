@@ -1,0 +1,641 @@
+{
+  "type": "decision",
+  "decision": "combat_play",
+  "room_type": "boss",
+  "context": {
+    "act": 1,
+    "floor": 14,
+    "ascension": 0
+  },
+  "run": {
+    "act": 1,
+    "floor": 14,
+    "ascension": 0
+  },
+  "round": 1,
+  "turn": "player",
+  "is_play_phase": null,
+  "energy": 2,
+  "max_energy": 3,
+  "hand": [
+    {
+      "index": 0,
+      "id": "STRIKE_IRONCLAD",
+      "name": "Strike",
+      "type": "Attack",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Deal 6 damage.",
+      "target_type": "AnyEnemy",
+      "can_play": true,
+      "unplayable_reason": null,
+      "is_upgraded": false,
+      "enchantment": null,
+      "keywords": []
+    },
+    {
+      "index": 1,
+      "id": "DEFEND_IRONCLAD",
+      "name": "Defend",
+      "type": "Skill",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Gain 5 Block.",
+      "target_type": "Self",
+      "can_play": true,
+      "unplayable_reason": null,
+      "is_upgraded": false,
+      "enchantment": null,
+      "keywords": [
+        {
+          "name": "Block",
+          "description": "Until next turn, prevents damage."
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "id": "STRIKE_IRONCLAD",
+      "name": "Strike",
+      "type": "Attack",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Deal 6 damage.",
+      "target_type": "AnyEnemy",
+      "can_play": true,
+      "unplayable_reason": null,
+      "is_upgraded": false,
+      "enchantment": null,
+      "keywords": []
+    },
+    {
+      "index": 3,
+      "id": "DEFEND_IRONCLAD",
+      "name": "Defend",
+      "type": "Skill",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Gain 5 Block.",
+      "target_type": "Self",
+      "can_play": true,
+      "unplayable_reason": null,
+      "is_upgraded": false,
+      "enchantment": null,
+      "keywords": [
+        {
+          "name": "Block",
+          "description": "Until next turn, prevents damage."
+        }
+      ]
+    }
+  ],
+  "enemies": [
+    {
+      "entity_id": "CRUSHER_0",
+      "combat_id": 1,
+      "name": "Crusher",
+      "hp": 203,
+      "max_hp": 209,
+      "block": 0,
+      "status": [
+        {
+          "id": "BACK_ATTACK_LEFT_POWER",
+          "name": "Back Attack",
+          "amount": 1,
+          "type": "Buff",
+          "description": "Deals 50% more damage when it is attacking you from behind.",
+          "keywords": []
+        },
+        {
+          "id": "CRAB_RAGE_POWER",
+          "name": "Crab Rage",
+          "amount": 1,
+          "type": "Buff",
+          "description": "When an ally dies, Crusher gains 6 Strength and 99 Block.",
+          "keywords": [
+            {
+              "name": "Strength",
+              "description": "Strength adds additional damage to Attacks."
+            },
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        }
+      ],
+      "move_id": "THRASH_MOVE",
+      "follow_up_id": "ENLARGING_STRIKE_MOVE",
+      "move_log": [
+        "THRASH_MOVE"
+      ],
+      "intents": [
+        {
+          "type": "Attack",
+          "base_damage": 12,
+          "hits": 1,
+          "damage": 12,
+          "total_damage": 12,
+          "label": "12",
+          "title": "Aggressive",
+          "description": "This enemy intends to Attack for 12 damage."
+        }
+      ]
+    },
+    {
+      "entity_id": "ROCKET_0",
+      "combat_id": 2,
+      "name": "Rocket",
+      "hp": 199,
+      "max_hp": 199,
+      "block": 0,
+      "status": [
+        {
+          "id": "BACK_ATTACK_RIGHT_POWER",
+          "name": "Back Attack",
+          "amount": 1,
+          "type": "Buff",
+          "description": "Deals 50% more damage when it is attacking you from behind.",
+          "keywords": []
+        },
+        {
+          "id": "CRAB_RAGE_POWER",
+          "name": "Crab Rage",
+          "amount": 1,
+          "type": "Buff",
+          "description": "When an ally dies, Rocket gains 6 Strength and 99 Block.",
+          "keywords": [
+            {
+              "name": "Strength",
+              "description": "Strength adds additional damage to Attacks."
+            },
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        }
+      ],
+      "move_id": "TARGETING_RETICLE_MOVE",
+      "follow_up_id": "PRECISION_BEAM_MOVE",
+      "move_log": [
+        "TARGETING_RETICLE_MOVE"
+      ],
+      "intents": [
+        {
+          "type": "Attack",
+          "base_damage": 3,
+          "hits": 1,
+          "damage": 4,
+          "total_damage": 4,
+          "label": "4",
+          "title": "Aggressive",
+          "description": "This enemy intends to Attack for 4 damage."
+        }
+      ]
+    }
+  ],
+  "player": {
+    "character": "The Ironclad",
+    "hp": 80,
+    "max_hp": 80,
+    "block": 0,
+    "energy": 2,
+    "max_energy": 3,
+    "hand": [
+      {
+        "index": 0,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "enchantment": null,
+        "keywords": []
+      },
+      {
+        "index": 1,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 2,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "enchantment": null,
+        "keywords": []
+      },
+      {
+        "index": 3,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      }
+    ],
+    "draw_pile_count": 2,
+    "discard_pile_count": 1,
+    "exhaust_pile_count": 0,
+    "draw_pile": [
+      {
+        "index": 0,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "id": "BASH",
+        "name": "Bash",
+        "type": "Attack",
+        "cost": "2",
+        "star_cost": null,
+        "description": "Deal 8 damage. Apply 2 Vulnerable.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Vulnerable",
+            "description": "Vulnerable creatures take 50% more damage from Attacks."
+          }
+        ]
+      }
+    ],
+    "discard_pile": [
+      {
+        "index": 0,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "enchantment": null,
+        "keywords": []
+      }
+    ],
+    "exhaust_pile": [],
+    "gold": 99,
+    "status": [
+      {
+        "id": "SURROUNDED_POWER",
+        "name": "Surrounded",
+        "amount": 1,
+        "type": "Debuff",
+        "description": "Receive 50% more damage if attacked from behind. Use targeting cards or potions to change your orientation.",
+        "keywords": []
+      }
+    ],
+    "relics": [
+      {
+        "id": "BURNING_BLOOD",
+        "name": "Burning Blood",
+        "description": "At the end of combat, heal 6 HP.",
+        "counter": null,
+        "status": "Normal",
+        "keywords": []
+      }
+    ],
+    "potions": []
+  },
+  "draw_pile_count": 2,
+  "discard_pile_count": 1,
+  "exhaust_pile_count": 0,
+  "battle": {
+    "round": 1,
+    "turn": "player",
+    "player": {
+      "character": "The Ironclad",
+      "hp": 80,
+      "max_hp": 80,
+      "block": 0,
+      "energy": 2,
+      "max_energy": 3,
+      "hand": [
+        {
+          "index": 0,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "enchantment": null,
+          "keywords": []
+        },
+        {
+          "index": 1,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "enchantment": null,
+          "keywords": []
+        },
+        {
+          "index": 3,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        }
+      ],
+      "draw_pile_count": 2,
+      "discard_pile_count": 1,
+      "exhaust_pile_count": 0,
+      "draw_pile": [
+        {
+          "index": 0,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "id": "BASH",
+          "name": "Bash",
+          "type": "Attack",
+          "cost": "2",
+          "star_cost": null,
+          "description": "Deal 8 damage. Apply 2 Vulnerable.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Vulnerable",
+              "description": "Vulnerable creatures take 50% more damage from Attacks."
+            }
+          ]
+        }
+      ],
+      "discard_pile": [
+        {
+          "index": 0,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "enchantment": null,
+          "keywords": []
+        }
+      ],
+      "exhaust_pile": [],
+      "gold": 99,
+      "status": [
+        {
+          "id": "SURROUNDED_POWER",
+          "name": "Surrounded",
+          "amount": 1,
+          "type": "Debuff",
+          "description": "Receive 50% more damage if attacked from behind. Use targeting cards or potions to change your orientation.",
+          "keywords": []
+        }
+      ],
+      "relics": [
+        {
+          "id": "BURNING_BLOOD",
+          "name": "Burning Blood",
+          "description": "At the end of combat, heal 6 HP.",
+          "counter": null,
+          "status": "Normal",
+          "keywords": []
+        }
+      ],
+      "potions": []
+    },
+    "enemies": [
+      {
+        "entity_id": "CRUSHER_0",
+        "combat_id": 1,
+        "name": "Crusher",
+        "hp": 203,
+        "max_hp": 209,
+        "block": 0,
+        "status": [
+          {
+            "id": "BACK_ATTACK_LEFT_POWER",
+            "name": "Back Attack",
+            "amount": 1,
+            "type": "Buff",
+            "description": "Deals 50% more damage when it is attacking you from behind.",
+            "keywords": []
+          },
+          {
+            "id": "CRAB_RAGE_POWER",
+            "name": "Crab Rage",
+            "amount": 1,
+            "type": "Buff",
+            "description": "When an ally dies, Crusher gains 6 Strength and 99 Block.",
+            "keywords": [
+              {
+                "name": "Strength",
+                "description": "Strength adds additional damage to Attacks."
+              },
+              {
+                "name": "Block",
+                "description": "Until next turn, prevents damage."
+              }
+            ]
+          }
+        ],
+        "move_id": "THRASH_MOVE",
+        "follow_up_id": "ENLARGING_STRIKE_MOVE",
+        "move_log": [
+          "THRASH_MOVE"
+        ],
+        "intents": [
+          {
+            "type": "Attack",
+            "base_damage": 12,
+            "hits": 1,
+            "damage": 12,
+            "total_damage": 12,
+            "label": "12",
+            "title": "Aggressive",
+            "description": "This enemy intends to Attack for 12 damage."
+          }
+        ]
+      },
+      {
+        "entity_id": "ROCKET_0",
+        "combat_id": 2,
+        "name": "Rocket",
+        "hp": 199,
+        "max_hp": 199,
+        "block": 0,
+        "status": [
+          {
+            "id": "BACK_ATTACK_RIGHT_POWER",
+            "name": "Back Attack",
+            "amount": 1,
+            "type": "Buff",
+            "description": "Deals 50% more damage when it is attacking you from behind.",
+            "keywords": []
+          },
+          {
+            "id": "CRAB_RAGE_POWER",
+            "name": "Crab Rage",
+            "amount": 1,
+            "type": "Buff",
+            "description": "When an ally dies, Rocket gains 6 Strength and 99 Block.",
+            "keywords": [
+              {
+                "name": "Strength",
+                "description": "Strength adds additional damage to Attacks."
+              },
+              {
+                "name": "Block",
+                "description": "Until next turn, prevents damage."
+              }
+            ]
+          }
+        ],
+        "move_id": "TARGETING_RETICLE_MOVE",
+        "follow_up_id": "PRECISION_BEAM_MOVE",
+        "move_log": [
+          "TARGETING_RETICLE_MOVE"
+        ],
+        "intents": [
+          {
+            "type": "Attack",
+            "base_damage": 3,
+            "hits": 1,
+            "damage": 4,
+            "total_damage": 4,
+            "label": "4",
+            "title": "Aggressive",
+            "description": "This enemy intends to Attack for 4 damage."
+          }
+        ]
+      }
+    ]
+  }
+}

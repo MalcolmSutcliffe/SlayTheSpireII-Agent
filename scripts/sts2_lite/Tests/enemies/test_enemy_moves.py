@@ -64,7 +64,9 @@ def test_nibbit_hiss_gives_more_strength_on_the_deadly_ascension():
 def test_every_follow_up_exists():
     for table in MOVE_TABLES.values():
         moves = table(0)
-        for m in moves.values():
+        for name, m in moves.items():
+            if m.choose is not None or name == "STUNNED":       # the follow-up is a function, or the stun's own (Enemy.after_stun)
+                continue
             following = [m.next_move] if m.next_move else []
             following += [b.move for b in m.branches] + list(m.next_by_slot)
             assert following and all(f in moves for f in following)

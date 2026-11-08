@@ -128,6 +128,8 @@ def test_table_move_id_defaults():
 
 
 def _game_ids(monster):
+    if monster.startswith("DECIMILLIPEDE_SEGMENT_"):
+        monster = "DECIMILLIPEDE_SEGMENT"       # the three segments share their moves in the abstract base class
     name = "".join(w.capitalize() for w in monster.split("_"))
     files = [f for f in (DECOMPILED / "MegaCrit.Sts2.Core.Models.Monsters").glob("*.cs") if f.stem.lower() == name.lower()]
     return set(re.findall(r'new MoveState\("([A-Z0-9_]+)"', files[0].read_text())) if files else None
@@ -140,5 +142,5 @@ def test_every_table_move_corresponds_to_a_game_move(monster):
     assert ids, f"no decompiled source for {monster}"
     table = MOVE_TABLES[monster](0)
     reachable = {table_move_id(monster, g, table) for g in ids}
-    synthetic = {"STUN"}      # simulator-only moves
+    synthetic = {"STUN", "STUNNED"}      # simulator-only moves
     assert set(table) - reachable - synthetic == set()

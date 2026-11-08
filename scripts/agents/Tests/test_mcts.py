@@ -218,7 +218,7 @@ def test_outcome_key_matches_for_equal_enemy_moves():
 
 def test_random_enemy_moves_become_separate_outcomes(monkeypatch):
     # the cards drawn are identical either way, so only the enemy's next move differs
-    def random_move(self):
+    def random_move(self, *_):
         self.move_id = rng.choice(["BUTT", "HISS"])
     monkeypatch.setattr(Enemy, "_finish_move", random_move)
     cs = make_state([strike()], draw=[strike()] * 6)

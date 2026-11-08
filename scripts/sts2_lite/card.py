@@ -51,6 +51,12 @@ class CardId(Enum):
     WOUND = auto()
     NOT_IMPLEMENTED = auto()    # stand-in for a card the sim does not model: behaves like Wound
     SOOT = auto()
+    TOXIC = auto()
+    FRANTIC_ESCAPE = auto()
+    DISINTEGRATION = auto()    # the four Knowledge Demon curses are only ever offered on its pick screen
+    MIND_ROT = auto()
+    SLOTH = auto()
+    WASTE_AWAY = auto()
     REGRET = auto()
     DECAY = auto()
     SHAME = auto()
@@ -197,6 +203,7 @@ class CardId(Enum):
     TORIC_TOUGHNESS = auto()
 
 INFECTION_DAMAGE = 3
+TOXIC_DAMAGE = 5
 
 # energy cost change when upgraded (the rest of an upgrade is read from is_upgraded when the card is played)
 UPGRADE_COST_CHANGE = {
@@ -233,7 +240,7 @@ _EXHAUST, _ETHEREAL, _INNATE, _UNPLAYABLE, _RETAIN, _ETERNAL, _REPLAY = 1, 2, 4,
 
 # cards with the Exhaust keyword
 EXHAUSTING_CARDS = frozenset({CardId.SLIMED, CardId.TREMBLE, CardId.IMPERVIOUS, CardId.MOLTEN_FIST,
-                              CardId.FEED, CardId.DOMINATE, CardId.FIEND_FIRE, CardId.FORGOTTEN_RITUAL,
+                              CardId.TOXIC, CardId.FEED, CardId.DOMINATE, CardId.FIEND_FIRE, CardId.FORGOTTEN_RITUAL,
                               CardId.INFERNAL_BLADE, CardId.NOT_YET, CardId.OFFERING, CardId.SPORE_MIND,
                               CardId.PRODUCTION, CardId.MASTER_OF_STRATEGY, CardId.DRAMATIC_ENTRANCE, CardId.SHOCKWAVE,
                               CardId.SCRAWL, CardId.PURITY, CardId.SECRET_TECHNIQUE, CardId.SECRET_WEAPON, CardId.THINKING_AHEAD,
@@ -246,7 +253,8 @@ CURSE_CARDS = frozenset({CardId.BAD_LUCK, CardId.DEBT, CardId.REGRET, CardId.DEC
                          CardId.FOLLY, CardId.GUILTY, CardId.SPORE_MIND, CardId.ASCENDERS_BANE})
 
 # cards with the Unplayable keyword
-UNPLAYABLE_CARDS = frozenset({CardId.DAZED, CardId.WOUND, CardId.NOT_IMPLEMENTED, CardId.INFECTION, CardId.SOOT}
+UNPLAYABLE_CARDS = frozenset({CardId.DAZED, CardId.WOUND, CardId.NOT_IMPLEMENTED, CardId.INFECTION, CardId.SOOT,
+                              CardId.DISINTEGRATION, CardId.MIND_ROT, CardId.SLOTH, CardId.WASTE_AWAY}
                              | (CURSE_CARDS - {CardId.SPORE_MIND}))
 
 # cards with the Ethereal keyword: exhausted instead of discarded if still in hand at end of turn
@@ -343,6 +351,7 @@ class Card:
     enchant_amount : int = 0                   # the enchantment's X (Sharp 2, Adroit 3, ...)
     enchant_bonus : int = 0                    # damage Momentum has added this combat
     _keywords : int | None = None              # keyword mask; None: the card's canonical keywords
+    generated : bool = False                   # made during this fight (the game's DeckVersion is null); the Thieving Hopper cannot take it
 
     def __init__(self):
         pass
@@ -410,6 +419,7 @@ class Card:
         else:
             new_card.energy_cost = int(card["cost"])
         new_card.is_upgraded = card["is_upgraded"]
+        new_card.generated = bool(card.get("generated"))
         if card.get("card_keywords") is not None:       # CardModel.Keywords; older bridges only send hover tips
             new_card._keywords = keyword_mask(CardKeyword[k.upper()] for k in card["card_keywords"] if k.upper() in CardKeyword.__members__)
         if card.get("enchantment"):
@@ -494,6 +504,33 @@ class Card:
         return c
 
     @classmethod
+    def create_toxic(cls) -> Card:
+        c = cls()
+        c.card_id, c.name, c.type = CardId.TOXIC, "Toxic", CardType.Status
+        c.energy_cost, c.target_type = 1, TargetType.NONE
+        c.is_upgraded = c.is_unplayable = False
+        return c
+
+    @classmethod
+    def create_frantic_escape(cls) -> Card:
+        c = cls()
+        c.card_id, c.name, c.type = CardId.FRANTIC_ESCAPE, "Frantic Escape", CardType.Status
+        c.energy_cost, c.target_type = 1, TargetType.Self
+        c.is_upgraded = c.is_unplayable = False
+        return c
+
+    @classmethod
+    def create_knowledge_curse(cls, card_id : CardId) -> Card:
+        """What Knowledge Demon offers: a pick, never played (the chosen one applies its power)."""
+        c = cls()
+        c.card_id, c.type = card_id, CardType.Status
+        c.name = card_id.name.replace("_", " ").title()
+        c.energy_cost, c.target_type = 0, TargetType.NONE
+        c.is_upgraded = False
+        c.is_unplayable = True
+        return c
+
+    @classmethod
     def create_curse(cls, card_id : CardId) -> Card:
         """A curse: cost 0 and unplayable, except Spore Mind (1 energy, Exhaust)."""
         c = cls()
@@ -507,7 +544,9 @@ class Card:
     @classmethod
     def create(cls, card_id : CardId) -> Card:
         """A fresh copy of a card that enemies add to the player's piles."""
-        return GENERATED_CARDS[card_id]()
+        c = GENERATED_CARDS[card_id]()
+        c.generated = True
+        return c
 
     @classmethod
     def create_generated(cls, card_id : CardId, upgraded : bool = False) -> Card:
@@ -518,6 +557,7 @@ class Card:
         c.card_id, c.name, c.type = card_id, name, card_type
         c.energy_cost, c.target_type = cost, target
         c.is_upgraded = c.is_unplayable = False
+        c.generated = True
         return c.upgraded_copy() if upgraded else c
 
     def confused_copy(self, cost : int) -> Card:
@@ -618,6 +658,8 @@ class Card:
         card_id = self.card_id
         if card_id == CardId.INFECTION:
             combat.combat_state.player.apply_damage(INFECTION_DAMAGE)
+        elif card_id == CardId.TOXIC:
+            combat.combat_state.player.apply_damage(TOXIC_DAMAGE)
         elif card_id in HAND_CURSE_EFFECTS:
             HAND_CURSE_EFFECTS[card_id](combat.combat_state.player)
 
@@ -637,13 +679,14 @@ class Card:
         new_card.replay = card.replay
         new_card.enchantment, new_card.enchant_amount, new_card.enchant_bonus = card.enchantment, card.enchant_amount, card.enchant_bonus
         new_card._keywords = card._keywords
+        new_card.generated = card.generated
         return new_card
 
     def signature(self) -> tuple:
         """Everything that decides how this card plays: two cards with equal signatures are interchangeable
         (the fields create_copy carries over, minus name/type/target which follow from the id)."""
         return (self.card_id, self.is_upgraded, self.energy_cost, self.is_unplayable, self.restore_cost, self.until_played,
-                self.bonus_damage, self.replay, self.enchantment, self.enchant_amount, self.enchant_bonus, self._mask)
+                self.bonus_damage, self.replay, self.enchantment, self.enchant_amount, self.enchant_bonus, self._mask, self.generated)
 
     def current_cost(self, player) -> int | str:
         """Energy cost now: the base cost plus Tangled on attacks."""
@@ -779,6 +822,9 @@ class Card:
             return False
         if StatusId.RINGING in combat.combat_state.player.status and combat.combat_state.cards_played >= 1:
             return False
+        sloth = combat.combat_state.player.status.get(StatusId.SLOTH)
+        if sloth is not None and combat.combat_state.cards_played >= sloth.amount:
+            return False            # Sloth: at most this many cards a turn
         if combat.combat_state.cards_played >= NORMALITY_CARD_LIMIT and any(c.card_id == CardId.NORMALITY for c in combat.combat_state.player.hand):
             return False            # Normality: at most 3 cards a turn while it is in hand
         if combat.combat_state.player.relics and _CHOKER in combat.combat_state.player.relics and blocks_play(combat.combat_state.player):
@@ -1383,6 +1429,19 @@ def play_shrug_it_off(card: Card, combat : CombatSimulator, target_index=0, is_u
     _gain_block(combat, 11 if is_upgraded else 8)
     combat.combat_state.player.draw_cards(1)
 
+def play_toxic(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    pass        # only its Exhaust keyword
+
+def play_frantic_escape(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    """One more turn before the Sandpit closes; every play costs one more energy for the rest of the fight."""
+    for enemy in combat.combat_state.enemies:
+        if StatusId.SANDPIT in enemy.status:
+            enemy.status[StatusId.SANDPIT].amount += 1
+    card.energy_cost += 1
+
+def play_knowledge_curse(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    pass        # unplayable
+
 def play_spore_mind(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     pass        # only its Exhaust keyword
 
@@ -1713,6 +1772,7 @@ GET_CARD_FUNCTION : dict[CardId, function] = {
     CardId.DEFEND_IRONCLAD : play_defend,
     CardId.DEMON_FORM : play_demon_form,
     CardId.DISCOVERY : play_discovery,
+    CardId.DISINTEGRATION : play_knowledge_curse,
     CardId.DISMANTLE : play_dismantle,
     CardId.DOMINATE : play_dominate,
     CardId.DRAMATIC_ENTRANCE : play_dramatic_entrance,
@@ -1734,6 +1794,7 @@ GET_CARD_FUNCTION : dict[CardId, function] = {
     CardId.FLAME_BARRIER : play_flame_barrier,
     CardId.FLASH_OF_STEEL : play_flash_of_steel,
     CardId.FORGOTTEN_RITUAL : play_forgotten_ritual,
+    CardId.FRANTIC_ESCAPE : play_frantic_escape,
     CardId.GIANT_ROCK : play_giant_rock,
     CardId.GOLD_AXE : play_gold_axe,
     CardId.HAND_OF_GREED : play_hand_of_greed,
@@ -1758,6 +1819,7 @@ GET_CARD_FUNCTION : dict[CardId, function] = {
     CardId.MAYHEM : play_mayhem,
     CardId.METAMORPHOSIS : play_metamorphosis,
     CardId.MIND_BLAST : play_mind_blast,
+    CardId.MIND_ROT : play_knowledge_curse,
     CardId.MOLTEN_FIST : play_molten_fist,
     CardId.NEOWS_FURY : play_neows_fury,
     CardId.NOSTALGIA : play_nostalgia,
@@ -1795,6 +1857,7 @@ GET_CARD_FUNCTION : dict[CardId, function] = {
     CardId.SHOCKWAVE : play_shockwave,
     CardId.SHRUG_IT_OFF : play_shrug_it_off,
     CardId.SLIMED : play_slimed,
+    CardId.SLOTH : play_knowledge_curse,
     CardId.SPITE : play_spite,
     CardId.SPORE_MIND : play_spore_mind,
     CardId.SQUASH : play_squash,
@@ -1813,6 +1876,7 @@ GET_CARD_FUNCTION : dict[CardId, function] = {
     CardId.THRUMMING_HATCHET : play_thrumming_hatchet,
     CardId.THUNDERCLAP : play_thunderclap,
     CardId.TORIC_TOUGHNESS : play_toric_toughness,
+    CardId.TOXIC : play_toxic,
     CardId.TREMBLE : play_tremble,
     CardId.TRUE_GRIT : play_true_grit,
     CardId.TWIN_STRIKE : play_twin_strike,
@@ -1823,6 +1887,7 @@ GET_CARD_FUNCTION : dict[CardId, function] = {
     CardId.UPPERCUT : play_uppercut,
     CardId.VICIOUS : play_vicious,
     CardId.VOLLEY : play_volley,
+    CardId.WASTE_AWAY : play_knowledge_curse,
     CardId.WHIRLWIND : play_whirlwind,
 }
 
@@ -2007,7 +2072,7 @@ _RARITY_NAMES = {
         "GIANT_ROCK"
     ),
     CardRarity.Status : (
-        "SLIMED INFECTION DAZED WOUND SOOT"
+        "SLIMED INFECTION DAZED WOUND SOOT TOXIC FRANTIC_ESCAPE DISINTEGRATION MIND_ROT SLOTH WASTE_AWAY"
     ),
     CardRarity.Curse : (
         "REGRET DECAY SHAME DOUBT NORMALITY INJURY POOR_SLEEP GREED CLUMSY CURSE_OF_THE_BELL WRITHE FOLLY BAD_LUCK DEBT GUILTY SPORE_MIND "
@@ -2052,6 +2117,10 @@ GENERATED_CARDS = {
     CardId.DAZED : Card.create_dazed,
     CardId.WOUND : Card.create_wound,
     CardId.SOOT : Card.create_soot,
+    CardId.TOXIC : Card.create_toxic,
+    CardId.FRANTIC_ESCAPE : Card.create_frantic_escape,
 }
+for _curse in (CardId.DISINTEGRATION, CardId.MIND_ROT, CardId.SLOTH, CardId.WASTE_AWAY):
+    GENERATED_CARDS[_curse] = lambda _curse=_curse: Card.create_knowledge_curse(_curse)
 for _curse in CURSE_CARDS:
     GENERATED_CARDS[_curse] = lambda _curse=_curse: Card.create_curse(_curse)

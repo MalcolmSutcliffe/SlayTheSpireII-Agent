@@ -40,6 +40,8 @@ Returns the current game state. The `state_type` field indicates the screen:
 - Player: HP, block, energy, stars (Regent), gold, character, status, relics, potions, hand (with card details including star costs), pile counts, pile contents, orbs
 - Enemies: entity_id, name, HP, block, status, intents with title/label/description
 - Enemy move state: `move_id` (game state-machine id of the move shown), `follow_up_id`, `move_log` (move ids so far, current last); attack intents add `base_damage` (before modifiers), `hits`, and game-computed `damage` / `total_damage`
+- Card state (hand and piles): `generated` is true for a card made during this combat (the game's `DeckVersion` is null), e.g. by Metamorphosis or an enemy's Dazed; the simulator uses it for the Thieving Hopper's theft
+- Combat state: `reviving` lists Decimillipede segments that were killed and will reattach (`entity_id`, `max_hp`, `move_id` = `DEAD_MOVE` or `REATTACH_MOVE`); they are not in `enemies`
 - Keywords on all entities (cards, relics, potions, status)
 - Relics: `id`, `name`, `description`, `counter`, `status` (the relic's own Normal / Active / Disabled), `keywords`. Rainbow Ring also has `types_played` (bits: 1 Attack, 2 Skill, 4 Power seen this turn); Permafrost and Ruined Helmet have `spent` (true once used this fight)
 
