@@ -194,3 +194,57 @@ def test_heuristic_plays_powers_first():
     sim, actions = playing_sim(make_state([strike(), strike(), power]))
     with mock.patch.object(mcts_module, "P_RANDOM_ACTION", 0.0):
         assert frequency(mcts_module.claude_heuristic, sim, actions, CardId.INFLAME) > 0.55
+
+
+# --- focus fire ---
+def two_enemies(hp_a, hp_b, block_a=0, block_b=0, minion_b=False):
+    from sts2_lite.enemy import Enemy
+    cs = make_state([strike(), strike()])
+    b = Enemy()
+    b.max_hp = b.current_hp = hp_b
+    b.enemy_id, b.attack_damage, b.num_attacks, b.block, b.is_minion = "E1", 5, 1, block_b, minion_b
+    cs.enemies[0].current_hp, cs.enemies[0].block = hp_a, block_a
+    cs.enemies.append(b)
+    return cs
+
+def targets_chosen(policy, cs, n=400):
+    sim = CombatSimulator(cs)
+    actions = sim.get_available_actions()
+    rng.seed(2)
+    with mock.patch.object(mcts_module, "P_RANDOM_ACTION", 0.0):
+        return {policy(sim, actions)["target"] for _ in range(n)}
+
+@pytest.mark.parametrize("policy", WEIGHTED)
+@pytest.mark.parametrize("focus,expected", [("none", {0, 1}), ("first", {0}), ("lowest_hp", {1}), ("lowest_hp_block", {1})])
+def test_focus_modes_pick_the_expected_enemy(policy, focus, expected):
+    with mock.patch.object(mcts_module, "FOCUS", focus):
+        assert targets_chosen(policy, two_enemies(30, 12)) == expected
+
+@pytest.mark.parametrize("policy", WEIGHTED)
+def test_focus_counts_block(policy):
+    cs = two_enemies(hp_a=20, hp_b=12, block_b=15)           # 20 against 27 effective
+    with mock.patch.object(mcts_module, "FOCUS", "lowest_hp_block"):
+        assert targets_chosen(policy, cs) == {0}
+    with mock.patch.object(mcts_module, "FOCUS", "lowest_hp"):
+        assert targets_chosen(policy, two_enemies(hp_a=20, hp_b=12, block_b=15)) == {1}
+
+@pytest.mark.parametrize("policy", WEIGHTED)
+def test_focus_skips_a_minion_while_another_enemy_lives(policy):
+    cs = two_enemies(hp_a=40, hp_b=3, minion_b=True)
+    with mock.patch.object(mcts_module, "FOCUS", "lowest_hp_block"):
+        assert targets_chosen(policy, cs) == {0}
+
+@pytest.mark.parametrize("policy", WEIGHTED)
+def test_focus_leaves_untargeted_cards_and_the_ending_of_the_turn_alone(policy):
+    cs = two_enemies(30, 12)
+    cs.player.hand = [defend(), strike()]
+    sim = CombatSimulator(cs)
+    actions = sim.get_available_actions()
+    rng.seed(4)
+    with mock.patch.object(mcts_module, "FOCUS", "lowest_hp_block"), mock.patch.object(mcts_module, "P_RANDOM_ACTION", 0.0):
+        picks = [policy(sim, actions) for _ in range(300)]
+    assert any("target_name" not in a for a in picks)                 # Defend still played
+    assert {a["target"] for a in picks if "target_name" in a} == {1}
+
+def test_focus_is_lowest_hp_plus_block_by_default():
+    assert mcts_module.FOCUS == "lowest_hp_block"

@@ -81,6 +81,11 @@ VULN_FIRST = 4.0                # a card that applies Vulnerable, while some ene
 ATTACK_BEFORE_VULN = 0.1        # an attack on a non-vulnerable target while a Vulnerable card can be played
 POWER_FIRST = 3.0               # Heuristic policy only
 
+# Which enemy the targeted cards of the weighted policies go at, so damage is not spread over several:
+#   "none" any enemy | "first" the first living one | "lowest_hp" the lowest HP | "lowest_hp_block" the lowest HP + block (minions last)
+FOCUS = "lowest_hp"
+
+
 DRAW_ENERGY_CARDS = frozenset(CardId[n] for n in (
     "BATTLE_TRANCE BURNING_PACT DRUM_OF_BATTLE FINESSE FLASH_OF_STEEL IMPATIENCE MASTER_OF_STRATEGY OFFERING PILLAGE POMMEL_STRIKE "
     "RESTLESSNESS SCRAWL SHRUG_IT_OFF THINKING_AHEAD BLOODLETTING EXPECT_A_FIGHT FORGOTTEN_RITUAL PRODUCTION").split())
@@ -581,12 +586,31 @@ def _rarity_weight(card) -> float:
     rarity = CardRarity.Common if card.card_id == CardId.BASH else CARD_RARITY[card.card_id]     # Bash plays like a Common
     return RARITY_WEIGHTS[rarity]
 
+def _focus_fire(c : CombatSimulator, plays : list[dict]) -> list[dict]:
+    """Restricts the targeted plays to the focus enemy; plays that take no target are untouched."""
+    if FOCUS == "none":
+        return plays
+    enemies = c.combat_state.enemies
+    targeted = [a for a in plays if "target_name" in a]
+    candidates = list(dict.fromkeys(a["target"] for a in targeted))
+    if len(candidates) < 2:
+        return plays
+    pool = [i for i in candidates if not enemies[i].is_minion] or candidates
+    if FOCUS == "first":
+        focus = pool[0]
+    elif FOCUS == "lowest_hp":
+        focus = min(pool, key=lambda i: enemies[i].current_hp)
+    else:
+        focus = min(pool, key=lambda i: enemies[i].current_hp + enemies[i].block)
+    return [a for a in plays if "target_name" not in a or a["target"] == focus]
+
 def _weighted_play(c : CombatSimulator, actions : list[dict], weight) -> dict:
     """P_RANDOM_ACTION: any action. Otherwise a card play drawn with weight(card, action); end_turn only when nothing else can be done.
     Pending choices (choose_card etc.) are uniform."""
     plays = [a for a in actions if a["action"] == "play_card"]
     if not plays or rng.random_float() < P_RANDOM_ACTION:
         return rng.choice(actions)
+    plays = _focus_fire(c, plays)
     hand = c.combat_state.player.hand
     return rng.choices(plays, weights=[weight(hand[a["card_index"]], a) for a in plays])[0]
 
