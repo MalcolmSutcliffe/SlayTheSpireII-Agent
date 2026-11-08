@@ -110,7 +110,7 @@ class sts2_MCTS:
     def monte_carlo_tree_search(self, 
                                 combat_state : CombatState, 
                                 config : SearchConfig = SearchConfig()
-                                ) -> tuple[dict, list[dict], str]:
+                                ) -> tuple[dict, dict]:
         
         self._root_node = sts2_DeterministicNode(None, CombatState.deepcopy(combat_state), None)
         self._expected_total_hp = self._calculate_expected_total_hp(combat_state)
@@ -132,12 +132,15 @@ class sts2_MCTS:
             sim_result = self._simulate_random_combat(leaf) # simulate
             backpropagate(leaf, sim_result)
 
-        print("Ran " + str(self._num_sims) + " sims in " + str(time.perf_counter() - self._start_time) + " seconds.")
-
-        stats = [{"action": c.action, "visits": c.visits, "q": c.total_reward / c.visits} for c in self._root_node.children]
+        stats = { 
+            "children": [{"action": c.action, "visits": c.visits, "q": c.total_reward / c.visits} for c in self._root_node.children],
+            "num_sims" : self._num_sims,
+            "time_taken" : time.perf_counter() - self._start_time,
+            "exit_reason" : exit_reason
+                }
         best_child = max(self._root_node.children, key=lambda c: c.visits)
         
-        return best_child.action, stats, exit_reason
+        return best_child.action, stats
 
     # finds the optimal node to simulate from
     def traverse_node(self, node : sts2_Node) -> sts2_Node:

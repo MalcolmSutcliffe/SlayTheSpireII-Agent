@@ -439,10 +439,7 @@ class CombatSimulator:
         player = self.combat_state.player
         card = (choice.offers if choice.pile == "offer" else self._pile(choice.pile))[index]
         if choice.kind == "discover":
-            free = Card.create_copy(card)
-            if free.energy_cost != "X":
-                free.restore_cost, free.energy_cost = free.energy_cost, 0       # SetToFreeThisTurn
-            player.add_to_hand(free)
+            player.add_to_hand(card.free_this_turn())
         elif choice.kind == "transform":
             picked = choice.picked + [index]
             eligible = [i for i, c in enumerate(player.hand) if i not in picked and transform_options(c)]
@@ -636,7 +633,7 @@ class CombatSimulator:
         to_top = self._nostalgia_mark(card)
         self.finish_vigor()             # an attack that led here (Pommel Strike's draw) has finished
         if player.relics and blocks_play(player):
-            self._move_played_card(card, force_exhaust)     # Velvet Choker: ShouldPlay false -> result pile unplayed
+            self._move_played_card(card, force_exhaust, played=False)     # Velvet Choker: ShouldPlay false -> result pile unplayed
             return
         auto_playing, self.auto_playing = self.auto_playing, True
         try:
@@ -696,12 +693,19 @@ class CombatSimulator:
                 self._announced_block += amount
             self.fire(EventType.BLOCK_GAINED, creature, amount)
 
-    def _move_played_card(self, card : Card, force_exhaust : bool = False, to_top : bool = False):
+    def _move_played_card(self, card : Card, force_exhaust : bool = False, to_top : bool = False, played : bool = True):
         player = self.combat_state.player
         if card.card_id in RETURNING_CARDS:
             player.returning.append((card.card_id, card.is_upgraded))        # comes back to the hand next turn (BeforeHandDraw)
-        if card.type == CardType.Power or card in player.exhaust_pile:
+        if card.type == CardType.Power:
             return
+        if card in player.exhaust_pile:             # exhausted during its own play
+            if played and card.until_played:
+                pile = player.exhaust_pile
+                pile[next(i for i, c in enumerate(pile) if c is card)] = card.cost_after_play()
+            return
+        if played:
+            card = card.cost_after_play()           # AfterCardPlayedCleanup (the game runs it after the move; same result)
         corrupted = card.type == CardType.Skill and StatusId.CORRUPTION in player.status
         if card.exhausts or force_exhaust or corrupted:
             player.exhaust_card(card)

@@ -326,13 +326,21 @@ class Player(Creature):
             for i, c in enumerate(pile):
                 if c.restore_cost is not None:
                     restored = Card.create_copy(c)
-                    restored.energy_cost, restored.restore_cost = c.restore_cost, None
+                    restored.energy_cost, restored.restore_cost, restored.until_played = c.restore_cost, None, False
                     pile[i] = restored
 
     def put_on_top(self, card : Card):
         """Place a card on top of the draw pile; the agent knows what it is."""
         self.draw_pile.append(card)
         self.known_top += 1
+
+    def insert_into_draw_pile(self, card : Card):
+        """CardPilePosition.Random: any of the len+1 places. Known top cards below the new card are no longer known
+        (their distance from the top is uncertain); those above it still are."""
+        index = rng.randrange(len(self.draw_pile) + 1)
+        if index >= len(self.draw_pile) - self.known_top:
+            self.known_top = len(self.draw_pile) - index
+        self.draw_pile.insert(index, card)
 
     def remove_from_draw_pile(self, card : Card):
         """Remove a card from the draw pile, forgetting a known top card if it was one."""

@@ -28,7 +28,7 @@ class MyAgent(BaseAgent):
         actions = c.get_available_actions()
         if len(actions) == 1:
             return actions[0]
-        action, stats, reason = mcts.monte_carlo_tree_search(combat_state, search_config)
+        action, stats = mcts.monte_carlo_tree_search(combat_state, search_config)
         return action
 
     

@@ -369,3 +369,60 @@ def test_the_search_behind_a_decision_is_logged(tester, monkeypatch, tmp_path):
     assert [m["visits"] for m in first["moves"]] == [10, 90]
     assert first["moves"][0]["move"] == "end_turn" and first["moves"][1]["mean"] == 0.5
     assert first["chosen"] == first["moves"][1]["move"]
+
+
+def test_the_search_reported_stats_are_logged(tester, monkeypatch, tmp_path):
+    """A search returning (action, stats) is logged from its stats: sims, exit reason and root moves."""
+    play = {"action": "play_card", "card_index": 0, "target": 0}
+    stats = {"children": [{"action": {"action": "end_turn"}, "visits": 30, "q": -0.25},
+                          {"action": play, "visits": 170, "q": 0.61234}],
+             "num_sims": 200, "time_taken": 0.4, "exit_reason": "STATISTICAL_CONFIDENCE"}
+    class FakeMCTS:
+        def monte_carlo_tree_search(self, state, config=None):
+            return play, stats
+    module = types.ModuleType("agents.sts2_MCTS.MCTS")
+    module.sts2_MCTS, module.DEFAULT_MAX_SIMS = FakeMCTS, 3000
+    monkeypatch.setitem(sys.modules, "agents.sts2_MCTS.MCTS", module)
+    class SearchAgent:
+        def get_action(self, combat_state, budget=0):
+            action, _ = FakeMCTS().monte_carlo_tree_search(combat_state)
+            return action
+    game = FakeGame([capture(), capture()])
+    monkeypatch.setattr(tester, "get_state", game.get_state)
+    monkeypatch.setattr(tester, "act", game.act)
+    path = tmp_path / "decisions.jsonl"
+    tester.run_agent(SearchAgent(), log_path=str(tmp_path / "log.jsonl"), decision_log=str(path))
+    first = json.loads(path.read_text().splitlines()[0])
+    assert first["sims"] == 200 and first["stopped_by"] == "STATISTICAL_CONFIDENCE"
+    assert [m["visits"] for m in first["moves"]] == [30, 170]
+    assert first["moves"][1]["mean"] == 0.6123
+
+
+# ------------------------------------------------------------ cards the sim does not implement
+def _with_unknown(card_id="MADE_UP_CARD", pile="draw_pile"):
+    state = capture()
+    template = dict(state["hand"][0])
+    template.update(id=card_id, name="Made Up")
+    if pile == "hand":
+        state["hand"] = state["hand"] + [template]
+    else:
+        state["player"][pile] = list(state["player"][pile]) + [template]
+    return state
+
+def test_unimplemented_cards_are_found_in_every_pile(tester):
+    assert tester.unimplemented_cards(capture()) == {}
+    for pile in ("hand", "draw_pile", "discard_pile", "exhaust_pile"):
+        assert tester.unimplemented_cards(_with_unknown(pile=pile)) == {pile: ["MADE_UP_CARD"]}
+
+def test_an_unimplemented_card_is_logged_once_per_run(tester, monkeypatch, tmp_path):
+    _, log = run(tester, monkeypatch, [_with_unknown(), _with_unknown()], tmp_path)
+    records = [json.loads(line) for line in log.read_text().splitlines()]
+    unknown = [r for r in records if r.get("kind") == "not_implemented"]
+    assert len(unknown) == 1
+    assert unknown[0]["differences"] == ["card MADE_UP_CARD is not implemented in the sim (loaded as a Wound)"]
+    assert unknown[0]["piles"] == {"draw_pile": ["MADE_UP_CARD"]}
+
+def test_implemented_states_log_nothing_extra(tester, monkeypatch, tmp_path):
+    _, log = run(tester, monkeypatch, [capture(), capture()], tmp_path)
+    text = log.read_text() if log.exists() else ""
+    assert "not_implemented" not in text

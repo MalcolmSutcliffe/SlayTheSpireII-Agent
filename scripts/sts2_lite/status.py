@@ -79,6 +79,7 @@ class StatusId(Enum):
     PANACHE = auto()
     ROLLING_BOULDER = auto()
     THE_BOMB = auto()
+    TORIC_TOUGHNESS = auto()
     THE_GAMBIT = auto()
     MAYHEM = auto()
     NOSTALGIA = auto()
@@ -159,6 +160,7 @@ STATUS_BEAVIOURS : dict[StatusId, StatusBehaviour] = {
     StatusId.PANACHE : StatusBehaviour.STATIC,
     StatusId.ROLLING_BOULDER : StatusBehaviour.STATIC,
     StatusId.THE_BOMB : StatusBehaviour.STATIC,
+    StatusId.TORIC_TOUGHNESS : StatusBehaviour.STATIC,     # ticks itself after the block is cleared
     StatusId.THE_GAMBIT : StatusBehaviour.STATIC,
     StatusId.MAYHEM : StatusBehaviour.STATIC,
     StatusId.NOSTALGIA : StatusBehaviour.STATIC,
@@ -181,7 +183,10 @@ INSTANCED = {
     StatusId.PANACHE : (10, 1),                 # [cards left, damage, 1 once the Panache card itself has been played]
     StatusId.THE_BOMB : (40,),                  # [turns left, damage]
     StatusId.ROLLING_BOULDER : (),              # [damage of the next hit]
+    StatusId.TORIC_TOUGHNESS : (5,),            # [turns left, block]
 }
+# what an instanced copy's extra number is read from in the bridge's description (default: "N damage")
+INSTANCED_TEXT = {StatusId.TORIC_TOUGHNESS : r"(\d+)\D{0,20}?Block"}
 AUTOMATION_CARDS, PANACHE_CARDS = 10, 5
 ROLLING_BOULDER_STEP = 5
 
@@ -202,7 +207,7 @@ class StatusInstance:
         status_id = StatusId[status["id"][:-6]]
         amount = status["amount"]
         if status_id in INSTANCED:      # what the copy remembers beyond its shown amount is read from the text
-            damage = re.search(r"(\d+)\s+damage", status.get("description") or "")
+            damage = re.search(INSTANCED_TEXT.get(status_id, r"(\d+)\s+damage"), status.get("description") or "")
             extra = (int(damage.group(1)),) if damage and INSTANCED[status_id] else INSTANCED[status_id]
             if status_id == StatusId.PANACHE:
                 extra = (extra[0], 1)       # the card that applied it has been played if it is on the board
@@ -362,6 +367,23 @@ def _block_next_turn_on_block_cleared(combat : CombatSimulator, owner : Creature
         del owner.status[StatusId.BLOCK_NEXT_TURN]
         combat.gain_block(owner, amount)
 
+def _toric_toughness_on_block_cleared(combat : CombatSimulator, owner : Creature, amount : int):
+    # ToricToughnessPower.AfterBlockCleared, per copy: unpowered block, then one turn less (fires under Barricade too)
+    if not _own(combat, owner):
+        return
+    inst = owner.status[StatusId.TORIC_TOUGHNESS]
+    kept = []
+    for record in inst.records:
+        combat.gain_block(owner, record[1])
+        record[0] -= 1
+        if record[0] > 0:
+            kept.append(record)
+    inst.records = kept
+    if kept:
+        inst.sync()
+    else:
+        del owner.status[StatusId.TORIC_TOUGHNESS]
+
 def _prep_time_on_turn_start(combat : CombatSimulator, owner : Creature, amount : int):
     if _own(combat, owner):
         owner.apply_status(StatusId.VIGOR, amount)
@@ -455,6 +477,7 @@ STATUS_HANDLERS : dict[tuple[StatusId, EventType], Callable] = HandlerTable({
     (StatusId.AGGRESSION, EventType.BEFORE_PLAYER_TURN) : _aggression_on_before_player_turn,
     (StatusId.STAMPEDE, EventType.PLAY_PHASE_END) : _stampede_on_end_turn,
     (StatusId.BLOCK_NEXT_TURN, EventType.BLOCK_CLEARED) : _block_next_turn_on_block_cleared,
+    (StatusId.TORIC_TOUGHNESS, EventType.BLOCK_CLEARED) : _toric_toughness_on_block_cleared,
     (StatusId.PREP_TIME, EventType.PLAYER_TURN_START) : _prep_time_on_turn_start,
     (StatusId.ROLLING_BOULDER, EventType.PLAYER_TURN_START) : _rolling_boulder_on_turn_start,
     (StatusId.PANACHE, EventType.CARD_PLAYED) : _panache_on_card_played,

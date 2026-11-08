@@ -360,7 +360,7 @@ def search(cs, sims, seed=0, time_budget=None, early_exit=True):
     mcts = new_mcts()
     config = SearchConfig(max_sims=sims, time_budget=time_budget, early_exit=early_exit)
     with contextlib.redirect_stdout(io.StringIO()):
-        action, _stats, _reason = mcts.monte_carlo_tree_search(cs, config)
+        action, _stats = mcts.monte_carlo_tree_search(cs, config)
     return action, mcts
 
 def draw_fight():
@@ -576,10 +576,11 @@ def test_search_returns_root_stats_and_exit_reason():
     rng.seed(0)
     import contextlib, io
     with contextlib.redirect_stdout(io.StringIO()):
-        action, stats, reason = sts2_MCTS().monte_carlo_tree_search(draw_fight(), SearchConfig(max_sims=200))
-    assert action in [s["action"] for s in stats]
-    assert sum(s["visits"] for s in stats) >= MIN_SIMS
-    assert reason in ("MAX_SIMS", "TIME_BUDGET", "STATISTICAL_CONFIDENCE")
+        action, stats = sts2_MCTS().monte_carlo_tree_search(draw_fight(), SearchConfig(max_sims=200))
+    assert action in [c["action"] for c in stats["children"]]
+    assert sum(c["visits"] for c in stats["children"]) == stats["num_sims"] >= MIN_SIMS
+    assert stats["exit_reason"] in ("MAX_SIMS", "TIME_BUDGET", "STATISTICAL_CONFIDENCE")
+    assert stats["time_taken"] > 0
 
 
 # ---------------------------------------------------------------- rollouts
@@ -772,7 +773,7 @@ def test_damaged_enemy_rates_better_when_unfinished():
     assert mcts._rate_outcome(hurt) > mcts._rate_outcome(stalled_fight())
 
 def test_search_terminates_on_a_stalled_fight():
-    action, _, _ = sts2_MCTS().monte_carlo_tree_search(stalled_fight(), SearchConfig(max_sims=10**9, time_budget=0.2))
+    action, _ = sts2_MCTS().monte_carlo_tree_search(stalled_fight(), SearchConfig(max_sims=10**9, time_budget=0.2))
     assert action["action"] in ("play_card", "end_turn")
 
 
@@ -989,8 +990,8 @@ def _search_with_exit_forced(early_exit):
     import contextlib, io
     with mock.patch.object(sts2_MCTS, "_check_statistical_exit", lambda self: True), contextlib.redirect_stdout(io.StringIO()):
         mcts = sts2_MCTS()
-        _, _, reason = mcts.monte_carlo_tree_search(draw_fight(), SearchConfig(max_sims=300, early_exit=early_exit))
-    return mcts, reason
+        _, stats = mcts.monte_carlo_tree_search(draw_fight(), SearchConfig(max_sims=300, early_exit=early_exit))
+    return mcts, stats["exit_reason"]
 
 def test_statistical_exit_stops_the_search_when_enabled():
     mcts, reason = _search_with_exit_forced(early_exit=True)
@@ -1005,5 +1006,5 @@ def test_disabling_early_exit_runs_to_the_sim_cap():
 def test_an_expired_time_budget_is_reported():
     import contextlib, io
     with contextlib.redirect_stdout(io.StringIO()):
-        _, _, reason = sts2_MCTS().monte_carlo_tree_search(draw_fight(), SearchConfig(max_sims=10**9, time_budget=0.05, early_exit=False))
-    assert reason == "TIME_BUDGET"
+        _, stats = sts2_MCTS().monte_carlo_tree_search(draw_fight(), SearchConfig(max_sims=10**9, time_budget=0.05, early_exit=False))
+    assert stats["exit_reason"] == "TIME_BUDGET"

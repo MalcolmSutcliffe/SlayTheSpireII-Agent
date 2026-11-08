@@ -187,6 +187,14 @@ class CardId(Enum):
     STOMP = auto()
     TEAR_ASUNDER = auto()
     THRASH = auto()
+    # event cards
+    BYRD_SWOOP = auto()
+    EXTERMINATE = auto()
+    PECK = auto()
+    SQUASH = auto()
+    ENLIGHTENMENT = auto()
+    METAMORPHOSIS = auto()
+    TORIC_TOUGHNESS = auto()
 
 INFECTION_DAMAGE = 3
 
@@ -229,7 +237,8 @@ EXHAUSTING_CARDS = frozenset({CardId.SLIMED, CardId.TREMBLE, CardId.IMPERVIOUS, 
                               CardId.INFERNAL_BLADE, CardId.NOT_YET, CardId.OFFERING, CardId.SPORE_MIND,
                               CardId.PRODUCTION, CardId.MASTER_OF_STRATEGY, CardId.DRAMATIC_ENTRANCE, CardId.SHOCKWAVE,
                               CardId.SCRAWL, CardId.PURITY, CardId.SECRET_TECHNIQUE, CardId.SECRET_WEAPON, CardId.THINKING_AHEAD,
-                              CardId.PANIC_BUTTON, CardId.PROLONG, CardId.DARK_SHACKLES, CardId.JACK_OF_ALL_TRADES, CardId.ANOINTED, CardId.DISCOVERY})
+                              CardId.PANIC_BUTTON, CardId.PROLONG, CardId.DARK_SHACKLES, CardId.JACK_OF_ALL_TRADES, CardId.ANOINTED, CardId.DISCOVERY,
+                              CardId.ENLIGHTENMENT, CardId.METAMORPHOSIS})
 
 # curses (Enthralled is not modelled; Debt's gold loss is not either: the sim does not track gold)
 CURSE_CARDS = frozenset({CardId.BAD_LUCK, CardId.DEBT, CardId.REGRET, CardId.DECAY, CardId.SHAME, CardId.DOUBT, CardId.NORMALITY, CardId.INJURY,
@@ -326,6 +335,7 @@ class Card:
     is_upgraded : bool
     is_unplayable : bool
     restore_cost : int | str | None = None     # set while the cost is changed for this turn: the cost it gets back
+    until_played : bool = False                # the temporary cost also ends when the card is played (SetThisTurnOrUntilPlayed)
     replay : int = 0                           # extra plays the card has for good (Hidden Gem); Glam's is the REPLAY keyword
     bonus_damage : int = 0                     # damage Rampage and Thrash have gained this combat
     shown_damage : int | None = None           # the damage printed on the card when it was loaded from the game
@@ -502,7 +512,8 @@ class Card:
     @classmethod
     def create_generated(cls, card_id : CardId, upgraded : bool = False) -> Card:
         """A fresh copy of a card that a card effect adds to the player's piles (Infernal Blade, Stoke)."""
-        name, card_type, cost, target = GENERATABLE_CARDS.get(card_id) or COLORLESS_CARDS.get(card_id) or TOKEN_CARDS[card_id]
+        name, card_type, cost, target = (GENERATABLE_CARDS.get(card_id) or COLORLESS_CARDS.get(card_id) or EVENT_CARDS.get(card_id)
+                                         or TOKEN_CARDS[card_id])
         c = cls()
         c.card_id, c.name, c.type = card_id, name, card_type
         c.energy_cost, c.target_type = cost, target
@@ -512,7 +523,7 @@ class Card:
     def confused_copy(self, cost : int) -> Card:
         """ConfusedPower.AfterCardDrawn: SetThisCombat(cost), an Absolute modifier over every earlier one."""
         new_card = Card.create_copy(self)
-        new_card.energy_cost, new_card.restore_cost = cost, None
+        new_card.energy_cost, new_card.restore_cost, new_card.until_played = cost, None, False
         return new_card
 
     def cheaper_this_turn(self, amount : int) -> Card:
@@ -521,6 +532,53 @@ class Card:
         if new_card.restore_cost is None:
             new_card.restore_cost = self.energy_cost
         new_card.energy_cost = max(0, self.energy_cost - amount)
+        return new_card
+
+    def free_this_combat(self) -> Card:
+        """CardModel.SetToFreeThisCombat: SetThisCombat(0). X costs ignore local modifiers (CardEnergyCost.GetWithModifiers)."""
+        if self.energy_cost == "X":
+            return self
+        new_card = Card.create_copy(self)
+        new_card.energy_cost, new_card.restore_cost, new_card.until_played = 0, None, False
+        return new_card
+
+    def free_this_turn(self) -> Card:
+        """CardModel.SetToFreeThisTurn: SetThisTurnOrUntilPlayed(0)."""
+        if self.energy_cost == "X":
+            return self
+        new_card = Card.create_copy(self)
+        if new_card.restore_cost is None:
+            new_card.restore_cost = self.energy_cost
+        new_card.energy_cost, new_card.until_played = 0, True
+        return new_card
+
+    def reduced_to(self, cost : int, this_combat : bool) -> Card:
+        """A reduce-only Absolute cost modifier (LocalCostModifier.IsReduceOnly): min(current, cost).
+        this_combat: SetThisCombat (also caps the cost a this-turn change gives back); else SetThisTurnOrUntilPlayed."""
+        if self.energy_cost == "X":
+            return self
+        restored = self.restore_cost if self.restore_cost is not None else self.energy_cost
+        until = self.until_played
+        if this_combat:
+            new_restore = None if self.restore_cost is None else min(self.restore_cost, cost)
+            new_cost = min(self.energy_cost, cost)
+        else:
+            new_cost = min(self.energy_cost, cost)
+            new_restore = restored if new_cost != self.energy_cost or self.restore_cost is not None else None
+            until = until or new_cost != self.energy_cost
+        if new_cost == self.energy_cost and new_restore == self.restore_cost and until == self.until_played:
+            return self
+        new_card = Card.create_copy(self)
+        new_card.energy_cost, new_card.restore_cost, new_card.until_played = new_cost, new_restore, until
+        return new_card
+
+    def cost_after_play(self) -> Card:
+        """CardEnergyCost.AfterCardPlayedCleanup: until-played changes end once the play finishes. The sim keeps one
+        temporary cost per card, so a Stomp discount stacked on it ends too (both would be gone by the next turn)."""
+        if not self.until_played:
+            return self
+        new_card = Card.create_copy(self)
+        new_card.energy_cost, new_card.restore_cost, new_card.until_played = self.restore_cost, None, False
         return new_card
 
     @property
@@ -574,6 +632,7 @@ class Card:
         new_card.is_upgraded = card.is_upgraded
         new_card.is_unplayable = card.is_unplayable
         new_card.restore_cost = card.restore_cost
+        new_card.until_played = card.until_played
         new_card.bonus_damage = card.bonus_damage
         new_card.replay = card.replay
         new_card.enchantment, new_card.enchant_amount, new_card.enchant_bonus = card.enchantment, card.enchant_amount, card.enchant_bonus
@@ -583,7 +642,7 @@ class Card:
     def signature(self) -> tuple:
         """Everything that decides how this card plays: two cards with equal signatures are interchangeable
         (the fields create_copy carries over, minus name/type/target which follow from the id)."""
-        return (self.card_id, self.is_upgraded, self.energy_cost, self.is_unplayable, self.restore_cost,
+        return (self.card_id, self.is_upgraded, self.energy_cost, self.is_unplayable, self.restore_cost, self.until_played,
                 self.bonus_damage, self.replay, self.enchantment, self.enchant_amount, self.enchant_bonus, self._mask)
 
     def current_cost(self, player) -> int | str:
@@ -805,6 +864,7 @@ def _gain_block(combat : CombatSimulator, base : int):
     if owner.relics:
         block_gained(owner, combat.card_in_play, block)
     combat.gain_block(owner, block)
+    return block
 
 def _vulnerable(combat : CombatSimulator, target : Creature, amount : int):
     player = combat.combat_state.player
@@ -826,6 +886,7 @@ def _temp_strength(target : Creature, marker : StatusId, amount : int, sign : in
     target.apply_status(StatusId.STRENGTH, sign * amount, bypass_artifact=True)
 
 PLAIN_DAMAGE = {        # id : (damage, damage upgraded) of the cards that print one fixed number
+    CardId.BYRD_SWOOP : (14, 18), CardId.PECK : (2, 2), CardId.EXTERMINATE : (3, 4), CardId.SQUASH : (10, 12),
     CardId.ANGER : (6, 8), CardId.BASH : (8, 10), CardId.BLUDGEON : (32, 42), CardId.BREAK : (20, 30),
     CardId.BREAKTHROUGH : (9, 13), CardId.CINDER : (18, 24), CardId.CONFLAGRATION : (2, 2),
     CardId.DISMANTLE : (8, 10), CardId.FEED : (10, 12), CardId.FIEND_FIRE : (7, 10), CardId.FIGHT_ME : (5, 6),
@@ -1211,8 +1272,7 @@ def play_impervious(card: Card, combat : CombatSimulator, target_index=0, is_upg
     _gain_block(combat, 40 if is_upgraded else 30)
 
 def play_infernal_blade(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    new_card = Card.create_generated(rng.choice(INFERNAL_BLADE_POOL))
-    new_card.restore_cost, new_card.energy_cost = new_card.energy_cost, 0
+    new_card = Card.create_generated(rng.choice(INFERNAL_BLADE_POOL)).free_this_turn()     # Whirlwind stays X
     combat.combat_state.player.add_to_hand(new_card)
 
 def play_inferno(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
@@ -1378,6 +1438,47 @@ def play_tear_asunder(card: Card, combat : CombatSimulator, target_index=0, is_u
     target = _enemy(combat, target_index)
     # one hit, and one more for every time the player has lost HP in this fight
     _attack(combat, 7 if is_upgraded else 5, target, 1 + combat.combat_state.player.hp_loss_events)
+
+# ---- event cards
+TORIC_TOUGHNESS_TURNS = 2
+METAMORPHOSIS_CARDS = (3, 5)
+ENLIGHTENMENT_COST = 1
+
+def play_byrd_swoop(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], _enemy(combat, target_index))
+
+def play_peck(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], _enemy(combat, target_index), 4 if is_upgraded else 3)
+
+def play_exterminate(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    for _ in range(4):                  # each hit goes to every living enemy
+        for target in _living(combat):
+            _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], target)
+        combat.resolve_deaths()
+
+def play_squash(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    target = _enemy(combat, target_index)
+    _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], target)
+    _vulnerable(combat, target, 3 if is_upgraded else 2)
+
+def play_enlightenment(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    """Cards in hand (this one is in play, not in hand): cost reduced to 1 this turn, or this combat if upgraded."""
+    hand = combat.combat_state.player.hand
+    for i, c in enumerate(hand):
+        hand[i] = c.reduced_to(ENLIGHTENMENT_COST, this_combat=is_upgraded)
+
+def play_metamorphosis(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    """CardFactory.GetForCombat (repeats allowed): random Attacks from the pool, free this combat, each at a random place
+    in the draw pile."""
+    made = [Card.create_generated(rng.choice(INFERNAL_BLADE_POOL)).free_this_combat()
+            for _ in range(METAMORPHOSIS_CARDS[is_upgraded])]
+    for new_card in made:
+        combat.combat_state.player.insert_into_draw_pile(new_card)
+
+def play_toric_toughness(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    """Block now; the power gains that same (already modified) block, unpowered, after the block is cleared for 2 turns."""
+    block = _gain_block(combat, 7 if is_upgraded else 5)
+    combat.combat_state.player.add_instance(StatusId.TORIC_TOUGHNESS, [TORIC_TOUGHNESS_TURNS, block])
 
 def play_thrash(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     # `card` is this play's own copy (see CombatSimulator.private_copy), so it can remember the growth
@@ -1597,6 +1698,7 @@ GET_CARD_FUNCTION : dict[CardId, function] = {
     CardId.BREAKTHROUGH : play_breakthrough,
     CardId.BULLY : play_bully,
     CardId.BURNING_PACT : play_burning_pact,
+    CardId.BYRD_SWOOP : play_byrd_swoop,
     CardId.CALAMITY : play_calamity,
     CardId.CASCADE : play_cascade,
     CardId.CATASTROPHE : play_catastrophe,
@@ -1615,11 +1717,13 @@ GET_CARD_FUNCTION : dict[CardId, function] = {
     CardId.DOMINATE : play_dominate,
     CardId.DRAMATIC_ENTRANCE : play_dramatic_entrance,
     CardId.DRUM_OF_BATTLE : play_drum_of_battle,
+    CardId.ENLIGHTENMENT : play_enlightenment,
     CardId.ENTROPY : play_entropy,
     CardId.EQUILIBRIUM : play_equilibrium,
     CardId.ETERNAL_ARMOR : play_eternal_armor,
     CardId.EVIL_EYE : play_evil_eye,
     CardId.EXPECT_A_FIGHT : play_expect_a_fight,
+    CardId.EXTERMINATE : play_exterminate,
     CardId.FASTEN : play_fasten,
     CardId.FEED : play_feed,
     CardId.FEEL_NO_PAIN : play_feel_no_pain,
@@ -1652,6 +1756,7 @@ GET_CARD_FUNCTION : dict[CardId, function] = {
     CardId.MANGLE : play_mangle,
     CardId.MASTER_OF_STRATEGY : play_master_of_strategy,
     CardId.MAYHEM : play_mayhem,
+    CardId.METAMORPHOSIS : play_metamorphosis,
     CardId.MIND_BLAST : play_mind_blast,
     CardId.MOLTEN_FIST : play_molten_fist,
     CardId.NEOWS_FURY : play_neows_fury,
@@ -1663,6 +1768,7 @@ GET_CARD_FUNCTION : dict[CardId, function] = {
     CardId.PACTS_END : play_pacts_end,
     CardId.PANACHE : play_panache,
     CardId.PANIC_BUTTON : play_panic_button,
+    CardId.PECK : play_peck,
     CardId.PERFECTED_STRIKE : play_perfected_strike,
     CardId.PILLAGE : play_pillage,
     CardId.POMMEL_STRIKE : play_pommel_strike,
@@ -1691,6 +1797,7 @@ GET_CARD_FUNCTION : dict[CardId, function] = {
     CardId.SLIMED : play_slimed,
     CardId.SPITE : play_spite,
     CardId.SPORE_MIND : play_spore_mind,
+    CardId.SQUASH : play_squash,
     CardId.STAMPEDE : play_stampede,
     CardId.STOKE : play_stoke,
     CardId.STOMP : play_stomp,
@@ -1705,6 +1812,7 @@ GET_CARD_FUNCTION : dict[CardId, function] = {
     CardId.THRASH : play_thrash,
     CardId.THRUMMING_HATCHET : play_thrumming_hatchet,
     CardId.THUNDERCLAP : play_thunderclap,
+    CardId.TORIC_TOUGHNESS : play_toric_toughness,
     CardId.TREMBLE : play_tremble,
     CardId.TRUE_GRIT : play_true_grit,
     CardId.TWIN_STRIKE : play_twin_strike,
@@ -1802,6 +1910,13 @@ GENERATABLE_CARDS = {
     CardId.WHIRLWIND : ("Whirlwind", CardType.Attack, "X", ALL),
 }
 TOKEN_CARDS = {CardId.GIANT_ROCK : ("Giant Rock", CardType.Attack, 1, A)}      # made by Primal Force
+# event cards (CardRarity.Event): never generated in combat; listed so tests and transforms can build them
+EVENT_CARDS = {
+    CardId.BYRD_SWOOP : ("Swoop", CardType.Attack, 0, A), CardId.PECK : ("Peck", CardType.Attack, 1, A),
+    CardId.EXTERMINATE : ("Exterminate", CardType.Attack, 1, ALL), CardId.SQUASH : ("Squash", CardType.Attack, 1, A),
+    CardId.ENLIGHTENMENT : ("Enlightenment", CardType.Skill, 0, S), CardId.METAMORPHOSIS : ("Metamorphosis", CardType.Skill, 2, S),
+    CardId.TORIC_TOUGHNESS : ("Toric Toughness", CardType.Skill, 2, S),
+}
 # colorless cards that card effects can add (Jack of All Trades, Toolbox): (name, type, cost, target). Multiplayer-only
 # cards are left out; Alchemize and Splash are not modelled; Alchemize, Hand of Greed and Hidden Gem are never generated in combat.
 COLORLESS_CARDS = {

@@ -314,6 +314,7 @@ NEW_POWER_CARDS = tuple(CardId[n] for n in (
     'HOWL_FROM_BEYOND', 'INFERNAL_BLADE', 'NOT_YET', 'OFFERING', 'PACTS_END',
     'BRAND', 'HELLRAISER', 'INFERNO', 'PRIMAL_FORCE', 'STOKE', 'STOMP'))
 
+UNTARGETED_EVENT = (CardId.EXTERMINATE, CardId.ENLIGHTENMENT, CardId.METAMORPHOSIS, CardId.TORIC_TOUGHNESS)
 UNTARGETED_COLORLESS = (CardId.FINESSE, CardId.PRODUCTION, CardId.MASTER_OF_STRATEGY, CardId.DRAMATIC_ENTRANCE, CardId.SHOCKWAVE,
                         CardId.PROWESS, CardId.IMPATIENCE, CardId.RESTLESSNESS, CardId.SCRAWL, CardId.ETERNAL_ARMOR, CardId.PURITY,
                         CardId.ULTIMATE_DEFEND, CardId.VOLLEY, CardId.SECRET_TECHNIQUE, CardId.SECRET_WEAPON, CardId.THINKING_AHEAD,
@@ -329,7 +330,7 @@ def test_every_single_target_card_rejects_a_bad_target():
                                CardId.BREAKTHROUGH, CardId.SHRUG_IT_OFF, CardId.THUNDERCLAP,
                                CardId.INFLAME, CardId.CRIMSON_MANTLE, CardId.IMPERVIOUS, CardId.EVIL_EYE,
                                    CardId.SECOND_WIND, CardId.BLOODLETTING, CardId.WHIRLWIND,
-                                   CardId.SWORD_BOOMERANG, *NEW_POWER_CARDS, *UNTARGETED_COLORLESS)]
+                                   CardId.SWORD_BOOMERANG, *NEW_POWER_CARDS, *UNTARGETED_COLORLESS, *UNTARGETED_EVENT)]
     assert len(targeted) >= 10
     for cid in targeted:
         cs = make_state([make_card(cid, cid.name, CardType.Attack, 1, TargetType.AnyEnemy)], enemy_count=1)

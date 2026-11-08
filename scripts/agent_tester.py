@@ -1,12 +1,13 @@
 from agents.base_agent import BaseAgent
 from agents.my_agent import MyAgent
 
-from sts2_lite.card import CardType
+from sts2_lite.card import CardId, CardType
 from sts2_lite.combat import CombatState, CombatSimulator
 from sts2_lite.selection import game_index
 from sts2_lite.verify import compare, snapshot, is_random_step
 
 import argparse
+import functools
 import json
 import re
 import subprocess
@@ -163,8 +164,8 @@ def describe_action(action : dict, combat_state : CombatState) -> str:
 
 def install_search_hook() -> dict:
     """Remembers the MCTS searcher of the latest decision (the agent does not keep it) without touching the agent:
-    wraps monte_carlo_tree_search. Returns {"last": searcher | None, "module": the MCTS module | None}."""
-    holder = {"last": None, "module": None}
+    wraps monte_carlo_tree_search. Returns {"last": searcher | None, "stats": its returned stats | None, "module": the MCTS module | None}."""
+    holder = {"last": None, "stats": None, "module": None}
     try:
         import importlib
         module = importlib.import_module("agents.sts2_MCTS.MCTS")
@@ -175,9 +176,14 @@ def install_search_hook() -> dict:
     original = cls.monte_carlo_tree_search
     if getattr(original, "_remembers_searcher", False):
         original = original._original
+    @functools.wraps(original)          # keeps the search's signature for anything that inspects it
     def wrapper(self, *args, **kwargs):
         holder["last"] = self
-        return original(self, *args, **kwargs)
+        result = original(self, *args, **kwargs)
+        # search returns (action, stats); stats carry num_sims, time_taken, exit_reason
+        if isinstance(result, tuple) and len(result) == 2 and isinstance(result[1], dict):
+            holder["stats"] = result[1]
+        return result
     wrapper._remembers_searcher = True
     wrapper._original = original
     cls.monte_carlo_tree_search = wrapper
@@ -200,21 +206,26 @@ def log_decision(path : str, game_state : dict, combat_state : CombatState, acti
         "seconds": round(seconds, 3),
         "sims": None, "stopped_by": None, "moves": None,
     }
-    searcher = holder.get("last")
-    if searcher is not None and getattr(searcher, "_root_node", None) is not None:
+    searcher, stats = holder.get("last"), holder.get("stats")
+    if stats is not None:               # reported by the search itself
+        record["sims"] = stats.get("num_sims")
+        record["stopped_by"] = stats.get("exit_reason")
+        record["moves"] = [{"move": describe_action(c["action"], combat_state), "visits": c["visits"],
+                            "mean": round(c["q"], 4)} for c in stats.get("children", [])]
+    elif searcher is not None and getattr(searcher, "_root_node", None) is not None:
         record["sims"] = searcher._num_sims
         record["moves"] = [{"move": describe_action(c.action, combat_state), "visits": c.visits,
                             "mean": round(c.total_reward / c.visits, 4) if c.visits else None}
                            for c in searcher._root_node.children]
         module = holder.get("module")
-        if module is not None:          # why the search ended
+        if module is not None:          # older search without stats: infer why it ended
             if searcher._num_sims >= getattr(module, "DEFAULT_MAX_SIMS", float("inf")):
                 record["stopped_by"] = "sim cap"
             elif seconds >= TIME_BUDGET_SECONDS - 0.05:
                 record["stopped_by"] = "time"
             else:
                 record["stopped_by"] = "confidence"
-    holder["last"] = None
+    holder["last"] = holder["stats"] = None
     with open(path, "a") as f:
         f.write(json.dumps(record) + "\n")
 
@@ -271,6 +282,40 @@ def log_mismatch(path : str, batch : dict, after, diffs : list[str], predicted :
     if len(diffs) > 6:
         print(f"    ... and {len(diffs) - 6} more in {path}")
 
+def unimplemented_cards(game_state : dict) -> dict[str, list[str]]:
+    """Bridge card ids the sim loads as NOT_IMPLEMENTED (a Wound stand-in), by pile."""
+    player = game_state.get("player") or {}
+    piles = {"hand": game_state.get("hand") or player.get("hand") or []}
+    for name in ("draw_pile", "discard_pile", "exhaust_pile"):
+        piles[name] = player.get(name) or []
+    found = {}
+    for name, cards in piles.items():
+        ids = [c.get("id") for c in cards if c.get("id") not in CardId.__members__ or c.get("id") == "NOT_IMPLEMENTED"]
+        if ids:
+            found[name] = ids
+    return found
+
+def report_unimplemented(game_state : dict, log_path : str, reported : set[str]):
+    """Logs an engine mismatch the first time a run meets a card the sim does not implement."""
+    found = unimplemented_cards(game_state)
+    new = sorted({cid for ids in found.values() for cid in ids} - reported)
+    if not new:
+        return
+    reported.update(new)
+    record = {
+        "time": datetime.now().isoformat(timespec="seconds"),
+        "floor": (game_state.get("context") or {}).get("floor"),
+        "kind": "not_implemented",
+        "actions": [],
+        "random_step": False,
+        "differences": [f"card {cid} is not implemented in the sim (loaded as a Wound)" for cid in new],
+        "piles": found,
+        "before": game_state,
+    }
+    with open(log_path, "a") as f:
+        f.write(json.dumps(record) + "\n")
+    print(f"MISMATCH: not implemented in the sim: {', '.join(new)}")
+
 def verify_step(batch : dict, game_state : dict, actual : CombatState, log_path : str) -> bool:
     """Compare the state the sim predicted after the batch of actions with the one the game now reports."""
     diffs = compare(batch["predicted"], actual, random_step=batch["random_step"])
@@ -299,6 +344,7 @@ def run_agent(agent : BaseAgent, step : bool = False, verify : bool = True, log_
     decisions = 0
     locked_reads = 0
     checked = mismatched = 0
+    reported_cards = set()      # NOT_IMPLEMENTED card ids already logged this run
     try:
         while True:
             game_state = get_state()
@@ -355,6 +401,7 @@ def run_agent(agent : BaseAgent, step : bool = False, verify : bool = True, log_
                 continue
             else:
                 combat_state = CombatState.from_dict(game_state)
+                report_unimplemented(game_state, log_path, reported_cards)
                 combat_state.carry_turn_counters(previous)
                 combat_state.carry_known_top(previous)    # cards the agent put on top (Headbutt)
                 combat_state.carry_combat_counters(previous)    # HP-loss events (Tear Asunder), Inferno plays

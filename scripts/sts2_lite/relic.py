@@ -684,11 +684,7 @@ def _mummified_hand(combat, relic):
     card = hand[index]
     if card.energy_cost == "X" or card.energy_cost == 0:
         return                  # already free
-    free = Card.create_copy(card)
-    if free.restore_cost is None:
-        free.restore_cost = card.energy_cost
-    free.energy_cost = 0
-    hand[index] = free
+    hand[index] = card.free_this_turn()          # SetToFreeThisTurn
 
 # Attacks and Skills
 DAUGHTER_OF_THE_WIND_BLOCK = 1
@@ -861,9 +857,7 @@ PAELS_TEARS_ENERGY = 2
 def _crossbow(combat, relic):
     """Crossbow.AfterSideTurnStart: a random Attack from the character pool, free this turn."""
     from sts2_lite.card import Card, INFERNAL_BLADE_POOL
-    new_card = Card.create_generated(rng.choice(INFERNAL_BLADE_POOL))
-    new_card.restore_cost, new_card.energy_cost = new_card.energy_cost, 0
-    _player(combat).add_to_hand(new_card)
+    _player(combat).add_to_hand(Card.create_generated(rng.choice(INFERNAL_BLADE_POOL)).free_this_turn())     # X stays X
 
 TOASTY_MITTENS_STRENGTH = 1
 PHILOSOPHERS_STONE_STRENGTH = 1
@@ -1057,8 +1051,7 @@ def _pendulum(combat, relic):
 def _biiig_hug(combat, relic):
     """BiiigHug.AfterShuffle: a Soot at a random place in the new draw pile."""
     from sts2_lite.card import Card
-    pile = _player(combat).draw_pile
-    pile.insert(rng.randrange(len(pile) + 1), Card.create_soot())
+    _player(combat).insert_into_draw_pile(Card.create_soot())
 
 def _abacus(combat, relic):
     combat.gain_block(_player(combat), ABACUS_BLOCK)
