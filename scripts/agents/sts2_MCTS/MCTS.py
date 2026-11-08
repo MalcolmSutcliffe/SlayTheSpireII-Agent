@@ -37,6 +37,9 @@ GAMMA = 0.999
 # move confidence constants
 EPSILON = 0.005
 Z_SCORE = 2.33
+TIE_MARGIN = 0.01                # root moves this close to the best (and not significantly worse) are tied
+TIE_MIN_VISITS = 30              # the top move needs this many visits before a tie is considered
+TIE_VISIT_FRACTION = 0.5         # a tied move needs this share of the top move's visits: a thin estimate is within the margin by luck
 
 # rollout policy constants
 ROLLOUT_POLICY = RolloutPolicy.RandomPlayblePEndTurn
@@ -51,6 +54,7 @@ class SearchConfig:
     exploration: float = 2.0
     outcome_c: float = 2.0
     early_exit : bool = True             # allows the sim to exit early
+    prefer_info : bool = True            # among tied root moves, play the one whose outcome is not yet known (a draw) first
     rollout: RolloutPolicy = RolloutPolicy.RandomPlayblePEndTurn
 
 class sts2_Node:
@@ -141,9 +145,32 @@ class sts2_MCTS:
             "time_taken" : time.perf_counter() - self._start_time,
             "exit_reason" : exit_reason
                 }
-        best_child = max(self._root_node.children, key=lambda c: c.visits)
+        best_child = self._pick_root_child()
         
         return best_child.action, stats
+
+    def _pick_root_child(self) -> sts2_Node:
+        """The most visited move; with prefer_info, a tied move that reveals information (a draw or random effect) goes first.
+        The agent searches again after every action, so seeing the result early is free, and a tied move gives up nothing."""
+        children = self._root_node.children
+        top = max(children, key=lambda c: c.visits)
+        if not self._search_config.prefer_info or top.visits < TIE_MIN_VISITS:
+            return top
+        informative = [c for c in children if c.is_chance_node and c.action["action"] != "end_turn"
+                       and c.visits >= max(TIE_MIN_VISITS, TIE_VISIT_FRACTION * top.visits) and self._tied(c, top)]
+        return max(informative, key=lambda c: c.visits) if informative else top
+
+    def _tied(self, node : sts2_Node, top : sts2_Node) -> bool:
+        """`node` is within TIE_MARGIN of `top` and not significantly worse at Z_SCORE (the test the early exit uses)."""
+        if node is top:
+            return True
+        gap = top.total_reward/top.visits - node.total_reward/node.visits
+        if gap <= 0:
+            return True
+        if gap > TIE_MARGIN:
+            return False
+        var = lambda n: max(0.0, (n.total_reward_squared - n.total_reward**2/n.visits) / (n.visits - 1))
+        return gap <= Z_SCORE * math.sqrt(var(node)/node.visits + var(top)/top.visits)
 
     # finds the optimal node to simulate from
     def traverse_node(self, node : sts2_Node) -> list[sts2_Node]:

@@ -162,3 +162,23 @@ def test_default_workers_leave_cores_and_memory_free(monkeypatch):
 
 def test_jobs_run_in_a_pool_of_short_lived_workers():
     assert sorted(bench.map_jobs(abs, [-3, -1, -2], 2, "t")) == [1, 2, 3]
+
+
+# ---------------------------------------------------------------- subsets
+def test_draw_subset_keeps_states_with_a_draw_card_in_hand():
+    sub = bench.load_index(subset="draw")
+    assert sub and len(sub) < len(bench.load_index())
+    for e in sub:
+        assert any(c.card_id.name in bench.DRAW_CARDS for c in bench.load_state(e["file"]).player.hand)
+
+def test_draw_card_names_exist_in_the_sim():
+    from sts2_lite.card import CardId
+    assert all(n in CardId.__members__ for n in bench.DRAW_CARDS)
+
+def test_unknown_subset_is_rejected():
+    with pytest.raises(SystemExit):
+        bench.load_index(subset="nope")
+
+def test_subsets_get_their_own_reference_file():
+    assert bench.reference_path() == bench.REFERENCE_PATH
+    assert bench.reference_path("draw").name == "reference_act1_draw.jsonl"

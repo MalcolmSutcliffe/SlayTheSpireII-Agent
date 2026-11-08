@@ -5,7 +5,7 @@ Suites:
   fights     whole fights played in the sim from benchmark states (playing strength)
 
 Usage (from scripts/):
-  python -m benchmarks.bench build-ref [--sims 100000] [--seeds 3]
+  python -m benchmarks.bench build-ref [--sims 100000] [--seeds 3] [--subset draw]
   python -m benchmarks.bench decisions --config baseline [--seeds 10] [--smoke]
   python -m benchmarks.bench fights    --config baseline [--seeds 10] [--smoke]
   python -m benchmarks.bench compare results/A.jsonl results/B.jsonl
@@ -57,11 +57,26 @@ CONFIGS = {
 
 
 # ---------------------------------------------------------------- states and configs
-def load_index(smoke: bool = False) -> list[dict]:
-    """Benchmark entries; smoke keeps round-1 states only (one full fight per encounter)."""
+DRAW_CARDS = frozenset({"BATTLE_TRANCE", "BURNING_PACT", "DRUM_OF_BATTLE", "FINESSE", "FLASH_OF_STEEL", "IMPATIENCE", "MASTER_OF_STRATEGY",
+                        "OFFERING", "PILLAGE", "POMMEL_STRIKE", "RESTLESSNESS", "SCRAWL", "SHRUG_IT_OFF", "THINKING_AHEAD",       # draw
+                        "BLOODLETTING", "EXPECT_A_FIGHT", "FORGOTTEN_RITUAL", "PRODUCTION"})                                     # energy
+SUBSETS = ("draw",)
+
+def load_index(smoke: bool = False, subset: str | None = None) -> list[dict]:
+    """Benchmark entries; smoke keeps round-1 states only (one full fight per encounter).
+    subset "draw": states with a draw or energy card in hand (does the search value information?)."""
     with open(STATES_DIR / "index.jsonl") as f:
         entries = [json.loads(line) for line in f if line.strip()]
-    return [e for e in entries if e["round"] == 1] if smoke else entries
+    if smoke:
+        entries = [e for e in entries if e["round"] == 1]
+    if subset == "draw":
+        entries = [e for e in entries if any(c.card_id.name in DRAW_CARDS for c in load_state(e["file"]).player.hand)]
+    elif subset is not None:
+        raise SystemExit(f"unknown subset {subset!r}; choose from {SUBSETS}")
+    return entries
+
+def reference_path(subset: str | None = None) -> Path:
+    return REFERENCE_PATH if subset is None else REFERENCE_PATH.with_name(f"reference_act1_{subset}.jsonl")
 
 @lru_cache(maxsize=None)
 def _raw_state(file: str) -> str:
@@ -138,9 +153,10 @@ def merge_reference(file: str, runs: list[dict]) -> dict:
     return {"file": file, "q": q, "visits": dict(n_sum), "best": best,
             "stable": len(picks) == 1, "seeds": len(runs)}
 
-def build_reference(sims: int, seeds: int, workers: int, smoke: bool = False, out: Path = REFERENCE_PATH) -> list[dict]:
+def build_reference(sims: int, seeds: int, workers: int, smoke: bool = False, out: Path | None = None, subset: str | None = None) -> list[dict]:
+    out = out or reference_path(subset)
     config = dataclasses.replace(CONFIGS["reference"], max_sims=sims)
-    entries = load_index(smoke)
+    entries = load_index(smoke, subset)
     jobs = [(e["file"], s, config_dict(config)) for e in entries for s in range(seeds)]
     runs = map_jobs(_reference_job, jobs, workers, "reference")
     by_file = defaultdict(list)
@@ -174,9 +190,9 @@ def _decision_job(job: tuple) -> dict:
     return {"file": file, "seed": seed, **score_decision(ref, action),
             "sims": stats["num_sims"], "seconds": stats["time_taken"], "exit_reason": stats["exit_reason"]}
 
-def eval_decisions(config: SearchConfig, seeds: int, workers: int, smoke: bool = False) -> list[dict]:
-    refs = load_reference()
-    entries = [e for e in load_index(smoke) if e["file"] in refs]
+def eval_decisions(config: SearchConfig, seeds: int, workers: int, smoke: bool = False, subset: str | None = None) -> list[dict]:
+    refs = load_reference(reference_path(subset))
+    entries = [e for e in load_index(smoke, subset) if e["file"] in refs]
     jobs = [(e["file"], s, config_dict(config), refs[e["file"]]) for e in entries for s in range(seeds)]
     return map_jobs(_decision_job, jobs, workers, "decisions")
 
@@ -241,8 +257,8 @@ def _fight_job(job: tuple) -> dict:
     result = play_fight(load_state(file), config_from_dict(config_d), seed, SEARCH_SEED_OFFSET + seed)
     return {"file": file, "seed": seed, **result}
 
-def eval_fights(config: SearchConfig, seeds: int, workers: int, smoke: bool = False) -> list[dict]:
-    jobs = [(e["file"], s, config_dict(config)) for e in load_index(smoke) for s in range(seeds)]
+def eval_fights(config: SearchConfig, seeds: int, workers: int, smoke: bool = False, subset: str | None = None) -> list[dict]:
+    jobs = [(e["file"], s, config_dict(config)) for e in load_index(smoke, subset) for s in range(seeds)]
     return map_jobs(_fight_job, jobs, workers, "fights")
 
 def summarize_fights(rows: list[dict]) -> dict:
@@ -359,6 +375,7 @@ def main(argv: list[str] | None = None):
     def common(s, seeds):
         s.add_argument("--seeds", type=int, default=seeds)
         s.add_argument("--smoke", action="store_true", help="round-1 states only")
+        s.add_argument("--subset", choices=SUBSETS, default=None, help="draw: states with a draw or energy card in hand (own reference file)")
         s.add_argument("--workers", type=int, default=default_workers(), help="parallel searches; each holds its tree in RAM (~1 GB at 100k sims)")
 
     r = sub.add_parser("build-ref", help="long searches on every state -> reference_act1.jsonl")
@@ -379,15 +396,15 @@ def main(argv: list[str] | None = None):
     args = p.parse_args(argv)
 
     if args.cmd == "build-ref":
-        refs = build_reference(args.sims, args.seeds, args.workers, args.smoke)
-        print(f"wrote {REFERENCE_PATH}: {len(refs)} states, {sum(r['stable'] for r in refs)} stable")
+        refs = build_reference(args.sims, args.seeds, args.workers, args.smoke, subset=args.subset)
+        print(f"wrote {reference_path(args.subset)}: {len(refs)} states, {sum(r['stable'] for r in refs)} stable")
     elif args.cmd in ("decisions", "fights"):
         config = make_config(args.config, args.set)
         label = args.label or "_".join([args.config] + [s.replace("=", "-") for s in args.set])
         run = eval_decisions if args.cmd == "decisions" else eval_fights
-        rows = run(config, args.seeds, args.workers, args.smoke)
+        rows = run(config, args.seeds, args.workers, args.smoke, args.subset)
         summary = (summarize_decisions if args.cmd == "decisions" else summarize_fights)(rows)
-        path = write_results(args.cmd, label, config, rows, {"seeds": args.seeds, "smoke": args.smoke})
+        path = write_results(args.cmd, label, config, rows, {"seeds": args.seeds, "smoke": args.smoke, "subset": args.subset})
         print(f"{label}: " + "  ".join(f"{k}={fmt(v)}" for k, v in summary.items()))
         print(f"wrote {path}")
     elif args.cmd == "compare":
