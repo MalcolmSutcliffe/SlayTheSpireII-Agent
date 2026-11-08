@@ -185,6 +185,7 @@ class Player(Creature):
         new_pl.block_play_gains = player.block_play_gains
         new_pl.cards_exhausted_this_turn = player.cards_exhausted_this_turn
         new_pl.lost_hp_this_turn = player.lost_hp_this_turn
+        new_pl.has_been_attacked_this_turn = player.has_been_attacked_this_turn
         new_pl.hp_loss_events = player.hp_loss_events
         new_pl.hp_lost_log = list(player.hp_lost_log)
         new_pl.attacks_played_this_turn = player.attacks_played_this_turn

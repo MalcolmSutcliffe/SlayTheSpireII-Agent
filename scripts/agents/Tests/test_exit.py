@@ -32,8 +32,8 @@ def test_nodes_start_with_no_squared_reward():
 def test_backpropagate_adds_the_squared_reward_up_the_tree():
     root = sts2_DeterministicNode(None, make_state([]), None)
     child = sts2_DeterministicNode(root, make_state([]), None)
-    backpropagate(child, 0.5)
-    backpropagate(child, -1.0)
+    backpropagate([root, child], 0.5)
+    backpropagate([root, child], -1.0)
     for node in (root, child):
         assert node.total_reward == pytest.approx(-0.5)
         assert node.total_reward_squared == pytest.approx(1.25)

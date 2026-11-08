@@ -123,6 +123,10 @@ class Enemy(Creature):
         new_e.move_streak = enemy.move_streak
         new_e.used_moves = set(enemy.used_moves)
         new_e.slot = enemy.slot
+        # per-turn flags: Skittish blocks on the first attack of a turn, so a copy made between two attacks must remember the first
+        new_e.has_been_attacked_this_turn = enemy.has_been_attacked_this_turn
+        new_e.lost_hp_this_turn = enemy.lost_hp_this_turn
+        new_e.hp_loss_events = enemy.hp_loss_events
         return new_e
 
     def turn_start(self):

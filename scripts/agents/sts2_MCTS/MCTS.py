@@ -8,6 +8,7 @@ from sts2_lite import rng
 from sts2_lite.combat import CombatState, CombatSimulator
 
 from sts2_lite.enemy import Enemy
+from sts2_lite.state_key import state_key
 
 class RolloutPolicy(Enum):
     FirstAction = auto()            # just play first action
@@ -98,6 +99,7 @@ class sts2_ChanceNode(sts2_Node):
 
 class sts2_MCTS:
     _root_node : sts2_DeterministicNode = None
+    _table : dict      # transposition table: state_key -> node, one per search
     _expected_total_hp : int
     _starting_hp : int
     _search_config : SearchConfig
@@ -112,6 +114,7 @@ class sts2_MCTS:
                                 config : SearchConfig = SearchConfig()
                                 ) -> tuple[dict, dict]:
         
+        self._table = {}
         self._root_node = sts2_DeterministicNode(None, CombatState.deepcopy(combat_state), None)
         self._expected_total_hp = self._calculate_expected_total_hp(combat_state)
         self._starting_hp = combat_state.player.current_hp
@@ -128,9 +131,9 @@ class sts2_MCTS:
                 exit_reason = reason
                 break
             # traverse and sim
-            leaf = self.traverse_node(self._root_node) # find optimal leaf node to simulate from
-            sim_result = self._simulate_random_combat(leaf) # simulate
-            backpropagate(leaf, sim_result)
+            path = self.traverse_node(self._root_node) # root to the leaf to simulate from (a shared node has several parents, so the path is tracked)
+            sim_result = self._simulate_random_combat(path[-1]) # simulate
+            backpropagate(path, sim_result)
 
         stats = { 
             "children": [{"action": c.action, "visits": c.visits, "q": c.total_reward / c.visits} for c in self._root_node.children],
@@ -143,30 +146,34 @@ class sts2_MCTS:
         return best_child.action, stats
 
     # finds the optimal node to simulate from
-    def traverse_node(self, node : sts2_Node) -> sts2_Node:
+    def traverse_node(self, node : sts2_Node) -> list[sts2_Node]:
+        path = [node]
         while True:
             # chance node
             if node.is_chance_node:
                 node, is_new = self._sample_outcome(node)
+                path.append(node)
                 if is_new:
-                    return node # roll out from here
+                    return path # roll out from the last node
             # deterministic node
             else:
                 # if terminal node, return
                 if node.is_terminal:
-                    return node
+                    return path
                 # if node has not yet been expanded, expand it
                 if not node.is_expanded:
-                    expand_node(node)
+                    expand_node(node, self._table)
                 # if node has unvisited child, return that
                 leaf = get_unvisited_child(node)
                 if leaf is not None:
+                    path.append(leaf)
                     if leaf.is_chance_node:
                         node = leaf # resolve it into an outcome
                         continue
-                    return leaf
+                    return path
                 # otherwise, get best utc and keep traversing
                 node = self._best_uct(node)
+                path.append(node)
 
     # resolve a chance node
     def _sample_outcome(self, node: sts2_Node) -> tuple[sts2_Node, bool]:
@@ -237,15 +244,18 @@ class sts2_MCTS:
         return outcome
 
     # uct score 
-    def get_uct_score(self, node : sts2_Node):
+    def get_uct_score(self, node : sts2_Node, parent : sts2_Node | None = None):
+        # a shared node (transposition) has several parents: use the one the search came through
+        if parent is None:
+            parent = node.parent
         if node.visits == 0:
             return 0
-        return node.total_reward/node.visits + self._search_config.exploration*math.sqrt(math.log(node.parent.visits)/node.visits)
+        return node.total_reward/node.visits + self._search_config.exploration*math.sqrt(math.log(max(1, parent.visits))/node.visits)
 
     def _best_uct(self, node : sts2_Node) -> sts2_Node:
         if len(node.children) == 0:
             return node
-        return max(node.children, key = lambda x: self.get_uct_score(x))
+        return max(node.children, key = lambda x: self.get_uct_score(x, node))
 
     def _calculate_expected_total_hp(self, combat_state : CombatState):
         expected_total_hp = 0
@@ -324,7 +334,7 @@ def get_unvisited_child(node : sts2_Node):
             return child
     return None
 
-def expand_node(node : sts2_Node):
+def expand_node(node : sts2_Node, table : dict | None = None):
     c = CombatSimulator(node.state)
     actions = c.get_available_actions()
     actions = cull_identical_actions(c, actions)
@@ -342,16 +352,20 @@ def expand_node(node : sts2_Node):
         else:
             new_child = sts2_DeterministicNode(node, c_a.combat_state, a)
             new_child.is_terminal = c_a.is_over
-        node.children.append(new_child)
+            # same state reached by another order of plays: share the node (the root's children keep their own action)
+            if table is not None and node.parent is not None:
+                new_child = table.setdefault(state_key(new_child.state), new_child)
+        if not any(new_child is c for c in node.children):
+            node.children.append(new_child)
 
     node.is_expanded = True
 
-def backpropagate(node : sts2_Node, result : float):
-    while node is not None:
+def backpropagate(path : list[sts2_Node], result : float):
+    """Adds the result to every node on the path from the root to the simulated leaf."""
+    for node in path:
         node.total_reward += result
         node.total_reward_squared += result*result
         node.visits += 1
-        node = node.parent
 
 def rollout_policy(actions, policy : RolloutPolicy):
     if len(actions) == 0:

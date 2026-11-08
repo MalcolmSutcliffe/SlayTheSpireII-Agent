@@ -180,6 +180,17 @@ def walk(node):
     for k in kids:
         yield from walk(k)
 
+def walk_unique(root):
+    """Every node once: transposed states are one node with several parents."""
+    seen, stack = set(), [root]
+    while stack:
+        n = stack.pop()
+        if id(n) in seen:
+            continue
+        seen.add(id(n))
+        yield n
+        stack.extend(n.outcomes.values() if n.is_chance_node else n.children)
+
 
 def test_outcome_key_ignores_card_order():
     a = make_state([strike(), defend()], draw=[bash(), strike()])
@@ -349,7 +360,7 @@ def test_traverse_resolves_an_unvisited_chance_child():
     for c in root.children:                             # leave only the chance child unvisited
         if not c.is_chance_node:
             c.visits = 1
-    leaf = new_mcts().traverse_node(root)
+    leaf = new_mcts().traverse_node(root)[-1]
     assert not leaf.is_chance_node
     assert leaf.parent.is_chance_node and leaf.parent.parent is root
 
@@ -407,8 +418,10 @@ def test_chance_node_visits_equal_the_sum_of_its_outcomes():
 
 def test_deterministic_node_visits_cover_their_children():
     _, mcts = search(draw_fight(), 400)
-    for n in walk(mcts._root_node):
-        if not n.is_chance_node:
+    parents = Counter(id(c) for n in walk_unique(mcts._root_node) if not n.is_chance_node for c in n.children)
+    for n in walk_unique(mcts._root_node):
+        # children that other nodes share carry visits that came through those nodes as well
+        if not n.is_chance_node and all(parents[id(c)] == 1 for c in n.children):
             assert n.visits >= sum(c.visits for c in n.children)
 
 def test_outcome_count_stays_under_the_cap_throughout_the_tree():
@@ -487,7 +500,7 @@ def test_traversal_returns_a_terminal_node_without_expanding_it():
     mcts._num_sims = 10
     root.visits = 10
     kill.total_reward = 10.0                            # make UCT prefer the kill
-    leaf = mcts.traverse_node(root)
+    leaf = mcts.traverse_node(root)[-1]
     assert leaf is kill
     assert not kill.is_expanded and kill.children == []
 
@@ -509,29 +522,29 @@ def chain(length):
 
 def test_backpropagate_updates_every_ancestor():
     nodes = chain(5)
-    backpropagate(nodes[-1], 0.5)
+    backpropagate(nodes, 0.5)
     assert all(n.visits == 1 and n.total_reward == 0.5 for n in nodes)
 
 def test_backpropagate_accumulates():
     nodes = chain(3)
-    backpropagate(nodes[-1], 1.0)
-    backpropagate(nodes[-2], 2.0)
+    backpropagate(nodes, 1.0)
+    backpropagate(nodes[:-1], 2.0)
     assert [n.visits for n in nodes] == [2, 2, 2, 1]
     assert [n.total_reward for n in nodes] == [3.0, 3.0, 3.0, 1.0]
 
 def test_backpropagate_only_touches_the_path():
     nodes = chain(3)
     sibling = sts2_DeterministicNode(nodes[1], make_state([]), None)
-    backpropagate(nodes[-1], 1.0)
+    backpropagate(nodes, 1.0)
     assert sibling.visits == 0
 
-def test_backpropagate_handles_none():
-    backpropagate(None, 1.0)
+def test_backpropagate_of_an_empty_path_does_nothing():
+    backpropagate([], 1.0)
 
 def test_backpropagate_has_no_depth_limit():
     nodes = chain(5000)
     assert len(nodes) > sys.getrecursionlimit()
-    backpropagate(nodes[-1], 1.0)
+    backpropagate(nodes, 1.0)
     assert nodes[0].visits == 1
 
 def test_search_leaves_the_recursion_limit_alone():
