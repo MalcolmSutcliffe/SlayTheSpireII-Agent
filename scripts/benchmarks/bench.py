@@ -317,6 +317,15 @@ def read_results(path: Path) -> tuple[dict, list[dict]]:
         raise SystemExit(f"{path} has no header line")
     return rows[0], rows[1:]
 
+MAX_DEFAULT_WORKERS = 4      # a 100k-sim search keeps its whole tree (~1 GB or more) alive; more workers than RAM allows freezes the machine
+
+def default_workers() -> int:
+    return max(1, min((os.cpu_count() or 2) - 2, MAX_DEFAULT_WORKERS))
+
+def _lower_priority():
+    with contextlib.suppress(AttributeError, OSError):       # no os.nice on Windows
+        os.nice(10)
+
 def map_jobs(fn, jobs: list, workers: int, name: str) -> list:
     """Runs jobs (in a process pool when workers > 1) with a progress line on stderr."""
     t0, out = time.perf_counter(), []
@@ -329,7 +338,7 @@ def map_jobs(fn, jobs: list, workers: int, name: str) -> list:
             out.append(fn(job))
             progress(i)
     else:
-        with multiprocessing.Pool(workers) as pool:
+        with multiprocessing.Pool(workers, initializer=_lower_priority, maxtasksperchild=1) as pool:      # a fresh process per job returns the tree's memory
             for i, r in enumerate(pool.imap_unordered(fn, jobs), 1):
                 out.append(r)
                 progress(i)
@@ -350,7 +359,7 @@ def main(argv: list[str] | None = None):
     def common(s, seeds):
         s.add_argument("--seeds", type=int, default=seeds)
         s.add_argument("--smoke", action="store_true", help="round-1 states only")
-        s.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 2) - 1))
+        s.add_argument("--workers", type=int, default=default_workers(), help="parallel searches; each holds its tree in RAM (~1 GB at 100k sims)")
 
     r = sub.add_parser("build-ref", help="long searches on every state -> reference_act1.jsonl")
     common(r, 3)

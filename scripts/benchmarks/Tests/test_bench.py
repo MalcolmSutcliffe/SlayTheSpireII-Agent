@@ -34,7 +34,7 @@ def test_named_config_with_overrides():
 # ---------------------------------------------------------------- states
 def test_index_and_smoke_subset():
     full, smoke = bench.load_index(), bench.load_index(smoke=True)
-    assert len(full) == 36
+    assert len(full) >= 36 and len({e["file"] for e in full}) == len(full)      # no duplicate entries after merging runs
     assert smoke and all(e["round"] == 1 for e in smoke) and len(smoke) < len(full)
 
 def test_load_state_gives_independent_copies():
@@ -152,3 +152,13 @@ def test_cannot_compare_different_suites(tmp_path, monkeypatch):
     pb = bench.write_results("decisions", "b", SearchConfig(), [], {})
     with pytest.raises(SystemExit):
         bench.compare_files(pa, pb)
+
+
+# ---------------------------------------------------------------- resources
+def test_default_workers_leave_cores_and_memory_free(monkeypatch):
+    for cores, expected in ((1, 1), (2, 1), (4, 2), (8, 4), (32, 4)):
+        monkeypatch.setattr(bench.os, "cpu_count", lambda c=cores: c)
+        assert bench.default_workers() == expected
+
+def test_jobs_run_in_a_pool_of_short_lived_workers():
+    assert sorted(bench.map_jobs(abs, [-3, -1, -2], 2, "t")) == [1, 2, 3]

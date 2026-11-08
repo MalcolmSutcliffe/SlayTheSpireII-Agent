@@ -240,7 +240,7 @@ class sts2_MCTS:
     def get_uct_score(self, node : sts2_Node):
         if node.visits == 0:
             return 0
-        return node.total_reward/node.visits + self._search_config.exploration*math.sqrt(math.log(self._num_sims)/node.visits)
+        return node.total_reward/node.visits + self._search_config.exploration*math.sqrt(math.log(node.parent.visits)/node.visits)
 
     def _best_uct(self, node : sts2_Node) -> sts2_Node:
         if len(node.children) == 0:

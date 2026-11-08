@@ -89,3 +89,27 @@ def test_other_enemies_hp_is_always_compared():
     sim, game = load(), load()
     game.enemies[0].current_hp = sim.enemies[0].current_hp - 2
     assert any("enemy 0" in d and "hp" in d for d in compare(sim, game))
+
+def test_a_wriggler_hurt_by_the_same_amount_is_not_a_difference():
+    """Phrog Parasite dies to Whirlwind's first hit; the Wrigglers it spawns take the other hits: 21-16 vs 17-16."""
+    sim, game = _as_wriggler(load(), 5, 21), _as_wriggler(load(), 1, 17)
+    assert not any("hp" in d and "enemy" in d for d in compare(sim, game))
+
+
+# ---------------------------------------------------------------- cards that exhaust a random card
+def _hand_with(card_id, upgraded=False):
+    from test_cards import make_card, make_state
+    from sts2_lite.card import CardType, TargetType
+    card = make_card(card_id, "x", CardType.Skill, 1, TargetType.Self)
+    card.is_upgraded = upgraded
+    return make_state([card], enemy_count=1)
+
+def test_true_grit_is_random_only_when_not_upgraded():
+    play = [{"action": "play_card", "card_index": 0, "target": 0}]
+    assert is_random_step(_hand_with(CardId.TRUE_GRIT), _hand_with(CardId.TRUE_GRIT), play)
+    assert not is_random_step(_hand_with(CardId.TRUE_GRIT, True), _hand_with(CardId.TRUE_GRIT, True), play)
+
+def test_cinder_and_thrash_are_random_steps():
+    play = [{"action": "play_card", "card_index": 0, "target": 0}]
+    for card_id in (CardId.CINDER, CardId.THRASH):
+        assert is_random_step(_hand_with(card_id), _hand_with(card_id), play)

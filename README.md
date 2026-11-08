@@ -83,7 +83,7 @@ Add enchantments
  - [ ] Concurrent search caching
  - [x] Identical move culling
  - [ ] Better node traversal heuristics (i.e. powers/non-starter cards first,)
- - [ ] Benchmark harness. Create a fixed set of fights to play, use this to fine tune constants.
+ - [x] Benchmark harness. Create a fixed set of fights to play, use this to fine tune constants.
  - [ ] Improve sim speed
  - [ ] MCTS-Solver: proven win/loss propagation. If there is gaurenteed lethal, or a forced loss, mark node as solved and propagate. NOTE: gaurenteed wins overlook meta-scaling cards
  - [ ] Root parallelization

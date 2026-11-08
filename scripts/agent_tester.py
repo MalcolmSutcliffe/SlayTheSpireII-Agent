@@ -460,7 +460,7 @@ def main():
     parser.add_argument("--step", action="store_true", help="wait for Enter before every action")
     parser.add_argument("--no-verify", action="store_true", help="do not compare the sim with the game")
     parser.add_argument("--log", default=DEFAULT_LOG, help="where differences are written (JSON lines)")
-    parser.add_argument("--decision-log", default=DEFAULT_DECISION_LOG, help="where every decision is written (JSON lines): the move, sims, time and each move's visits and mean reward")
+    parser.add_argument("--decision-log", default=None, help="where every decision is written (JSON lines): the move, sims, time and each move's visits and mean reward")
     parser.add_argument("--capture-dir", default=None, help="save the state at the start of every turn here (benchmark material)")
     args = parser.parse_args()
     agent = MyAgent()

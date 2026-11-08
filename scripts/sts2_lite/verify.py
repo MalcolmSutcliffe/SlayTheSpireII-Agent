@@ -15,7 +15,10 @@ if TYPE_CHECKING:
 # cards whose result depends on something the bridge hides (the draw order) or on the RNG: what they
 # generate or play cannot be predicted, so their mismatches are tagged rather than trusted
 RANDOM_CARDS = frozenset({CardId.INFERNAL_BLADE, CardId.STOKE, CardId.HAVOC, CardId.SEEKER_STRIKE, CardId.JACKPOT, CardId.JACK_OF_ALL_TRADES,
-                          CardId.CATASTROPHE, CardId.BEAT_DOWN, CardId.ANOINTED, CardId.DISCOVERY, CardId.HIDDEN_GEM})
+                          CardId.CATASTROPHE, CardId.BEAT_DOWN, CardId.ANOINTED, CardId.DISCOVERY, CardId.HIDDEN_GEM,
+                          CardId.CINDER, CardId.THRASH, CardId.METAMORPHOSIS})       # Cinder / Thrash exhaust a random card
+# random only when not upgraded: the upgrade lets the player choose the card to exhaust
+RANDOM_UNLESS_UPGRADED = frozenset({CardId.TRUE_GRIT})
 
 
 def _statuses(creature) -> dict[str, int]:
@@ -49,7 +52,8 @@ def is_random_step(before : CombatState, predicted : CombatState, actions : list
     for a in actions:
         if a["action"] == "play_card":
             card = before.player.hand[a["card_index"]] if a["card_index"] < len(before.player.hand) else None
-            if card is not None and (card.card_id in RANDOM_CARDS or (card.type == CardType.Attack and StatusId.CALAMITY in before.player.status)):
+            if card is not None and (card.card_id in RANDOM_CARDS or (card.card_id in RANDOM_UNLESS_UPGRADED and not card.is_upgraded)
+                                     or (card.type == CardType.Attack and StatusId.CALAMITY in before.player.status)):
                 return True
     return False
 
@@ -73,7 +77,9 @@ def _fresh_spawn_hp_is_random(pe, ae) -> bool:
     if spawn is None:
         return False
     low, high = min(spawn), max(spawn)
-    return all(e.current_hp == e.max_hp and low <= e.current_hp <= high for e in (pe, ae))
+    # the rolled max HP differs, the damage taken since the spawn (max - current) must not
+    # (a Wriggler hit by the rest of a Whirlwind on the turn it appeared)
+    return all(low <= e.max_hp <= high for e in (pe, ae)) and pe.max_hp - pe.current_hp == ae.max_hp - ae.current_hp
 
 def compare(predicted : CombatState, actual : CombatState, random_step : bool = False) -> list[str]:
     """Differences between the simulated state and the game's. With `random_step` only what no draw
