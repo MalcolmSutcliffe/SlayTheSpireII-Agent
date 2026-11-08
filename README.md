@@ -81,7 +81,7 @@ Add enchantments
  - [x] Transposition table
  - [x] Information preference (The agent should prioritize learning the outcome of random events e.g. draws, to perform subsequent moves with more information)
  - [x] Better outcome scoring 
- - [ ] Concurrent search caching
+ - [X] Concurrent search caching
  - [x] Identical move culling
  - [x] Benchmark harness. Create a fixed set of fights to play, use this to fine tune constants.
  - [ ] Improve sim speed

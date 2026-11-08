@@ -1,3 +1,5 @@
+import copy
+import json
 import math
 import time
 
@@ -98,6 +100,7 @@ class SearchConfig:
     early_exit : bool = True             # allows the sim to exit early
     prefer_info : bool = True            # among tied root moves, play the one whose outcome is not yet known (a draw) first
     rollout: RolloutPolicy = RolloutPolicy.RandomPlayblePEndTurn
+    reuse_tree : bool = True             # keep the part of the previous search the game actually went into (needs the same sts2_MCTS object)
 
 class sts2_Node:
     parent : sts2_Node
@@ -122,6 +125,7 @@ class sts2_DeterministicNode(sts2_Node):
     is_expanded : bool
     state : CombatState
     children : list[sts2_Node]
+    key : tuple | None = None      # state_key(state), kept when the node went through the transposition table
 
     def __init__(self, parent : sts2_Node, state: CombatState, action):
         super().__init__(parent, action)
@@ -160,10 +164,13 @@ class sts2_MCTS:
                                 config : SearchConfig = SearchConfig()
                                 ) -> tuple[dict, dict]:
         
-        self._table = {}
-        self._root_node = sts2_DeterministicNode(None, CombatState.deepcopy(combat_state), None)
-        self._expected_total_hp = self._calculate_expected_total_hp(combat_state)
-        self._starting_hp = combat_state.player.current_hp
+        reused = config.reuse_tree and self._reroot(combat_state)
+        if not reused:
+            self._table = {}
+            self._root_node = sts2_DeterministicNode(None, CombatState.deepcopy(combat_state), None)
+            self._expected_total_hp = self._calculate_expected_total_hp(combat_state)
+            self._starting_hp = combat_state.player.current_hp
+        inherited = self._root_node.visits
         self._num_sims = 0
         self._search_config = config
         self._start_time = time.perf_counter()
@@ -185,11 +192,89 @@ class sts2_MCTS:
             "children": [{"action": c.action, "visits": c.visits, "q": c.total_reward / c.visits} for c in self._root_node.children],
             "num_sims" : self._num_sims,
             "time_taken" : time.perf_counter() - self._start_time,
-            "exit_reason" : exit_reason
+            "exit_reason" : exit_reason,
+            "reused" : reused,
+            "inherited_visits" : inherited,       # visits the root already had from earlier searches
                 }
         best_child = self._pick_root_child()
         
         return best_child.action, stats
+
+    ### Tree reuse
+    ### The agent searches again after every action. The state it is given is one the last search already looked at (the node the
+    ### played move led to, or one of the sampled outcomes of a draw), so that node becomes the new root with everything below it.
+
+    def _find_node(self, key : tuple) -> sts2_Node | None:
+        """The node of the previous search whose state is `key`: the old root, one of its moves or sampled outcomes, or anything deeper."""
+        root = self._root_node
+        if state_key(root.state) == key:
+            return root
+        for child in root.children:
+            if child.is_chance_node:
+                for outcome in child.outcomes.values():
+                    if state_key(outcome.state) == key:
+                        return outcome
+            elif state_key(child.state) == key:
+                return child
+        return self._table.get(key)
+
+    def _reroot(self, observed : CombatState) -> bool:
+        """Makes the node for `observed` the root of the next search; False (nothing changed) when the last search never reached it.
+        The reward scale (`_starting_hp`, `_expected_total_hp`) stays that of the first search of the fight, as the inherited
+        rewards were rated with it."""
+        if self._root_node is None:
+            return False
+        match = self._find_node(state_key(observed))
+        if match is None:
+            return False
+        root = sts2_DeterministicNode(None, CombatState.deepcopy(observed), None)
+        root.visits, root.total_reward, root.total_reward_squared = match.visits, match.total_reward, match.total_reward_squared
+        root.is_terminal = match.is_terminal
+        expand_node(root)       # the moves in the observed state's own card positions: these are what the agent returns
+        if match.is_expanded:
+            # A move that leads to a fixed state is found by that state: a shared child keeps the action (card position) of the
+            # parent that created it, which is wrong for any other. A random move is a node of its own, so its action is right.
+            old_sim = CombatSimulator(match.state)
+            by_state = {(c.key or state_key(c.state)): c for c in match.children if not c.is_chance_node}
+            by_move = {_move_id(old_sim, c.action): c for c in match.children if c.is_chance_node}
+            new_sim = CombatSimulator(root.state)
+            for i, fresh in enumerate(root.children):
+                old = by_move.get(_move_id(new_sim, fresh.action)) if fresh.is_chance_node else by_state.get(state_key(fresh.state))
+                if old is not None:
+                    root.children[i] = self._carry_over(old, root, fresh.action)
+        self._root_node = root
+        self._table = self._adopt(root)
+        return True
+
+    def _carry_over(self, old : sts2_Node, root : sts2_DeterministicNode, action : dict) -> sts2_Node:
+        """A copy of a move of the matched node, with the action indexed for the observed state, which is root's.
+        (A root child is never shared, as the returned action comes from it.)"""
+        node = copy.copy(old)
+        node.parent, node.action = root, action
+        if node.is_chance_node:
+            node.pre_state = root.state
+            node.outcomes, node.outcome_counts = dict(old.outcomes), dict(old.outcome_counts)
+        else:
+            node.children = list(old.children)
+        return node
+
+    def _adopt(self, root : sts2_DeterministicNode) -> dict:
+        """Points every node below `root` at a parent inside the kept tree (so the old tree can be freed) and rebuilds the
+        transposition table from it."""
+        table, seen, stack = {}, {id(root)}, [root]
+        while stack:
+            node = stack.pop()
+            for child in (node.outcomes.values() if node.is_chance_node else node.children):
+                if id(child) in seen:
+                    continue
+                seen.add(id(child))
+                child.parent = node
+                if not child.is_chance_node and not node.is_chance_node and node is not root:
+                    if child.key is None:
+                        child.key = state_key(child.state)
+                    table.setdefault(child.key, child)
+                stack.append(child)
+        return table
 
     def _pick_root_child(self) -> sts2_Node:
         """The most visited move; with prefer_info, a tied move that reveals information (a draw or random effect) goes first.
@@ -423,7 +508,9 @@ def expand_node(node : sts2_Node, table : dict | None = None):
             new_child.is_terminal = c_a.is_over
             # same state reached by another order of plays: share the node (the root's children keep their own action)
             if table is not None and node.parent is not None:
-                new_child = table.setdefault(state_key(new_child.state), new_child)
+                key = state_key(new_child.state)
+                new_child = table.setdefault(key, new_child)
+                new_child.key = key
         if not any(new_child is c for c in node.children):
             node.children.append(new_child)
 
@@ -466,6 +553,11 @@ def outcome_key(state):
     n = p.known_top
     known = tuple((c.card_id.value, c.is_upgraded) for c in p.draw_pile[len(p.draw_pile) - n:]) if n else ()
     return ids(p.hand), ids(p.draw_pile), known, tuple((e.enemy_id, e.move_id) for e in state.enemies)
+
+def _move_id(c : CombatSimulator, action : dict) -> tuple:
+    """Identifies a move across two states that differ only in card order (the indices in `action` do not carry over)."""
+    key = _action_key(c, action)
+    return key if key != (id(action),) else ("action", json.dumps(action, sort_keys=True))
 
 def cull_identical_actions(c : CombatSimulator, actions : list[dict]) -> list[dict]:
     seen = set()

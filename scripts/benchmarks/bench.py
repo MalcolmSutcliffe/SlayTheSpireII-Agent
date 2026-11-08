@@ -228,6 +228,7 @@ def play_fight(start: CombatState, config: SearchConfig, world_seed: int, search
     start_hp, start_turn = state.player.current_hp, state.turn_number
     decisions = sims = 0
     seconds = 0.0
+    searcher = sts2_MCTS()                                 # one per fight: with config.reuse_tree it carries the tree from move to move
     while not sim.is_over and sim.combat_state.turn_number < start_turn + turn_cap:
         actions = sim.get_available_actions()
         if not actions:
@@ -236,7 +237,7 @@ def play_fight(start: CombatState, config: SearchConfig, world_seed: int, search
             action = actions[0]
         else:
             rng.setstate(search)
-            action, stats = sts2_MCTS().monte_carlo_tree_search(sim.combat_state, config)
+            action, stats = searcher.monte_carlo_tree_search(sim.combat_state, config)
             search = rng.getstate()
             decisions += 1
             sims += stats["num_sims"]

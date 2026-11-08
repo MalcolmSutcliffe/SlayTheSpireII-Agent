@@ -20,9 +20,10 @@ class MyAgent(BaseAgent):
 
     def __init__(self):
         self.name = "MCTS combat agent"
+        self._mcts = sts2_MCTS()        # kept between calls: the next search reuses the part of this tree the game went into
 
     def get_action(self, combat_state : CombatState, time_budget):
-        mcts = sts2_MCTS()
+        mcts = self._mcts
         search_config = SearchConfig(time_budget=time_budget)
         c = CombatSimulator(combat_state)
         actions = c.get_available_actions()
