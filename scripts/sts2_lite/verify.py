@@ -3,7 +3,10 @@ from __future__ import annotations
 from collections import Counter
 from typing import TYPE_CHECKING
 
+import re
+
 from sts2_lite.card import CardId, CardType
+from sts2_lite.enemy_moves import SPAWN_HP
 from sts2_lite.status import StatusId
 
 if TYPE_CHECKING:
@@ -64,6 +67,14 @@ def _dict_diff(name : str, expected : dict, actual : dict) -> list[str]:
             out.append(f"{name} {key}: sim {expected.get(key, 0)}, game {actual.get(key, 0)}")
     return out
 
+def _fresh_spawn_hp_is_random(pe, ae) -> bool:
+    """A monster that has just appeared with unhurt, in-range HP (Wriggler 17-21): the game rolled it, the sim sampled its own."""
+    spawn = SPAWN_HP.get(re.sub(r"_\d+$", "", str(ae.enemy_id)))
+    if spawn is None:
+        return False
+    low, high = min(spawn), max(spawn)
+    return all(e.current_hp == e.max_hp and low <= e.current_hp <= high for e in (pe, ae))
+
 def compare(predicted : CombatState, actual : CombatState, random_step : bool = False) -> list[str]:
     """Differences between the simulated state and the game's. With `random_step` only what no draw
     or shuffle can change is checked as exact: the cards the player owns in total and the exhaust pile."""
@@ -80,7 +91,7 @@ def compare(predicted : CombatState, actual : CombatState, random_step : bool = 
         diffs.append(f"enemy count: sim {len(predicted.enemies)}, game {len(actual.enemies)}")
     for i, (pe, ae) in enumerate(zip(predicted.enemies, actual.enemies)):
         label = f"enemy {i} ({ae.enemy_id})"
-        if pe.current_hp != ae.current_hp:
+        if pe.current_hp != ae.current_hp and not _fresh_spawn_hp_is_random(pe, ae):
             diffs.append(f"{label} hp: sim {pe.current_hp}, game {ae.current_hp}")
         if pe.block != ae.block:
             diffs.append(f"{label} block: sim {pe.block}, game {ae.block}")

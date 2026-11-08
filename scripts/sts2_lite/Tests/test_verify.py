@@ -65,3 +65,27 @@ def test_end_turn_is_a_random_step_and_a_plain_play_is_not():
 
 def test_snapshot_is_plain_data():
     json.dumps(snapshot(load()))
+
+
+# ---------------------------------------------------------------- randomly rolled HP of a fresh spawn
+def _as_wriggler(cs, hp, max_hp):
+    enemy = cs.enemies[0]
+    enemy.enemy_id, enemy.current_hp, enemy.max_hp = "WRIGGLER_2", hp, max_hp
+    return cs
+
+def test_a_fresh_wrigglers_rolled_hp_is_not_a_difference():
+    sim, game = _as_wriggler(load(), 19, 19), _as_wriggler(load(), 21, 21)
+    assert not any("hp" in d and "enemy" in d for d in compare(sim, game))
+
+def test_a_hurt_wrigglers_hp_is_still_compared():
+    sim, game = _as_wriggler(load(), 15, 19), _as_wriggler(load(), 16, 21)
+    assert any("enemy 0 (WRIGGLER_2) hp: sim 15, game 16" in d for d in compare(sim, game))
+
+def test_a_wriggler_outside_the_spawn_range_is_still_compared():
+    sim, game = _as_wriggler(load(), 19, 19), _as_wriggler(load(), 30, 30)
+    assert any("hp" in d and "WRIGGLER_2" in d for d in compare(sim, game))
+
+def test_other_enemies_hp_is_always_compared():
+    sim, game = load(), load()
+    game.enemies[0].current_hp = sim.enemies[0].current_hp - 2
+    assert any("enemy 0" in d and "hp" in d for d in compare(sim, game))

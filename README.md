@@ -82,6 +82,7 @@ Add enchantments
  - [x] Better outcome scoring 
  - [ ] Concurrent search caching
  - [x] Identical move culling
+ - [ ] Hand permutation irrelevence
  - [ ] Better node traversal heuristics (i.e. powers/non-starter cards first,)
  - [ ] Gimme move culling (i.e if fight ends with one card play dont waste time searching deep : consider meta-scaling)
  - [ ] Benchmark harness. Create a fixed set of fights to play, use this to fine tune constants.

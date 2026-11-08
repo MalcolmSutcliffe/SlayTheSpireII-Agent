@@ -60,6 +60,10 @@ def test_kind_of_classifies_states(tester):
     assert tester.kind_of({**play, "is_play_phase": False}) == "busy"
     assert tester.kind_of({**play, "enemies": []}) == "busy"        # between a kill and the spawns it triggers
     assert tester.kind_of({**play, "enemies": [{"hp": 5}]}) == "play"
+    torn_down = {**play, "player": {k: v for k, v in play["player"].items() if k != "max_hp"}}
+    assert tester.kind_of(torn_down) == "busy"          # the fight is ending: the player's data is incomplete
+    assert tester.kind_of({**play, "player": {}}) == "busy"
+    assert tester.kind_of({k: v for k, v in play.items() if k != "player"}) == "busy"
     assert tester.kind_of({"type": "decision", "decision": "map_select"}) == "away"
     assert tester.kind_of({"type": "decision", "decision": "hand_select"}) == "pick"
     assert tester.kind_of({"type": "decision", "decision": "card_select", "screen_type": "NCombatPileCardSelectScreen"}) == "pick"
@@ -307,3 +311,61 @@ def test_a_new_fight_captures_its_first_round_again(tester, monkeypatch, tmp_pat
     monkeypatch.setattr(tester, "act", game.act)
     tester.run_agent(FirstActionAgent(), log_path=str(tmp_path / "log.jsonl"), capture_dir=str(out))
     assert len(list(out.glob("*.json"))) == 2
+
+
+def test_describe_action_names_cards_targets_and_picks(tester):
+    from sts2_lite.combat import CombatState
+    state = CombatState.from_dict(capture())
+    hand = state.player.hand
+    assert tester.describe_action({"action": "end_turn"}, state) == "end_turn"
+    plain = tester.describe_action({"action": "play_card", "card_index": 0, "target": 0}, state)
+    assert plain == hand[0].card_id.name + ("+" if hand[0].is_upgraded else "")
+    assert tester.describe_action({"action": "play_card", "card_index": 0, "target": 0, "target_name": "E_0"}, state).endswith(" -> E_0")
+    assert tester.describe_action({"action": "choose_card", "card_id": "HEADBUTT", "is_upgraded": True, "pile": "discard"}, state) == "pick HEADBUTT+ (discard)"
+
+def test_every_decision_is_logged_with_the_situation_and_the_move(tester, monkeypatch, tmp_path):
+    game = FakeGame([capture(), capture()])
+    monkeypatch.setattr(tester, "get_state", game.get_state)
+    monkeypatch.setattr(tester, "act", game.act)
+    path = tmp_path / "decisions.jsonl"
+    tester.run_agent(FirstActionAgent(), log_path=str(tmp_path / "log.jsonl"), decision_log=str(path))
+    lines = [json.loads(l) for l in path.read_text().splitlines()]
+    assert lines and lines[0]["n"] == 1
+    first = lines[0]
+    assert first["hand"] and first["enemies"] and first["chosen"]
+    assert first["hp"] == capture()["player"]["hp"] and first["energy"] == capture()["energy"]
+    assert first["seconds"] >= 0
+    assert first["sims"] is None and first["moves"] is None          # this agent runs no search
+
+def test_nothing_is_logged_unless_asked(tester, monkeypatch, tmp_path):
+    run(tester, monkeypatch, [capture()], tmp_path)
+    assert not (tmp_path / "decisions.jsonl").exists()
+
+def test_the_search_behind_a_decision_is_logged(tester, monkeypatch, tmp_path):
+    """The agent's MCTS is wrapped to remember its searcher: sims, why it stopped and every root move's visits and mean."""
+    class Child:
+        def __init__(self, action, visits, total):
+            self.action, self.visits, self.total_reward = action, visits, total
+    class Root:
+        children = [Child({"action": "end_turn"}, 10, -2.0), Child({"action": "play_card", "card_index": 0, "target": 0}, 90, 45.0)]
+    class FakeMCTS:
+        _root_node, _num_sims = None, 0
+        def monte_carlo_tree_search(self, state, budget=0):
+            self._root_node, self._num_sims = Root, 100
+            return {"action": "play_card", "card_index": 0, "target": 0}
+    module = types.ModuleType("agents.MCTS")
+    module.sts2_MCTS, module.DEFAULT_MAX_SIMS = FakeMCTS, 3000
+    monkeypatch.setitem(sys.modules, "agents.MCTS", module)
+    class SearchAgent:
+        def get_action(self, combat_state, budget=0):
+            return FakeMCTS().monte_carlo_tree_search(combat_state, budget)
+    game = FakeGame([capture(), capture()])
+    monkeypatch.setattr(tester, "get_state", game.get_state)
+    monkeypatch.setattr(tester, "act", game.act)
+    path = tmp_path / "decisions.jsonl"
+    tester.run_agent(SearchAgent(), log_path=str(tmp_path / "log.jsonl"), decision_log=str(path))
+    first = json.loads(path.read_text().splitlines()[0])
+    assert first["sims"] == 100 and first["stopped_by"] == "confidence"       # far below the time budget and the cap
+    assert [m["visits"] for m in first["moves"]] == [10, 90]
+    assert first["moves"][0]["move"] == "end_turn" and first["moves"][1]["mean"] == 0.5
+    assert first["chosen"] == first["moves"][1]["move"]

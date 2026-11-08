@@ -160,8 +160,8 @@ class RelicInstance:
         counter = relic.get("counter")
         if relic_id is RelicId.BRILLIANT_SCARF and counter is None:
             counter = BRILLIANT_SCARF_CARDS         # ShowCounter is false once 5 cards are played
-        if counter is not None and counter == HAPPY_FLOWER_TURNS.get(relic_id):
-            counter = 0         # Happy Flower shows its full count while the relic flashes, which is a reset to 0
+        if counter is not None and counter == FLASHES_AT_FULL_COUNT.get(relic_id):
+            counter = 0         # these relics show their full count while they flash, which is a reset to 0 (Letter Opener: until the next card is played)
         return cls(relic_id, counter, used, relic.get("types_played") or 0)
 
     @classmethod
@@ -787,6 +787,7 @@ def _turn(combat) -> int:
 CANDELABRA_TURN, CANDELABRA_ENERGY = 2, 2
 CHANDELIER_TURN, CHANDELIER_ENERGY = 3, 3
 HAPPY_FLOWER_TURNS = {RelicId.HAPPY_FLOWER : 3, RelicId.FAKE_HAPPY_FLOWER : 5}
+FLASHES_AT_FULL_COUNT = {**HAPPY_FLOWER_TURNS, RelicId.LETTER_OPENER : LETTER_OPENER_EVERY}
 HORN_CLEAT_TURN, HORN_CLEAT_BLOCK = 2, 14
 CAPTAINS_WHEEL_TURN, CAPTAINS_WHEEL_BLOCK = 3, 18
 SPARKLING_ROUGE_TURN = 3

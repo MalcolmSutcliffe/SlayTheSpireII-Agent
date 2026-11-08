@@ -1,0 +1,1026 @@
+{
+ "type": "decision",
+ "decision": "combat_play",
+ "room_type": "boss",
+ "context": {
+  "act": 1,
+  "floor": 17,
+  "ascension": 0
+ },
+ "run": {
+  "act": 1,
+  "floor": 17,
+  "ascension": 0
+ },
+ "round": 5,
+ "turn": "player",
+ "is_play_phase": null,
+ "energy": 0,
+ "max_energy": 3,
+ "hand": [
+  {
+   "index": 0,
+   "id": "DEFEND_IRONCLAD",
+   "name": "Defend",
+   "type": "Skill",
+   "cost": "1",
+   "star_cost": null,
+   "description": "Gain 5 Block.",
+   "target_type": "Self",
+   "can_play": false,
+   "unplayable_reason": "EnergyCostTooHigh",
+   "is_upgraded": false,
+   "enchantment": null,
+   "keywords": [
+    {
+     "name": "Block",
+     "description": "Until next turn, prevents damage."
+    }
+   ]
+  },
+  {
+   "index": 1,
+   "id": "PERFECTED_STRIKE",
+   "name": "Perfected Strike+",
+   "type": "Attack",
+   "cost": "2",
+   "star_cost": null,
+   "description": "Deal 27 damage. Deals 3 additional damage for ALL your cards containing \u201cStrike\u201d.",
+   "target_type": "AnyEnemy",
+   "can_play": false,
+   "unplayable_reason": "EnergyCostTooHigh",
+   "is_upgraded": true,
+   "enchantment": null,
+   "keywords": []
+  },
+  {
+   "index": 2,
+   "id": "STRIKE_IRONCLAD",
+   "name": "Strike",
+   "type": "Attack",
+   "cost": "1",
+   "star_cost": null,
+   "description": "Deal 18 damage.",
+   "target_type": "AnyEnemy",
+   "can_play": false,
+   "unplayable_reason": "EnergyCostTooHigh",
+   "is_upgraded": false,
+   "enchantment": null,
+   "keywords": []
+  },
+  {
+   "index": 3,
+   "id": "GIANT_ROCK",
+   "name": "Giant Rock",
+   "type": "Attack",
+   "cost": "1",
+   "star_cost": null,
+   "description": "Deal 28 damage.",
+   "target_type": "AnyEnemy",
+   "can_play": false,
+   "unplayable_reason": "EnergyCostTooHigh",
+   "is_upgraded": false,
+   "enchantment": null,
+   "keywords": []
+  },
+  {
+   "index": 4,
+   "id": "DEFEND_IRONCLAD",
+   "name": "Defend+",
+   "type": "Skill",
+   "cost": "1",
+   "star_cost": null,
+   "description": "Gain 8 Block.",
+   "target_type": "Self",
+   "can_play": false,
+   "unplayable_reason": "EnergyCostTooHigh",
+   "is_upgraded": true,
+   "enchantment": null,
+   "keywords": [
+    {
+     "name": "Block",
+     "description": "Until next turn, prevents damage."
+    }
+   ]
+  }
+ ],
+ "enemies": [
+  {
+   "entity_id": "KIN_PRIEST_0",
+   "combat_id": 3,
+   "name": "Kin Priest",
+   "hp": 120,
+   "max_hp": 190,
+   "block": 0,
+   "status": [
+    {
+     "id": "STRENGTH_POWER",
+     "name": "Strength",
+     "amount": 2,
+     "type": "Buff",
+     "description": "Increases attack damage by 2.",
+     "keywords": []
+    },
+    {
+     "id": "VULNERABLE_POWER",
+     "name": "Vulnerable",
+     "amount": 2,
+     "type": "Debuff",
+     "description": "Receive 50% more damage from Attacks for 2 turns.",
+     "keywords": []
+    }
+   ],
+   "intents": [
+    {
+     "type": "Attack",
+     "label": "10",
+     "title": "Aggressive",
+     "description": "This enemy intends to Attack for 10 damage."
+    },
+    {
+     "type": "Debuff",
+     "label": "",
+     "title": "Strategic",
+     "description": "This enemy intends to apply a Debuff to you."
+    }
+   ]
+  }
+ ],
+ "player": {
+  "character": "The Ironclad",
+  "hp": 11,
+  "max_hp": 71,
+  "block": 8,
+  "energy": 0,
+  "max_energy": 3,
+  "hand": [
+   {
+    "index": 0,
+    "id": "DEFEND_IRONCLAD",
+    "name": "Defend",
+    "type": "Skill",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Gain 5 Block.",
+    "target_type": "Self",
+    "can_play": false,
+    "unplayable_reason": "EnergyCostTooHigh",
+    "is_upgraded": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Block",
+      "description": "Until next turn, prevents damage."
+     }
+    ]
+   },
+   {
+    "index": 1,
+    "id": "PERFECTED_STRIKE",
+    "name": "Perfected Strike+",
+    "type": "Attack",
+    "cost": "2",
+    "star_cost": null,
+    "description": "Deal 27 damage. Deals 3 additional damage for ALL your cards containing \u201cStrike\u201d.",
+    "target_type": "AnyEnemy",
+    "can_play": false,
+    "unplayable_reason": "EnergyCostTooHigh",
+    "is_upgraded": true,
+    "enchantment": null,
+    "keywords": []
+   },
+   {
+    "index": 2,
+    "id": "STRIKE_IRONCLAD",
+    "name": "Strike",
+    "type": "Attack",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Deal 18 damage.",
+    "target_type": "AnyEnemy",
+    "can_play": false,
+    "unplayable_reason": "EnergyCostTooHigh",
+    "is_upgraded": false,
+    "enchantment": null,
+    "keywords": []
+   },
+   {
+    "index": 3,
+    "id": "GIANT_ROCK",
+    "name": "Giant Rock",
+    "type": "Attack",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Deal 28 damage.",
+    "target_type": "AnyEnemy",
+    "can_play": false,
+    "unplayable_reason": "EnergyCostTooHigh",
+    "is_upgraded": false,
+    "enchantment": null,
+    "keywords": []
+   },
+   {
+    "index": 4,
+    "id": "DEFEND_IRONCLAD",
+    "name": "Defend+",
+    "type": "Skill",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Gain 8 Block.",
+    "target_type": "Self",
+    "can_play": false,
+    "unplayable_reason": "EnergyCostTooHigh",
+    "is_upgraded": true,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Block",
+      "description": "Until next turn, prevents damage."
+     }
+    ]
+   }
+  ],
+  "draw_pile_count": 9,
+  "discard_pile_count": 1,
+  "exhaust_pile_count": 0,
+  "draw_pile": [
+   {
+    "index": 0,
+    "id": "GIANT_ROCK",
+    "name": "Giant Rock",
+    "type": "Attack",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Deal 16 damage.",
+    "target_type": "AnyEnemy",
+    "can_play": false,
+    "unplayable_reason": "EnergyCostTooHigh",
+    "is_upgraded": false,
+    "enchantment": null,
+    "keywords": []
+   },
+   {
+    "index": 1,
+    "id": "STRIKE_IRONCLAD",
+    "name": "Strike",
+    "type": "Attack",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Deal 15 damage.",
+    "target_type": "AnyEnemy",
+    "can_play": false,
+    "unplayable_reason": "EnergyCostTooHigh",
+    "is_upgraded": false,
+    "enchantment": null,
+    "keywords": []
+   },
+   {
+    "index": 2,
+    "id": "PRIMAL_FORCE",
+    "name": "Primal Force",
+    "type": "Skill",
+    "cost": "0",
+    "star_cost": null,
+    "description": "Transform all Attacks in your Hand into Giant Rock.",
+    "target_type": "Self",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Giant Rock",
+      "description": "Deal 16 damage."
+     }
+    ]
+   },
+   {
+    "index": 3,
+    "id": "DEFEND_IRONCLAD",
+    "name": "Defend",
+    "type": "Skill",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Gain 5 Block.",
+    "target_type": "Self",
+    "can_play": false,
+    "unplayable_reason": "EnergyCostTooHigh",
+    "is_upgraded": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Block",
+      "description": "Until next turn, prevents damage."
+     }
+    ]
+   },
+   {
+    "index": 4,
+    "id": "GIANT_ROCK",
+    "name": "Giant Rock",
+    "type": "Attack",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Deal 16 damage.",
+    "target_type": "AnyEnemy",
+    "can_play": false,
+    "unplayable_reason": "EnergyCostTooHigh",
+    "is_upgraded": false,
+    "enchantment": null,
+    "keywords": []
+   },
+   {
+    "index": 5,
+    "id": "DEFEND_IRONCLAD",
+    "name": "Defend",
+    "type": "Skill",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Gain 5 Block.",
+    "target_type": "Self",
+    "can_play": false,
+    "unplayable_reason": "EnergyCostTooHigh",
+    "is_upgraded": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Block",
+      "description": "Until next turn, prevents damage."
+     }
+    ]
+   },
+   {
+    "index": 6,
+    "id": "GIANT_ROCK",
+    "name": "Giant Rock",
+    "type": "Attack",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Deal 16 damage.",
+    "target_type": "AnyEnemy",
+    "can_play": false,
+    "unplayable_reason": "EnergyCostTooHigh",
+    "is_upgraded": false,
+    "enchantment": null,
+    "keywords": []
+   },
+   {
+    "index": 7,
+    "id": "EXPECT_A_FIGHT",
+    "name": "Expect a Fight+",
+    "type": "Skill",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Gain [ironclad_energy_icon.png] for each Attack in your Hand. You cannot gain additional [ironclad_energy_icon.png] this turn. (Gain [ironclad_energy_icon.png][ironclad_energy_icon.png][ironclad_energy_icon.png])",
+    "target_type": "Self",
+    "can_play": false,
+    "unplayable_reason": "EnergyCostTooHigh",
+    "is_upgraded": true,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Energy",
+      "description": "Energy is used to play cards from your Hand."
+     }
+    ]
+   },
+   {
+    "index": 8,
+    "id": "BASH",
+    "name": "Bash",
+    "type": "Attack",
+    "cost": "2",
+    "star_cost": null,
+    "description": "Deal 20 damage. Apply 2 Vulnerable.",
+    "target_type": "AnyEnemy",
+    "can_play": false,
+    "unplayable_reason": "EnergyCostTooHigh",
+    "is_upgraded": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Vulnerable",
+      "description": "Vulnerable creatures take 50% more damage from Attacks."
+     }
+    ]
+   }
+  ],
+  "discard_pile": [
+   {
+    "index": 0,
+    "id": "BATTLE_TRANCE",
+    "name": "Battle Trance+",
+    "type": "Skill",
+    "cost": "0",
+    "star_cost": null,
+    "description": "Draw 4 cards. You cannot draw additional cards this turn.",
+    "target_type": "Self",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": true,
+    "enchantment": null,
+    "keywords": []
+   }
+  ],
+  "exhaust_pile": [],
+  "gold": 280,
+  "status": [
+   {
+    "id": "DEMON_FORM_POWER",
+    "name": "Demon Form",
+    "amount": 3,
+    "type": "Buff",
+    "description": "At the start of your turn, gain 3 Strength.",
+    "keywords": [
+     {
+      "name": "Strength",
+      "description": "Strength adds additional damage to Attacks."
+     }
+    ]
+   },
+   {
+    "id": "STRENGTH_POWER",
+    "name": "Strength",
+    "amount": 12,
+    "type": "Buff",
+    "description": "Increases attack damage by 12.",
+    "keywords": []
+   },
+   {
+    "id": "NO_DRAW_POWER",
+    "name": "No Draw",
+    "amount": 1,
+    "type": "Debuff",
+    "description": "You may not draw any more cards this turn.",
+    "keywords": []
+   }
+  ],
+  "relics": [
+   {
+    "id": "BURNING_BLOOD",
+    "name": "Burning Blood",
+    "description": "At the end of combat, heal 6 HP.",
+    "counter": null,
+    "status": "Normal",
+    "keywords": []
+   },
+   {
+    "id": "BOOMING_CONCH",
+    "name": "Booming Conch",
+    "description": "At the start of Elite combats, draw 2 additional cards and gain [ironclad_energy_icon.png].",
+    "counter": null,
+    "status": "Normal",
+    "keywords": [
+     {
+      "name": "Energy",
+      "description": "Energy is used to play cards from your Hand."
+     }
+    ]
+   },
+   {
+    "id": "LANTERN",
+    "name": "Lantern",
+    "description": "Start each combat with an additional [ironclad_energy_icon.png].",
+    "counter": null,
+    "status": "Normal",
+    "keywords": [
+     {
+      "name": "Energy",
+      "description": "Energy is used to play cards from your Hand."
+     }
+    ]
+   },
+   {
+    "id": "BAG_OF_PREPARATION",
+    "name": "Bag of Preparation",
+    "description": "At the start of each combat, draw 2 additional cards.",
+    "counter": null,
+    "status": "Normal",
+    "keywords": []
+   },
+   {
+    "id": "LETTER_OPENER",
+    "name": "Letter Opener",
+    "description": "Every time you play 3 Skills in a single turn, deal 5 damage to ALL enemies.",
+    "counter": 3,
+    "status": "Normal",
+    "keywords": []
+   },
+   {
+    "id": "RIPPLE_BASIN",
+    "name": "Ripple Basin",
+    "description": "If you did not play any Attacks during your turn, gain 4 Block.",
+    "counter": null,
+    "status": "Normal",
+    "keywords": [
+     {
+      "name": "Block",
+      "description": "Until next turn, prevents damage."
+     }
+    ]
+   }
+  ],
+  "potions": [
+   {
+    "id": "REGEN_POTION",
+    "name": "Regen Potion",
+    "description": "Gain 5 Regen.",
+    "slot": 0,
+    "can_use_in_combat": true,
+    "target_type": "AnyPlayer",
+    "keywords": [
+     {
+      "name": "Regen",
+      "description": "Regen heals HP at the end of your turn. Each turn, Regen is reduced by 1."
+     }
+    ]
+   },
+   {
+    "id": "ATTACK_POTION",
+    "name": "Attack Potion",
+    "description": "Choose 1 of 3 random Attack cards to add into your Hand. It's free to play this turn.",
+    "slot": 1,
+    "can_use_in_combat": true,
+    "target_type": "Self",
+    "keywords": []
+   },
+   {
+    "id": "SHACKLING_POTION",
+    "name": "Shackling Potion",
+    "description": "ALL enemies lose 7 Strength this turn.",
+    "slot": 2,
+    "can_use_in_combat": true,
+    "target_type": "AllEnemies",
+    "keywords": [
+     {
+      "name": "Strength",
+      "description": "Strength adds additional damage to Attacks."
+     }
+    ]
+   }
+  ]
+ },
+ "draw_pile_count": 9,
+ "discard_pile_count": 1,
+ "exhaust_pile_count": 0,
+ "battle": {
+  "round": 5,
+  "turn": "player",
+  "player": {
+   "character": "The Ironclad",
+   "hp": 11,
+   "max_hp": 71,
+   "block": 8,
+   "energy": 0,
+   "max_energy": 3,
+   "hand": [
+    {
+     "index": 0,
+     "id": "DEFEND_IRONCLAD",
+     "name": "Defend",
+     "type": "Skill",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Gain 5 Block.",
+     "target_type": "Self",
+     "can_play": false,
+     "unplayable_reason": "EnergyCostTooHigh",
+     "is_upgraded": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Block",
+       "description": "Until next turn, prevents damage."
+      }
+     ]
+    },
+    {
+     "index": 1,
+     "id": "PERFECTED_STRIKE",
+     "name": "Perfected Strike+",
+     "type": "Attack",
+     "cost": "2",
+     "star_cost": null,
+     "description": "Deal 27 damage. Deals 3 additional damage for ALL your cards containing \u201cStrike\u201d.",
+     "target_type": "AnyEnemy",
+     "can_play": false,
+     "unplayable_reason": "EnergyCostTooHigh",
+     "is_upgraded": true,
+     "enchantment": null,
+     "keywords": []
+    },
+    {
+     "index": 2,
+     "id": "STRIKE_IRONCLAD",
+     "name": "Strike",
+     "type": "Attack",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Deal 18 damage.",
+     "target_type": "AnyEnemy",
+     "can_play": false,
+     "unplayable_reason": "EnergyCostTooHigh",
+     "is_upgraded": false,
+     "enchantment": null,
+     "keywords": []
+    },
+    {
+     "index": 3,
+     "id": "GIANT_ROCK",
+     "name": "Giant Rock",
+     "type": "Attack",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Deal 28 damage.",
+     "target_type": "AnyEnemy",
+     "can_play": false,
+     "unplayable_reason": "EnergyCostTooHigh",
+     "is_upgraded": false,
+     "enchantment": null,
+     "keywords": []
+    },
+    {
+     "index": 4,
+     "id": "DEFEND_IRONCLAD",
+     "name": "Defend+",
+     "type": "Skill",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Gain 8 Block.",
+     "target_type": "Self",
+     "can_play": false,
+     "unplayable_reason": "EnergyCostTooHigh",
+     "is_upgraded": true,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Block",
+       "description": "Until next turn, prevents damage."
+      }
+     ]
+    }
+   ],
+   "draw_pile_count": 9,
+   "discard_pile_count": 1,
+   "exhaust_pile_count": 0,
+   "draw_pile": [
+    {
+     "index": 0,
+     "id": "GIANT_ROCK",
+     "name": "Giant Rock",
+     "type": "Attack",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Deal 16 damage.",
+     "target_type": "AnyEnemy",
+     "can_play": false,
+     "unplayable_reason": "EnergyCostTooHigh",
+     "is_upgraded": false,
+     "enchantment": null,
+     "keywords": []
+    },
+    {
+     "index": 1,
+     "id": "STRIKE_IRONCLAD",
+     "name": "Strike",
+     "type": "Attack",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Deal 15 damage.",
+     "target_type": "AnyEnemy",
+     "can_play": false,
+     "unplayable_reason": "EnergyCostTooHigh",
+     "is_upgraded": false,
+     "enchantment": null,
+     "keywords": []
+    },
+    {
+     "index": 2,
+     "id": "PRIMAL_FORCE",
+     "name": "Primal Force",
+     "type": "Skill",
+     "cost": "0",
+     "star_cost": null,
+     "description": "Transform all Attacks in your Hand into Giant Rock.",
+     "target_type": "Self",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Giant Rock",
+       "description": "Deal 16 damage."
+      }
+     ]
+    },
+    {
+     "index": 3,
+     "id": "DEFEND_IRONCLAD",
+     "name": "Defend",
+     "type": "Skill",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Gain 5 Block.",
+     "target_type": "Self",
+     "can_play": false,
+     "unplayable_reason": "EnergyCostTooHigh",
+     "is_upgraded": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Block",
+       "description": "Until next turn, prevents damage."
+      }
+     ]
+    },
+    {
+     "index": 4,
+     "id": "GIANT_ROCK",
+     "name": "Giant Rock",
+     "type": "Attack",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Deal 16 damage.",
+     "target_type": "AnyEnemy",
+     "can_play": false,
+     "unplayable_reason": "EnergyCostTooHigh",
+     "is_upgraded": false,
+     "enchantment": null,
+     "keywords": []
+    },
+    {
+     "index": 5,
+     "id": "DEFEND_IRONCLAD",
+     "name": "Defend",
+     "type": "Skill",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Gain 5 Block.",
+     "target_type": "Self",
+     "can_play": false,
+     "unplayable_reason": "EnergyCostTooHigh",
+     "is_upgraded": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Block",
+       "description": "Until next turn, prevents damage."
+      }
+     ]
+    },
+    {
+     "index": 6,
+     "id": "GIANT_ROCK",
+     "name": "Giant Rock",
+     "type": "Attack",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Deal 16 damage.",
+     "target_type": "AnyEnemy",
+     "can_play": false,
+     "unplayable_reason": "EnergyCostTooHigh",
+     "is_upgraded": false,
+     "enchantment": null,
+     "keywords": []
+    },
+    {
+     "index": 7,
+     "id": "EXPECT_A_FIGHT",
+     "name": "Expect a Fight+",
+     "type": "Skill",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Gain [ironclad_energy_icon.png] for each Attack in your Hand. You cannot gain additional [ironclad_energy_icon.png] this turn. (Gain [ironclad_energy_icon.png][ironclad_energy_icon.png][ironclad_energy_icon.png])",
+     "target_type": "Self",
+     "can_play": false,
+     "unplayable_reason": "EnergyCostTooHigh",
+     "is_upgraded": true,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Energy",
+       "description": "Energy is used to play cards from your Hand."
+      }
+     ]
+    },
+    {
+     "index": 8,
+     "id": "BASH",
+     "name": "Bash",
+     "type": "Attack",
+     "cost": "2",
+     "star_cost": null,
+     "description": "Deal 20 damage. Apply 2 Vulnerable.",
+     "target_type": "AnyEnemy",
+     "can_play": false,
+     "unplayable_reason": "EnergyCostTooHigh",
+     "is_upgraded": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Vulnerable",
+       "description": "Vulnerable creatures take 50% more damage from Attacks."
+      }
+     ]
+    }
+   ],
+   "discard_pile": [
+    {
+     "index": 0,
+     "id": "BATTLE_TRANCE",
+     "name": "Battle Trance+",
+     "type": "Skill",
+     "cost": "0",
+     "star_cost": null,
+     "description": "Draw 4 cards. You cannot draw additional cards this turn.",
+     "target_type": "Self",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": true,
+     "enchantment": null,
+     "keywords": []
+    }
+   ],
+   "exhaust_pile": [],
+   "gold": 280,
+   "status": [
+    {
+     "id": "DEMON_FORM_POWER",
+     "name": "Demon Form",
+     "amount": 3,
+     "type": "Buff",
+     "description": "At the start of your turn, gain 3 Strength.",
+     "keywords": [
+      {
+       "name": "Strength",
+       "description": "Strength adds additional damage to Attacks."
+      }
+     ]
+    },
+    {
+     "id": "STRENGTH_POWER",
+     "name": "Strength",
+     "amount": 12,
+     "type": "Buff",
+     "description": "Increases attack damage by 12.",
+     "keywords": []
+    },
+    {
+     "id": "NO_DRAW_POWER",
+     "name": "No Draw",
+     "amount": 1,
+     "type": "Debuff",
+     "description": "You may not draw any more cards this turn.",
+     "keywords": []
+    }
+   ],
+   "relics": [
+    {
+     "id": "BURNING_BLOOD",
+     "name": "Burning Blood",
+     "description": "At the end of combat, heal 6 HP.",
+     "counter": null,
+     "status": "Normal",
+     "keywords": []
+    },
+    {
+     "id": "BOOMING_CONCH",
+     "name": "Booming Conch",
+     "description": "At the start of Elite combats, draw 2 additional cards and gain [ironclad_energy_icon.png].",
+     "counter": null,
+     "status": "Normal",
+     "keywords": [
+      {
+       "name": "Energy",
+       "description": "Energy is used to play cards from your Hand."
+      }
+     ]
+    },
+    {
+     "id": "LANTERN",
+     "name": "Lantern",
+     "description": "Start each combat with an additional [ironclad_energy_icon.png].",
+     "counter": null,
+     "status": "Normal",
+     "keywords": [
+      {
+       "name": "Energy",
+       "description": "Energy is used to play cards from your Hand."
+      }
+     ]
+    },
+    {
+     "id": "BAG_OF_PREPARATION",
+     "name": "Bag of Preparation",
+     "description": "At the start of each combat, draw 2 additional cards.",
+     "counter": null,
+     "status": "Normal",
+     "keywords": []
+    },
+    {
+     "id": "LETTER_OPENER",
+     "name": "Letter Opener",
+     "description": "Every time you play 3 Skills in a single turn, deal 5 damage to ALL enemies.",
+     "counter": 3,
+     "status": "Normal",
+     "keywords": []
+    },
+    {
+     "id": "RIPPLE_BASIN",
+     "name": "Ripple Basin",
+     "description": "If you did not play any Attacks during your turn, gain 4 Block.",
+     "counter": null,
+     "status": "Normal",
+     "keywords": [
+      {
+       "name": "Block",
+       "description": "Until next turn, prevents damage."
+      }
+     ]
+    }
+   ],
+   "potions": [
+    {
+     "id": "REGEN_POTION",
+     "name": "Regen Potion",
+     "description": "Gain 5 Regen.",
+     "slot": 0,
+     "can_use_in_combat": true,
+     "target_type": "AnyPlayer",
+     "keywords": [
+      {
+       "name": "Regen",
+       "description": "Regen heals HP at the end of your turn. Each turn, Regen is reduced by 1."
+      }
+     ]
+    },
+    {
+     "id": "ATTACK_POTION",
+     "name": "Attack Potion",
+     "description": "Choose 1 of 3 random Attack cards to add into your Hand. It's free to play this turn.",
+     "slot": 1,
+     "can_use_in_combat": true,
+     "target_type": "Self",
+     "keywords": []
+    },
+    {
+     "id": "SHACKLING_POTION",
+     "name": "Shackling Potion",
+     "description": "ALL enemies lose 7 Strength this turn.",
+     "slot": 2,
+     "can_use_in_combat": true,
+     "target_type": "AllEnemies",
+     "keywords": [
+      {
+       "name": "Strength",
+       "description": "Strength adds additional damage to Attacks."
+      }
+     ]
+    }
+   ]
+  },
+  "enemies": [
+   {
+    "entity_id": "KIN_PRIEST_0",
+    "combat_id": 3,
+    "name": "Kin Priest",
+    "hp": 120,
+    "max_hp": 190,
+    "block": 0,
+    "status": [
+     {
+      "id": "STRENGTH_POWER",
+      "name": "Strength",
+      "amount": 2,
+      "type": "Buff",
+      "description": "Increases attack damage by 2.",
+      "keywords": []
+     },
+     {
+      "id": "VULNERABLE_POWER",
+      "name": "Vulnerable",
+      "amount": 2,
+      "type": "Debuff",
+      "description": "Receive 50% more damage from Attacks for 2 turns.",
+      "keywords": []
+     }
+    ],
+    "intents": [
+     {
+      "type": "Attack",
+      "label": "10",
+      "title": "Aggressive",
+      "description": "This enemy intends to Attack for 10 damage."
+     },
+     {
+      "type": "Debuff",
+      "label": "",
+      "title": "Strategic",
+      "description": "This enemy intends to apply a Debuff to you."
+     }
+    ]
+   }
+  ]
+ }
+}
