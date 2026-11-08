@@ -79,7 +79,7 @@ Add enchantments
  - [x] Optimize outcome scoring function
  - [x] Confidence exit (If the agent is confident enough in a move, finish the search)
  - [x] Transposition table
- - [ ] Information preference (The agent should prioritize learning the outcome of random events e.g. draws, to perform subsequent moves with more information)
+ - [x] Information preference (The agent should prioritize learning the outcome of random events e.g. draws, to perform subsequent moves with more information)
  - [x] Better outcome scoring 
  - [ ] Concurrent search caching
  - [x] Identical move culling
