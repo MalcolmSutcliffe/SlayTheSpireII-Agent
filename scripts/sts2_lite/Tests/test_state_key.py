@@ -182,7 +182,7 @@ KEYED_OR_IGNORED = {
               "moves", "move_id", "move_streak", "used_moves", "has_been_attacked_this_turn", "lost_hp_this_turn", "hp_loss_events",
               "hp_lost_log", "damage_taken", "after_stun", "off_balance", "counter"},
     "CombatState": {"player", "enemies", "energy", "max_energy", "turn_number", "extra_turns", "ascension", "cards_played", "revivals",
-                    "pending_choice", "won", "dormant"},
+                    "pending_choice", "won", "dormant", "continuations"},
     "RelicInstance": {"relic_id", "counter", "used", "value", "triggering"},
 }
 

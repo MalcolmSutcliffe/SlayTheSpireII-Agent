@@ -64,6 +64,8 @@ class CombatState:
         self.enemies = []
         self.cards_played = 0   # this player turn
         self.revivals = []      # (monster, slot) killed enemies that return after the enemy turn
+        self.continuations = []     # what a card still has to do once its card choice is answered, in order: ("finish", card, ...) its after-play step,
+                                    # ("play", cards) the cards Cascade/Mayhem took off the draw pile
         self.dormant = []       # Decimillipede segments that were killed and will reattach: out of the fight, not dead
         self.pending_choice = None
         self.won = False         # victory heals applied
@@ -119,6 +121,8 @@ class CombatState:
                 kind, amount = "exhaust_any", int(match.group(1)) - len(state.get("selected_cards") or [])
             elif "on top of your Draw Pile" in prompt:      # Thinking Ahead
                 kind = "to_draw_pile"
+            elif "card to Exhaust" in prompt:       # Brand, Burning Pact, True Grit+: the prompt is the same, so the pick is taken without Burning Pact's draw
+                kind = "exhaust"
             elif "to Transform" in prompt:      # Entropy: as many cards as it has stacks
                 kind, amount = "transform", max(1, self.player.status_amount(StatusId.ENTROPY) - len(state.get("selected_cards") or []))
         if kind is None:
@@ -323,6 +327,7 @@ class CombatState:
         new_cs.ascension = combat_state.ascension
         new_cs.revivals = list(combat_state.revivals)
         new_cs.dormant = [Enemy.deepcopy(e) for e in combat_state.dormant]
+        new_cs.continuations = list(combat_state.continuations)
         new_cs.cards_played = combat_state.cards_played
         new_cs.pending_choice = combat_state.pending_choice.deepcopy() if combat_state.pending_choice else None
         new_cs.won = combat_state.won
@@ -480,6 +485,7 @@ class CombatSimulator:
         if pending is None or not pending.optional:
             raise IllegalActionError("there is no optional card choice to confirm")
         self.combat_state.pending_choice = None
+        self._resume_autoplay()
         self._check_hand_emptied()
 
     def choose_card(self, card_index : int):
@@ -490,6 +496,7 @@ class CombatSimulator:
             raise IllegalActionError(f"card_index {card_index} is not one of {pending.indices}")
         self.combat_state.pending_choice = None
         self._apply_choice(pending, card_index)
+        self._resume_autoplay()
         self._check_hand_emptied()
 
     def _apply_choice(self, choice : PendingChoice, index : int):
@@ -568,7 +575,7 @@ class CombatSimulator:
             release_card(self.combat_state.player)
             raise
         self.combat_state.cards_played += 1
-        self._finish_card_play(card, hp_loss_mark, to_top=to_top)
+        self._finish_or_wait(card, hp_loss_mark, to_top=to_top)
         self._check_hand_emptied()
 
     def _face_target(self, card : Card, target_index : int):
@@ -588,9 +595,9 @@ class CombatSimulator:
 
     @staticmethod
     def private_copy(card : Card) -> Card:
-        """Cards that change when played (Rampage, Thrash, Swift/Sown/Vigorous/Momentum/Glam) are played as a copy: card objects are shared between
+        """Cards that change when played (Rampage, Thrash, Frantic Escape, Swift/Sown/Vigorous/Momentum/Glam) are played as a copy: card objects are shared between
         simulated states, so the played one must not be changed in place. The copy goes to the discard pile."""
-        if card.card_id in (CardId.RAMPAGE, CardId.THRASH) or card.enchantment in CHANGED_ON_PLAY:
+        if card.card_id in (CardId.RAMPAGE, CardId.THRASH, CardId.FRANTIC_ESCAPE) or card.enchantment in CHANGED_ON_PLAY:
             return Card.create_copy(card)
         return card
 
@@ -710,7 +717,7 @@ class CombatSimulator:
         try:
             with self._playing(card):
                 card.play_card(self, target, free=True, x_value=x_value)
-            self._finish_card_play(card, hp_loss_mark, force_exhaust, dupe, to_top)
+            self._finish_or_wait(card, hp_loss_mark, force_exhaust, dupe, to_top)
         finally:
             self.auto_playing = auto_playing
 
@@ -724,13 +731,45 @@ class CombatSimulator:
             if top is None:
                 break
             taken.append(top)
-        for top in taken:
-            if self.is_over:
-                break
+        self._run_autoplay(taken)
+
+    def _run_autoplay(self, queue : list[Card]):
+        """Plays the cards in order. One that asks for a card choice holds the rest back until it is answered (the game waits for it too)."""
+        cs = self.combat_state
+        while queue and not self.is_over:
+            top = queue.pop(0)
             if top.unplayable:
-                player.discard_pile.append(top)
+                cs.player.discard_pile.append(top)
             else:
                 self.auto_play(top)
+            if cs.pending_choice is not None:
+                if queue:
+                    cs.continuations = cs.continuations + [("play", tuple(queue))]
+                return
+
+    def _finish_or_wait(self, card : Card, hp_loss_mark : int, force_exhaust : bool = False, dupe : bool = False, to_top : bool = False):
+        """A card that is waiting for a card choice is not finished: the game answers the choice first, and only then moves the card, runs
+        what follows its play (Dark Embrace's draw, say) and plays on. Doing it earlier changes the piles the choice points into."""
+        cs = self.combat_state
+        if cs.pending_choice is not None:
+            cs.continuations = cs.continuations + [("finish", card, hp_loss_mark, force_exhaust, dupe, to_top)]
+        else:
+            self._finish_card_play(card, hp_loss_mark, force_exhaust, dupe, to_top)
+
+    def _resume_autoplay(self):
+        """Carries on with what was waiting for the card choice, up to the next choice."""
+        cs = self.combat_state
+        while cs.continuations and cs.pending_choice is None:
+            if self.is_over:
+                cs.continuations = []
+                return
+            (kind, *args), *rest = cs.continuations
+            cs.continuations = []           # what the step adds (a choice of its own) goes before the rest
+            if kind == "finish":
+                self._finish_card_play(*args)
+            else:
+                self._run_autoplay(list(args[0]))
+            cs.continuations = cs.continuations + rest
 
     def _rupture(self, hp_loss_mark : int):
         """Strength for each time hit points were lost since the mark."""

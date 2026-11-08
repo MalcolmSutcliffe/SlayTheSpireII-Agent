@@ -24,7 +24,7 @@ ACTION_TIMEOUT = 8.0            # seconds to wait for the game to react to a pla
 DEFAULT_LOG = "engine_mismatches.jsonl"
 DEFAULT_DECISION_LOG = "agent_decisions.jsonl"
 
-TIME_BUDGET_SECONDS = 5.0       # Max time allocated for agent to think
+TIME_BUDGET_SECONDS = 10.0       # Max time allocated for agent to think
 
 def get_state() -> dict:
     result = subprocess.run(["cli-anything-sts2", "state"], capture_output=True, text=True)

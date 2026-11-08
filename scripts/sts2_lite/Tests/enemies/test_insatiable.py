@@ -3,7 +3,7 @@ import pytest
 
 from sts2_lite import enemy as enemy_module
 from sts2_lite.card import CardId
-from sts2_lite.combat import CombatSimulator
+from sts2_lite.combat import CombatSimulator, CombatState
 from sts2_lite.enemy_moves import MOVE_TABLES
 from sts2_lite.status import StatusId
 from sts2_lite.Tests.enemies.test_hive_simple import at, moves_over, turn
@@ -74,4 +74,16 @@ def test_playing_frantic_escape_pushes_the_pit_back_and_costs_more_each_time():
     sim = CombatSimulator(cs)
     sim.play_card(0, 0)
     assert cs.enemies[0].status_amount(StatusId.SANDPIT) == 3 and cs.energy == 2
-    assert card.energy_cost == 2
+    assert cs.player.discard_pile[0].energy_cost == 2 and card.energy_cost == 1      # the played copy costs more; the card other states share does not
+
+
+def test_frantic_escape_search_does_not_make_the_shared_card_dearer():
+    """Simulated plays happen on copies of the state that share card objects: the cost rise must not leak into the real hand."""
+    from sts2_lite.card import Card
+    cs = at("THE_INSATIABLE", "THRASH", status=[{"id": "SANDPIT_POWER", "amount": 4}])
+    cs.player.hand = [Card.create(CardId.FRANTIC_ESCAPE)]
+    cs.energy = 3
+    for _ in range(5):
+        sim = CombatSimulator(CombatState.deepcopy(cs))
+        sim.play_card(0, 0)
+    assert cs.player.hand[0].energy_cost == 1 and cs.player.hand[0].can_play_card(CombatSimulator(cs), 0)

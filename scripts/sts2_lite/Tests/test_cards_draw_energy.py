@@ -742,3 +742,39 @@ def test_howl_that_comes_after_the_win_stays_in_the_exhaust_pile():
     sim = CombatSimulator(cs)
     sim.end_turn()
     assert sim.is_over and len(cs.player.exhaust_pile) == 1
+
+
+def test_cascade_waits_for_a_card_choice_before_playing_the_next_card():
+    """Burning Pact played by Cascade asks which cards to exhaust; the card after it must not change the hand under that choice."""
+    pact = card(CardId.BURNING_PACT, 1, CardType.Skill, TargetType.Self)
+    cs = state([cascade(), strike(), defend()]); cs.energy = 2
+    cs.player.draw_pile = [defend(), pact]              # the end is the top: Burning Pact plays first
+    sim = play(cs)
+    pending = cs.pending_choice
+    assert pending is not None and pending.kind == "exhaust"
+    assert [k for k, *_ in cs.continuations] == ["finish", "play", "finish"] and cs.player.block == 0
+    assert all(i < len(cs.player.hand) for i in pending.indices)
+    assert all(a["card_index"] < len(cs.player.hand) for a in sim.get_available_actions())
+    sim.choose_card(pending.indices[0])
+    assert cs.continuations == [] and cs.player.block == 5      # the Defend played after the pick
+
+def test_cascade_queue_is_copied_with_the_state():
+    pact = card(CardId.BURNING_PACT, 1, CardType.Skill, TargetType.Self)
+    cs = state([cascade(), strike(), defend()]); cs.energy = 2
+    cs.player.draw_pile = [defend(), pact]
+    play(cs)
+    copy = CombatState.deepcopy(cs)
+    assert len(copy.continuations) == 3 and copy.continuations is not cs.continuations
+
+
+def test_havoc_playing_headbutt_does_not_reshuffle_the_discard_pile_under_the_pick():
+    """Havoc exhausts the card it played, and Dark Embrace then draws: that happens after the pick, not before it."""
+    cs = state([card(CardId.HAVOC, 1, CardType.Skill, TargetType.Self), strike()]); cs.energy = 1
+    cs.player.draw_pile = [card(CardId.HEADBUTT, 1, CardType.Attack, TargetType.AnyEnemy)]
+    cs.player.discard_pile = [defend(), bash(), defend()]
+    cs.player.apply_status(StatusId.DARK_EMBRACE, 1)
+    sim = play(cs)
+    pending = cs.pending_choice
+    assert pending is not None and pending.pile == "discard" and pending.indices and all(i < len(cs.player.discard_pile) for i in pending.indices)
+    sim.choose_card(pending.indices[0])
+    assert cs.pending_choice is None and cs.continuations == []

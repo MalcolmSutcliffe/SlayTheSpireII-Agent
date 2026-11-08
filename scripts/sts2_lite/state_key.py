@@ -63,8 +63,12 @@ def _player(p) -> tuple:
             tuple(sorted(p.returning, key=repr)), p.card_blocks_this_turn, p.cards_exhausted_this_turn, p.gold,
             p.has_been_attacked_this_turn, p.lost_hp_this_turn, p.hp_loss_events, tuple(p.hp_lost_log), p.is_minion)
 
+def _continuations(cs) -> tuple:
+    """What the cards waiting for a pick still have to do."""
+    return tuple((k, a[0].signature(), *a[1:]) if k == "finish" else (k, tuple(c.signature() for c in a[0])) for k, *a in cs.continuations)
+
 def state_key(cs : CombatState) -> tuple:
     """Hashable fingerprint of `cs`; equal for states reached by playing the same cards in a different order."""
     return (cs.energy, cs.max_energy, cs.turn_number, cs.extra_turns, cs.ascension, cs.cards_played, cs.won,
-            tuple(sorted(cs.revivals, key=repr)), tuple(_enemy(e) for e in cs.dormant), _choice(cs),
+            tuple(sorted(cs.revivals, key=repr)), tuple(_enemy(e) for e in cs.dormant), _continuations(cs), _choice(cs),
             _player(cs.player), tuple(_enemy(e) for e in cs.enemies))
