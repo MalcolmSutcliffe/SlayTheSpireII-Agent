@@ -7,14 +7,25 @@ from dataclasses import dataclass
 from sts2_lite import rng
 from sts2_lite.combat import CombatState, CombatSimulator
 
+from sts2_lite.card import CARD_RARITY, CardId, CardRarity, CardType, MAX_HAND_SIZE
+
 from sts2_lite.enemy import Enemy
+from sts2_lite.status import StatusId
 from sts2_lite.state_key import state_key
 
 class RolloutPolicy(Enum):
-    FirstAction = auto()            # just play first action
-    RandomAction = auto()                 # random choice from all abailable actions
+    FirstAction = auto()            # just play first action (works surprisingly well)
+    RandomAction = auto()           # random choice from all abailable actions
     RandomPlayble = auto()          # random choice that prefers playable cards first, then end turn
-    RandomPlayblePEndTurn = auto()  # random playable, with P_End_TURN
+    RandomPlayblePEndTurn = auto()  # random playable, with P_END_TURN
+    
+    # Bias towards playing higher rarity cards first. 
+    # Prefer block when being attacked. 
+    # Exceptions for certain cards that perform better when played later (i.e. body slam)
+    RarityPreference = auto()
+    
+    # Situation-aware weighted choice (Powers and draw first, Vulnerable before attacks, block only while damage is unblocked)
+    ClaudeHeuristic = auto()
 
 ## constants
 MAX_ROLLOUT_TURNS = 50
@@ -42,8 +53,39 @@ TIE_MIN_VISITS = 30              # the top move needs this many visits before a 
 TIE_VISIT_FRACTION = 0.5         # a tied move needs this share of the top move's visits: a thin estimate is within the margin by luck
 
 # rollout policy constants
-ROLLOUT_POLICY = RolloutPolicy.RandomPlayblePEndTurn
-P_END_TURN = 0.05
+ROLLOUT_POLICY = RolloutPolicy.RarityPreference
+P_END_TURN = 0.02
+
+# rarity preference
+RARITY_WEIGHTS = {
+    CardRarity.Ancient : 4,        # Note: usually ancient cards are very good. Right now we only have neow's fury, which is about an uncommn.
+    CardRarity.Rare : 8,
+    CardRarity.Uncommon : 4,
+    CardRarity.Token : 4,           # Note : Token and event cards seem to be about the same as uncommon, in terms of strength.
+    CardRarity.Event : 4,
+    CardRarity.Common : 2,
+    CardRarity.Basic : 1,           # baseline: a basic card is value 1. Model other weights around that value
+    CardRarity.Status : 0.1,        # only playable status is slimed
+    CardRarity.Curse : 0.01,
+}
+
+P_RANDOM_ACTION = 0.05          # chance a heuristic rollout plays a uniformly random action (end_turn included)
+BLOCK_MULT = 24.0                # a block card's weight grows to (1 + BLOCK_MULT)x as the unblocked incoming damage reaches BLOCK_CAP
+BLOCK_CAP = 15
+DRAW_FIRST = 4.0                # draw / energy cards
+NO_ROOM = 0.1                   # ... when the hand has no room for what they draw
+DRAW_ROOM = 3                   # needs len(hand) <= MAX_HAND_SIZE - DRAW_ROOM
+VULN_FIRST = 4.0                # a card that applies Vulnerable, while some enemy lacks it
+ATTACK_BEFORE_VULN = 0.1        # an attack on a non-vulnerable target while a Vulnerable card can be played
+POWER_FIRST = 3.0               # Heuristic policy only
+
+DRAW_ENERGY_CARDS = frozenset(CardId[n] for n in (
+    "BATTLE_TRANCE BURNING_PACT DRUM_OF_BATTLE FINESSE FLASH_OF_STEEL IMPATIENCE MASTER_OF_STRATEGY OFFERING PILLAGE POMMEL_STRIKE "
+    "RESTLESSNESS SCRAWL SHRUG_IT_OFF THINKING_AHEAD BLOODLETTING EXPECT_A_FIGHT FORGOTTEN_RITUAL PRODUCTION").split())
+VULNERABLE_CARDS = frozenset(CardId[n] for n in "BASH BREAK SHOCKWAVE SQUASH TAUNT THUNDERCLAP TREMBLE UPPERCUT".split())
+BLOCK_CARDS = frozenset(CardId[n] for n in (
+    "DEFEND_IRONCLAD SHRUG_IT_OFF BLOOD_WALL IRON_WAVE TRUE_GRIT FLAME_BARRIER IMPERVIOUS SECOND_WIND ULTIMATE_DEFEND EQUILIBRIUM "
+    "ARMAMENTS EVIL_EYE PANIC_BUTTON TAUNT FINESSE TORIC_TOUGHNESS").split())
 
 CULLABLE_PILES = ("hand", "discard") # draw pile is not neccessarily cullable because of known_top cards
 
@@ -244,7 +286,7 @@ class sts2_MCTS:
             if len(actions) == 0:
                 break
 
-            action = rollout_policy(actions, self._search_config.rollout)
+            action = rollout_policy(c, actions, self._search_config.rollout)
             
             c.perform_action(action)
 
@@ -394,12 +436,12 @@ def backpropagate(path : list[sts2_Node], result : float):
         node.total_reward_squared += result*result
         node.visits += 1
 
-def rollout_policy(actions, policy : RolloutPolicy):
+def rollout_policy(c : CombatSimulator, actions, policy : RolloutPolicy):
     if len(actions) == 0:
         return None
     if len(actions) == 1:   
         return actions[0]
-    return ROLLOUT_POLICY_DICT[policy](actions)
+    return ROLLOUT_POLICY_DICT[policy](c, actions)
 
 def _effective_hp(enemy : Enemy):
     if enemy.is_minion:
@@ -435,29 +477,96 @@ def cull_identical_actions(c : CombatSimulator, actions : list[dict]) -> list[di
             kept.append(a)
     return kept
 
+###
+### Rollout Poliocy helpers
+###
+
+def _incoming_damage(cs : CombatState) -> int:
+    """Damage the enemies' next moves deal before block (no Strength, Weak or Vulnerable applied)."""
+    return sum(e.attack_damage * e.num_attacks for e in cs.enemies if e.current_hp > 0 and not e.is_minion)
+
+def _rarity_weight(card) -> float:
+    rarity = CardRarity.Common if card.card_id == CardId.BASH else CARD_RARITY[card.card_id]     # Bash plays like a Common
+    return RARITY_WEIGHTS[rarity]
+
+def _weighted_play(c : CombatSimulator, actions : list[dict], weight) -> dict:
+    """P_RANDOM_ACTION: any action. Otherwise a card play drawn with weight(card, action); end_turn only when nothing else can be done.
+    Pending choices (choose_card etc.) are uniform."""
+    plays = [a for a in actions if a["action"] == "play_card"]
+    if not plays or rng.random_float() < P_RANDOM_ACTION:
+        return rng.choice(actions)
+    hand = c.combat_state.player.hand
+    return rng.choices(plays, weights=[weight(hand[a["card_index"]], a) for a in plays])[0]
+
+def _situation(c : CombatSimulator, actions : list[dict]):
+    """(unblocked incoming damage, can a Vulnerable card be played, hand has room to draw)"""
+    cs = c.combat_state
+    hand = cs.player.hand
+    can_vuln = any(a["action"] == "play_card" and hand[a["card_index"]].card_id in VULNERABLE_CARDS for a in actions) \
+        and any(e.current_hp > 0 and not e.is_minion and e.status_amount(StatusId.VULNERABLE) == 0 for e in cs.enemies)
+    return max(0, _incoming_damage(cs) - cs.player.block), can_vuln, len(hand) <= MAX_HAND_SIZE - DRAW_ROOM
+
+def _common_factors(c : CombatSimulator, card, action : dict, unblocked : int, can_vuln : bool, room : bool) -> float:
+    """Draw / Vulnerable / block factors shared by both weighted policies."""
+    w = 1.0
+    if card.card_id in DRAW_ENERGY_CARDS:
+        w *= DRAW_FIRST if room else NO_ROOM
+    if card.card_id in VULNERABLE_CARDS and can_vuln:
+        w *= VULN_FIRST
+    if card.type == CardType.Attack and can_vuln and card.card_id not in VULNERABLE_CARDS:
+        enemies = c.combat_state.enemies
+        target = enemies[action["target"]] if action["target"] < len(enemies) else None
+        if target is None or target.status_amount(StatusId.VULNERABLE) == 0:       # (an attack on all enemies counts as unvulnerable too)
+            w *= ATTACK_BEFORE_VULN
+    if card.card_id in BLOCK_CARDS and unblocked > 0:
+        w *= 1.0 + BLOCK_MULT * min(1.0, unblocked / BLOCK_CAP)
+    return w
+
+
 ### 
 ### Rollout Policy functions
 ###
 
-def first_action(actions : list[dict]) -> dict:
+def first_action(c : CombatSimulator, actions : list[dict]) -> dict:
     return actions[0]
 
-def random_action(actions : list[dict]) -> dict:
+def random_action(c : CombatSimulator, actions : list[dict]) -> dict:
     return rng.choice(actions)
 
-def random_playable(actions : list[dict]) -> dict:
+def random_playable(c : CombatSimulator, actions : list[dict]) -> dict:
     playable_actions = [a for a in actions if a["action"] != "end_turn"] or actions
     return rng.choice(playable_actions)
 
-def random_playable_p_end_turn(actions : list[dict]) -> dict:
+def random_playable_p_end_turn(c : CombatSimulator, actions : list[dict]) -> dict:
     end_turn = next((a for a in actions if a["action"] == "end_turn"), None)
     if end_turn is not None and rng.random_float() < P_END_TURN:
         return end_turn
-    return random_playable(actions)
+    return random_playable(c, actions)
+
+def rarity_preference(c : CombatSimulator, actions : list[dict]) -> dict:
+    """Weighted by rarity of card"""
+    unblocked, can_vuln, room = _situation(c, actions)
+    return _weighted_play(c, actions, lambda card, a: _rarity_weight(card) * _common_factors(c, card, a, unblocked, can_vuln, room))
+
+def claude_heuristic(c : CombatSimulator, actions : list[dict]) -> dict:
+    """Same shape as rarity_preference, but rarity is replaced by what the card does: Powers first (they pay off for the rest of
+    the fight, which the rollout plays out), then draw/energy, Vulnerable, other Skills and Attacks equal, block only while damage
+    is unblocked."""
+    unblocked, can_vuln, room = _situation(c, actions)
+    def weight(card, a):
+        w = _common_factors(c, card, a, unblocked, can_vuln, room)
+        if card.type == CardType.Power:
+            w *= POWER_FIRST
+        elif card.card_id in BLOCK_CARDS and unblocked == 0:
+            w *= 0.25                                                                # already safe: spend the energy on offence
+        return w
+    return _weighted_play(c, actions, weight)
 
 ROLLOUT_POLICY_DICT = {
     RolloutPolicy.FirstAction : first_action,
     RolloutPolicy.RandomAction : random_action,
     RolloutPolicy.RandomPlayble : random_playable,
-    RolloutPolicy.RandomPlayblePEndTurn : random_playable_p_end_turn
+    RolloutPolicy.RandomPlayblePEndTurn : random_playable_p_end_turn,
+    RolloutPolicy.RarityPreference : rarity_preference,
+    RolloutPolicy.ClaudeHeuristic : claude_heuristic,
 }

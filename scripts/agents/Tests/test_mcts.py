@@ -993,7 +993,7 @@ def test_exploration_scales_the_uct_bonus():
 @pytest.mark.parametrize("policy", list(RolloutPolicy))
 def test_rollouts_use_the_configured_policy(policy):
     calls = Counter()
-    spies = {p: (lambda actions, p=p, f=f: (calls.update([p]), f(actions))[1]) for p, f in ROLLOUT_POLICY_DICT.items()}
+    spies = {p: (lambda c, actions, p=p, f=f: (calls.update([p]), f(c, actions))[1]) for p, f in ROLLOUT_POLICY_DICT.items()}
     with mock.patch.dict(ROLLOUT_POLICY_DICT, spies):
         mcts = primed(draw_fight(), new_mcts(SearchConfig(rollout=policy)))
         mcts._simulate_random_combat(sts2_DeterministicNode(None, draw_fight(), None))

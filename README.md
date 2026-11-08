@@ -74,7 +74,7 @@ Add enchantments
  ## MCTS :
 
  - [x] Rollout policies
- - [ ] Enhanced rollout policy
+ - [x] Enhanced rollout policies
  - [x] Time based max search rather than branch limit
  - [x] Optimize outcome scoring function
  - [x] Confidence exit (If the agent is confident enough in a move, finish the search)
@@ -83,11 +83,10 @@ Add enchantments
  - [x] Better outcome scoring 
  - [ ] Concurrent search caching
  - [x] Identical move culling
- - [ ] Better node traversal heuristics (i.e. powers/non-starter cards first,)
  - [x] Benchmark harness. Create a fixed set of fights to play, use this to fine tune constants.
  - [ ] Improve sim speed
- - [ ] MCTS-Solver: proven win/loss propagation. If there is gaurenteed lethal, or a forced loss, mark node as solved and propagate. NOTE: gaurenteed wins overlook meta-scaling cards
  - [ ] Root parallelization
+ - [ ] Neural network rollout policy
 
  
  Waiting on engine:
