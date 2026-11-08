@@ -4,13 +4,22 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from sts2_lite.combat import CombatSimulator
 
+import logging
 from enum import Enum, auto
 
 from sts2_lite import rng
 from sts2_lite.card import Card
 from sts2_lite.creature import Creature
-from sts2_lite.enemy_moves import MOVE_TABLES, SPAWN_HP, SPAWN_MOVE, SPAWN_STATUS, TOUGH_ASCENSION, MoveTable
+from sts2_lite.enemy_moves import MOVE_TABLES, table_move_id, SPAWN_HP, SPAWN_MOVE, SPAWN_STATUS, TOUGH_ASCENSION, MoveTable
+from sts2_lite.damage import modify_damage
 from sts2_lite.status import StatusInstance, StatusId
+
+log = logging.getLogger("sts2_lite")
+STRICT_BRIDGE_CHECKS = False    # True: a disagreement with the game raises BridgeMismatch instead of logging a warning
+
+
+class BridgeMismatch(AssertionError):
+    pass
 
 class EnemyId(Enum):
     SEAPUNK = auto()
@@ -39,14 +48,19 @@ class Enemy(Creature):
         e.attack_damage = 0
         e.num_attacks = 0
         for intent in enemy["intents"]:
-            if intent["type"] == "Attack":
+            if "base_damage" in intent:
+                # the move's own damage and hits (before Strength, Weak, Vulnerable...): exact, no inference needed
+                e.attack_damage = intent["base_damage"]
+                e.num_attacks = intent["hits"]
+            elif intent["type"] == "Attack":
+                # older bridge: the displayed damage; the simulator works the base out of it
                 label = intent["label"].split("x")
                 e.attack_damage = int(label[0])
                 if len(label) > 1:
                     e.num_attacks = int(label[1])
                 else:
                     e.num_attacks = 1
-                
+
         e.status = {}
         for s in enemy["status"]:
             e.status[StatusId[s["id"][:-6]]] = StatusInstance.from_dict(s)
@@ -59,7 +73,29 @@ class Enemy(Creature):
         table = MOVE_TABLES.get(monster)
         if table is not None:
             e.moves = table(ascension)
+        e._read_move_history(enemy, monster)
         return e
+
+    @staticmethod
+    def reads_base_damage(intents : list[dict]) -> bool:
+        """True when the bridge gave the move's base damage, so the displayed damage needs no inverting."""
+        return any("base_damage" in i for i in intents)
+
+    def _read_move_history(self, raw : dict, monster : str):
+        """Current move, streak and once-per-fight moves from the bridge's `move_id` and `move_log` (newest last)."""
+        if self.moves is None or "move_id" not in raw:
+            return
+        current = table_move_id(monster, raw["move_id"], self.moves)
+        if current is None:
+            return
+        self.move_id = current
+        log = [table_move_id(monster, m, self.moves) for m in raw.get("move_log", ())]
+        if log and log[-1] == current:      # the log ends with the current move
+            streak = 1
+            while streak < len(log) and log[-1 - streak] == current:
+                streak += 1
+            self.move_streak = streak
+            self.used_moves = {m for m in log[:-1] if m is not None}
 
     @classmethod
     def spawn(cls, monster : str, slot : int, ascension : int) -> Enemy:
@@ -96,6 +132,30 @@ class Enemy(Creature):
             self.move_id = found[0]
         else:
             self.moves = None
+
+    def check_against_bridge(self, raw : dict, player : Creature):
+        """Compare the simulator's reading of this enemy with what the game reported. Disagreements are the
+        bugs to fix: wrong damage modifiers, a move table that has drifted from the game, a missed move id."""
+        problems = []
+        for intent in raw.get("intents", ()):
+            if "base_damage" not in intent or "damage" not in intent:
+                continue
+            damage = modify_damage(self.attack_damage, self, player)
+            if damage != intent["damage"]:
+                problems.append(f"damage {damage} but the game shows {intent['damage']} "
+                                f"(base {self.attack_damage}, strength {self.status_amount(StatusId.STRENGTH)})")
+            elif damage * self.num_attacks != intent["total_damage"]:
+                problems.append(f"{self.num_attacks} hits of {damage} but the game shows a total of {intent['total_damage']}")
+        if "move_id" in raw and self.moves is not None and self.move_id is not None:
+            if table_move_id(self.enemy_id.rpartition("_")[0], raw["move_id"], self.moves) != self.move_id:
+                problems.append(f"move {self.move_id} but the game says {raw['move_id']}")
+        if "move_id" in raw and self.moves is None and self.enemy_id.rpartition("_")[0] in MOVE_TABLES:
+            problems.append(f"move {raw['move_id']} not in the table")
+        for problem in problems:
+            message = f"{self.enemy_id}: {problem}"
+            if STRICT_BRIDGE_CHECKS:
+                raise BridgeMismatch(message)
+            log.warning(message)
 
     @staticmethod
     def _in_round(move, round_number : int) -> bool:

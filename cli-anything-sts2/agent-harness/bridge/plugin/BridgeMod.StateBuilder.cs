@@ -601,6 +601,14 @@ public static partial class BridgeMod
         // Intents
         if (monster?.NextMove is MoveState moveState)
         {
+            // Exact move identity from the game's state machine (replaces label inference).
+            state["move_id"] = moveState.StateId;
+            state["follow_up_id"] = moveState.FollowUpState?.Id ?? moveState.FollowUpStateId;
+            // Move history (branch states excluded by the game); includes the current move last.
+            var moveLog = monster.MoveStateMachine?.StateLog;
+            if (moveLog != null)
+                state["move_log"] = moveLog.Select(m => m.Id).ToList();
+
             var intents = new List<Dictionary<string, object?>>();
             foreach (var intent in moveState.Intents)
             {
@@ -608,6 +616,23 @@ public static partial class BridgeMod
                 {
                     ["type"] = intent.IntentType.ToString()
                 };
+                if (intent is AttackIntent attack)
+                {
+                    // base_damage: move's raw damage, before Strength/Vulnerable/etc.
+                    // damage/total_damage: game-computed final values, for cross-checking the sim.
+                    try
+                    {
+                        var atkTargets = creature.CombatState?.PlayerCreatures;
+                        intentData["base_damage"] = (int)attack.DamageCalc();
+                        intentData["hits"] = attack.Repeats;
+                        if (atkTargets != null)
+                        {
+                            intentData["damage"] = attack.GetSingleDamage(atkTargets, creature);
+                            intentData["total_damage"] = attack.GetTotalDamage(atkTargets, creature);
+                        }
+                    }
+                    catch { /* damage calc may fail for exotic intents */ }
+                }
                 try
                 {
                     var targets = creature.CombatState?.PlayerCreatures;

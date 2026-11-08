@@ -11,6 +11,7 @@ https://github.com/HKUDS/CLI-Anything/blob/main/skills/cli-anything-slay-the-spi
     - added relic "status" field to state ouput
     - changed draw pile, discard pile, and exhaust pile to have full card information
     - expose various extra fields such as active, spent, cardsPlayedThisTurn, etc, for important relic functionality
+    - reads and exposes the enemy move id, on top of the intent.
 
 https://github.com/zhiyue/sts2-rl-agent -> headless sts2_env used for cross-referencing game behaviour
 

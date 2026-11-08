@@ -401,3 +401,29 @@ MOVE_TABLES = {
     "KIN_FOLLOWER": kin_follower,
     "KIN_PRIEST": kin_priest,
 }
+
+
+# The game's move state ids differ from the table keys: "<KEY>_MOVE" in most cases, and these exceptions.
+# monster -> {game id: table key}
+GAME_MOVE_ALIASES = {
+    "SHRINKER_BEETLE": {"SHRINKER_MOVE": "SHRINK"},
+    "FUZZY_WURM_CRAWLER": {"FIRST_ACID_GOOP": "FIRST_GOOP", "ACID_GOOP": "GOOP"},
+    "LEAF_SLIME_S": {"TACKLE_MOVE": "BUTT"},
+    "TWIG_SLIME_S": {"TACKLE_MOVE": "BUTT"},
+    "TWIG_SLIME_M": {"POKEY_POUNCE_MOVE": "CLUMP_SHOT"},
+    "BYGONE_EFFIGY": {"SLASHES_MOVE": "SLASH"},
+    "WRIGGLER": {"NASTY_BITE_MOVE": "BITE"},
+    "CUBEX_CONSTRUCT": {"REPEATER_BLAST_MOVE_2": "REPEATER_BLAST_2"},
+}
+
+
+def table_move_id(monster : str, game_id : str, table : MoveTable) -> str | None:
+    """The table key for a move state id from the bridge (`move_id`), or None when the table has no such move."""
+    alias = GAME_MOVE_ALIASES.get(monster, {}).get(game_id)
+    if alias in table:
+        return alias
+    if game_id in table:
+        return game_id
+    if game_id.endswith("_MOVE") and game_id[:-5] in table:
+        return game_id[:-5]
+    return None

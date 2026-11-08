@@ -46,6 +46,9 @@ OUTCOME_ALPHA = 0.5
 WIN_BONUS = 1.0
 HP_SCALE = 1.0
 GAMMA = 0.999
+# information bonus: see sts2_MCTS._information_value
+INFO_SIGMA = 0.05               # spread of the outcomes' values (reward units) at which a chance node earns 76% of the largest bonus (tanh(1))
+INFO_MIN_VISITS = 2             # a sampled outcome's value counts once it has been visited this often
 
 # move confidence constants
 EPSILON = 0.005
@@ -105,6 +108,7 @@ class SearchConfig:
     early_exit : bool = True             # allows the sim to exit early
     prefer_info : bool = True            # among tied root moves, play the one whose outcome is not yet known (a draw) first
     rollout: RolloutPolicy = RolloutPolicy.RandomPlayblePEndTurn
+    info_bonus : float = 0.0             # largest bonus for resolving a draw / random effect early, in HP of the final score (0 = off; the idea is <= 0.5)
     reuse_tree : bool = True             # keep the part of the previous search the game actually went into (needs the same sts2_MCTS object)
 
 class sts2_Node:
@@ -131,6 +135,7 @@ class sts2_DeterministicNode(sts2_Node):
     state : CombatState
     children : list[sts2_Node]
     key : tuple | None = None      # state_key(state), kept when the node went through the transposition table
+    actionable : bool = True       # something other than End Turn can be done in this state (set for sampled outcomes when info_bonus is on)
 
     def __init__(self, parent : sts2_Node, state: CombatState, action):
         super().__init__(parent, action)
@@ -159,6 +164,7 @@ class sts2_MCTS:
     _starting_hp : int
     _search_config : SearchConfig
     _num_sims: int = 0
+    _info_cap : float = 0.0      # largest information bonus, in reward units
     _start_time : float
 
     def __init__(self):
@@ -176,6 +182,9 @@ class sts2_MCTS:
             self._expected_total_hp = self._calculate_expected_total_hp(combat_state)
             self._starting_hp = combat_state.player.current_hp
         inherited = self._root_node.visits
+        hp_ratio = max(0.1, min(1.0, combat_state.player.current_hp / max(1, self._starting_hp)))
+        # largest bonus in reward units: `info_bonus` HP at the slope of the win reward (WIN_BONUS - HP_SCALE*(1 - sqrt(hp/start)))
+        self._info_cap = config.info_bonus * HP_SCALE / (2.0 * math.sqrt(hp_ratio) * max(1, self._starting_hp))
         self._num_sims = 0
         self._search_config = config
         self._start_time = time.perf_counter()
@@ -191,7 +200,7 @@ class sts2_MCTS:
             # traverse and sim
             path = self.traverse_node(self._root_node) # root to the leaf to simulate from (a shared node has several parents, so the path is tracked)
             sim_result = self._simulate_random_combat(path[-1]) # simulate
-            backpropagate(path, sim_result)
+            backpropagate(path, sim_result, self._information_bonuses(path))
 
         stats = { 
             "children": [{"action": c.action, "visits": c.visits, "q": c.total_reward / c.visits} for c in self._root_node.children],
@@ -281,6 +290,48 @@ class sts2_MCTS:
                 stack.append(child)
         return table
 
+    ### Information bonus
+    ### Resolving a draw (or a random effect) before the turn's remaining plays are chosen lets the agent choose them knowing the result.
+    ### Rollouts play on at random and the sampled outcomes are visited rarely, so the search undervalues that. A chance node whose
+    ### outcomes differ in value, and with something left to play afterwards, earns a bonus. It is one-sided on purpose (a potential-based
+    ### term would cancel along the path): it does not charge anything back, and it only goes to the chance node and its ancestors, so
+    ### the outcomes' own values, which the bonus is measured from, stay clean.
+
+    def _information_value(self, node : sts2_ChanceNode) -> float:
+        """cap * tanh(spread / INFO_SIGMA) * the share of sampled outcomes with something left to play.
+        spread is the standard deviation, between the outcomes, of their values (weighted by how often each was sampled), with the
+        noise of each outcome's own estimate taken off, so outcomes that only look different by chance earn nothing."""
+        sampled = [(node.outcomes[k], node.outcome_counts[k]) for k in node.outcomes]
+        seen = [(o, c) for o, c in sampled if o.visits >= INFO_MIN_VISITS]
+        if len(seen) < 2:
+            return 0.0
+        total = sum(c for _, c in seen)
+        values = [o.total_reward / o.visits for o, _ in seen]
+        mean = sum(c * q for (_, c), q in zip(seen, values)) / total
+        between = sum(c * (q - mean) ** 2 for (_, c), q in zip(seen, values)) / total
+        noise = sum(c * max(0.0, (o.total_reward_squared - o.total_reward ** 2 / o.visits) / (o.visits - 1)) / o.visits
+                    for o, c in seen) / total
+        spread = math.sqrt(max(0.0, between - noise))
+        if spread == 0.0:
+            return 0.0
+        actionable = sum(c for o, c in sampled if o.actionable) / sum(c for _, c in sampled)
+        return self._info_cap * math.tanh(spread / INFO_SIGMA) * actionable
+
+    def _information_bonuses(self, path : list[sts2_Node]) -> list[float] | None:
+        """The bonus each node of `path` receives on top of the simulation result, or None when there is none. A node gets the bonuses
+        of the chance nodes at or below it, together at most the cap. End Turn is left out: its outcomes (the next hand, the enemies'
+        moves) arrive when nothing more can be done about them."""
+        if self._info_cap <= 0.0:
+            return None
+        own = [self._information_value(n) if n.is_chance_node and n.action["action"] != "end_turn" else 0.0 for n in path]
+        if not any(own):
+            return None
+        bonuses, running = [0.0] * len(path), 0.0
+        for i in range(len(path) - 1, -1, -1):
+            running = min(self._info_cap, running + own[i])
+            bonuses[i] = running
+        return bonuses
+
     def _pick_root_child(self) -> sts2_Node:
         """The most visited move; with prefer_info, a tied move that reveals information (a draw or random effect) goes first.
         The agent searches again after every action, so seeing the result early is free, and a tied move gives up nothing."""
@@ -351,6 +402,8 @@ class sts2_MCTS:
             if len(node.outcomes) < cap:
                 child = sts2_DeterministicNode(node, state, node.action)
                 child.is_terminal = sim.is_over
+                if self._info_cap > 0.0:
+                    child.actionable = not sim.is_over and any(a["action"] != "end_turn" for a in sim.get_available_actions())
                 node.outcomes[key] = child
                 node.outcome_counts[key] = 1
                 return child, True
@@ -521,11 +574,12 @@ def expand_node(node : sts2_Node, table : dict | None = None):
 
     node.is_expanded = True
 
-def backpropagate(path : list[sts2_Node], result : float):
-    """Adds the result to every node on the path from the root to the simulated leaf."""
-    for node in path:
-        node.total_reward += result
-        node.total_reward_squared += result*result
+def backpropagate(path : list[sts2_Node], result : float, bonuses : list[float] | None = None):
+    """Adds the result to every node on the path from the root to the simulated leaf (plus its bonus, if there are any)."""
+    for i, node in enumerate(path):
+        r = result if bonuses is None else result + bonuses[i]
+        node.total_reward += r
+        node.total_reward_squared += r*r
         node.visits += 1
 
 def rollout_policy(c : CombatSimulator, actions, policy : RolloutPolicy):

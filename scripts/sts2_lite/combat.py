@@ -82,10 +82,12 @@ class CombatState:
         if eye is not None:
             cs._read_paels_eye(eye, combat_state["player"].get("relics", []))
         for enemy, raw in zip(cs.enemies, combat_state["enemies"]):
-            if enemy.num_attacks > 0:
+            if enemy.num_attacks > 0 and not Enemy.reads_base_damage(raw["intents"]):
                 enemy.damage_candidates = bases_from_displayed(enemy.attack_damage, enemy, cs.player)
                 enemy.attack_damage = base_from_displayed(enemy.attack_damage, enemy, cs.player)
-            enemy.identify_move(raw["intents"], cs.turn_number)
+            if enemy.move_id is None:       # not given by the bridge's move_id: infer it from the intents
+                enemy.identify_move(raw["intents"], cs.turn_number)
+            enemy.check_against_bridge(raw, cs.player)
         cs._infer_revivals()
         cs._infer_ringing_play()
         cs.energy = combat_state["energy"]

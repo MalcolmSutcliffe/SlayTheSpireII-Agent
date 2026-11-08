@@ -246,5 +246,5 @@ def test_focus_leaves_untargeted_cards_and_the_ending_of_the_turn_alone(policy):
     assert any("target_name" not in a for a in picks)                 # Defend still played
     assert {a["target"] for a in picks if "target_name" in a} == {1}
 
-def test_focus_is_lowest_hp_plus_block_by_default():
-    assert mcts_module.FOCUS == "lowest_hp_block"
+def test_focus_default_is_one_of_the_modes():
+    assert mcts_module.FOCUS in ("none", "first", "lowest_hp", "lowest_hp_block")

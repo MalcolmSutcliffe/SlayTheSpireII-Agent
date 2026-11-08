@@ -39,6 +39,7 @@ Returns the current game state. The `state_type` field indicates the screen:
 **Battle state includes:**
 - Player: HP, block, energy, stars (Regent), gold, character, status, relics, potions, hand (with card details including star costs), pile counts, pile contents, orbs
 - Enemies: entity_id, name, HP, block, status, intents with title/label/description
+- Enemy move state: `move_id` (game state-machine id of the move shown), `follow_up_id`, `move_log` (move ids so far, current last); attack intents add `base_damage` (before modifiers), `hits`, and game-computed `damage` / `total_damage`
 - Keywords on all entities (cards, relics, potions, status)
 - Relics: `id`, `name`, `description`, `counter`, `status` (the relic's own Normal / Active / Disabled), `keywords`. Rainbow Ring also has `types_played` (bits: 1 Attack, 2 Skill, 4 Power seen this turn); Permafrost and Ruined Helmet have `spent` (true once used this fight)
 
