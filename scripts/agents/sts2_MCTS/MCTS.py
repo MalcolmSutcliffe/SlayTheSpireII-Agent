@@ -46,6 +46,7 @@ OUTCOME_ALPHA = 0.5
 WIN_BONUS = 1.0
 HP_SCALE = 1.0
 GAMMA = 0.999
+
 # information bonus: see sts2_MCTS._information_value
 INFO_SIGMA = 0.05               # spread of the outcomes' values (reward units) at which a chance node earns 76% of the largest bonus (tanh(1))
 INFO_MIN_VISITS = 2             # a sampled outcome's value counts once it has been visited this often
@@ -174,23 +175,31 @@ class sts2_MCTS:
                                 combat_state : CombatState, 
                                 config : SearchConfig = SearchConfig()
                                 ) -> tuple[dict, dict]:
-        
+
+        # check if can reroot tree at a saved state
         reused = config.reuse_tree and self._reroot(combat_state)
+
+        # new tree, reset table
         if not reused:
             self._table = {}
             self._root_node = sts2_DeterministicNode(None, CombatState.deepcopy(combat_state), None)
+            # re-calculate expected fight hp
             self._expected_total_hp = self._calculate_expected_total_hp(combat_state)
             self._starting_hp = combat_state.player.current_hp
+
         inherited = self._root_node.visits
         hp_ratio = max(0.1, min(1.0, combat_state.player.current_hp / max(1, self._starting_hp)))
+
         # largest bonus in reward units: `info_bonus` HP at the slope of the win reward (WIN_BONUS - HP_SCALE*(1 - sqrt(hp/start)))
         self._info_cap = config.info_bonus * HP_SCALE / (2.0 * math.sqrt(hp_ratio) * max(1, self._starting_hp))
+
         self._num_sims = 0
         self._search_config = config
         self._start_time = time.perf_counter()
 
         exit_reason = None
 
+        # tree search loop
         while True:
             # check exit conditions
             do_exit, reason = self._check_exit()
@@ -199,7 +208,7 @@ class sts2_MCTS:
                 break
             # traverse and sim
             path = self.traverse_node(self._root_node) # root to the leaf to simulate from (a shared node has several parents, so the path is tracked)
-            sim_result = self._simulate_random_combat(path[-1]) # simulate
+            sim_result = self._simulate_combat_rollout(path[-1]) # simulate
             backpropagate(path, sim_result, self._information_bonuses(path))
 
         stats = { 
@@ -416,7 +425,7 @@ class sts2_MCTS:
         return child, False
         
     # simulate combat to end
-    def _simulate_random_combat(self, node : sts2_Node) -> float:
+    def _simulate_combat_rollout(self, node : sts2_Node) -> float:
 
         c = CombatSimulator(CombatState.deepcopy(node.state))
         # shuffle draw pile to inject randomness into rollout
