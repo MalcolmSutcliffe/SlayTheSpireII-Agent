@@ -8,8 +8,11 @@ from sts2_lite.status import StatusInstance, StatusId, is_debuff
 from sts2_lite.card import Card, CardId
 from sts2_lite.relic import RelicId, STURDY_CLAMP_BLOCK, modify_hp_loss, dealt_hp_loss, after_damage_given
 
+# powers that do not stack (PowerStackType.Single)
+SINGLE_STACK = frozenset({StatusId.SMOGGY})
+
 # statuses whose owner reacts to being hit (see Creature._after_damage)
-REACTIVE_STATUSES = frozenset({StatusId.BURROWED, StatusId.PERSONAL_HIVE, StatusId.CURL_UP, StatusId.SLUMBER, StatusId.FLUTTER})
+REACTIVE_STATUSES = frozenset({StatusId.ASLEEP, StatusId.SHRIEK, StatusId.BURROWED, StatusId.PERSONAL_HIVE, StatusId.CURL_UP, StatusId.SLUMBER, StatusId.FLUTTER})
 
 
 class Creature:
@@ -91,6 +94,8 @@ class Creature:
             return
         if StatusId.HARD_TO_KILL in self.status:
             damage = min(damage, self.status[StatusId.HARD_TO_KILL].amount)       # ModifyDamageCap; also caps what block absorbs
+        if StatusId.INTANGIBLE in self.status:
+            damage = 1                                                          # IntangiblePower: ModifyDamageCap 1, and HP lost at most 1
         hp_before = self.current_hp
         broken = False
         if self.block > 0:
@@ -107,6 +112,8 @@ class Creature:
             self._lose_hp_from_damage(damage, dealer, powered)
         if dealer is not None and dealer.relics and dealer is not self:
             after_damage_given(dealer, self, broken)
+        if powered and dealer is not None and hp_before > self.current_hp and StatusId.PAPER_CUTS in dealer.status:
+            self.lose_max_hp(dealer.status[StatusId.PAPER_CUTS].amount)      # PaperCutsPower.AfterDamageGiven
         if self.current_hp > 0:
             self._after_damage(hp_before - self.current_hp, broken, powered, dealer)
 
@@ -128,6 +135,14 @@ class Creature:
         if powered and dealer is not None and StatusId.CURL_UP in self.status and not self.status[StatusId.CURL_UP].records:
             self.status[StatusId.CURL_UP].records.append([1])       # the card that did this earns the block once it finishes
         if unblocked > 0:
+            if StatusId.ASLEEP in self.status:         # AsleepPower: a hit wakes it, without its Plating, and it slashes next
+                self.status.pop(StatusId.PLATING, None)
+                del self.status[StatusId.ASLEEP]
+                self.stun("SLASH")
+            shriek = self.status.get(StatusId.SHRIEK)
+            if shriek is not None and self.current_hp <= shriek.amount:        # ShriekPower: the Terror Eel screams, then cannot again
+                del self.status[StatusId.SHRIEK]
+                self.stun("TERROR")
             if StatusId.SLUMBER in self.status:
                 self._lose_status_amount(StatusId.SLUMBER, 1, lambda: self.stun("ROLL_OUT"))
             if powered and StatusId.FLUTTER in self.status:
@@ -145,6 +160,14 @@ class Creature:
         return None
 
     def _lose_hp_from_damage(self, damage : int, dealer : Creature | None, powered : bool):
+        shell = self.status.get(StatusId.HARDENED_SHELL)
+        if shell is not None:           # HardenedShellPower: at most `amount` hit points a turn, every hit counted
+            lost = shell.records[0][0] if shell.records else 0
+            damage = max(0, min(damage, shell.amount - lost))
+            if damage:
+                shell.records = [[lost + damage]]
+            if damage == 0:
+                return
         if StatusId.SLIPPERY in self.status and self.status[StatusId.SLIPPERY].amount > 0:
             damage = 1
             self.status[StatusId.SLIPPERY].amount -= 1
@@ -171,6 +194,10 @@ class Creature:
         elif StatusId.PLOW in self.status and self.current_hp <= self.status[StatusId.PLOW].amount:
             self.lose_plow()
 
+    def lose_max_hp(self, amount : int):
+        self.max_hp = max(1, self.max_hp - amount)
+        self.current_hp = min(self.current_hp, self.max_hp)
+
     def lose_plow(self):
         """Plow breaks the first time hit points reach its amount: Strength is lost and the creature is stunned."""
         del self.status[StatusId.PLOW]
@@ -192,6 +219,8 @@ class Creature:
                 del self.status[StatusId.ARTIFACT]
             return
         if status in self.status:
+            if status in SINGLE_STACK:
+                return
             self.status[status].amount += amount
             if status is StatusId.THORNS and self.status[status].amount <= 0:
                 del self.status[status]         # the Spiny Toad takes its spikes back

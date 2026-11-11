@@ -1,0 +1,768 @@
+{
+ "type": "decision",
+ "decision": "combat_play",
+ "room_type": "monster",
+ "context": {
+  "act": 1,
+  "floor": 3,
+  "ascension": 0
+ },
+ "run": {
+  "act": 1,
+  "floor": 3,
+  "ascension": 0
+ },
+ "round": 2,
+ "turn": "player",
+ "is_play_phase": null,
+ "energy": 3,
+ "max_energy": 3,
+ "hand": [
+  {
+   "index": 0,
+   "id": "STRIKE_IRONCLAD",
+   "name": "Strike",
+   "type": "Attack",
+   "cost": "1",
+   "star_cost": null,
+   "description": "Deal 6 damage.",
+   "target_type": "AnyEnemy",
+   "can_play": true,
+   "unplayable_reason": null,
+   "is_upgraded": false,
+   "generated": false,
+   "enchantment": null,
+   "keywords": []
+  },
+  {
+   "index": 1,
+   "id": "STRIKE_IRONCLAD",
+   "name": "Strike",
+   "type": "Attack",
+   "cost": "1",
+   "star_cost": null,
+   "description": "Deal 6 damage.",
+   "target_type": "AnyEnemy",
+   "can_play": true,
+   "unplayable_reason": null,
+   "is_upgraded": false,
+   "generated": false,
+   "enchantment": null,
+   "keywords": []
+  },
+  {
+   "index": 2,
+   "id": "DEFEND_IRONCLAD",
+   "name": "Defend",
+   "type": "Skill",
+   "cost": "1",
+   "star_cost": null,
+   "description": "Gain 5 Block.",
+   "target_type": "Self",
+   "can_play": true,
+   "unplayable_reason": null,
+   "is_upgraded": false,
+   "generated": false,
+   "enchantment": null,
+   "keywords": [
+    {
+     "name": "Block",
+     "description": "Until next turn, prevents damage."
+    }
+   ]
+  },
+  {
+   "index": 3,
+   "id": "UNRELENTING",
+   "name": "Unrelenting+",
+   "type": "Attack",
+   "cost": "2",
+   "star_cost": null,
+   "description": "Deal 20 damage. The next Attack you play costs 0 [ironclad_energy_icon.png].",
+   "target_type": "AnyEnemy",
+   "can_play": true,
+   "unplayable_reason": null,
+   "is_upgraded": true,
+   "generated": false,
+   "enchantment": null,
+   "keywords": []
+  },
+  {
+   "index": 4,
+   "id": "DEFEND_IRONCLAD",
+   "name": "Defend",
+   "type": "Skill",
+   "cost": "1",
+   "star_cost": null,
+   "description": "Gain 5 Block.",
+   "target_type": "Self",
+   "can_play": true,
+   "unplayable_reason": null,
+   "is_upgraded": false,
+   "generated": false,
+   "enchantment": null,
+   "keywords": [
+    {
+     "name": "Block",
+     "description": "Until next turn, prevents damage."
+    }
+   ]
+  }
+ ],
+ "enemies": [
+  {
+   "entity_id": "TOADPOLE_0",
+   "combat_id": 1,
+   "name": "Toadpole",
+   "hp": 5,
+   "max_hp": 22,
+   "block": 0,
+   "status": [
+    {
+     "id": "VULNERABLE_POWER",
+     "name": "Vulnerable",
+     "amount": 1,
+     "type": "Debuff",
+     "description": "Receive 50% more damage from Attacks for 1 turn.",
+     "keywords": []
+    },
+    {
+     "id": "THORNS_POWER",
+     "name": "Thorns",
+     "amount": 2,
+     "type": "Buff",
+     "description": "When hit by an attack, deal 2 damage back.",
+     "keywords": []
+    }
+   ],
+   "move_id": "SPIKE_SPIT_MOVE",
+   "follow_up_id": "WHIRL_MOVE",
+   "move_log": [
+    "SPIKEN_MOVE",
+    "SPIKE_SPIT_MOVE"
+   ],
+   "intents": [
+    {
+     "type": "Attack",
+     "base_damage": 3,
+     "hits": 3,
+     "damage": 3,
+     "total_damage": 9,
+     "label": "3x3",
+     "title": "Aggressive",
+     "description": "This enemy intends to Attack for 3 damage 3 times."
+    }
+   ]
+  },
+  {
+   "entity_id": "TOADPOLE_1",
+   "combat_id": 2,
+   "name": "Toadpole",
+   "hp": 23,
+   "max_hp": 23,
+   "block": 0,
+   "status": [],
+   "move_id": "SPIKEN_MOVE",
+   "follow_up_id": "SPIKE_SPIT_MOVE",
+   "move_log": [
+    "WHIRL_MOVE",
+    "SPIKEN_MOVE"
+   ],
+   "intents": [
+    {
+     "type": "Buff",
+     "label": "",
+     "title": "Empower",
+     "description": "This enemy intends to use a Buff."
+    }
+   ]
+  }
+ ],
+ "player": {
+  "character": "The Ironclad",
+  "hp": 69,
+  "max_hp": 80,
+  "block": 0,
+  "energy": 3,
+  "max_energy": 3,
+  "hand": [
+   {
+    "index": 0,
+    "id": "STRIKE_IRONCLAD",
+    "name": "Strike",
+    "type": "Attack",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Deal 6 damage.",
+    "target_type": "AnyEnemy",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "generated": false,
+    "enchantment": null,
+    "keywords": []
+   },
+   {
+    "index": 1,
+    "id": "STRIKE_IRONCLAD",
+    "name": "Strike",
+    "type": "Attack",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Deal 6 damage.",
+    "target_type": "AnyEnemy",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "generated": false,
+    "enchantment": null,
+    "keywords": []
+   },
+   {
+    "index": 2,
+    "id": "DEFEND_IRONCLAD",
+    "name": "Defend",
+    "type": "Skill",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Gain 5 Block.",
+    "target_type": "Self",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "generated": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Block",
+      "description": "Until next turn, prevents damage."
+     }
+    ]
+   },
+   {
+    "index": 3,
+    "id": "UNRELENTING",
+    "name": "Unrelenting+",
+    "type": "Attack",
+    "cost": "2",
+    "star_cost": null,
+    "description": "Deal 20 damage. The next Attack you play costs 0 [ironclad_energy_icon.png].",
+    "target_type": "AnyEnemy",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": true,
+    "generated": false,
+    "enchantment": null,
+    "keywords": []
+   },
+   {
+    "index": 4,
+    "id": "DEFEND_IRONCLAD",
+    "name": "Defend",
+    "type": "Skill",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Gain 5 Block.",
+    "target_type": "Self",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "generated": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Block",
+      "description": "Until next turn, prevents damage."
+     }
+    ]
+   }
+  ],
+  "draw_pile_count": 1,
+  "discard_pile_count": 5,
+  "exhaust_pile_count": 0,
+  "draw_pile": [
+   {
+    "index": 0,
+    "id": "STRIKE_IRONCLAD",
+    "name": "Strike",
+    "type": "Attack",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Deal 6 damage.",
+    "target_type": "AnyEnemy",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "generated": false,
+    "enchantment": null,
+    "keywords": []
+   }
+  ],
+  "discard_pile": [
+   {
+    "index": 0,
+    "id": "BASH",
+    "name": "Bash",
+    "type": "Attack",
+    "cost": "2",
+    "star_cost": null,
+    "description": "Deal 8 damage. Apply 2 Vulnerable.",
+    "target_type": "AnyEnemy",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "generated": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Vulnerable",
+      "description": "Vulnerable creatures take 50% more damage from Attacks."
+     }
+    ]
+   },
+   {
+    "index": 1,
+    "id": "STRIKE_IRONCLAD",
+    "name": "Strike",
+    "type": "Attack",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Deal 9 damage.",
+    "target_type": "AnyEnemy",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "generated": false,
+    "enchantment": null,
+    "keywords": []
+   },
+   {
+    "index": 2,
+    "id": "STRIKE_IRONCLAD",
+    "name": "Strike",
+    "type": "Attack",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Deal 6 damage.",
+    "target_type": "AnyEnemy",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "generated": false,
+    "enchantment": null,
+    "keywords": []
+   },
+   {
+    "index": 3,
+    "id": "DEFEND_IRONCLAD",
+    "name": "Defend",
+    "type": "Skill",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Gain 5 Block.",
+    "target_type": "Self",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "generated": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Block",
+      "description": "Until next turn, prevents damage."
+     }
+    ]
+   },
+   {
+    "index": 4,
+    "id": "DEFEND_IRONCLAD",
+    "name": "Defend",
+    "type": "Skill",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Gain 5 Block.",
+    "target_type": "Self",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "generated": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Block",
+      "description": "Until next turn, prevents damage."
+     }
+    ]
+   }
+  ],
+  "exhaust_pile": [],
+  "gold": 114,
+  "status": [],
+  "relics": [
+   {
+    "id": "BURNING_BLOOD",
+    "name": "Burning Blood",
+    "description": "At the end of combat, heal 6 HP.",
+    "counter": null,
+    "status": "Normal",
+    "keywords": []
+   },
+   {
+    "id": "SILVER_CRUCIBLE",
+    "name": "Silver Crucible",
+    "description": "The first 3 card rewards you see are Upgraded. The first Treasure Chest you open is empty.",
+    "counter": 2,
+    "status": "Normal",
+    "keywords": []
+   }
+  ],
+  "potions": [
+   {
+    "id": "RADIANT_TINCTURE",
+    "name": "Radiant Tincture",
+    "description": "Gain [ironclad_energy_icon.png]. Gain an additional [ironclad_energy_icon.png] at the start of your next 3 turns.",
+    "slot": 0,
+    "can_use_in_combat": true,
+    "target_type": "AnyPlayer",
+    "keywords": [
+     {
+      "name": "Energy",
+      "description": "Energy is used to play cards from your Hand."
+     }
+    ]
+   }
+  ]
+ },
+ "draw_pile_count": 1,
+ "discard_pile_count": 5,
+ "exhaust_pile_count": 0,
+ "battle": {
+  "round": 2,
+  "turn": "player",
+  "player": {
+   "character": "The Ironclad",
+   "hp": 69,
+   "max_hp": 80,
+   "block": 0,
+   "energy": 3,
+   "max_energy": 3,
+   "hand": [
+    {
+     "index": 0,
+     "id": "STRIKE_IRONCLAD",
+     "name": "Strike",
+     "type": "Attack",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Deal 6 damage.",
+     "target_type": "AnyEnemy",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "generated": false,
+     "enchantment": null,
+     "keywords": []
+    },
+    {
+     "index": 1,
+     "id": "STRIKE_IRONCLAD",
+     "name": "Strike",
+     "type": "Attack",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Deal 6 damage.",
+     "target_type": "AnyEnemy",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "generated": false,
+     "enchantment": null,
+     "keywords": []
+    },
+    {
+     "index": 2,
+     "id": "DEFEND_IRONCLAD",
+     "name": "Defend",
+     "type": "Skill",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Gain 5 Block.",
+     "target_type": "Self",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "generated": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Block",
+       "description": "Until next turn, prevents damage."
+      }
+     ]
+    },
+    {
+     "index": 3,
+     "id": "UNRELENTING",
+     "name": "Unrelenting+",
+     "type": "Attack",
+     "cost": "2",
+     "star_cost": null,
+     "description": "Deal 20 damage. The next Attack you play costs 0 [ironclad_energy_icon.png].",
+     "target_type": "AnyEnemy",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": true,
+     "generated": false,
+     "enchantment": null,
+     "keywords": []
+    },
+    {
+     "index": 4,
+     "id": "DEFEND_IRONCLAD",
+     "name": "Defend",
+     "type": "Skill",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Gain 5 Block.",
+     "target_type": "Self",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "generated": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Block",
+       "description": "Until next turn, prevents damage."
+      }
+     ]
+    }
+   ],
+   "draw_pile_count": 1,
+   "discard_pile_count": 5,
+   "exhaust_pile_count": 0,
+   "draw_pile": [
+    {
+     "index": 0,
+     "id": "STRIKE_IRONCLAD",
+     "name": "Strike",
+     "type": "Attack",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Deal 6 damage.",
+     "target_type": "AnyEnemy",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "generated": false,
+     "enchantment": null,
+     "keywords": []
+    }
+   ],
+   "discard_pile": [
+    {
+     "index": 0,
+     "id": "BASH",
+     "name": "Bash",
+     "type": "Attack",
+     "cost": "2",
+     "star_cost": null,
+     "description": "Deal 8 damage. Apply 2 Vulnerable.",
+     "target_type": "AnyEnemy",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "generated": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Vulnerable",
+       "description": "Vulnerable creatures take 50% more damage from Attacks."
+      }
+     ]
+    },
+    {
+     "index": 1,
+     "id": "STRIKE_IRONCLAD",
+     "name": "Strike",
+     "type": "Attack",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Deal 9 damage.",
+     "target_type": "AnyEnemy",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "generated": false,
+     "enchantment": null,
+     "keywords": []
+    },
+    {
+     "index": 2,
+     "id": "STRIKE_IRONCLAD",
+     "name": "Strike",
+     "type": "Attack",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Deal 6 damage.",
+     "target_type": "AnyEnemy",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "generated": false,
+     "enchantment": null,
+     "keywords": []
+    },
+    {
+     "index": 3,
+     "id": "DEFEND_IRONCLAD",
+     "name": "Defend",
+     "type": "Skill",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Gain 5 Block.",
+     "target_type": "Self",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "generated": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Block",
+       "description": "Until next turn, prevents damage."
+      }
+     ]
+    },
+    {
+     "index": 4,
+     "id": "DEFEND_IRONCLAD",
+     "name": "Defend",
+     "type": "Skill",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Gain 5 Block.",
+     "target_type": "Self",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "generated": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Block",
+       "description": "Until next turn, prevents damage."
+      }
+     ]
+    }
+   ],
+   "exhaust_pile": [],
+   "gold": 114,
+   "status": [],
+   "relics": [
+    {
+     "id": "BURNING_BLOOD",
+     "name": "Burning Blood",
+     "description": "At the end of combat, heal 6 HP.",
+     "counter": null,
+     "status": "Normal",
+     "keywords": []
+    },
+    {
+     "id": "SILVER_CRUCIBLE",
+     "name": "Silver Crucible",
+     "description": "The first 3 card rewards you see are Upgraded. The first Treasure Chest you open is empty.",
+     "counter": 2,
+     "status": "Normal",
+     "keywords": []
+    }
+   ],
+   "potions": [
+    {
+     "id": "RADIANT_TINCTURE",
+     "name": "Radiant Tincture",
+     "description": "Gain [ironclad_energy_icon.png]. Gain an additional [ironclad_energy_icon.png] at the start of your next 3 turns.",
+     "slot": 0,
+     "can_use_in_combat": true,
+     "target_type": "AnyPlayer",
+     "keywords": [
+      {
+       "name": "Energy",
+       "description": "Energy is used to play cards from your Hand."
+      }
+     ]
+    }
+   ]
+  },
+  "enemies": [
+   {
+    "entity_id": "TOADPOLE_0",
+    "combat_id": 1,
+    "name": "Toadpole",
+    "hp": 5,
+    "max_hp": 22,
+    "block": 0,
+    "status": [
+     {
+      "id": "VULNERABLE_POWER",
+      "name": "Vulnerable",
+      "amount": 1,
+      "type": "Debuff",
+      "description": "Receive 50% more damage from Attacks for 1 turn.",
+      "keywords": []
+     },
+     {
+      "id": "THORNS_POWER",
+      "name": "Thorns",
+      "amount": 2,
+      "type": "Buff",
+      "description": "When hit by an attack, deal 2 damage back.",
+      "keywords": []
+     }
+    ],
+    "move_id": "SPIKE_SPIT_MOVE",
+    "follow_up_id": "WHIRL_MOVE",
+    "move_log": [
+     "SPIKEN_MOVE",
+     "SPIKE_SPIT_MOVE"
+    ],
+    "intents": [
+     {
+      "type": "Attack",
+      "base_damage": 3,
+      "hits": 3,
+      "damage": 3,
+      "total_damage": 9,
+      "label": "3x3",
+      "title": "Aggressive",
+      "description": "This enemy intends to Attack for 3 damage 3 times."
+     }
+    ]
+   },
+   {
+    "entity_id": "TOADPOLE_1",
+    "combat_id": 2,
+    "name": "Toadpole",
+    "hp": 23,
+    "max_hp": 23,
+    "block": 0,
+    "status": [],
+    "move_id": "SPIKEN_MOVE",
+    "follow_up_id": "SPIKE_SPIT_MOVE",
+    "move_log": [
+     "WHIRL_MOVE",
+     "SPIKEN_MOVE"
+    ],
+    "intents": [
+     {
+      "type": "Buff",
+      "label": "",
+      "title": "Empower",
+      "description": "This enemy intends to use a Buff."
+     }
+    ]
+   }
+  ],
+  "reviving": []
+ }
+}

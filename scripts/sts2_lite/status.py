@@ -108,10 +108,34 @@ class StatusId(Enum):
     MIND_ROT = auto()
     SLOTH = auto()
     WASTE_AWAY = auto()
+    STOCK = auto()
+    GALVANIC = auto()
+    PAPER_CUTS = auto()
+    POSSESS_STRENGTH = auto()
+    POSSESS_SPEED = auto()
+    RAMPART = auto()
+    SOAR = auto()
+    HIGH_VOLTAGE = auto()
+    HEX = auto()
+    DAMPEN = auto()
+    INTANGIBLE = auto()
+    ENRAGE = auto()
+    ADAPTABLE = auto()
+    PAINFUL_STABS = auto()
+    NEMESIS = auto()
+    CHAINS_OF_BINDING = auto()
+    WITHERING_PRESENCE = auto()
+    HARDENED_SHELL = auto()
+    SURPRISE = auto()
+    ASLEEP = auto()
+    THIEVERY = auto()
+    HEIST = auto()
 
 INFESTED_SPAWNS = 4
 CRAB_RAGE_STRENGTH, CRAB_RAGE_BLOCK = 6, 99
 SLOTH_LIMIT = 3
+GIANT_ABOUT_TO_BLOW_HP = 999999999     # SetMaxAndCurrentHp of the Waterfall Giant once it has been killed with Steam Eruption
+HARDENED_SHELL_CAP = 20       # the bridge shows what is left of it this turn (DisplayAmount)
 
 class StatusBehaviour(Enum):
     STATIC = auto()
@@ -126,7 +150,12 @@ STATUS_BEAVIOURS : dict[StatusId, StatusBehaviour] = {
     StatusId.DEXTERITY : StatusBehaviour.STATIC,
     StatusId.SHRINK : StatusBehaviour.DECREASE_BY_ONE,     # a counter that ticks when its owner's side ends; negative is infinite (ShrinkPower)
     StatusId.THORNS : StatusBehaviour.STATIC,
-    StatusId.RAVENOUS : StatusBehaviour.STATIC,
+    StatusId.RAVENOUS : StatusBehaviour.STATIC,       # when another enemy dies: stunned, and Strength (_ravenous_on_creature_killed)
+    StatusId.ASLEEP : StatusBehaviour.STATIC,           # Lagavulin Matriarch: counts down at the end of the enemy turn (_asleep_on_enemy_turn_end)
+    StatusId.SURPRISE : StatusBehaviour.STATIC,         # Gremlin Merc: the Sneaky and Fat Gremlins come out when it dies
+    StatusId.THIEVERY : StatusBehaviour.STATIC,         # Gremlin Merc: gold taken per hit move (instanced; records[0] = [amount, gold stolen so far])
+    StatusId.HEIST : StatusBehaviour.STATIC,            # Fat Gremlin: the gold it carries, given back when it is killed
+    StatusId.HARDENED_SHELL : StatusBehaviour.STATIC,   # caps the hit points lost each turn (Creature._lose_hp_from_damage); records[0][0] = lost so far
     StatusId.SUCK : StatusBehaviour.STATIC,
     StatusId.SLOW : StatusBehaviour.RESET_TO_ZERO,
     StatusId.TERRITORIAL : StatusBehaviour.STATIC,
@@ -213,6 +242,23 @@ STATUS_BEAVIOURS : dict[StatusId, StatusBehaviour] = {
     StatusId.MIND_ROT : StatusBehaviour.STATIC,     # draws this many fewer cards each turn
     StatusId.SLOTH : StatusBehaviour.STATIC,     # at most this many cards a turn
     StatusId.WASTE_AWAY : StatusBehaviour.STATIC,     # this much less maximum energy
+    StatusId.STOCK : StatusBehaviour.STATIC,     # Axebot: lives left; it comes back when it dies
+    StatusId.GALVANIC : StatusBehaviour.STATIC,     # Globe Head: playing a Power costs the player this many hit points
+    StatusId.PAPER_CUTS : StatusBehaviour.STATIC,     # Scroll of Biting: each unblocked attack hit costs this much maximum HP
+    StatusId.POSSESS_STRENGTH : StatusBehaviour.STATIC,     # The Lost: gives back the Strength it took when it dies (records[0][0])
+    StatusId.RAMPART : StatusBehaviour.STATIC,     # Living Shield: Turret Operators gain this much block as each player turn starts
+    StatusId.SOAR : StatusBehaviour.STATIC,     # Owl Magistrate in flight: attacks against it deal half damage
+    StatusId.HEX : StatusBehaviour.STATIC,     # Spectral Knight: every card is Ethereal while it lives
+    StatusId.DAMPEN : StatusBehaviour.STATIC,     # Magi Knight: upgraded cards are downgraded while it lives
+    StatusId.INTANGIBLE : StatusBehaviour.DECREASE_BY_ONE,     # damage taken is capped at 1; ticks at the end of the enemy turn
+    StatusId.ENRAGE : StatusBehaviour.STATIC,     # Test Subject: gains this much Strength whenever a Skill is played
+    StatusId.ADAPTABLE : StatusBehaviour.STATIC,     # Test Subject: killing it only sends it to its next form (twice)
+    StatusId.PAINFUL_STABS : StatusBehaviour.STATIC,     # an attack that gets through Block adds this many Wounds per hit
+    StatusId.NEMESIS : StatusBehaviour.STATIC,     # Test Subject's last form: Intangible every other turn (records[0][0]: 1 when it applies it next)
+    StatusId.CHAINS_OF_BINDING : StatusBehaviour.STATIC,     # Queen: this many cards a turn are Bound
+    StatusId.WITHERING_PRESENCE : StatusBehaviour.STATIC,     # Aeonglass: cards left to play until a Wither
+    StatusId.HIGH_VOLTAGE : StatusBehaviour.STATIC,     # Zapbot: Strength at the end of every enemy turn
+    StatusId.POSSESS_SPEED : StatusBehaviour.STATIC,     # The Forgotten: gives back the Dexterity it took when it dies
     StatusId.ENTROPY : StatusBehaviour.STATIC,}
 
 DEBUFFS = frozenset({StatusId.WEAK, StatusId.VULNERABLE, StatusId.FRAIL, StatusId.SHRINK,
@@ -220,10 +266,10 @@ DEBUFFS = frozenset({StatusId.WEAK, StatusId.VULNERABLE, StatusId.FRAIL, StatusI
                      StatusId.NO_DRAW, StatusId.NO_ENERGY_GAIN, StatusId.MANGLE, StatusId.CONFUSED,
                      StatusId.NO_BLOCK, StatusId.THE_GAMBIT, StatusId.DARK_SHACKLES,
                      StatusId.TENDER, StatusId.TAINTED, StatusId.SURROUNDED, StatusId.DISINTEGRATION, StatusId.MIND_ROT,
-                     StatusId.SLOTH, StatusId.WASTE_AWAY})
+                     StatusId.SLOTH, StatusId.WASTE_AWAY, StatusId.HEX, StatusId.DAMPEN, StatusId.CHAINS_OF_BINDING, StatusId.SMOGGY})
 
 def is_debuff(status_id : StatusId, amount : int) -> bool:
-    return status_id in DEBUFFS or (status_id == StatusId.STRENGTH and amount < 0)
+    return status_id in DEBUFFS or (status_id in (StatusId.STRENGTH, StatusId.DEXTERITY) and amount < 0)
 
 # Powers that every play adds a separate copy of (PowerInstanceType.Instanced). The bridge lists each copy; the
 # state keeps one status whose `records` hold one list per copy: [shown amount, ...what else the copy remembers].
@@ -233,6 +279,7 @@ INSTANCED = {
     StatusId.THE_BOMB : (40,),                  # [turns left, damage]
     StatusId.ROLLING_BOULDER : (),              # [damage of the next hit]
     StatusId.TORIC_TOUGHNESS : (5,),            # [turns left, block]
+    StatusId.THIEVERY : (0,),                   # [gold per steal, gold stolen so far]
 }
 # what an instanced copy's extra number is read from in the bridge's description (default: "N damage")
 INSTANCED_TEXT = {StatusId.TORIC_TOUGHNESS : r"(\d+)\D{0,20}?Block"}
@@ -263,9 +310,19 @@ class StatusInstance:
             return cls(status_id, amount, [[amount, *extra]])
         if status_id == StatusId.SLOTH:
             return cls(status_id, SLOTH_LIMIT)       # the shown amount is the cards played this turn; the limit is always 3
+        if status_id == StatusId.HARDENED_SHELL:
+            lost = max(0, HARDENED_SHELL_CAP - amount)
+            return cls(status_id, HARDENED_SHELL_CAP, [[lost]] if lost else [])
         if status_id == StatusId.TENDER:
             return cls(status_id, amount, [[amount]])       # the shown amount is the cards played this turn
         return cls(status_id, amount)
+
+    @property
+    def shown_amount(self) -> int:
+        """The amount the game displays: Hardened Shell shows what is left of this turn's allowance."""
+        if self.status_id == StatusId.HARDENED_SHELL:
+            return max(0, self.amount - (self.records[0][0] if self.records else 0))
+        return self.amount
 
     @classmethod
     def deepcopy(cls, status : StatusInstance):
@@ -284,6 +341,19 @@ class StatusInstance:
 # Event handlers: handler(combat, owner, amount, *event_args)
 # ---
 def _ritual_on_enemy_turn_end(combat : CombatSimulator, owner : Creature, amount : int):
+    inst = owner.status[StatusId.RITUAL]
+    if inst.records:        # RitualPower.WasJustAppliedByEnemy: the turn it was applied on does not count
+        inst.records = []
+        return
+    owner.apply_status(StatusId.STRENGTH, amount)
+
+def _rampart_on_before_player_turn(combat : CombatSimulator, owner : Creature, amount : int):
+    # RampartPower.AfterSideTurnStart: the Turret Operators behind the shield gain unpowered block
+    for enemy in combat.combat_state.enemies:
+        if enemy.enemy_id.startswith("TURRET_OPERATOR") and enemy.current_hp > 0:
+            enemy.apply_block(amount)
+
+def _high_voltage_on_enemy_turn_end(combat : CombatSimulator, owner : Creature, amount : int):
     owner.apply_status(StatusId.STRENGTH, amount)
 
 def _territorial_on_enemy_turn_end(combat : CombatSimulator, owner : Creature, amount : int):
@@ -293,6 +363,56 @@ def _shrink_on_creature_killed(combat : CombatSimulator, owner : Creature, amoun
     # Shrink lasts while the beetle that applied it lives
     if killed.enemy_id.startswith("SHRINKER_BEETLE"):
         del owner.status[StatusId.SHRINK]
+
+def _ravenous_on_creature_killed(combat : CombatSimulator, owner : Creature, amount : int, killed : Creature):
+    # RavenousPower.AfterDeath: another enemy died, so the Corpse Slug devours it: stunned, and Strength
+    if killed is owner or not hasattr(killed, "enemy_id") or owner.current_hp <= 0:
+        return
+    owner.stun()
+    owner.apply_status(StatusId.STRENGTH, amount)
+
+def _asleep_on_enemy_turn_end(combat : CombatSimulator, owner : Creature, amount : int):
+    # AsleepPower: the Plating goes a turn before the sleep ends (BeforeSideTurnEndVeryEarly), then one less turn of sleep
+    inst = owner.status[StatusId.ASLEEP]
+    if inst.amount <= 1:
+        owner.status.pop(StatusId.PLATING, None)
+    inst.amount -= 1
+    if inst.amount <= 0:
+        del owner.status[StatusId.ASLEEP]
+
+def _steam_eruption_on_death(combat : CombatSimulator, owner : Creature, amount : int):
+    # SteamEruptionPower.AfterDeath: the Waterfall Giant is not removed; it swells to be about to blow with all the steam it built
+    cs = combat.combat_state
+    owner.max_hp = owner.current_hp = GIANT_ABOUT_TO_BLOW_HP
+    owner.block = 0
+    owner.move_id, owner.move_streak, owner.attack_damage, owner.num_attacks = "ABOUT_TO_BLOW", 1, 0, 0
+    cs.enemies.insert(min(getattr(owner, "last_index", 0), len(cs.enemies)), owner)
+
+def _smoggy_on_card_played(combat : CombatSimulator, owner : Creature, amount : int, card):
+    # SmoggyPower.AfterCardPlayed: after a Skill every Skill card, in any pile, is afflicted with Smog until the turn ends
+    from sts2_lite.card import CardType     # card.py imports this module
+    if card.type == CardType.Skill:
+        owner.smogged = True
+
+def _smoggy_on_player_turn_ended(combat : CombatSimulator, owner : Creature, amount : int):
+    owner.smogged = False           # SmoggyPower.AfterSideTurnEnd
+
+def _surprise_on_death(combat : CombatSimulator, owner : Creature, amount : int):
+    # SurprisePower.AfterDeath: the merc's gremlins step out, and the Fat one carries off the gold the merc took
+    from sts2_lite.enemy import Enemy
+    cs = combat.combat_state
+    thievery = owner.status.get(StatusId.THIEVERY)
+    stolen = sum(r[1] for r in thievery.records) if thievery is not None else 0
+    place = min(getattr(owner, "last_index", 0), len(cs.enemies))
+    sneaky = Enemy.spawn("SNEAKY_GREMLIN", 0, cs.ascension)
+    fat = Enemy.spawn("FAT_GREMLIN", 0, cs.ascension)
+    if stolen > 0:
+        fat.apply_status(StatusId.HEIST, stolen)
+    combat.summon(sneaky, at=place)
+    combat.summon(fat, at=place + 1)
+
+def _hardened_shell_on_side_turn_start(combat : CombatSimulator, owner : Creature, amount : int):
+    owner.status[StatusId.HARDENED_SHELL].records = []     # BeforeSideTurnStart (either side): the count of hit points lost starts again
 
 def _crab_rage_on_creature_killed(combat : CombatSimulator, owner : Creature, amount : int, killed : Creature):
     # an ally of the crab died: +6 Strength and 99 Block, once
@@ -441,7 +561,7 @@ def _juggernaut_on_block_gained(combat : CombatSimulator, owner : Creature, amou
         return
     living = [e for e in combat.combat_state.enemies if e.current_hp > 0]
     if living:
-        target = living[0] if len(living) == 1 else rng.choice(living)
+        target = rng.pick_target(living)
         target.apply_damage(amount, owner)
 
 def _rage_on_card_played(combat : CombatSimulator, owner : Creature, amount : int, card):
@@ -587,7 +707,83 @@ def _entropy_on_turn_start(combat : CombatSimulator, owner : Creature, amount : 
     if _own(combat, owner):
         combat.request_transform(amount)
 
+def _stock_on_death(combat : CombatSimulator, owner : Creature, amount : int):
+    # StockPower.AfterDeath: a new Axebot in the same place with one life fewer, opening with Boot Up
+    from sts2_lite.enemy import Enemy     # enemy.py imports this module
+    monster, _, slot = owner.enemy_id.rpartition("_")
+    new = Enemy.spawn(monster, int(slot), combat.combat_state.ascension)
+    if amount - 1 > 0:
+        new.status[StatusId.STOCK] = StatusInstance(StatusId.STOCK, amount - 1)
+    combat.summon(new, at=getattr(owner, "last_index", None))
+
+def _galvanic_on_card_played(combat : CombatSimulator, owner : Creature, amount : int, card):
+    # every Power card is afflicted with Galvanized while the owner lives: playing one hurts the player (unpowered)
+    from sts2_lite.card import CardType     # card.py imports this module
+    if card.type == CardType.Power:
+        combat.combat_state.player.apply_damage(amount)
+
+def _possess_on_death(stat : StatusId):
+    def handler(combat : CombatSimulator, owner : Creature, amount : int):
+        # what the owner took from the player returns to the player
+        inst = owner.status[StatusId.POSSESS_STRENGTH if stat == StatusId.STRENGTH else StatusId.POSSESS_SPEED]
+        if inst.records and inst.records[0][0] > 0:
+            combat.combat_state.player.apply_status(stat, inst.records[0][0], bypass_artifact=True)
+    return handler
+
+def _hex_on_creature_killed(combat : CombatSimulator, owner : Creature, amount : int, killed : Creature):
+    # HexPower.AfterDeath: it goes with the Spectral Knight that applied it
+    if killed.enemy_id.startswith("SPECTRAL_KNIGHT"):
+        del owner.status[StatusId.HEX]
+
+def downgrade_cards(player):
+    """DampenPower.AfterApplied: every upgraded card in the deck becomes its plain version; the upgraded one is kept to come back."""
+    for pile in (player.hand, player.draw_pile, player.discard_pile, player.exhaust_pile):
+        for i, card in enumerate(pile):
+            if card.is_upgraded:
+                plain = card.downgraded_copy()
+                plain.dampened_from = card
+                pile[i] = plain
+
+def _dampen_on_creature_killed(combat : CombatSimulator, owner : Creature, amount : int, killed : Creature):
+    # the last Magi Knight that cast it is gone: the cards get their upgrades back
+    if not killed.enemy_id.startswith("MAGI_KNIGHT"):
+        return
+    del owner.status[StatusId.DAMPEN]
+    for pile in (owner.hand, owner.draw_pile, owner.discard_pile, owner.exhaust_pile):
+        for i, card in enumerate(pile):
+            if card.dampened_from is not None:
+                pile[i] = card.dampened_from
+
+WITHERING_PRESENCE_CARDS = 6
+
+def _enrage_on_card_played(combat : CombatSimulator, owner : Creature, amount : int, card):
+    from sts2_lite.card import CardType
+    if card.type == CardType.Skill:
+        owner.apply_status(StatusId.STRENGTH, amount)
+
+def _withering_presence_on_card_played(combat : CombatSimulator, owner : Creature, amount : int, card):
+    # the status sits on Aeonglass and counts the player's cards; the last of the six adds a Wither to their hand
+    from sts2_lite.card import Card
+    inst = owner.status[StatusId.WITHERING_PRESENCE]
+    inst.amount -= 1
+    if inst.amount <= 0:
+        inst.amount = WITHERING_PRESENCE_CARDS
+        combat.combat_state.player.add_to_hand(Card.create_wither(combat.wither_level()))
+
+def _nemesis_toggle(combat : CombatSimulator, owner : Creature):
+    """NemesisPower.AfterSideTurnEnd: Intangible every other enemy turn (it comes after the turn's own Intangible tick)."""
+    inst = owner.status[StatusId.NEMESIS]
+    if not inst.records:
+        inst.records.append([0])
+    inst.records[0][0] ^= 1
+    if inst.records[0][0]:
+        owner.apply_status(StatusId.INTANGIBLE, 1)
+    else:
+        owner.status.pop(StatusId.INTANGIBLE, None)
+
 STATUS_HANDLERS : dict[tuple[StatusId, EventType], Callable] = HandlerTable({
+    (StatusId.ENRAGE, EventType.CARD_PLAYED) : _enrage_on_card_played,
+    (StatusId.WITHERING_PRESENCE, EventType.CARD_PLAYED) : _withering_presence_on_card_played,
     (StatusId.INFERNO, EventType.PLAYER_TURN_START) : _inferno_on_turn_start,
     (StatusId.RITUAL, EventType.ENEMY_TURN_END) : _ritual_on_enemy_turn_end,
     (StatusId.TERRITORIAL, EventType.ENEMY_TURN_END) : _territorial_on_enemy_turn_end,
@@ -606,12 +802,28 @@ STATUS_HANDLERS : dict[tuple[StatusId, EventType], Callable] = HandlerTable({
     (StatusId.TENDER, EventType.CARD_PLAYED) : _tender_on_card_played,
     (StatusId.TENDER, EventType.PLAYER_TURN_ENDED) : _tender_on_player_turn_ended,
     (StatusId.INFESTED, EventType.DEATH) : _infested_on_death,
+    (StatusId.HEX, EventType.CREATURE_KILLED) : _hex_on_creature_killed,
+    (StatusId.DAMPEN, EventType.CREATURE_KILLED) : _dampen_on_creature_killed,
+    (StatusId.RAMPART, EventType.BEFORE_PLAYER_TURN) : _rampart_on_before_player_turn,
+    (StatusId.HIGH_VOLTAGE, EventType.ENEMY_TURN_END) : _high_voltage_on_enemy_turn_end,
+    (StatusId.STOCK, EventType.DEATH) : _stock_on_death,
+    (StatusId.GALVANIC, EventType.CARD_PLAYED) : _galvanic_on_card_played,
+    (StatusId.POSSESS_STRENGTH, EventType.DEATH) : _possess_on_death(StatusId.STRENGTH),
+    (StatusId.POSSESS_SPEED, EventType.DEATH) : _possess_on_death(StatusId.DEXTERITY),
     (StatusId.ILLUSION, EventType.DEATH) : _illusion_on_death,
     (StatusId.TANGLED, EventType.END_TURN) : _tangled_on_end_turn,
     (StatusId.RINGING, EventType.END_TURN) : _ringing_on_end_turn,
     (StatusId.CONSTRICT, EventType.END_TURN) : _constrict_on_end_turn,
     (StatusId.CONSTRICT, EventType.CREATURE_KILLED) : _constrict_on_creature_killed,
     (StatusId.PLATING, EventType.END_TURN) : _plating_on_end_turn,
+    (StatusId.ASLEEP, EventType.ENEMY_TURN_END) : _asleep_on_enemy_turn_end,
+    (StatusId.STEAM_ERUPTION, EventType.DEATH) : _steam_eruption_on_death,
+    (StatusId.SMOGGY, EventType.CARD_PLAYED) : _smoggy_on_card_played,
+    (StatusId.SMOGGY, EventType.PLAYER_TURN_ENDED) : _smoggy_on_player_turn_ended,
+    (StatusId.SURPRISE, EventType.DEATH) : _surprise_on_death,
+    (StatusId.RAVENOUS, EventType.CREATURE_KILLED) : _ravenous_on_creature_killed,
+    (StatusId.HARDENED_SHELL, EventType.BEFORE_PLAYER_TURN) : _hardened_shell_on_side_turn_start,
+    (StatusId.HARDENED_SHELL, EventType.ENEMY_TURN_START) : _hardened_shell_on_side_turn_start,
     (StatusId.SELF_FORMING_CLAY, EventType.PLAYER_TURN_START) : _self_forming_clay_on_turn_start,
     (StatusId.DEMON_FORM, EventType.PLAYER_TURN_START) : _demon_form_on_turn_start,
     (StatusId.FEEL_NO_PAIN, EventType.CARD_EXHAUSTED) : _feel_no_pain_on_exhausted,

@@ -1,0 +1,745 @@
+{
+  "type": "decision",
+  "decision": "combat_play",
+  "room_type": "boss",
+  "context": {
+    "act": 1,
+    "floor": 28,
+    "ascension": 0
+  },
+  "run": {
+    "act": 1,
+    "floor": 28,
+    "ascension": 0
+  },
+  "round": 5,
+  "turn": "player",
+  "is_play_phase": null,
+  "energy": 3,
+  "max_energy": 3,
+  "hand": [
+    {
+      "index": 0,
+      "id": "DEFEND_IRONCLAD",
+      "name": "Defend",
+      "type": "Skill",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Gain 5 Block.",
+      "target_type": "Self",
+      "can_play": true,
+      "unplayable_reason": null,
+      "is_upgraded": false,
+      "generated": false,
+      "enchantment": null,
+      "keywords": [
+        {
+          "name": "Block",
+          "description": "Until next turn, prevents damage."
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "id": "STRIKE_IRONCLAD",
+      "name": "Strike",
+      "type": "Attack",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Deal 6 damage.",
+      "target_type": "AnyEnemy",
+      "can_play": true,
+      "unplayable_reason": null,
+      "is_upgraded": false,
+      "generated": false,
+      "enchantment": null,
+      "keywords": []
+    },
+    {
+      "index": 2,
+      "id": "DEFEND_IRONCLAD",
+      "name": "Defend",
+      "type": "Skill",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Gain 5 Block.",
+      "target_type": "Self",
+      "can_play": true,
+      "unplayable_reason": null,
+      "is_upgraded": false,
+      "generated": false,
+      "enchantment": null,
+      "keywords": [
+        {
+          "name": "Block",
+          "description": "Until next turn, prevents damage."
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "id": "DEFEND_IRONCLAD",
+      "name": "Defend",
+      "type": "Skill",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Gain 5 Block.",
+      "target_type": "Self",
+      "can_play": true,
+      "unplayable_reason": null,
+      "is_upgraded": false,
+      "generated": false,
+      "enchantment": null,
+      "keywords": [
+        {
+          "name": "Block",
+          "description": "Until next turn, prevents damage."
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "id": "STRIKE_IRONCLAD",
+      "name": "Strike",
+      "type": "Attack",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Deal 6 damage.",
+      "target_type": "AnyEnemy",
+      "can_play": true,
+      "unplayable_reason": null,
+      "is_upgraded": false,
+      "generated": false,
+      "enchantment": null,
+      "keywords": []
+    }
+  ],
+  "enemies": [
+    {
+      "entity_id": "SOUL_FYSH_0",
+      "combat_id": 1,
+      "name": "Soul Fysh",
+      "hp": 211,
+      "max_hp": 211,
+      "block": 0,
+      "status": [
+        {
+          "id": "INTANGIBLE_POWER",
+          "name": "Intangible",
+          "amount": 1,
+          "type": "Buff",
+          "description": "Reduce all damage taken and HP loss to 1. Lasts for 1 turn.",
+          "keywords": []
+        }
+      ],
+      "move_id": "SCREAM_MOVE",
+      "follow_up_id": "BECKON_MOVE",
+      "move_log": [
+        "BECKON_MOVE",
+        "DE_GAS_MOVE",
+        "GAZE_MOVE",
+        "FADE_MOVE",
+        "SCREAM_MOVE"
+      ],
+      "intents": [
+        {
+          "type": "Attack",
+          "base_damage": 13,
+          "hits": 1,
+          "damage": 13,
+          "total_damage": 13,
+          "label": "13",
+          "title": "Aggressive",
+          "description": "This enemy intends to Attack for 13 damage."
+        },
+        {
+          "type": "Debuff",
+          "label": "",
+          "title": "Strategic",
+          "description": "This enemy intends to apply a Debuff to you."
+        }
+      ]
+    }
+  ],
+  "player": {
+    "character": "The Ironclad",
+    "hp": 50,
+    "max_hp": 80,
+    "block": 0,
+    "energy": 3,
+    "max_energy": 3,
+    "hand": [
+      {
+        "index": 0,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": []
+      },
+      {
+        "index": 2,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 3,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 4,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": []
+      }
+    ],
+    "draw_pile_count": 8,
+    "discard_pile_count": 0,
+    "exhaust_pile_count": 0,
+    "draw_pile": [
+      {
+        "index": 0,
+        "id": "BECKON",
+        "name": "Beckon",
+        "type": "Status",
+        "cost": "1",
+        "star_cost": null,
+        "description": "At the end of your turn, if this is in your Hand,  lose 6 HP.",
+        "target_type": "None",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": true,
+        "enchantment": null,
+        "keywords": []
+      },
+      {
+        "index": 1,
+        "id": "BECKON",
+        "name": "Beckon",
+        "type": "Status",
+        "cost": "1",
+        "star_cost": null,
+        "description": "At the end of your turn, if this is in your Hand,  lose 6 HP.",
+        "target_type": "None",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": true,
+        "enchantment": null,
+        "keywords": []
+      },
+      {
+        "index": 2,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": []
+      },
+      {
+        "index": 3,
+        "id": "BECKON",
+        "name": "Beckon",
+        "type": "Status",
+        "cost": "1",
+        "star_cost": null,
+        "description": "At the end of your turn, if this is in your Hand,  lose 6 HP.",
+        "target_type": "None",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": true,
+        "enchantment": null,
+        "keywords": []
+      },
+      {
+        "index": 4,
+        "id": "BASH",
+        "name": "Bash",
+        "type": "Attack",
+        "cost": "2",
+        "star_cost": null,
+        "description": "Deal 8 damage. Apply 2 Vulnerable.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Vulnerable",
+            "description": "Vulnerable creatures take 50% more damage from Attacks."
+          }
+        ]
+      },
+      {
+        "index": 5,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": []
+      },
+      {
+        "index": 6,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": []
+      },
+      {
+        "index": 7,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      }
+    ],
+    "discard_pile": [],
+    "exhaust_pile": [],
+    "gold": 79,
+    "status": [],
+    "relics": [
+      {
+        "id": "BURNING_BLOOD",
+        "name": "Burning Blood",
+        "description": "At the end of combat, heal 6 HP.",
+        "counter": null,
+        "status": "Normal",
+        "keywords": []
+      }
+    ],
+    "potions": []
+  },
+  "draw_pile_count": 8,
+  "discard_pile_count": 0,
+  "exhaust_pile_count": 0,
+  "battle": {
+    "round": 5,
+    "turn": "player",
+    "player": {
+      "character": "The Ironclad",
+      "hp": 50,
+      "max_hp": 80,
+      "block": 0,
+      "energy": 3,
+      "max_energy": 3,
+      "hand": [
+        {
+          "index": 0,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "generated": false,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "generated": false,
+          "enchantment": null,
+          "keywords": []
+        },
+        {
+          "index": 2,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "generated": false,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        },
+        {
+          "index": 3,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "generated": false,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        },
+        {
+          "index": 4,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "generated": false,
+          "enchantment": null,
+          "keywords": []
+        }
+      ],
+      "draw_pile_count": 8,
+      "discard_pile_count": 0,
+      "exhaust_pile_count": 0,
+      "draw_pile": [
+        {
+          "index": 0,
+          "id": "BECKON",
+          "name": "Beckon",
+          "type": "Status",
+          "cost": "1",
+          "star_cost": null,
+          "description": "At the end of your turn, if this is in your Hand,  lose 6 HP.",
+          "target_type": "None",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "generated": true,
+          "enchantment": null,
+          "keywords": []
+        },
+        {
+          "index": 1,
+          "id": "BECKON",
+          "name": "Beckon",
+          "type": "Status",
+          "cost": "1",
+          "star_cost": null,
+          "description": "At the end of your turn, if this is in your Hand,  lose 6 HP.",
+          "target_type": "None",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "generated": true,
+          "enchantment": null,
+          "keywords": []
+        },
+        {
+          "index": 2,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "generated": false,
+          "enchantment": null,
+          "keywords": []
+        },
+        {
+          "index": 3,
+          "id": "BECKON",
+          "name": "Beckon",
+          "type": "Status",
+          "cost": "1",
+          "star_cost": null,
+          "description": "At the end of your turn, if this is in your Hand,  lose 6 HP.",
+          "target_type": "None",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "generated": true,
+          "enchantment": null,
+          "keywords": []
+        },
+        {
+          "index": 4,
+          "id": "BASH",
+          "name": "Bash",
+          "type": "Attack",
+          "cost": "2",
+          "star_cost": null,
+          "description": "Deal 8 damage. Apply 2 Vulnerable.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "generated": false,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Vulnerable",
+              "description": "Vulnerable creatures take 50% more damage from Attacks."
+            }
+          ]
+        },
+        {
+          "index": 5,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "generated": false,
+          "enchantment": null,
+          "keywords": []
+        },
+        {
+          "index": 6,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "generated": false,
+          "enchantment": null,
+          "keywords": []
+        },
+        {
+          "index": 7,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "generated": false,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        }
+      ],
+      "discard_pile": [],
+      "exhaust_pile": [],
+      "gold": 79,
+      "status": [],
+      "relics": [
+        {
+          "id": "BURNING_BLOOD",
+          "name": "Burning Blood",
+          "description": "At the end of combat, heal 6 HP.",
+          "counter": null,
+          "status": "Normal",
+          "keywords": []
+        }
+      ],
+      "potions": []
+    },
+    "enemies": [
+      {
+        "entity_id": "SOUL_FYSH_0",
+        "combat_id": 1,
+        "name": "Soul Fysh",
+        "hp": 211,
+        "max_hp": 211,
+        "block": 0,
+        "status": [
+          {
+            "id": "INTANGIBLE_POWER",
+            "name": "Intangible",
+            "amount": 1,
+            "type": "Buff",
+            "description": "Reduce all damage taken and HP loss to 1. Lasts for 1 turn.",
+            "keywords": []
+          }
+        ],
+        "move_id": "SCREAM_MOVE",
+        "follow_up_id": "BECKON_MOVE",
+        "move_log": [
+          "BECKON_MOVE",
+          "DE_GAS_MOVE",
+          "GAZE_MOVE",
+          "FADE_MOVE",
+          "SCREAM_MOVE"
+        ],
+        "intents": [
+          {
+            "type": "Attack",
+            "base_damage": 13,
+            "hits": 1,
+            "damage": 13,
+            "total_damage": 13,
+            "label": "13",
+            "title": "Aggressive",
+            "description": "This enemy intends to Attack for 13 damage."
+          },
+          {
+            "type": "Debuff",
+            "label": "",
+            "title": "Strategic",
+            "description": "This enemy intends to apply a Debuff to you."
+          }
+        ]
+      }
+    ],
+    "reviving": []
+  }
+}

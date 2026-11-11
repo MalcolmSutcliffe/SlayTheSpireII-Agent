@@ -61,7 +61,7 @@ def _player(p) -> tuple:
             _relics(p.relics),
             p.inferno_plays, p.cards_played_total, p.crimson_mantle_plays, p.attacks_played_this_turn, p.plays_started_this_turn,
             tuple(sorted(p.returning, key=repr)), p.card_blocks_this_turn, p.cards_exhausted_this_turn, p.gold,
-            p.has_been_attacked_this_turn, p.lost_hp_this_turn, p.hp_loss_events, tuple(p.hp_lost_log), p.is_minion)
+            p.has_been_attacked_this_turn, p.lost_hp_this_turn, p.hp_loss_events, tuple(p.hp_lost_log), p.is_minion, p.binding, p.bound_cards, p.bound_played, p.smogged)
 
 def _continuations(cs) -> tuple:
     """What the cards waiting for a pick still have to do."""

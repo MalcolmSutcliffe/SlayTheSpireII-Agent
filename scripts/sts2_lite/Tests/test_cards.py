@@ -327,7 +327,7 @@ UNTARGETED_COLORLESS = (CardId.FINESSE, CardId.PRODUCTION, CardId.MASTER_OF_STRA
 def test_every_single_target_card_rejects_a_bad_target():
     from sts2_lite.card import GET_CARD_FUNCTION
     targeted = [cid for cid, f in GET_CARD_FUNCTION.items()
-                if cid not in (CardId.DEFEND_IRONCLAD, CardId.BLOOD_WALL, CardId.SLIMED, CardId.SPORE_MIND,
+                if cid not in (CardId.DEFEND_IRONCLAD, CardId.BLOOD_WALL, CardId.SLIMED, CardId.BECKON, CardId.SPORE_MIND,
                                CardId.BREAKTHROUGH, CardId.SHRUG_IT_OFF, CardId.THUNDERCLAP,
                                CardId.INFLAME, CardId.CRIMSON_MANTLE, CardId.IMPERVIOUS, CardId.EVIL_EYE,
                                    CardId.SECOND_WIND, CardId.BLOODLETTING, CardId.WHIRLWIND,
@@ -382,3 +382,13 @@ def test_self_exhausting_card_is_not_discarded():
     CombatSimulator(cs).play_card(1, 0)
     assert cs.player.hand == [other, drawn]
     assert cs.player.discard_pile == []
+
+
+def test_a_card_the_player_cannot_afford_right_now_is_not_unplayable_for_good():
+    """The bridge flags unaffordable cards (EnergyCostTooHigh); that flag followed them into the discard pile and the rollouts."""
+    from sts2_lite.card import Card
+    raw = {"id": "DEFEND_IRONCLAD", "name": "Defend", "type": "Skill", "cost": "1", "can_play": False, "unplayable_reason": "EnergyCostTooHigh",
+           "is_upgraded": False, "target_type": "Self", "keywords": []}
+    assert not Card.from_dict(raw).is_unplayable
+    raw["unplayable_reason"] = "HasUnplayableKeyword"
+    assert Card.from_dict(raw).is_unplayable

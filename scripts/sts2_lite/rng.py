@@ -22,3 +22,14 @@ choice = _counted(_generator.choice)
 choices = _counted(_generator.choices)
 sample = _counted(_generator.sample)
 random_float = _counted(_generator.random)       # uniform float in [0.0, 1.0)
+
+# Number of times one of several enemies was picked at random (Sword Boomerang, Juggernaut, ...): the bridge cannot tell which
+target_rolls = 0
+
+def pick_target(living):
+    """One of `living` at random; no roll when there is only one."""
+    global target_rolls
+    if len(living) == 1:
+        return living[0]
+    target_rolls += 1
+    return choice(living)

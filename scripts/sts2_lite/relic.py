@@ -455,7 +455,7 @@ def _hurt_random(combat : CombatSimulator, amount : int):
     """Unpowered damage to one random hittable enemy (Rng.CombatTargets)."""
     living = _living(combat)
     if living:
-        (living[0] if len(living) == 1 else rng.choice(living)).apply_damage(amount, combat.combat_state.player)
+        (rng.pick_target(living)).apply_damage(amount, combat.combat_state.player)
         combat.resolve_deaths()
 
 

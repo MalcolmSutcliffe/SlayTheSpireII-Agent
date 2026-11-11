@@ -1,10 +1,11 @@
 from agents.base_agent import BaseAgent
 from agents.my_agent import MyAgent
 
+from sts2_lite import rng
 from sts2_lite.card import CardId, CardType
 from sts2_lite.combat import CombatState, CombatSimulator
 from sts2_lite.selection import game_index
-from sts2_lite.verify import compare, snapshot, is_random_step
+from sts2_lite.verify import compare, snapshot, is_random_step, is_unpredictable_step, some_target_roll_matches
 
 import argparse
 import functools
@@ -131,16 +132,23 @@ def auto_pick(game_state : dict):
 def dump(game_state : dict) -> str:
     return json.dumps(game_state, sort_keys=True)
 
-def settled(game_state : dict) -> dict:
+def pile_total(game_state : dict) -> int:
+    """Cards in the hand and the three piles. A card being played or auto-played sits in none of them."""
+    player = game_state.get("player") or {}
+    return len(game_state.get("hand") or []) + sum(player.get(k, 0) or 0 for k in ("draw_pile_count", "discard_pile_count", "exhaust_pile_count"))
+
+def settled(game_state : dict, cards_owed : int | None = None) -> dict:
     """A card's cost is paid before its effect lands, and a turn starts in stages: take the first state that
-    reads the same SETTLE_READS times in a row."""
+    reads the same SETTLE_READS times in a row. `cards_owed`: a card being played, auto-played (Havoc) or exhausted
+    (Toasty Mittens) is in limbo, and the game can pause there with the same state on every read: wait until the hand and piles hold
+    the number of cards the sim expects."""
     stable = 1
-    for _ in range(40):
+    for _ in range(40 if cards_owed is None else 60):
         time.sleep(SETTLE_INTERVAL)
         again = get_state()
         if dump(again) == dump(game_state):
             stable += 1
-            if stable >= SETTLE_READS:
+            if stable >= SETTLE_READS and (cards_owed is None or pile_total(again) == cards_owed):
                 return again
         else:
             stable, game_state = 1, again
@@ -210,6 +218,8 @@ def log_decision(path : str, game_state : dict, combat_state : CombatState, acti
     if stats is not None:               # reported by the search itself
         record["sims"] = stats.get("num_sims")
         record["stopped_by"] = stats.get("exit_reason")
+        record["reused"] = stats.get("reused")                  # the tree of the last search was kept (and how many visits it came with)
+        record["inherited_visits"] = stats.get("inherited_visits")
         record["moves"] = [{"move": describe_action(c["action"], combat_state), "visits": c["visits"],
                             "mean": round(c["q"], 4)} for c in stats.get("children", [])]
     elif searcher is not None and getattr(searcher, "_root_node", None) is not None:
@@ -324,7 +334,12 @@ def verify_step(batch : dict, game_state : dict, actual : CombatState, log_path 
     if potions_of(batch["before"]) != potions_of(game_state):
         print("a potion was used during this step (the sim does not play potions): not compared")
         return True
-    diffs = compare(batch["predicted"], actual, random_step=batch["random_step"])
+    if batch.get("unpredictable"):
+        print("a card played a random card from the draw pile that the agent could not see (Havoc): not compared")
+        return True
+    diffs = compare(batch["predicted"], actual, random_step=batch["random_step"], random_target=batch.get("random_target", False))
+    if diffs and batch.get("random_target") and some_target_roll_matches(batch["before_sim"], batch["actions"], actual, batch["random_step"]):
+        diffs = []          # the game hit other enemies than the sim did, and the damage differs because the enemies do
     if diffs:
         log_mismatch(log_path, batch, game_state, diffs, batch["predicted"], actual)
     return not diffs
@@ -339,8 +354,14 @@ def verify_combat_end(batch : dict, game_state : dict, log_path : str):
 ### The loop
 ###
 
+def save_decision_state(state_dir : str, number : int, game_state : dict):
+    """The exact state the agent saw at decision `number`, so a strange decision can be replayed (the decision log keeps only a summary)."""
+    path = Path(state_dir)
+    path.mkdir(parents=True, exist_ok=True)
+    (path / f"decision_{number:05d}.json").write_text(json.dumps(game_state))
+
 def run_agent(agent : BaseAgent, step : bool = False, verify : bool = True, log_path : str = DEFAULT_LOG, capture_dir : str | None = None,
-              decision_log : str | None = None):
+              decision_log : str | None = None, state_dir : str | None = None):
     previous = None     # state after the last action: the bridge reports no per-turn history
     batch = None        # actions since the last point the sim and the game could be compared
     waiting_for = None  # what the loop last said it was waiting on, so it says so once
@@ -351,6 +372,7 @@ def run_agent(agent : BaseAgent, step : bool = False, verify : bool = True, log_
     locked_reads = 0
     checked = mismatched = 0
     reported_cards = set()      # NOT_IMPLEMENTED card ids already logged this run
+    cards_owed = None           # how many cards the hand and piles must hold once the last action has finished
     try:
         while True:
             game_state = get_state()
@@ -379,7 +401,8 @@ def run_agent(agent : BaseAgent, step : bool = False, verify : bool = True, log_
             if kind == "play":
                 ended = None
 
-            game_state = settled(game_state)
+            game_state = settled(game_state, cards_owed)
+            cards_owed = None
             if kind_of(game_state, previous is not None and previous.pending_choice is not None) != kind:
                 continue            # the game moved on while the state settled (the last enemy died and the fight is torn down): read it again
             decision = game_state["decision"]
@@ -412,6 +435,7 @@ def run_agent(agent : BaseAgent, step : bool = False, verify : bool = True, log_
                 report_unimplemented(game_state, log_path, reported_cards)
                 combat_state.carry_turn_counters(previous)
                 combat_state.carry_known_top(previous)    # cards the agent put on top (Headbutt)
+                combat_state.carry_boss_state(previous)         # the form of a dead Test Subject
                 combat_state.carry_combat_counters(previous)    # HP-loss events (Tear Asunder), Inferno plays
                 if cards_look_locked(combat_state):
                     locked_reads += 1
@@ -435,8 +459,10 @@ def run_agent(agent : BaseAgent, step : bool = False, verify : bool = True, log_
                 input("waiting for input ... \n")
             started = time.perf_counter()
             action = agent.get_action(combat_state, TIME_BUDGET_SECONDS)
+            decisions += 1
+            if state_dir:
+                save_decision_state(state_dir, decisions, game_state)
             if decision_log:
-                decisions += 1
                 log_decision(decision_log, game_state, combat_state, action, time.perf_counter() - started, search, decisions)
 
             if batch is None:
@@ -444,12 +470,18 @@ def run_agent(agent : BaseAgent, step : bool = False, verify : bool = True, log_
             batch["actions"].append(action)
             previous = CombatState.deepcopy(combat_state)
             simulator = CombatSimulator(previous)
+            rolls = rng.target_rolls
             simulator.perform_action(action)
+            batch["random_target"] = batch.get("random_target", False) or rng.target_rolls != rolls     # the game may have hit another enemy
             picking_more = previous.pending_choice is not None
             batch["predicted"] = None if picking_more else previous
             batch["predicted_over"] = simulator.is_over
             batch["random_step"] = is_random_step(batch["before_sim"], previous, batch["actions"])
+            batch["unpredictable"] = batch.get("unpredictable", False) or is_unpredictable_step(batch["before_sim"], batch["actions"])
 
+            if batch["predicted"] is not None:
+                p = batch["predicted"].player
+                cards_owed = len(p.hand) + len(p.draw_pile) + len(p.discard_pile) + len(p.exhaust_pile)     # wait for every card to land
             before = dump(game_state)
             if action["action"] == "end_turn":
                 ended = {"round": game_state.get("round"), "time": time.time()}
@@ -470,9 +502,10 @@ def main():
     parser.add_argument("--log", default=DEFAULT_LOG, help="where differences are written (JSON lines)")
     parser.add_argument("--decision-log", default=None, help="where every decision is written (JSON lines): the move, sims, time and each move's visits and mean reward")
     parser.add_argument("--capture-dir", default=None, help="save the state at the start of every turn here (benchmark material)")
+    parser.add_argument("--state-dir", default=None, help="save the game state behind every decision here (decision_00001.json ...); numbers match --decision-log")
     args = parser.parse_args()
     agent = MyAgent()
-    run_agent(agent, step=args.step, verify=not args.no_verify, log_path=args.log, capture_dir=args.capture_dir, decision_log=args.decision_log)
+    run_agent(agent, step=args.step, verify=not args.no_verify, log_path=args.log, capture_dir=args.capture_dir, decision_log=args.decision_log, state_dir=args.state_dir)
 
 if __name__ == "__main__":
     main()

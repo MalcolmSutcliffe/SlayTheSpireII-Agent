@@ -8,9 +8,9 @@ import logging
 from enum import Enum, auto
 
 from sts2_lite import rng
-from sts2_lite.card import Card
+from sts2_lite.card import Card, CardId
 from sts2_lite.creature import Creature
-from sts2_lite.enemy_moves import MOVE_TABLES, table_move_id, SPAWN_HP, SPAWN_MOVE, SPAWN_STATUS, TOUGH_ASCENSION, MoveTable
+from sts2_lite.enemy_moves import MOVE_TABLES, rat_counter, table_move_id, SPAWN_HP, SPAWN_MOVE, SPAWN_STATUS, TOUGH_ASCENSION, MoveTable
 from sts2_lite.damage import modify_damage
 from sts2_lite.status import StatusInstance, StatusId
 
@@ -74,6 +74,10 @@ class Enemy(Creature):
 
         if StatusId.MINION in e.status:
             e.is_minion = True
+        # The Lost / The Forgotten: the game does not show what they took; every Smog or Miasma gave them what it took
+        for possess, stat in ((StatusId.POSSESS_STRENGTH, StatusId.STRENGTH), (StatusId.POSSESS_SPEED, StatusId.DEXTERITY)):
+            if possess in e.status and not e.status[possess].records:
+                e.status[possess].records.append([max(0, e.status_amount(stat))])
 
         monster, _, number = e.enemy_id.rpartition("_")
         e.slot = int(number) if number.isdigit() else 0
@@ -108,6 +112,22 @@ class Enemy(Creature):
                 streak += 1
             self.move_streak = streak
             self.used_moves = {m for m in log[:-1] if m is not None}
+        if monster == "AEONGLASS":
+            self.counter = (log[:-1] if log and log[-1] == current else log).count("INCREASING_INTENSITY")      # WitherUpgradeCount
+        elif monster == "TEST_SUBJECT" and current == "MULTI_CLAW":
+            self.counter = max(0, int(raw.get("intents", [{}])[0].get("hits", 3)) - 3)       # claws it has gained
+        if monster == "WATERFALL_GIANT" and current != "EXPLODE":
+            performed = log[:-1] if log and log[-1] == current else log
+            self.counter = performed.count("PRESSURE_GUN")          # the Pressure Gun has grown by 5 for each time it fired
+        if monster == "GREMLIN_MERC" and StatusId.THIEVERY in self.status:
+            performed = log[:-1] if log and log[-1] == current else log        # each attack took the full amount, as far as the bridge can say
+            thievery = self.status[StatusId.THIEVERY]
+            thievery.records = [[thievery.amount, thievery.amount * len(performed)]]
+        if monster == "TWO_TAILED_RAT":
+            performed = log[:-1] if log and log[-1] == current else log
+            screeches = [i for i, m in enumerate(performed) if m == "SCREECH"]
+            gap = len(performed) - 1 - screeches[-1] if screeches else 3
+            self.counter = rat_counter(sum(1 for m in performed if m != "CALL_FOR_BACKUP"), max(0, 3 - gap), performed.count("CALL_FOR_BACKUP"))
         if monster == "KNOWLEDGE_DEMON":
             performed = log[:-1] if log and log[-1] == current else log      # the current move has not been performed yet
             self.counter = performed.count("CURSE_OF_KNOWLEDGE")
@@ -119,6 +139,27 @@ class Enemy(Creature):
         e.current_hp, e.block = 0, 0
         e.status = {StatusId.REATTACH : segment.status[StatusId.REATTACH]}
         e.move_id, e.move_streak, e.attack_damage, e.num_attacks, e.after_stun, e.off_balance = "DEAD", 1, 0, 0, None, False
+        return e
+
+    @classmethod
+    def lie_dead_subject(cls, subject : Enemy) -> Enemy:
+        """A killed Test Subject (AdaptablePower): still in the fight, with only the powers that outlive it, and about to respawn."""
+        e = cls.deepcopy(subject)
+        e.current_hp, e.block = 0, 0
+        e.last_index = getattr(subject, "last_index", 0)
+        e.status = {sid : inst for sid, inst in subject.status.items() if sid in (StatusId.ADAPTABLE, StatusId.PAINFUL_STABS)}
+        e.move_id, e.move_streak, e.attack_damage, e.num_attacks, e.after_stun, e.off_balance = "RESPAWN", 1, 0, 0, None, False
+        return e
+
+    @classmethod
+    def dormant_subject(cls, ascension : int) -> Enemy:
+        """The Test Subject while it is dead: the bridge lists no enemies at all. Its form is not shown, so this is the first one's death."""
+        e = cls()
+        e.max_hp, e.current_hp, e.enemy_id = (111 if ascension >= TOUGH_ASCENSION else 100), 0, "TEST_SUBJECT_0"
+        e.moves = MOVE_TABLES["TEST_SUBJECT"](ascension)
+        e.move_id, e.attack_damage, e.num_attacks = "RESPAWN", 0, 0
+        e.status = {StatusId.ADAPTABLE : StatusInstance(StatusId.ADAPTABLE, 1)}
+        e.last_index = 0
         return e
 
     @classmethod
@@ -145,7 +186,7 @@ class Enemy(Creature):
         e.moves = MOVE_TABLES[monster](ascension)
         e.move_id = SPAWN_MOVE.get(monster, "SPAWNED")
         e.attack_damage = e.moves[e.move_id].damage
-        e.num_attacks = e.moves[e.move_id].hits
+        e.num_attacks = e._move_hits(e.moves[e.move_id])
         for status_id, amount in SPAWN_STATUS.get(monster, ()):
             e.status[status_id] = StatusInstance(status_id, amount)
         e.is_minion = StatusId.MINION in e.status
@@ -236,9 +277,13 @@ class Enemy(Creature):
         super().turn_start()
         self.block += block
 
-    def perform_turn(self, combat : CombatSimulator):
+    def clear_block(self):
         if StatusId.BURROWED not in self.status:        # Burrowed keeps its block
             self.block = 0
+
+    def perform_turn(self, combat : CombatSimulator):
+        if not getattr(combat, "blocks_cleared", False):        # the simulator clears everyone's block as the side's turn starts
+            self.clear_block()
         if self.move_id == STUNNED:
             self._wake_from_stun(combat)
             return
@@ -246,7 +291,16 @@ class Enemy(Creature):
         if self.num_attacks > 0:
             player = combat.combat_state.player
             damage = combat.calculate_damage(self.attack_damage, self, player)
+            lost_before = player.hp_loss_events
             player.apply_attack_damage(damage, self, self.num_attacks)
+            stabs = self.status.get(StatusId.PAINFUL_STABS)
+            if stabs is not None and player.hp_loss_events > lost_before:       # a Wound for every hit that got through the block
+                for _ in range(stabs.amount * (player.hp_loss_events - lost_before)):
+                    player.discard_pile.append(Card.create(CardId.WOUND))
+            suck = self.status.get(StatusId.SUCK)
+            if suck is not None and player.hp_loss_events > lost_before:        # SuckPower: Strength for every hit that got through
+                self.apply_status(StatusId.STRENGTH, suck.amount * (player.hp_loss_events - lost_before))
+            self.status.pop(StatusId.VIGOR, None)           # VigorPower: spent by the attack
         if self.moves is not None:
             player = combat.combat_state.player
             move = self.moves[performed]
@@ -308,8 +362,14 @@ class Enemy(Creature):
         following = self.moves[self.after_stun]
         self.move_id, self.after_stun = self.after_stun, None
         self.move_streak = 1
-        self.attack_damage = following.damage
-        self.num_attacks = following.hits
+        self.attack_damage = self._move_damage(following)
+        self.num_attacks = self._move_hits(following)
+
+    def _move_hits(self, move) -> int:
+        return move.hits + (move.extra_hits(self) if move.extra_hits is not None else 0)
+
+    def _move_damage(self, move) -> int:
+        return move.damage + (self.status_amount(StatusId.DEXTERITY) if move.dex_damage else 0) + (move.extra_damage(self) if move.extra_damage is not None else 0)
 
     def _finish_move(self, combat : CombatSimulator | None = None, performed : str | None = None):
         performed = performed or self.move_id
@@ -326,8 +386,8 @@ class Enemy(Creature):
         following = self.moves[next_id]
         self.move_streak = self.move_streak + 1 if next_id == self.move_id else 1
         self.move_id = next_id
-        self.attack_damage = following.damage
-        self.num_attacks = following.hits
+        self.attack_damage = self._move_damage(following)
+        self.num_attacks = self._move_hits(following)
 
     def _choose_next(self, move, combat : CombatSimulator | None = None) -> str:
         if move.choose is not None:

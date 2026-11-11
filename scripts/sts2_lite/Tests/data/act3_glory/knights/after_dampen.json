@@ -1,0 +1,1299 @@
+{
+  "type": "decision",
+  "decision": "combat_play",
+  "room_type": "elite",
+  "context": {
+    "act": 3,
+    "floor": 8,
+    "ascension": 0
+  },
+  "run": {
+    "act": 3,
+    "floor": 8,
+    "ascension": 0
+  },
+  "round": 3,
+  "turn": "player",
+  "is_play_phase": null,
+  "energy": 3,
+  "max_energy": 3,
+  "hand": [
+    {
+      "index": 0,
+      "id": "DEFEND_IRONCLAD",
+      "name": "Defend",
+      "type": "Skill",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Ethereal. Gain 5 Block.",
+      "target_type": "Self",
+      "can_play": true,
+      "unplayable_reason": null,
+      "is_upgraded": false,
+      "generated": false,
+      "enchantment": null,
+      "keywords": [
+        {
+          "name": "Hexed",
+          "description": "Add Ethereal to this card."
+        },
+        {
+          "name": "Ethereal",
+          "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+        },
+        {
+          "name": "Block",
+          "description": "Until next turn, prevents damage."
+        },
+        {
+          "name": "Exhaust",
+          "description": "Removed until the end of combat."
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "id": "ARMAMENTS",
+      "name": "Armaments",
+      "type": "Skill",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Ethereal. Gain 5 Block. Upgrade a card in your Hand.",
+      "target_type": "Self",
+      "can_play": true,
+      "unplayable_reason": null,
+      "is_upgraded": false,
+      "generated": true,
+      "enchantment": null,
+      "keywords": [
+        {
+          "name": "Hexed",
+          "description": "Add Ethereal to this card."
+        },
+        {
+          "name": "Ethereal",
+          "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+        },
+        {
+          "name": "Block",
+          "description": "Until next turn, prevents damage."
+        },
+        {
+          "name": "Exhaust",
+          "description": "Removed until the end of combat."
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "id": "ARMAMENTS",
+      "name": "Armaments",
+      "type": "Skill",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Ethereal. Gain 5 Block. Upgrade a card in your Hand.",
+      "target_type": "Self",
+      "can_play": true,
+      "unplayable_reason": null,
+      "is_upgraded": false,
+      "generated": true,
+      "enchantment": null,
+      "keywords": [
+        {
+          "name": "Hexed",
+          "description": "Add Ethereal to this card."
+        },
+        {
+          "name": "Ethereal",
+          "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+        },
+        {
+          "name": "Block",
+          "description": "Until next turn, prevents damage."
+        },
+        {
+          "name": "Exhaust",
+          "description": "Removed until the end of combat."
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "id": "ARMAMENTS",
+      "name": "Armaments",
+      "type": "Skill",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Ethereal. Gain 5 Block. Upgrade a card in your Hand.",
+      "target_type": "Self",
+      "can_play": true,
+      "unplayable_reason": null,
+      "is_upgraded": false,
+      "generated": true,
+      "enchantment": null,
+      "keywords": [
+        {
+          "name": "Hexed",
+          "description": "Add Ethereal to this card."
+        },
+        {
+          "name": "Ethereal",
+          "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+        },
+        {
+          "name": "Block",
+          "description": "Until next turn, prevents damage."
+        },
+        {
+          "name": "Exhaust",
+          "description": "Removed until the end of combat."
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "id": "DEFEND_IRONCLAD",
+      "name": "Defend",
+      "type": "Skill",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Ethereal. Gain 5 Block.",
+      "target_type": "Self",
+      "can_play": true,
+      "unplayable_reason": null,
+      "is_upgraded": false,
+      "generated": false,
+      "enchantment": null,
+      "keywords": [
+        {
+          "name": "Hexed",
+          "description": "Add Ethereal to this card."
+        },
+        {
+          "name": "Ethereal",
+          "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+        },
+        {
+          "name": "Block",
+          "description": "Until next turn, prevents damage."
+        },
+        {
+          "name": "Exhaust",
+          "description": "Removed until the end of combat."
+        }
+      ]
+    }
+  ],
+  "enemies": [
+    {
+      "entity_id": "FLAIL_KNIGHT_0",
+      "combat_id": 1,
+      "name": "Flail Knight",
+      "hp": 101,
+      "max_hp": 101,
+      "block": 0,
+      "status": [],
+      "move_id": "FLAIL_MOVE",
+      "follow_up_id": "RAND",
+      "move_log": [
+        "RAM_MOVE",
+        "RAM_MOVE",
+        "FLAIL_MOVE"
+      ],
+      "intents": [
+        {
+          "type": "Attack",
+          "base_damage": 9,
+          "hits": 2,
+          "damage": 9,
+          "total_damage": 18,
+          "label": "9x2",
+          "title": "Aggressive",
+          "description": "This enemy intends to Attack for 9 damage 2 times."
+        }
+      ]
+    },
+    {
+      "entity_id": "SPECTRAL_KNIGHT_0",
+      "combat_id": 2,
+      "name": "Spectral Knight",
+      "hp": 93,
+      "max_hp": 93,
+      "block": 0,
+      "status": [],
+      "move_id": "SOUL_SLASH",
+      "follow_up_id": "RAND",
+      "move_log": [
+        "HEX",
+        "SOUL_SLASH",
+        "SOUL_SLASH"
+      ],
+      "intents": [
+        {
+          "type": "Attack",
+          "base_damage": 15,
+          "hits": 1,
+          "damage": 15,
+          "total_damage": 15,
+          "label": "15",
+          "title": "Aggressive",
+          "description": "This enemy intends to Attack for 15 damage."
+        }
+      ]
+    },
+    {
+      "entity_id": "MAGI_KNIGHT_0",
+      "combat_id": 3,
+      "name": "Magi Knight",
+      "hp": 82,
+      "max_hp": 82,
+      "block": 0,
+      "status": [],
+      "move_id": "RAM_MOVE",
+      "follow_up_id": "PREP_MOVE",
+      "move_log": [
+        "POWER_SHIELD_MOVE",
+        "DAMPEN_MOVE",
+        "RAM_MOVE"
+      ],
+      "intents": [
+        {
+          "type": "Attack",
+          "base_damage": 10,
+          "hits": 1,
+          "damage": 10,
+          "total_damage": 10,
+          "label": "10",
+          "title": "Aggressive",
+          "description": "This enemy intends to Attack for 10 damage."
+        }
+      ]
+    }
+  ],
+  "player": {
+    "character": "The Ironclad",
+    "hp": 44,
+    "max_hp": 80,
+    "block": 0,
+    "energy": 3,
+    "max_energy": 3,
+    "hand": [
+      {
+        "index": 0,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Ethereal. Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Hexed",
+            "description": "Add Ethereal to this card."
+          },
+          {
+            "name": "Ethereal",
+            "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+          },
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          },
+          {
+            "name": "Exhaust",
+            "description": "Removed until the end of combat."
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "id": "ARMAMENTS",
+        "name": "Armaments",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Ethereal. Gain 5 Block. Upgrade a card in your Hand.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": true,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Hexed",
+            "description": "Add Ethereal to this card."
+          },
+          {
+            "name": "Ethereal",
+            "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+          },
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          },
+          {
+            "name": "Exhaust",
+            "description": "Removed until the end of combat."
+          }
+        ]
+      },
+      {
+        "index": 2,
+        "id": "ARMAMENTS",
+        "name": "Armaments",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Ethereal. Gain 5 Block. Upgrade a card in your Hand.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": true,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Hexed",
+            "description": "Add Ethereal to this card."
+          },
+          {
+            "name": "Ethereal",
+            "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+          },
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          },
+          {
+            "name": "Exhaust",
+            "description": "Removed until the end of combat."
+          }
+        ]
+      },
+      {
+        "index": 3,
+        "id": "ARMAMENTS",
+        "name": "Armaments",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Ethereal. Gain 5 Block. Upgrade a card in your Hand.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": true,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Hexed",
+            "description": "Add Ethereal to this card."
+          },
+          {
+            "name": "Ethereal",
+            "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+          },
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          },
+          {
+            "name": "Exhaust",
+            "description": "Removed until the end of combat."
+          }
+        ]
+      },
+      {
+        "index": 4,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Ethereal. Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Hexed",
+            "description": "Add Ethereal to this card."
+          },
+          {
+            "name": "Ethereal",
+            "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+          },
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          },
+          {
+            "name": "Exhaust",
+            "description": "Removed until the end of combat."
+          }
+        ]
+      }
+    ],
+    "draw_pile_count": 3,
+    "discard_pile_count": 0,
+    "exhaust_pile_count": 5,
+    "draw_pile": [
+      {
+        "index": 0,
+        "id": "BASH",
+        "name": "Bash",
+        "type": "Attack",
+        "cost": "2",
+        "star_cost": null,
+        "description": "Ethereal. Deal 8 damage. Apply 2 Vulnerable.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Vulnerable",
+            "description": "Vulnerable creatures take 50% more damage from Attacks."
+          },
+          {
+            "name": "Hexed",
+            "description": "Add Ethereal to this card."
+          },
+          {
+            "name": "Ethereal",
+            "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+          },
+          {
+            "name": "Exhaust",
+            "description": "Removed until the end of combat."
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Ethereal. Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Hexed",
+            "description": "Add Ethereal to this card."
+          },
+          {
+            "name": "Ethereal",
+            "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+          },
+          {
+            "name": "Exhaust",
+            "description": "Removed until the end of combat."
+          }
+        ]
+      },
+      {
+        "index": 2,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Ethereal. Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Hexed",
+            "description": "Add Ethereal to this card."
+          },
+          {
+            "name": "Ethereal",
+            "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+          },
+          {
+            "name": "Exhaust",
+            "description": "Removed until the end of combat."
+          }
+        ]
+      }
+    ],
+    "discard_pile": [],
+    "exhaust_pile": [
+      {
+        "index": 0,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Ethereal. Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Hexed",
+            "description": "Add Ethereal to this card."
+          },
+          {
+            "name": "Ethereal",
+            "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+          },
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          },
+          {
+            "name": "Exhaust",
+            "description": "Removed until the end of combat."
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Ethereal. Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Hexed",
+            "description": "Add Ethereal to this card."
+          },
+          {
+            "name": "Ethereal",
+            "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+          },
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          },
+          {
+            "name": "Exhaust",
+            "description": "Removed until the end of combat."
+          }
+        ]
+      },
+      {
+        "index": 2,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Ethereal. Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Hexed",
+            "description": "Add Ethereal to this card."
+          },
+          {
+            "name": "Ethereal",
+            "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+          },
+          {
+            "name": "Exhaust",
+            "description": "Removed until the end of combat."
+          }
+        ]
+      },
+      {
+        "index": 3,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Ethereal. Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Hexed",
+            "description": "Add Ethereal to this card."
+          },
+          {
+            "name": "Ethereal",
+            "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+          },
+          {
+            "name": "Exhaust",
+            "description": "Removed until the end of combat."
+          }
+        ]
+      },
+      {
+        "index": 4,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Ethereal. Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Hexed",
+            "description": "Add Ethereal to this card."
+          },
+          {
+            "name": "Ethereal",
+            "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+          },
+          {
+            "name": "Exhaust",
+            "description": "Removed until the end of combat."
+          }
+        ]
+      }
+    ],
+    "gold": 99,
+    "status": [
+      {
+        "id": "HEX_POWER",
+        "name": "Hex",
+        "amount": 2,
+        "type": "Debuff",
+        "description": "While Spectral Knight is alive, ALL your cards are Ethereal.",
+        "keywords": [
+          {
+            "name": "Hexed",
+            "description": "Add Ethereal to this card."
+          },
+          {
+            "name": "Ethereal",
+            "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+          }
+        ]
+      },
+      {
+        "id": "DAMPEN_POWER",
+        "name": "Dampen",
+        "amount": 1,
+        "type": "Debuff",
+        "description": "While Magi Knight is alive, ALL your cards are Downgraded.",
+        "keywords": []
+      }
+    ],
+    "relics": [
+      {
+        "id": "BURNING_BLOOD",
+        "name": "Burning Blood",
+        "description": "At the end of combat, heal 6 HP.",
+        "counter": null,
+        "status": "Normal",
+        "keywords": []
+      }
+    ],
+    "potions": []
+  },
+  "draw_pile_count": 3,
+  "discard_pile_count": 0,
+  "exhaust_pile_count": 5,
+  "battle": {
+    "round": 3,
+    "turn": "player",
+    "player": {
+      "character": "The Ironclad",
+      "hp": 44,
+      "max_hp": 80,
+      "block": 0,
+      "energy": 3,
+      "max_energy": 3,
+      "hand": [
+        {
+          "index": 0,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Ethereal. Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "generated": false,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Hexed",
+              "description": "Add Ethereal to this card."
+            },
+            {
+              "name": "Ethereal",
+              "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+            },
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            },
+            {
+              "name": "Exhaust",
+              "description": "Removed until the end of combat."
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "id": "ARMAMENTS",
+          "name": "Armaments",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Ethereal. Gain 5 Block. Upgrade a card in your Hand.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "generated": true,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Hexed",
+              "description": "Add Ethereal to this card."
+            },
+            {
+              "name": "Ethereal",
+              "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+            },
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            },
+            {
+              "name": "Exhaust",
+              "description": "Removed until the end of combat."
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "id": "ARMAMENTS",
+          "name": "Armaments",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Ethereal. Gain 5 Block. Upgrade a card in your Hand.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "generated": true,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Hexed",
+              "description": "Add Ethereal to this card."
+            },
+            {
+              "name": "Ethereal",
+              "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+            },
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            },
+            {
+              "name": "Exhaust",
+              "description": "Removed until the end of combat."
+            }
+          ]
+        },
+        {
+          "index": 3,
+          "id": "ARMAMENTS",
+          "name": "Armaments",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Ethereal. Gain 5 Block. Upgrade a card in your Hand.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "generated": true,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Hexed",
+              "description": "Add Ethereal to this card."
+            },
+            {
+              "name": "Ethereal",
+              "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+            },
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            },
+            {
+              "name": "Exhaust",
+              "description": "Removed until the end of combat."
+            }
+          ]
+        },
+        {
+          "index": 4,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Ethereal. Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "generated": false,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Hexed",
+              "description": "Add Ethereal to this card."
+            },
+            {
+              "name": "Ethereal",
+              "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+            },
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            },
+            {
+              "name": "Exhaust",
+              "description": "Removed until the end of combat."
+            }
+          ]
+        }
+      ],
+      "draw_pile_count": 3,
+      "discard_pile_count": 0,
+      "exhaust_pile_count": 5,
+      "draw_pile": [
+        {
+          "index": 0,
+          "id": "BASH",
+          "name": "Bash",
+          "type": "Attack",
+          "cost": "2",
+          "star_cost": null,
+          "description": "Ethereal. Deal 8 damage. Apply 2 Vulnerable.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "generated": false,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Vulnerable",
+              "description": "Vulnerable creatures take 50% more damage from Attacks."
+            },
+            {
+              "name": "Hexed",
+              "description": "Add Ethereal to this card."
+            },
+            {
+              "name": "Ethereal",
+              "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+            },
+            {
+              "name": "Exhaust",
+              "description": "Removed until the end of combat."
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Ethereal. Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "generated": false,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Hexed",
+              "description": "Add Ethereal to this card."
+            },
+            {
+              "name": "Ethereal",
+              "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+            },
+            {
+              "name": "Exhaust",
+              "description": "Removed until the end of combat."
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Ethereal. Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "generated": false,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Hexed",
+              "description": "Add Ethereal to this card."
+            },
+            {
+              "name": "Ethereal",
+              "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+            },
+            {
+              "name": "Exhaust",
+              "description": "Removed until the end of combat."
+            }
+          ]
+        }
+      ],
+      "discard_pile": [],
+      "exhaust_pile": [
+        {
+          "index": 0,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Ethereal. Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "generated": false,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Hexed",
+              "description": "Add Ethereal to this card."
+            },
+            {
+              "name": "Ethereal",
+              "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+            },
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            },
+            {
+              "name": "Exhaust",
+              "description": "Removed until the end of combat."
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Ethereal. Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "generated": false,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Hexed",
+              "description": "Add Ethereal to this card."
+            },
+            {
+              "name": "Ethereal",
+              "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+            },
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            },
+            {
+              "name": "Exhaust",
+              "description": "Removed until the end of combat."
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Ethereal. Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "generated": false,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Hexed",
+              "description": "Add Ethereal to this card."
+            },
+            {
+              "name": "Ethereal",
+              "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+            },
+            {
+              "name": "Exhaust",
+              "description": "Removed until the end of combat."
+            }
+          ]
+        },
+        {
+          "index": 3,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Ethereal. Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "generated": false,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Hexed",
+              "description": "Add Ethereal to this card."
+            },
+            {
+              "name": "Ethereal",
+              "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+            },
+            {
+              "name": "Exhaust",
+              "description": "Removed until the end of combat."
+            }
+          ]
+        },
+        {
+          "index": 4,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Ethereal. Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "generated": false,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Hexed",
+              "description": "Add Ethereal to this card."
+            },
+            {
+              "name": "Ethereal",
+              "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+            },
+            {
+              "name": "Exhaust",
+              "description": "Removed until the end of combat."
+            }
+          ]
+        }
+      ],
+      "gold": 99,
+      "status": [
+        {
+          "id": "HEX_POWER",
+          "name": "Hex",
+          "amount": 2,
+          "type": "Debuff",
+          "description": "While Spectral Knight is alive, ALL your cards are Ethereal.",
+          "keywords": [
+            {
+              "name": "Hexed",
+              "description": "Add Ethereal to this card."
+            },
+            {
+              "name": "Ethereal",
+              "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+            }
+          ]
+        },
+        {
+          "id": "DAMPEN_POWER",
+          "name": "Dampen",
+          "amount": 1,
+          "type": "Debuff",
+          "description": "While Magi Knight is alive, ALL your cards are Downgraded.",
+          "keywords": []
+        }
+      ],
+      "relics": [
+        {
+          "id": "BURNING_BLOOD",
+          "name": "Burning Blood",
+          "description": "At the end of combat, heal 6 HP.",
+          "counter": null,
+          "status": "Normal",
+          "keywords": []
+        }
+      ],
+      "potions": []
+    },
+    "enemies": [
+      {
+        "entity_id": "FLAIL_KNIGHT_0",
+        "combat_id": 1,
+        "name": "Flail Knight",
+        "hp": 101,
+        "max_hp": 101,
+        "block": 0,
+        "status": [],
+        "move_id": "FLAIL_MOVE",
+        "follow_up_id": "RAND",
+        "move_log": [
+          "RAM_MOVE",
+          "RAM_MOVE",
+          "FLAIL_MOVE"
+        ],
+        "intents": [
+          {
+            "type": "Attack",
+            "base_damage": 9,
+            "hits": 2,
+            "damage": 9,
+            "total_damage": 18,
+            "label": "9x2",
+            "title": "Aggressive",
+            "description": "This enemy intends to Attack for 9 damage 2 times."
+          }
+        ]
+      },
+      {
+        "entity_id": "SPECTRAL_KNIGHT_0",
+        "combat_id": 2,
+        "name": "Spectral Knight",
+        "hp": 93,
+        "max_hp": 93,
+        "block": 0,
+        "status": [],
+        "move_id": "SOUL_SLASH",
+        "follow_up_id": "RAND",
+        "move_log": [
+          "HEX",
+          "SOUL_SLASH",
+          "SOUL_SLASH"
+        ],
+        "intents": [
+          {
+            "type": "Attack",
+            "base_damage": 15,
+            "hits": 1,
+            "damage": 15,
+            "total_damage": 15,
+            "label": "15",
+            "title": "Aggressive",
+            "description": "This enemy intends to Attack for 15 damage."
+          }
+        ]
+      },
+      {
+        "entity_id": "MAGI_KNIGHT_0",
+        "combat_id": 3,
+        "name": "Magi Knight",
+        "hp": 82,
+        "max_hp": 82,
+        "block": 0,
+        "status": [],
+        "move_id": "RAM_MOVE",
+        "follow_up_id": "PREP_MOVE",
+        "move_log": [
+          "POWER_SHIELD_MOVE",
+          "DAMPEN_MOVE",
+          "RAM_MOVE"
+        ],
+        "intents": [
+          {
+            "type": "Attack",
+            "base_damage": 10,
+            "hits": 1,
+            "damage": 10,
+            "total_damage": 10,
+            "label": "10",
+            "title": "Aggressive",
+            "description": "This enemy intends to Attack for 10 damage."
+          }
+        ]
+      }
+    ],
+    "reviving": []
+  }
+}

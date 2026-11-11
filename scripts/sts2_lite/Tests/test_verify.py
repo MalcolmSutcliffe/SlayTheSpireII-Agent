@@ -77,6 +77,15 @@ def test_a_fresh_wrigglers_rolled_hp_is_not_a_difference():
     sim, game = _as_wriggler(load(), 19, 19), _as_wriggler(load(), 21, 21)
     assert not any("hp" in d and "enemy" in d for d in compare(sim, game))
 
+def test_a_hatchlings_rolled_hp_is_not_a_difference_but_its_damage_is():
+    """A Tough Egg that hatches keeps its id and comes out with 19-22 HP (captured: sim 21, game 20)."""
+    def egg(hp, max_hp):
+        cs = load()
+        cs.enemies[0].enemy_id, cs.enemies[0].current_hp, cs.enemies[0].max_hp = "TOUGH_EGG_0", hp, max_hp
+        return cs
+    assert not any("hp" in d and "enemy" in d for d in compare(egg(21, 21), egg(20, 20)))
+    assert any("hp" in d and "enemy" in d for d in compare(egg(15, 21), egg(20, 20)))
+
 def test_a_hurt_wrigglers_hp_is_still_compared():
     sim, game = _as_wriggler(load(), 15, 19), _as_wriggler(load(), 16, 21)
     assert any("enemy 0 (WRIGGLER_2) hp: sim 15, game 16" in d for d in compare(sim, game))
@@ -126,3 +135,40 @@ def test_a_random_exhaust_of_another_card_is_not_a_difference_but_a_lost_card_is
     assert not any(d.startswith(("exhaust pile", "cards owned")) for d in compare(sim, game, random_step=True))
     game.player.exhaust_pile.clear()                                                    # the game lost the card altogether
     assert any(d.startswith("cards owned") for d in compare(sim, game, random_step=True))
+
+
+# ---------------------------------------------------------------- random targets
+def test_a_random_target_only_changes_which_enemy_was_hit():
+    cs, other = load(), load()
+    cs.enemies.append(CombatState.deepcopy(cs).enemies[0]); other.enemies.append(CombatState.deepcopy(other).enemies[0])
+    cs.enemies[0].current_hp -= 5                     # the sim hit the first enemy, the game the second
+    other.enemies[1].current_hp -= 5
+    assert any("hp" in d for d in compare(cs, other))
+    assert compare(cs, other, random_target=True) == []
+    other.enemies[1].current_hp -= 1                  # but the damage as a whole is still checked
+    assert any("total hp" in d for d in compare(cs, other, random_target=True))
+
+def test_a_random_target_with_one_enemy_is_still_compared_exactly():
+    cs, other = load(), load()
+    cs.enemies[0].current_hp -= 5
+    assert any("hp" in d for d in compare(cs, other, random_target=True))
+
+def test_picking_among_several_enemies_is_counted_and_one_enemy_is_not():
+    from sts2_lite import rng
+    before = rng.target_rolls
+    assert rng.pick_target(["only"]) == "only" and rng.target_rolls == before
+    rng.pick_target(["a", "b"])
+    assert rng.target_rolls == before + 1
+
+
+def test_random_targets_that_differ_in_vulnerability_are_matched_by_replaying():
+    """Captured: Sword Boomerang's three hits all went to the Crusher in the game; the Rocket has Vulnerable, so the totals differ."""
+    from sts2_lite import enemy as enemy_module
+    from sts2_lite.verify import some_target_roll_matches
+    enemy_module.STRICT_BRIDGE_CHECKS = True
+    before = CombatState.from_dict(json.loads((DATA / "act2_hive/kaiser_crab/boomerang_before.json").read_text()))
+    after = CombatState.from_dict(json.loads((DATA / "act2_hive/kaiser_crab/boomerang_after.json").read_text()))
+    action = {"action": "play_card", "card_index": 0, "target": 0}
+    assert some_target_roll_matches(before, [action], after, random_step=False)
+    after.enemies[0].current_hp -= 1                    # a wrong amount is still caught
+    assert not some_target_roll_matches(before, [action], after, random_step=False, tries=60)
