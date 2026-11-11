@@ -1,0 +1,1995 @@
+{
+ "type": "decision",
+ "decision": "combat_play",
+ "room_type": "elite",
+ "context": {
+  "act": 2,
+  "floor": 24,
+  "ascension": 0
+ },
+ "run": {
+  "act": 2,
+  "floor": 24,
+  "ascension": 0
+ },
+ "round": 5,
+ "turn": "player",
+ "is_play_phase": null,
+ "energy": 3,
+ "max_energy": 3,
+ "hand": [
+  {
+   "index": 0,
+   "id": "DAZED",
+   "name": "Dazed",
+   "type": "Status",
+   "cost": "0",
+   "star_cost": null,
+   "description": "Unplayable. Ethereal.",
+   "target_type": "None",
+   "can_play": false,
+   "unplayable_reason": "HasUnplayableKeyword",
+   "is_upgraded": false,
+   "generated": true,
+   "enchantment": null,
+   "keywords": [
+    {
+     "name": "Ethereal",
+     "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+    },
+    {
+     "name": "Exhaust",
+     "description": "Removed until the end of combat."
+    },
+    {
+     "name": "Unplayable",
+     "description": "Unplayable cards cannot be played."
+    }
+   ]
+  },
+  {
+   "index": 1,
+   "id": "DAZED",
+   "name": "Dazed",
+   "type": "Status",
+   "cost": "0",
+   "star_cost": null,
+   "description": "Unplayable. Ethereal.",
+   "target_type": "None",
+   "can_play": false,
+   "unplayable_reason": "HasUnplayableKeyword",
+   "is_upgraded": false,
+   "generated": true,
+   "enchantment": null,
+   "keywords": [
+    {
+     "name": "Ethereal",
+     "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+    },
+    {
+     "name": "Exhaust",
+     "description": "Removed until the end of combat."
+    },
+    {
+     "name": "Unplayable",
+     "description": "Unplayable cards cannot be played."
+    }
+   ]
+  },
+  {
+   "index": 2,
+   "id": "DAZED",
+   "name": "Dazed",
+   "type": "Status",
+   "cost": "0",
+   "star_cost": null,
+   "description": "Unplayable. Ethereal.",
+   "target_type": "None",
+   "can_play": false,
+   "unplayable_reason": "HasUnplayableKeyword",
+   "is_upgraded": false,
+   "generated": true,
+   "enchantment": null,
+   "keywords": [
+    {
+     "name": "Ethereal",
+     "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+    },
+    {
+     "name": "Exhaust",
+     "description": "Removed until the end of combat."
+    },
+    {
+     "name": "Unplayable",
+     "description": "Unplayable cards cannot be played."
+    }
+   ]
+  },
+  {
+   "index": 3,
+   "id": "MANGLE",
+   "name": "Mangle",
+   "type": "Attack",
+   "cost": "3",
+   "star_cost": null,
+   "description": "Deal 22 damage. Enemy loses 10 Strength this turn.",
+   "target_type": "AnyEnemy",
+   "can_play": true,
+   "unplayable_reason": null,
+   "is_upgraded": false,
+   "generated": false,
+   "enchantment": null,
+   "keywords": [
+    {
+     "name": "Strength",
+     "description": "Strength adds additional damage to Attacks."
+    }
+   ]
+  },
+  {
+   "index": 4,
+   "id": "TRUE_GRIT",
+   "name": "True Grit",
+   "type": "Skill",
+   "cost": "1",
+   "star_cost": null,
+   "description": "Gain 16 Block. Exhaust 1 card at random.",
+   "target_type": "Self",
+   "can_play": true,
+   "unplayable_reason": null,
+   "is_upgraded": false,
+   "generated": false,
+   "enchantment": null,
+   "keywords": [
+    {
+     "name": "Exhaust",
+     "description": "Removed until the end of combat."
+    },
+    {
+     "name": "Block",
+     "description": "Until next turn, prevents damage."
+    }
+   ]
+  }
+ ],
+ "enemies": [
+  {
+   "entity_id": "ENTOMANCER_0",
+   "combat_id": 1,
+   "name": "Entomancer",
+   "hp": 7,
+   "max_hp": 145,
+   "block": 0,
+   "status": [
+    {
+     "id": "PERSONAL_HIVE_POWER",
+     "name": "Personal Hive",
+     "amount": 2,
+     "type": "Buff",
+     "description": "Whenever this enemy is hit by an Attack, add 2 Dazed into your Draw Pile.",
+     "keywords": [
+      {
+       "name": "Dazed",
+       "description": "Unplayable. Ethereal."
+      }
+     ]
+    },
+    {
+     "id": "VULNERABLE_POWER",
+     "name": "Vulnerable",
+     "amount": 3,
+     "type": "Debuff",
+     "description": "Receive 50% more damage from Attacks for 3 turns.",
+     "keywords": []
+    },
+    {
+     "id": "STRENGTH_POWER",
+     "name": "Strength",
+     "amount": 1,
+     "type": "Buff",
+     "description": "Increases attack damage by 1.",
+     "keywords": []
+    }
+   ],
+   "move_id": "SPEAR_MOVE",
+   "follow_up_id": "PHEROMONE_SPIT_MOVE",
+   "move_log": [
+    "BEES_MOVE",
+    "SPEAR_MOVE",
+    "PHEROMONE_SPIT_MOVE",
+    "BEES_MOVE",
+    "SPEAR_MOVE"
+   ],
+   "intents": [
+    {
+     "type": "Attack",
+     "base_damage": 18,
+     "hits": 1,
+     "damage": 19,
+     "total_damage": 19,
+     "label": "19",
+     "title": "Aggressive",
+     "description": "This enemy intends to Attack for 19 damage."
+    }
+   ]
+  }
+ ],
+ "player": {
+  "character": "The Ironclad",
+  "hp": 48,
+  "max_hp": 80,
+  "block": 3,
+  "energy": 3,
+  "max_energy": 3,
+  "hand": [
+   {
+    "index": 0,
+    "id": "DAZED",
+    "name": "Dazed",
+    "type": "Status",
+    "cost": "0",
+    "star_cost": null,
+    "description": "Unplayable. Ethereal.",
+    "target_type": "None",
+    "can_play": false,
+    "unplayable_reason": "HasUnplayableKeyword",
+    "is_upgraded": false,
+    "generated": true,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Ethereal",
+      "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+     },
+     {
+      "name": "Exhaust",
+      "description": "Removed until the end of combat."
+     },
+     {
+      "name": "Unplayable",
+      "description": "Unplayable cards cannot be played."
+     }
+    ]
+   },
+   {
+    "index": 1,
+    "id": "DAZED",
+    "name": "Dazed",
+    "type": "Status",
+    "cost": "0",
+    "star_cost": null,
+    "description": "Unplayable. Ethereal.",
+    "target_type": "None",
+    "can_play": false,
+    "unplayable_reason": "HasUnplayableKeyword",
+    "is_upgraded": false,
+    "generated": true,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Ethereal",
+      "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+     },
+     {
+      "name": "Exhaust",
+      "description": "Removed until the end of combat."
+     },
+     {
+      "name": "Unplayable",
+      "description": "Unplayable cards cannot be played."
+     }
+    ]
+   },
+   {
+    "index": 2,
+    "id": "DAZED",
+    "name": "Dazed",
+    "type": "Status",
+    "cost": "0",
+    "star_cost": null,
+    "description": "Unplayable. Ethereal.",
+    "target_type": "None",
+    "can_play": false,
+    "unplayable_reason": "HasUnplayableKeyword",
+    "is_upgraded": false,
+    "generated": true,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Ethereal",
+      "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+     },
+     {
+      "name": "Exhaust",
+      "description": "Removed until the end of combat."
+     },
+     {
+      "name": "Unplayable",
+      "description": "Unplayable cards cannot be played."
+     }
+    ]
+   },
+   {
+    "index": 3,
+    "id": "MANGLE",
+    "name": "Mangle",
+    "type": "Attack",
+    "cost": "3",
+    "star_cost": null,
+    "description": "Deal 22 damage. Enemy loses 10 Strength this turn.",
+    "target_type": "AnyEnemy",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "generated": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Strength",
+      "description": "Strength adds additional damage to Attacks."
+     }
+    ]
+   },
+   {
+    "index": 4,
+    "id": "TRUE_GRIT",
+    "name": "True Grit",
+    "type": "Skill",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Gain 16 Block. Exhaust 1 card at random.",
+    "target_type": "Self",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "generated": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Exhaust",
+      "description": "Removed until the end of combat."
+     },
+     {
+      "name": "Block",
+      "description": "Until next turn, prevents damage."
+     }
+    ]
+   }
+  ],
+  "draw_pile_count": 12,
+  "discard_pile_count": 0,
+  "exhaust_pile_count": 12,
+  "draw_pile": [
+   {
+    "index": 0,
+    "id": "DEFEND_IRONCLAD",
+    "name": "Defend",
+    "type": "Skill",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Gain 12 Block.",
+    "target_type": "Self",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "generated": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Block",
+      "description": "Until next turn, prevents damage."
+     }
+    ]
+   },
+   {
+    "index": 1,
+    "id": "DEFEND_IRONCLAD",
+    "name": "Defend",
+    "type": "Skill",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Gain 5 Block.",
+    "target_type": "Self",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "generated": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Block",
+      "description": "Until next turn, prevents damage."
+     }
+    ]
+   },
+   {
+    "index": 2,
+    "id": "BASH",
+    "name": "Bash",
+    "type": "Attack",
+    "cost": "2",
+    "star_cost": null,
+    "description": "Deal 19 damage. Apply 2 Vulnerable.",
+    "target_type": "AnyEnemy",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "generated": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Vulnerable",
+      "description": "Vulnerable creatures take 50% more damage from Attacks."
+     }
+    ]
+   },
+   {
+    "index": 3,
+    "id": "BLOODLETTING",
+    "name": "Bloodletting+",
+    "type": "Skill",
+    "cost": "0",
+    "star_cost": null,
+    "description": "Lose 3 HP. Gain [ironclad_energy_icon.png][ironclad_energy_icon.png][ironclad_energy_icon.png].",
+    "target_type": "Self",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": true,
+    "generated": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Energy",
+      "description": "Energy is used to play cards from your Hand."
+     }
+    ]
+   },
+   {
+    "index": 4,
+    "id": "DEFEND_IRONCLAD",
+    "name": "Defend",
+    "type": "Skill",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Gain 5 Block.",
+    "target_type": "Self",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "generated": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Block",
+      "description": "Until next turn, prevents damage."
+     }
+    ]
+   },
+   {
+    "index": 5,
+    "id": "STRIKE_IRONCLAD",
+    "name": "Strike",
+    "type": "Attack",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Deal 15 damage.",
+    "target_type": "AnyEnemy",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "generated": false,
+    "enchantment": null,
+    "keywords": []
+   },
+   {
+    "index": 6,
+    "id": "STRIKE_IRONCLAD",
+    "name": "Strike",
+    "type": "Attack",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Deal 16 damage.",
+    "target_type": "AnyEnemy",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "generated": false,
+    "enchantment": null,
+    "keywords": []
+   },
+   {
+    "index": 7,
+    "id": "UNRELENTING",
+    "name": "Unrelenting+",
+    "type": "Attack",
+    "cost": "2",
+    "star_cost": null,
+    "description": "Deal 39 damage. The next Attack you play costs 0 [ironclad_energy_icon.png].",
+    "target_type": "AnyEnemy",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": true,
+    "generated": false,
+    "enchantment": null,
+    "keywords": []
+   },
+   {
+    "index": 8,
+    "id": "DEFEND_IRONCLAD",
+    "name": "Defend",
+    "type": "Skill",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Gain 5 Block.",
+    "target_type": "Self",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "generated": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Block",
+      "description": "Until next turn, prevents damage."
+     }
+    ]
+   },
+   {
+    "index": 9,
+    "id": "HAVOC",
+    "name": "Havoc+",
+    "type": "Skill",
+    "cost": "0",
+    "star_cost": null,
+    "description": "Play the top card of your Draw Pile and Exhaust it.",
+    "target_type": "Self",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": true,
+    "generated": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Exhaust",
+      "description": "Removed until the end of combat."
+     }
+    ]
+   },
+   {
+    "index": 10,
+    "id": "TREMBLE",
+    "name": "Tremble",
+    "type": "Skill",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Apply 3 Vulnerable. Exhaust.",
+    "target_type": "AnyEnemy",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "generated": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Vulnerable",
+      "description": "Vulnerable creatures take 50% more damage from Attacks."
+     },
+     {
+      "name": "Exhaust",
+      "description": "Removed until the end of combat."
+     }
+    ]
+   },
+   {
+    "index": 11,
+    "id": "DOMINATE",
+    "name": "Dominate",
+    "type": "Skill",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Apply 1 Vulnerable. Gain 1 Strength for each Vulnerable on the enemy. Exhaust.",
+    "target_type": "AnyEnemy",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "generated": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Strength",
+      "description": "Strength adds additional damage to Attacks."
+     },
+     {
+      "name": "Vulnerable",
+      "description": "Vulnerable creatures take 50% more damage from Attacks."
+     },
+     {
+      "name": "Exhaust",
+      "description": "Removed until the end of combat."
+     }
+    ]
+   }
+  ],
+  "discard_pile": [],
+  "exhaust_pile": [
+   {
+    "index": 0,
+    "id": "STRIKE_IRONCLAD",
+    "name": "Strike",
+    "type": "Attack",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Deal 6 damage.",
+    "target_type": "AnyEnemy",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "generated": false,
+    "enchantment": null,
+    "keywords": []
+   },
+   {
+    "index": 1,
+    "id": "IMPERVIOUS",
+    "name": "Impervious",
+    "type": "Skill",
+    "cost": "2",
+    "star_cost": null,
+    "description": "Gain 31 Block. Exhaust.",
+    "target_type": "Self",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "generated": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Block",
+      "description": "Until next turn, prevents damage."
+     },
+     {
+      "name": "Exhaust",
+      "description": "Removed until the end of combat."
+     }
+    ]
+   },
+   {
+    "index": 2,
+    "id": "SWORD_BOOMERANG",
+    "name": "Sword Boomerang",
+    "type": "Attack",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Deal 3 damage to a random enemy 3 times.",
+    "target_type": "RandomEnemy",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "generated": false,
+    "enchantment": null,
+    "keywords": []
+   },
+   {
+    "index": 3,
+    "id": "DOMINATE",
+    "name": "Dominate+",
+    "type": "Skill",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Apply 2 Vulnerable. Gain 1 Strength for each Vulnerable on the enemy. Exhaust.",
+    "target_type": "AnyEnemy",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": true,
+    "generated": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Strength",
+      "description": "Strength adds additional damage to Attacks."
+     },
+     {
+      "name": "Vulnerable",
+      "description": "Vulnerable creatures take 50% more damage from Attacks."
+     },
+     {
+      "name": "Exhaust",
+      "description": "Removed until the end of combat."
+     }
+    ]
+   },
+   {
+    "index": 4,
+    "id": "BREAKTHROUGH",
+    "name": "Breakthrough+",
+    "type": "Attack",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Lose 1 HP. Deal 17 damage to ALL enemies.",
+    "target_type": "AllEnemies",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": true,
+    "generated": false,
+    "enchantment": null,
+    "keywords": []
+   },
+   {
+    "index": 5,
+    "id": "STRIKE_IRONCLAD",
+    "name": "Strike",
+    "type": "Attack",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Deal 6 damage.",
+    "target_type": "AnyEnemy",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "generated": false,
+    "enchantment": null,
+    "keywords": []
+   },
+   {
+    "index": 6,
+    "id": "DAZED",
+    "name": "Dazed",
+    "type": "Status",
+    "cost": "0",
+    "star_cost": null,
+    "description": "Unplayable. Ethereal.",
+    "target_type": "None",
+    "can_play": false,
+    "unplayable_reason": "HasUnplayableKeyword",
+    "is_upgraded": false,
+    "generated": true,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Ethereal",
+      "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+     },
+     {
+      "name": "Exhaust",
+      "description": "Removed until the end of combat."
+     },
+     {
+      "name": "Unplayable",
+      "description": "Unplayable cards cannot be played."
+     }
+    ]
+   },
+   {
+    "index": 7,
+    "id": "DAZED",
+    "name": "Dazed",
+    "type": "Status",
+    "cost": "0",
+    "star_cost": null,
+    "description": "Unplayable. Ethereal.",
+    "target_type": "None",
+    "can_play": false,
+    "unplayable_reason": "HasUnplayableKeyword",
+    "is_upgraded": false,
+    "generated": true,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Ethereal",
+      "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+     },
+     {
+      "name": "Exhaust",
+      "description": "Removed until the end of combat."
+     },
+     {
+      "name": "Unplayable",
+      "description": "Unplayable cards cannot be played."
+     }
+    ]
+   },
+   {
+    "index": 8,
+    "id": "MOLTEN_FIST",
+    "name": "Molten Fist",
+    "type": "Attack",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Deal 24 damage. Double the enemy's Vulnerable. Exhaust.",
+    "target_type": "AnyEnemy",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "generated": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Vulnerable",
+      "description": "Vulnerable creatures take 50% more damage from Attacks."
+     },
+     {
+      "name": "Exhaust",
+      "description": "Removed until the end of combat."
+     }
+    ]
+   },
+   {
+    "index": 9,
+    "id": "DAZED",
+    "name": "Dazed",
+    "type": "Status",
+    "cost": "0",
+    "star_cost": null,
+    "description": "Unplayable. Ethereal.",
+    "target_type": "None",
+    "can_play": false,
+    "unplayable_reason": "HasUnplayableKeyword",
+    "is_upgraded": false,
+    "generated": true,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Ethereal",
+      "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+     },
+     {
+      "name": "Exhaust",
+      "description": "Removed until the end of combat."
+     },
+     {
+      "name": "Unplayable",
+      "description": "Unplayable cards cannot be played."
+     }
+    ]
+   },
+   {
+    "index": 10,
+    "id": "DAZED",
+    "name": "Dazed",
+    "type": "Status",
+    "cost": "0",
+    "star_cost": null,
+    "description": "Unplayable. Ethereal.",
+    "target_type": "None",
+    "can_play": false,
+    "unplayable_reason": "HasUnplayableKeyword",
+    "is_upgraded": false,
+    "generated": true,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Ethereal",
+      "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+     },
+     {
+      "name": "Exhaust",
+      "description": "Removed until the end of combat."
+     },
+     {
+      "name": "Unplayable",
+      "description": "Unplayable cards cannot be played."
+     }
+    ]
+   },
+   {
+    "index": 11,
+    "id": "DAZED",
+    "name": "Dazed",
+    "type": "Status",
+    "cost": "0",
+    "star_cost": null,
+    "description": "Unplayable. Ethereal.",
+    "target_type": "None",
+    "can_play": false,
+    "unplayable_reason": "HasUnplayableKeyword",
+    "is_upgraded": false,
+    "generated": true,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Ethereal",
+      "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+     },
+     {
+      "name": "Exhaust",
+      "description": "Removed until the end of combat."
+     },
+     {
+      "name": "Unplayable",
+      "description": "Unplayable cards cannot be played."
+     }
+    ]
+   }
+  ],
+  "gold": 19,
+  "status": [
+   {
+    "id": "DEXTERITY_POWER",
+    "name": "Dexterity",
+    "amount": 1,
+    "type": "Buff",
+    "description": "Increases Block gained from cards by 1.",
+    "keywords": [
+     {
+      "name": "Block",
+      "description": "Until next turn, prevents damage."
+     }
+    ]
+   },
+   {
+    "id": "STRENGTH_POWER",
+    "name": "Strength",
+    "amount": 7,
+    "type": "Buff",
+    "description": "Increases attack damage by 7.",
+    "keywords": []
+   },
+   {
+    "id": "FEEL_NO_PAIN_POWER",
+    "name": "Feel No Pain",
+    "amount": 3,
+    "type": "Buff",
+    "description": "Whenever a card is Exhausted, gain 3 Block.",
+    "keywords": [
+     {
+      "name": "Block",
+      "description": "Until next turn, prevents damage."
+     }
+    ]
+   },
+   {
+    "id": "UNMOVABLE_POWER",
+    "name": "Unmovable",
+    "amount": 1,
+    "type": "Buff",
+    "description": "The first time you gain Block from a card each turn, double the amount gained.",
+    "keywords": [
+     {
+      "name": "Block",
+      "description": "Until next turn, prevents damage."
+     }
+    ]
+   }
+  ],
+  "relics": [
+   {
+    "id": "BURNING_BLOOD",
+    "name": "Burning Blood",
+    "description": "At the end of combat, heal 6 HP.",
+    "counter": null,
+    "status": "Normal",
+    "keywords": []
+   },
+   {
+    "id": "SILVER_CRUCIBLE",
+    "name": "Silver Crucible",
+    "description": "The first 3 card rewards you see are Upgraded. The first Treasure Chest you open is empty.",
+    "counter": null,
+    "status": "Disabled",
+    "keywords": []
+   },
+   {
+    "id": "BAG_OF_MARBLES",
+    "name": "Bag of Marbles",
+    "description": "At the start of each combat, apply 1 Vulnerable to ALL enemies.",
+    "counter": null,
+    "status": "Normal",
+    "keywords": [
+     {
+      "name": "Vulnerable",
+      "description": "Vulnerable creatures take 50% more damage from Attacks."
+     }
+    ]
+   },
+   {
+    "id": "ODDLY_SMOOTH_STONE",
+    "name": "Oddly Smooth Stone",
+    "description": "Start each combat with 1 Dexterity.",
+    "counter": null,
+    "status": "Normal",
+    "keywords": [
+     {
+      "name": "Dexterity",
+      "description": "Dexterity improves Block gained from cards."
+     }
+    ]
+   },
+   {
+    "id": "RED_SKULL",
+    "name": "Red Skull",
+    "description": "While your HP is at or below 50%, you have 3 additional Strength.",
+    "counter": null,
+    "status": "Normal",
+    "keywords": [
+     {
+      "name": "Strength",
+      "description": "Strength adds additional damage to Attacks."
+     }
+    ]
+   },
+   {
+    "id": "TOASTY_MITTENS",
+    "name": "Toasty Mittens",
+    "description": "At the start of your turn, Exhaust the top card of your Draw Pile and gain 1 Strength.",
+    "counter": null,
+    "status": "Normal",
+    "keywords": [
+     {
+      "name": "Exhaust",
+      "description": "Removed until the end of combat."
+     },
+     {
+      "name": "Strength",
+      "description": "Strength adds additional damage to Attacks."
+     }
+    ]
+   },
+   {
+    "id": "POLLINOUS_CORE",
+    "name": "Pollinous Core",
+    "description": "Every 4 turns, draw 2 additional cards.",
+    "counter": 1,
+    "status": "Normal",
+    "keywords": []
+   }
+  ],
+  "potions": [
+   {
+    "id": "BLOCK_POTION",
+    "name": "Block Potion",
+    "description": "Gain 12 Block.",
+    "slot": 0,
+    "can_use_in_combat": true,
+    "target_type": "AnyPlayer",
+    "keywords": [
+     {
+      "name": "Block",
+      "description": "Until next turn, prevents damage."
+     }
+    ]
+   },
+   {
+    "id": "BLOOD_POTION",
+    "name": "Blood Potion",
+    "description": "Heal for 20% of your Max HP.",
+    "slot": 1,
+    "can_use_in_combat": true,
+    "target_type": "AnyPlayer",
+    "keywords": []
+   },
+   {
+    "id": "COLORLESS_POTION",
+    "name": "Colorless Potion",
+    "description": "Choose 1 of 3 random Colorless cards to add into your Hand. It's free to play this turn.",
+    "slot": 2,
+    "can_use_in_combat": true,
+    "target_type": "Self",
+    "keywords": []
+   }
+  ]
+ },
+ "draw_pile_count": 12,
+ "discard_pile_count": 0,
+ "exhaust_pile_count": 12,
+ "battle": {
+  "round": 5,
+  "turn": "player",
+  "player": {
+   "character": "The Ironclad",
+   "hp": 48,
+   "max_hp": 80,
+   "block": 3,
+   "energy": 3,
+   "max_energy": 3,
+   "hand": [
+    {
+     "index": 0,
+     "id": "DAZED",
+     "name": "Dazed",
+     "type": "Status",
+     "cost": "0",
+     "star_cost": null,
+     "description": "Unplayable. Ethereal.",
+     "target_type": "None",
+     "can_play": false,
+     "unplayable_reason": "HasUnplayableKeyword",
+     "is_upgraded": false,
+     "generated": true,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Ethereal",
+       "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+      },
+      {
+       "name": "Exhaust",
+       "description": "Removed until the end of combat."
+      },
+      {
+       "name": "Unplayable",
+       "description": "Unplayable cards cannot be played."
+      }
+     ]
+    },
+    {
+     "index": 1,
+     "id": "DAZED",
+     "name": "Dazed",
+     "type": "Status",
+     "cost": "0",
+     "star_cost": null,
+     "description": "Unplayable. Ethereal.",
+     "target_type": "None",
+     "can_play": false,
+     "unplayable_reason": "HasUnplayableKeyword",
+     "is_upgraded": false,
+     "generated": true,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Ethereal",
+       "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+      },
+      {
+       "name": "Exhaust",
+       "description": "Removed until the end of combat."
+      },
+      {
+       "name": "Unplayable",
+       "description": "Unplayable cards cannot be played."
+      }
+     ]
+    },
+    {
+     "index": 2,
+     "id": "DAZED",
+     "name": "Dazed",
+     "type": "Status",
+     "cost": "0",
+     "star_cost": null,
+     "description": "Unplayable. Ethereal.",
+     "target_type": "None",
+     "can_play": false,
+     "unplayable_reason": "HasUnplayableKeyword",
+     "is_upgraded": false,
+     "generated": true,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Ethereal",
+       "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+      },
+      {
+       "name": "Exhaust",
+       "description": "Removed until the end of combat."
+      },
+      {
+       "name": "Unplayable",
+       "description": "Unplayable cards cannot be played."
+      }
+     ]
+    },
+    {
+     "index": 3,
+     "id": "MANGLE",
+     "name": "Mangle",
+     "type": "Attack",
+     "cost": "3",
+     "star_cost": null,
+     "description": "Deal 22 damage. Enemy loses 10 Strength this turn.",
+     "target_type": "AnyEnemy",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "generated": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Strength",
+       "description": "Strength adds additional damage to Attacks."
+      }
+     ]
+    },
+    {
+     "index": 4,
+     "id": "TRUE_GRIT",
+     "name": "True Grit",
+     "type": "Skill",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Gain 16 Block. Exhaust 1 card at random.",
+     "target_type": "Self",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "generated": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Exhaust",
+       "description": "Removed until the end of combat."
+      },
+      {
+       "name": "Block",
+       "description": "Until next turn, prevents damage."
+      }
+     ]
+    }
+   ],
+   "draw_pile_count": 12,
+   "discard_pile_count": 0,
+   "exhaust_pile_count": 12,
+   "draw_pile": [
+    {
+     "index": 0,
+     "id": "DEFEND_IRONCLAD",
+     "name": "Defend",
+     "type": "Skill",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Gain 12 Block.",
+     "target_type": "Self",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "generated": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Block",
+       "description": "Until next turn, prevents damage."
+      }
+     ]
+    },
+    {
+     "index": 1,
+     "id": "DEFEND_IRONCLAD",
+     "name": "Defend",
+     "type": "Skill",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Gain 5 Block.",
+     "target_type": "Self",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "generated": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Block",
+       "description": "Until next turn, prevents damage."
+      }
+     ]
+    },
+    {
+     "index": 2,
+     "id": "BASH",
+     "name": "Bash",
+     "type": "Attack",
+     "cost": "2",
+     "star_cost": null,
+     "description": "Deal 19 damage. Apply 2 Vulnerable.",
+     "target_type": "AnyEnemy",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "generated": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Vulnerable",
+       "description": "Vulnerable creatures take 50% more damage from Attacks."
+      }
+     ]
+    },
+    {
+     "index": 3,
+     "id": "BLOODLETTING",
+     "name": "Bloodletting+",
+     "type": "Skill",
+     "cost": "0",
+     "star_cost": null,
+     "description": "Lose 3 HP. Gain [ironclad_energy_icon.png][ironclad_energy_icon.png][ironclad_energy_icon.png].",
+     "target_type": "Self",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": true,
+     "generated": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Energy",
+       "description": "Energy is used to play cards from your Hand."
+      }
+     ]
+    },
+    {
+     "index": 4,
+     "id": "DEFEND_IRONCLAD",
+     "name": "Defend",
+     "type": "Skill",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Gain 5 Block.",
+     "target_type": "Self",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "generated": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Block",
+       "description": "Until next turn, prevents damage."
+      }
+     ]
+    },
+    {
+     "index": 5,
+     "id": "STRIKE_IRONCLAD",
+     "name": "Strike",
+     "type": "Attack",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Deal 15 damage.",
+     "target_type": "AnyEnemy",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "generated": false,
+     "enchantment": null,
+     "keywords": []
+    },
+    {
+     "index": 6,
+     "id": "STRIKE_IRONCLAD",
+     "name": "Strike",
+     "type": "Attack",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Deal 16 damage.",
+     "target_type": "AnyEnemy",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "generated": false,
+     "enchantment": null,
+     "keywords": []
+    },
+    {
+     "index": 7,
+     "id": "UNRELENTING",
+     "name": "Unrelenting+",
+     "type": "Attack",
+     "cost": "2",
+     "star_cost": null,
+     "description": "Deal 39 damage. The next Attack you play costs 0 [ironclad_energy_icon.png].",
+     "target_type": "AnyEnemy",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": true,
+     "generated": false,
+     "enchantment": null,
+     "keywords": []
+    },
+    {
+     "index": 8,
+     "id": "DEFEND_IRONCLAD",
+     "name": "Defend",
+     "type": "Skill",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Gain 5 Block.",
+     "target_type": "Self",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "generated": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Block",
+       "description": "Until next turn, prevents damage."
+      }
+     ]
+    },
+    {
+     "index": 9,
+     "id": "HAVOC",
+     "name": "Havoc+",
+     "type": "Skill",
+     "cost": "0",
+     "star_cost": null,
+     "description": "Play the top card of your Draw Pile and Exhaust it.",
+     "target_type": "Self",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": true,
+     "generated": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Exhaust",
+       "description": "Removed until the end of combat."
+      }
+     ]
+    },
+    {
+     "index": 10,
+     "id": "TREMBLE",
+     "name": "Tremble",
+     "type": "Skill",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Apply 3 Vulnerable. Exhaust.",
+     "target_type": "AnyEnemy",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "generated": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Vulnerable",
+       "description": "Vulnerable creatures take 50% more damage from Attacks."
+      },
+      {
+       "name": "Exhaust",
+       "description": "Removed until the end of combat."
+      }
+     ]
+    },
+    {
+     "index": 11,
+     "id": "DOMINATE",
+     "name": "Dominate",
+     "type": "Skill",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Apply 1 Vulnerable. Gain 1 Strength for each Vulnerable on the enemy. Exhaust.",
+     "target_type": "AnyEnemy",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "generated": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Strength",
+       "description": "Strength adds additional damage to Attacks."
+      },
+      {
+       "name": "Vulnerable",
+       "description": "Vulnerable creatures take 50% more damage from Attacks."
+      },
+      {
+       "name": "Exhaust",
+       "description": "Removed until the end of combat."
+      }
+     ]
+    }
+   ],
+   "discard_pile": [],
+   "exhaust_pile": [
+    {
+     "index": 0,
+     "id": "STRIKE_IRONCLAD",
+     "name": "Strike",
+     "type": "Attack",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Deal 6 damage.",
+     "target_type": "AnyEnemy",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "generated": false,
+     "enchantment": null,
+     "keywords": []
+    },
+    {
+     "index": 1,
+     "id": "IMPERVIOUS",
+     "name": "Impervious",
+     "type": "Skill",
+     "cost": "2",
+     "star_cost": null,
+     "description": "Gain 31 Block. Exhaust.",
+     "target_type": "Self",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "generated": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Block",
+       "description": "Until next turn, prevents damage."
+      },
+      {
+       "name": "Exhaust",
+       "description": "Removed until the end of combat."
+      }
+     ]
+    },
+    {
+     "index": 2,
+     "id": "SWORD_BOOMERANG",
+     "name": "Sword Boomerang",
+     "type": "Attack",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Deal 3 damage to a random enemy 3 times.",
+     "target_type": "RandomEnemy",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "generated": false,
+     "enchantment": null,
+     "keywords": []
+    },
+    {
+     "index": 3,
+     "id": "DOMINATE",
+     "name": "Dominate+",
+     "type": "Skill",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Apply 2 Vulnerable. Gain 1 Strength for each Vulnerable on the enemy. Exhaust.",
+     "target_type": "AnyEnemy",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": true,
+     "generated": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Strength",
+       "description": "Strength adds additional damage to Attacks."
+      },
+      {
+       "name": "Vulnerable",
+       "description": "Vulnerable creatures take 50% more damage from Attacks."
+      },
+      {
+       "name": "Exhaust",
+       "description": "Removed until the end of combat."
+      }
+     ]
+    },
+    {
+     "index": 4,
+     "id": "BREAKTHROUGH",
+     "name": "Breakthrough+",
+     "type": "Attack",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Lose 1 HP. Deal 17 damage to ALL enemies.",
+     "target_type": "AllEnemies",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": true,
+     "generated": false,
+     "enchantment": null,
+     "keywords": []
+    },
+    {
+     "index": 5,
+     "id": "STRIKE_IRONCLAD",
+     "name": "Strike",
+     "type": "Attack",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Deal 6 damage.",
+     "target_type": "AnyEnemy",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "generated": false,
+     "enchantment": null,
+     "keywords": []
+    },
+    {
+     "index": 6,
+     "id": "DAZED",
+     "name": "Dazed",
+     "type": "Status",
+     "cost": "0",
+     "star_cost": null,
+     "description": "Unplayable. Ethereal.",
+     "target_type": "None",
+     "can_play": false,
+     "unplayable_reason": "HasUnplayableKeyword",
+     "is_upgraded": false,
+     "generated": true,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Ethereal",
+       "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+      },
+      {
+       "name": "Exhaust",
+       "description": "Removed until the end of combat."
+      },
+      {
+       "name": "Unplayable",
+       "description": "Unplayable cards cannot be played."
+      }
+     ]
+    },
+    {
+     "index": 7,
+     "id": "DAZED",
+     "name": "Dazed",
+     "type": "Status",
+     "cost": "0",
+     "star_cost": null,
+     "description": "Unplayable. Ethereal.",
+     "target_type": "None",
+     "can_play": false,
+     "unplayable_reason": "HasUnplayableKeyword",
+     "is_upgraded": false,
+     "generated": true,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Ethereal",
+       "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+      },
+      {
+       "name": "Exhaust",
+       "description": "Removed until the end of combat."
+      },
+      {
+       "name": "Unplayable",
+       "description": "Unplayable cards cannot be played."
+      }
+     ]
+    },
+    {
+     "index": 8,
+     "id": "MOLTEN_FIST",
+     "name": "Molten Fist",
+     "type": "Attack",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Deal 24 damage. Double the enemy's Vulnerable. Exhaust.",
+     "target_type": "AnyEnemy",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "generated": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Vulnerable",
+       "description": "Vulnerable creatures take 50% more damage from Attacks."
+      },
+      {
+       "name": "Exhaust",
+       "description": "Removed until the end of combat."
+      }
+     ]
+    },
+    {
+     "index": 9,
+     "id": "DAZED",
+     "name": "Dazed",
+     "type": "Status",
+     "cost": "0",
+     "star_cost": null,
+     "description": "Unplayable. Ethereal.",
+     "target_type": "None",
+     "can_play": false,
+     "unplayable_reason": "HasUnplayableKeyword",
+     "is_upgraded": false,
+     "generated": true,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Ethereal",
+       "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+      },
+      {
+       "name": "Exhaust",
+       "description": "Removed until the end of combat."
+      },
+      {
+       "name": "Unplayable",
+       "description": "Unplayable cards cannot be played."
+      }
+     ]
+    },
+    {
+     "index": 10,
+     "id": "DAZED",
+     "name": "Dazed",
+     "type": "Status",
+     "cost": "0",
+     "star_cost": null,
+     "description": "Unplayable. Ethereal.",
+     "target_type": "None",
+     "can_play": false,
+     "unplayable_reason": "HasUnplayableKeyword",
+     "is_upgraded": false,
+     "generated": true,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Ethereal",
+       "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+      },
+      {
+       "name": "Exhaust",
+       "description": "Removed until the end of combat."
+      },
+      {
+       "name": "Unplayable",
+       "description": "Unplayable cards cannot be played."
+      }
+     ]
+    },
+    {
+     "index": 11,
+     "id": "DAZED",
+     "name": "Dazed",
+     "type": "Status",
+     "cost": "0",
+     "star_cost": null,
+     "description": "Unplayable. Ethereal.",
+     "target_type": "None",
+     "can_play": false,
+     "unplayable_reason": "HasUnplayableKeyword",
+     "is_upgraded": false,
+     "generated": true,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Ethereal",
+       "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+      },
+      {
+       "name": "Exhaust",
+       "description": "Removed until the end of combat."
+      },
+      {
+       "name": "Unplayable",
+       "description": "Unplayable cards cannot be played."
+      }
+     ]
+    }
+   ],
+   "gold": 19,
+   "status": [
+    {
+     "id": "DEXTERITY_POWER",
+     "name": "Dexterity",
+     "amount": 1,
+     "type": "Buff",
+     "description": "Increases Block gained from cards by 1.",
+     "keywords": [
+      {
+       "name": "Block",
+       "description": "Until next turn, prevents damage."
+      }
+     ]
+    },
+    {
+     "id": "STRENGTH_POWER",
+     "name": "Strength",
+     "amount": 7,
+     "type": "Buff",
+     "description": "Increases attack damage by 7.",
+     "keywords": []
+    },
+    {
+     "id": "FEEL_NO_PAIN_POWER",
+     "name": "Feel No Pain",
+     "amount": 3,
+     "type": "Buff",
+     "description": "Whenever a card is Exhausted, gain 3 Block.",
+     "keywords": [
+      {
+       "name": "Block",
+       "description": "Until next turn, prevents damage."
+      }
+     ]
+    },
+    {
+     "id": "UNMOVABLE_POWER",
+     "name": "Unmovable",
+     "amount": 1,
+     "type": "Buff",
+     "description": "The first time you gain Block from a card each turn, double the amount gained.",
+     "keywords": [
+      {
+       "name": "Block",
+       "description": "Until next turn, prevents damage."
+      }
+     ]
+    }
+   ],
+   "relics": [
+    {
+     "id": "BURNING_BLOOD",
+     "name": "Burning Blood",
+     "description": "At the end of combat, heal 6 HP.",
+     "counter": null,
+     "status": "Normal",
+     "keywords": []
+    },
+    {
+     "id": "SILVER_CRUCIBLE",
+     "name": "Silver Crucible",
+     "description": "The first 3 card rewards you see are Upgraded. The first Treasure Chest you open is empty.",
+     "counter": null,
+     "status": "Disabled",
+     "keywords": []
+    },
+    {
+     "id": "BAG_OF_MARBLES",
+     "name": "Bag of Marbles",
+     "description": "At the start of each combat, apply 1 Vulnerable to ALL enemies.",
+     "counter": null,
+     "status": "Normal",
+     "keywords": [
+      {
+       "name": "Vulnerable",
+       "description": "Vulnerable creatures take 50% more damage from Attacks."
+      }
+     ]
+    },
+    {
+     "id": "ODDLY_SMOOTH_STONE",
+     "name": "Oddly Smooth Stone",
+     "description": "Start each combat with 1 Dexterity.",
+     "counter": null,
+     "status": "Normal",
+     "keywords": [
+      {
+       "name": "Dexterity",
+       "description": "Dexterity improves Block gained from cards."
+      }
+     ]
+    },
+    {
+     "id": "RED_SKULL",
+     "name": "Red Skull",
+     "description": "While your HP is at or below 50%, you have 3 additional Strength.",
+     "counter": null,
+     "status": "Normal",
+     "keywords": [
+      {
+       "name": "Strength",
+       "description": "Strength adds additional damage to Attacks."
+      }
+     ]
+    },
+    {
+     "id": "TOASTY_MITTENS",
+     "name": "Toasty Mittens",
+     "description": "At the start of your turn, Exhaust the top card of your Draw Pile and gain 1 Strength.",
+     "counter": null,
+     "status": "Normal",
+     "keywords": [
+      {
+       "name": "Exhaust",
+       "description": "Removed until the end of combat."
+      },
+      {
+       "name": "Strength",
+       "description": "Strength adds additional damage to Attacks."
+      }
+     ]
+    },
+    {
+     "id": "POLLINOUS_CORE",
+     "name": "Pollinous Core",
+     "description": "Every 4 turns, draw 2 additional cards.",
+     "counter": 1,
+     "status": "Normal",
+     "keywords": []
+    }
+   ],
+   "potions": [
+    {
+     "id": "BLOCK_POTION",
+     "name": "Block Potion",
+     "description": "Gain 12 Block.",
+     "slot": 0,
+     "can_use_in_combat": true,
+     "target_type": "AnyPlayer",
+     "keywords": [
+      {
+       "name": "Block",
+       "description": "Until next turn, prevents damage."
+      }
+     ]
+    },
+    {
+     "id": "BLOOD_POTION",
+     "name": "Blood Potion",
+     "description": "Heal for 20% of your Max HP.",
+     "slot": 1,
+     "can_use_in_combat": true,
+     "target_type": "AnyPlayer",
+     "keywords": []
+    },
+    {
+     "id": "COLORLESS_POTION",
+     "name": "Colorless Potion",
+     "description": "Choose 1 of 3 random Colorless cards to add into your Hand. It's free to play this turn.",
+     "slot": 2,
+     "can_use_in_combat": true,
+     "target_type": "Self",
+     "keywords": []
+    }
+   ]
+  },
+  "enemies": [
+   {
+    "entity_id": "ENTOMANCER_0",
+    "combat_id": 1,
+    "name": "Entomancer",
+    "hp": 7,
+    "max_hp": 145,
+    "block": 0,
+    "status": [
+     {
+      "id": "PERSONAL_HIVE_POWER",
+      "name": "Personal Hive",
+      "amount": 2,
+      "type": "Buff",
+      "description": "Whenever this enemy is hit by an Attack, add 2 Dazed into your Draw Pile.",
+      "keywords": [
+       {
+        "name": "Dazed",
+        "description": "Unplayable. Ethereal."
+       }
+      ]
+     },
+     {
+      "id": "VULNERABLE_POWER",
+      "name": "Vulnerable",
+      "amount": 3,
+      "type": "Debuff",
+      "description": "Receive 50% more damage from Attacks for 3 turns.",
+      "keywords": []
+     },
+     {
+      "id": "STRENGTH_POWER",
+      "name": "Strength",
+      "amount": 1,
+      "type": "Buff",
+      "description": "Increases attack damage by 1.",
+      "keywords": []
+     }
+    ],
+    "move_id": "SPEAR_MOVE",
+    "follow_up_id": "PHEROMONE_SPIT_MOVE",
+    "move_log": [
+     "BEES_MOVE",
+     "SPEAR_MOVE",
+     "PHEROMONE_SPIT_MOVE",
+     "BEES_MOVE",
+     "SPEAR_MOVE"
+    ],
+    "intents": [
+     {
+      "type": "Attack",
+      "base_damage": 18,
+      "hits": 1,
+      "damage": 19,
+      "total_damage": 19,
+      "label": "19",
+      "title": "Aggressive",
+      "description": "This enemy intends to Attack for 19 damage."
+     }
+    ]
+   }
+  ],
+  "reviving": []
+ }
+}

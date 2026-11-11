@@ -174,7 +174,7 @@ KEYED_OR_IGNORED = {
     "Player": {"block", "current_hp", "max_hp", "status", "hand", "draw_pile", "discard_pile", "exhaust_pile", "relics", "known_top",
                "inferno_plays", "cards_played_total", "crimson_mantle_plays", "attacks_played_this_turn", "plays_started_this_turn",
                "returning", "card_blocks_this_turn", "cards_exhausted_this_turn", "gold", "has_been_attacked_this_turn",
-               "lost_hp_this_turn", "hp_loss_events", "hp_lost_log", "is_minion",
+               "lost_hp_this_turn", "hp_loss_events", "hp_lost_log", "is_minion", "binding", "bound_cards", "bound_played", "smogged",
                # ignored: accounting that nothing reads between actions, and hooks wired by the simulator
                "cards_drawn", "unknown_draws", "damage_taken", "block_play", "block_play_gains",
                "shuffle_hook", "draw_hook", "block_cleared_hook"},

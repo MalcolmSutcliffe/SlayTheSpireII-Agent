@@ -956,15 +956,17 @@ def test_end_of_turn_plating_block_is_for_the_player_only():
     cs.enemies[0].apply_status(StatusId.PLATING, 4)
     sim = CombatSimulator(cs)
     sim.end_turn()
-    assert cs.enemies[0].block == 3
+    assert cs.enemies[0].block == 4         # an enemy's Plating does not wear down in the first round (captured: Sewer Clam, Matriarch)
     from sts2_lite.events import EventType
     cs.enemies[0].block = 0
     sim.fire(EventType.END_TURN)
     assert cs.enemies[0].block == 0
 
-def test_enemy_plating_is_unchanged():
+def test_enemy_plating_wears_down_from_the_second_round():
     cs = one_enemy([])
     cs.enemies[0].apply_status(StatusId.PLATING, 4)
+    CombatSimulator(cs).end_turn()
+    assert cs.enemies[0].block == 4
     CombatSimulator(cs).end_turn()
     assert cs.enemies[0].block == 3
 

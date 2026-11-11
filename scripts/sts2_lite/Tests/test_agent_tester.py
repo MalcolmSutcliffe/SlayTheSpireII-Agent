@@ -145,6 +145,18 @@ def test_settled_needs_several_identical_reads(tester, monkeypatch):
     assert tester.settled(first)["energy"] == second["energy"]         # the first state was still changing
 
 
+def test_settled_after_havoc_waits_for_the_card_it_played_to_land(tester, monkeypatch):
+    """Havoc's card sits in neither the hand nor a pile while the game pauses on it: identical reads are not enough."""
+    whole = capture()
+    owed = tester.pile_total(whole)
+    limbo = {**whole, "player": {**whole["player"], "discard_pile_count": whole["player"]["discard_pile_count"] - 1}}
+    assert tester.pile_total(limbo) == owed - 1
+    monkeypatch.setattr(tester.time, "sleep", lambda s: None)
+    reads = iter([limbo] * 6 + [whole] * 6)
+    monkeypatch.setattr(tester, "get_state", lambda: next(reads))
+    assert tester.pile_total(tester.settled(limbo, owed)) == owed
+
+
 def test_a_fight_that_has_just_loaded_is_waited_on_until_the_hand_is_drawn(tester, monkeypatch):
     away = {"type": "decision", "decision": "map_select"}
     loading = {**capture(), "hand": [], "energy": 0}
@@ -426,3 +438,10 @@ def test_implemented_states_log_nothing_extra(tester, monkeypatch, tmp_path):
     _, log = run(tester, monkeypatch, [capture(), capture()], tmp_path)
     text = log.read_text() if log.exists() else ""
     assert "not_implemented" not in text
+
+
+def test_the_state_behind_a_decision_can_be_saved_for_replay(tester, tmp_path):
+    state = capture()
+    tester.save_decision_state(str(tmp_path / "states"), 7, state)
+    saved = json.loads((tmp_path / "states" / "decision_00007.json").read_text())
+    assert saved == state

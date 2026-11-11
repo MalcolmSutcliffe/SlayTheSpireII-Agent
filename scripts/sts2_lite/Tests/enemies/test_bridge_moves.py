@@ -94,7 +94,7 @@ def test_an_unknown_id_is_reported():
         load(raw_enemy("NIBBIT", "NEW_MOVE", ["NEW_MOVE"], attack(12)))
 
 def test_enemies_without_a_table_keep_the_intent_damage():
-    cs = load(raw_enemy("TOADPOLE", "SPIKE_SPIT_MOVE", ["SPIKEN_MOVE", "SPIKE_SPIT_MOVE"], attack(3, 3)))
+    cs = load(raw_enemy("UNKNOWN_BEAST", "SPIKE_SPIT_MOVE", ["SPIKEN_MOVE", "SPIKE_SPIT_MOVE"], attack(3, 3)))
     e = cs.enemies[0]
     assert e.moves is None and (e.attack_damage, e.num_attacks) == (3, 3)
 

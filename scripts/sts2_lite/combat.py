@@ -16,8 +16,8 @@ from sts2_lite.events import EventType
 from sts2_lite.relic import RelicId, PER_TURN_FLAG, ALWAYS_REPORTED, take_extra_turn, after_card_played, release_card, fire_relics, blocks_play, PHILOSOPHERS_STONE_STRENGTH, upgraded_after_play, \
     max_energy_gain, victory_heal
 
-from sts2_lite.status import StatusId, StatusBehaviour, STATUS_HANDLERS, AUTOMATION_CARDS, face_target, SLOTH_LIMIT
-from sts2_lite.enemy_moves import SUMMONS, SEGMENTS
+from sts2_lite.status import StatusId, StatusBehaviour, STATUS_HANDLERS, AUTOMATION_CARDS, face_target, SLOTH_LIMIT, _nemesis_toggle
+from sts2_lite.enemy_moves import SUMMONS, SEGMENTS, ALLY_DEATH_HOOKS
 
 # what the bridge calls each kind of hand selection
 HAND_SELECT_MODES = {"upgrade_select" : "upgrade"}
@@ -104,7 +104,11 @@ class CombatState:
                 enemy.identify_move(raw["intents"], cs.turn_number)
             enemy.check_against_bridge(raw, cs.player)
         cs._infer_revivals()
-        cs._infer_dormant_segments(combat_state.get("reviving"))
+        reviving = combat_state.get("reviving")
+        if reviving is None:        # the bridge lists them in the "battle" copy of the fight
+            reviving = (combat_state.get("battle") or {}).get("reviving")
+        cs._infer_dormant_segments(reviving)
+        cs._read_boss_state()
         cs._infer_ringing_play()
         cs.energy = combat_state["energy"]
         cs.max_energy = combat_state["max_energy"]
@@ -298,6 +302,31 @@ class CombatState:
                     if modify_damage(intent["base_damage"], enemy, player) != intent["damage"]:
                         possible.discard(facing)
         inst.records = [[min(possible) if possible else 0]]
+
+    def _read_boss_state(self):
+        """What the bridge does not say: the Queen has lost her Torch Head Amalgam when it is not in the fight."""
+        queen = next((e for e in self.enemies if e.enemy_id.startswith("QUEEN")), None)
+        if queen is not None and not any(e.enemy_id.startswith("TORCH_HEAD_AMALGAM") for e in self.enemies):
+            queen.counter = 1
+        rats = [e for e in self.enemies if e.enemy_id.startswith("TWO_TAILED_RAT")]
+        if len(rats) > 1 or any(rat.counter >= 12 for rat in rats):      # the backups called are counted by every rat; one more than the starting three means one was called
+            backups = max(max(rat.counter // 12 for rat in rats), len(rats) - 3)
+            for rat in rats:
+                rat.counter = rat.counter % 12 + 12 * min(backups, 3)
+        if not self.enemies and not self.dormant:       # AdaptablePower: a dead Test Subject is not listed, and the fight goes on
+            self.dormant.append(Enemy.dormant_subject(self.ascension))
+
+    def carry_boss_state(self, previous : CombatState | None):
+        """Which form the dead Test Subject was in, and how many claws it had gained, which the bridge cannot say: taken from the state before."""
+        placeholder = next((d for d in self.dormant if d.enemy_id.startswith("TEST_SUBJECT")), None)
+        if placeholder is None or previous is None:
+            return
+        before = next((e for e in previous.enemies + previous.dormant if e.enemy_id.startswith("TEST_SUBJECT")), None)
+        if before is None:
+            return
+        dead = before if before.current_hp <= 0 else Enemy.lie_dead_subject(before)
+        dead.max_hp = max(dead.max_hp, placeholder.max_hp) if before.current_hp > 0 else dead.max_hp
+        self.dormant[self.dormant.index(placeholder)] = Enemy.deepcopy(dead)
 
     def _infer_dormant_segments(self, reviving : list[dict] | None):
         """Killed Decimillipede segments waiting to reattach. The bridge lists them as `reviving`, with the move they are on. Without that
@@ -708,7 +737,7 @@ class CombatSimulator:
         if card.target_type == TargetType.AnyEnemy:
             if not living:
                 return
-            target = living[0] if len(living) == 1 else rng.choice(living)
+            target = rng.pick_target(living)
         else:
             target = 0
         self._face_target(card, target)
@@ -856,6 +885,7 @@ class CombatSimulator:
             self.resolve_deaths()
         self.fire(EventType.END_TURN)
         self.resolve_deaths()
+        self.combat_state.player.clear_bound()
         for card in list(self.combat_state.player.hand):
             card.on_turn_end_in_hand(self)
         self._after_hp_loss(hp_loss_mark)
@@ -888,7 +918,11 @@ class CombatSimulator:
             self._return_temporary_strength(enemy)
         self._decrease_statuses(self.combat_state.player, skip=set(self.combat_state.player.status) - before)
         for e in self.combat_state.enemies:
-            self._decrease_statuses(e)
+            # an enemy's Plating does not wear down after the first round (Lagavulin Matriarch: 12, 12, 11; Sewer Clam: 8 stays 8)
+            first_round = self.combat_state.turn_number == 1
+            self._decrease_statuses(e, skip={StatusId.PLATING} if first_round else frozenset())
+            if StatusId.NEMESIS in e.status:
+                _nemesis_toggle(self, e)
         self.combat_state.turn_number += 1
         self._check_is_over()
         if self.combat_state.pending_choice is not None and not self.is_over:
@@ -922,8 +956,9 @@ class CombatSimulator:
     def _discard_hand(self):
         player = self.combat_state.player
         exhausted = 0
+        hexed = StatusId.HEX in player.status       # HexPower: Ethereal for every card while it lasts
         for card in list(player.hand):
-            if card.ethereal:
+            if card.ethereal or hexed:
                 player.exhaust_card(card)
                 self.ethereal_exhaust = True
                 self.fire(EventType.CARD_EXHAUSTED, card)
@@ -946,7 +981,11 @@ class CombatSimulator:
         else:
             self.combat_state.energy = self.combat_state.max_energy
         self.combat_state.cards_played = 0
+        block_before = player.block
         self.fire(EventType.BEFORE_PLAYER_TURN)
+        # block gained here (Toasty Mittens exhausting a card with Feel No Pain in play) comes after the turn's block is cleared (captured)
+        early_block = max(0, player.block - block_before)
+        player.block = block_before
         retained_block = player.block_kept_at_turn_start()
         hp_loss_mark = player.hp_loss_events
         self._announced_block = 0
@@ -954,6 +993,7 @@ class CombatSimulator:
         # announce Crimson Mantle's block (already applied); gain_block block was announced already
         unannounced = player.block - retained_block - self._announced_block
         self._announced_block = None
+        player.block += early_block
         if unannounced > 0:
             self.fire(EventType.BLOCK_GAINED, player, unannounced)
         self._after_hp_loss(hp_loss_mark)
@@ -991,8 +1031,13 @@ class CombatSimulator:
             waiting = list(self.combat_state.dormant)       # segments killed during this turn do their dead turn at the next one
             self.fire(EventType.ENEMY_TURN_START)
             self.resolve_deaths()
+            self._respawn_subjects(waiting)
             eaten = was_alive and self.combat_state.player.current_hp <= 0      # Sandpit: the enemies do not get to act
-            for enemy in ([] if eaten else list(self.combat_state.enemies)):     # enemies summoned now act next turn
+            acting = [] if eaten else list(self.combat_state.enemies)       # enemies summoned now act next turn
+            for enemy in acting:
+                enemy.clear_block()         # everyone's block goes as the side's turn starts, before an ally (Guardbot) can add to it
+            self.blocks_cleared = True
+            for enemy in acting:
                 enemy.perform_turn(self)
                 self.resolve_deaths()        # an attacker can die to Flame Barrier
                 self._sync_hp()
@@ -1000,6 +1045,7 @@ class CombatSimulator:
             self._reattach_segments(waiting)
         finally:
             self.in_enemy_turn = False
+            self.blocks_cleared = False
         self._revive()
 
     def _reattach_segments(self, waiting : list[Enemy]):
@@ -1033,7 +1079,12 @@ class CombatSimulator:
             dead = [e for e in self.combat_state.enemies if e.current_hp <= 0]
             if not dead:
                 return
+            for i, e in enumerate(self.combat_state.enemies):
+                e.last_index = i        # where a death effect that puts an enemy back should place it
             self.combat_state.enemies = [e for e in self.combat_state.enemies if e.current_hp > 0]
+            for enemy in dead:                  # AdaptablePower: the Test Subject is not removed from the fight, it waits to respawn
+                if StatusId.ADAPTABLE in enemy.status:
+                    self.combat_state.dormant.append(Enemy.lie_dead_subject(enemy))
             if self.combat_state.enemies:       # ReattachPower: while another segment lives a killed one only lies dead
                 for enemy in dead:
                     if StatusId.REATTACH in enemy.status:
@@ -1041,6 +1092,23 @@ class CombatSimulator:
             for enemy in dead:
                 self._fire_death(enemy)
                 self.fire(EventType.CREATURE_KILLED, enemy)
+                for survivor in list(self.combat_state.enemies):
+                    hook = ALLY_DEATH_HOOKS.get(survivor.enemy_id.rpartition("_")[0])
+                    if hook is not None:
+                        hook(survivor, enemy, self)
+
+    def wither_level(self) -> int:
+        """How many steps Aeonglass has upgraded Withers by (its WitherUpgradeCount): every new one is made at that level."""
+        return next((e.counter for e in self.combat_state.enemies if e.enemy_id.startswith("AEONGLASS")), 0)
+
+    def _respawn_subjects(self, waiting : list[Enemy]):
+        """A killed Test Subject spends the enemy turn after it on its RESPAWN move, and performs it with the others."""
+        cs = self.combat_state
+        for subject in waiting:
+            if StatusId.ADAPTABLE in subject.status and subject in cs.dormant:
+                cs.dormant.remove(subject)
+                subject.current_hp = 1          # alive again for the move itself, which sets the hit points of its next form
+                cs.enemies.insert(min(getattr(subject, "last_index", 0), len(cs.enemies)), subject)
 
     def _fire_death(self, creature : Creature):
         for status_id, inst in list(creature.status.items()):
@@ -1048,11 +1116,13 @@ class CombatSimulator:
             if handler is not None:
                 handler(self, creature, inst.amount)
 
-    def summon(self, enemy : Enemy, front : bool = False):
-        """Add an enemy mid-fight. What it does first is up to its own moves."""
+    def summon(self, enemy : Enemy, front : bool = False, at : int | None = None):
+        """Add an enemy mid-fight (`at`: its place in the line). What it does first is up to its own moves."""
         if RelicId.PHILOSOPHERS_STONE in self.combat_state.player.relics:
             enemy.apply_status(StatusId.STRENGTH, PHILOSOPHERS_STONE_STRENGTH)      # AfterCreatureAddedToCombat
-        if front:
+        if at is not None:
+            self.combat_state.enemies.insert(min(at, len(self.combat_state.enemies)), enemy)
+        elif front:
             self.combat_state.enemies.insert(0, enemy)
         else:
             self.combat_state.enemies.append(enemy)
@@ -1067,6 +1137,9 @@ class CombatSimulator:
             if not enemy.is_minion:
                 self.is_over = False
                 return
+        if any(StatusId.ADAPTABLE in d.status for d in self.combat_state.dormant):
+            self.is_over = False            # the Test Subject has not stayed dead
+            return
 
         self.is_over = True
         if not self.combat_state.won:

@@ -142,3 +142,23 @@ def test_the_bridge_lists_waiting_segments_and_the_move_they_are_on():
     assert [(e.enemy_id, e.move_id, e.max_hp) for e in cs.dormant] == [("DECIMILLIPEDE_SEGMENT_MIDDLE_0", "DEAD", 44)]
     raw["reviving"] = []
     assert type(cs).from_dict(raw).dormant == []        # listed as none: nothing is inferred from what is missing
+
+
+# ---------------------------------------------------------------- the bridge lists the segments in "battle"
+def played_turn(before, after):
+    cs = captures.load("decimillipede", before, captures.HIVE)
+    CombatSimulator(cs).end_turn()
+    return cs, captures.load("decimillipede", after, captures.HIVE)
+
+def test_a_segment_lying_dead_reattaches_one_turn_later_not_at_once():
+    """Captured: the front segment on DEAD_MOVE is on REATTACH_MOVE after the enemy turn, and not yet back."""
+    cs, game = played_turn("front_dead_then_reattaching_before", "front_dead_then_reattaching_after")
+    assert [e.enemy_id for e in cs.enemies] == [e.enemy_id for e in game.enemies] and len(cs.enemies) == 2
+    assert [(d.enemy_id, d.move_id) for d in cs.dormant] == [("DECIMILLIPEDE_SEGMENT_FRONT_0", "REATTACH")]
+
+def test_segments_killed_a_turn_apart_come_back_a_turn_apart():
+    cs, game = played_turn("front_reattached_middle_dead_before", "front_reattached_middle_dead_after")
+    assert [e.enemy_id for e in cs.enemies] == [e.enemy_id for e in game.enemies]
+    assert [(d.enemy_id, d.move_id) for d in cs.dormant] == [("DECIMILLIPEDE_SEGMENT_MIDDLE_0", "REATTACH")]
+    from sts2_lite.verify import compare
+    assert compare(cs, game, random_step=True) == []

@@ -52,6 +52,10 @@ class Player(Creature):
         self.block_play_gains = 0         # gains made by that play
         self.cards_exhausted_this_turn = 0
         self.gold = 0
+        self.binding = False            # Chains of Binding is binding the cards drawn (the player's turn)
+        self.bound_cards = 0            # cards bound so far this turn
+        self.bound_played = False       # a Bound card has been played this turn: no other can be
+        self.smogged = False            # Smoggy: a Skill was played this turn, so every Skill card is afflicted with Smog until it ends
 
     @classmethod
     def from_dict(cls, player : dict):
@@ -90,6 +94,16 @@ class Player(Creature):
         # copies inferred from block amount (8 or 10 each)
         pl.crimson_mantle_plays = max(1, round(pl.status_amount(StatusId.CRIMSON_MANTLE) / 9)) if StatusId.CRIMSON_MANTLE in pl.status else 0
         pl._read_growing_cards()
+        if StatusId.CHAINS_OF_BINDING in pl.status:         # mid-turn: the cards bound so far are the ones in hand, and the one already played
+            pl.binding = True
+            pl.bound_played = any(c.bound and c.card_id is not None and raw.get("unplayable_reason") == "BlockedByHook" for c, raw in zip(pl.hand, player["hand"]))
+            pl.bound_cards = sum(c.bound for c in pl.hand) + (1 if pl.bound_played else 0)
+        if StatusId.SMOGGY in pl.status:         # a Skill in hand that the hook blocks: one was played this turn
+            smogged = [c for c, raw in zip(pl.hand, player["hand"])
+                       if c.type == CardType.Skill and not c.bound and raw.get("unplayable_reason") == "BlockedByHook"]
+            pl.smogged = bool(smogged)
+            for c in smogged:
+                c.is_unplayable = False         # only the Smog: the simulator knows that itself
         if StatusId.FREE_ATTACK in pl.status:
             pl._read_free_attack_costs()
         return pl
@@ -193,9 +207,21 @@ class Player(Creature):
         new_pl.returning = list(player.returning)
         new_pl.card_blocks_this_turn = player.card_blocks_this_turn
         new_pl.gold = player.gold
+        new_pl.binding, new_pl.bound_cards, new_pl.bound_played = player.binding, player.bound_cards, player.bound_played
+        new_pl.smogged = player.smogged
         return new_pl
     
+    def clear_bound(self):
+        """ChainsOfBindingPower.BeforeSideTurnEnd: the affliction goes wherever the cards are."""
+        self.binding, self.bound_cards, self.bound_played = False, 0, False
+        for pile in (self.hand, self.draw_pile, self.discard_pile):
+            for i, c in enumerate(pile):
+                if c.bound:
+                    pile[i] = c.bound_copy(False)
+
     def turn_start(self):
+        self.bound_cards, self.bound_played = 0, False
+        self.binding = StatusId.CHAINS_OF_BINDING in self.status
         remnant = self.relics.get(RelicId.BEATING_REMNANT)
         if remnant is not None:
             remnant.value = 0       # its damage limit counts from here
@@ -271,6 +297,10 @@ class Player(Creature):
             card = card.confused_copy(rng.randrange(SLITHER_MAX_COST + 1))     # a new random cost each time it is drawn
         if StatusId.CONFUSED in self.status and card.energy_cost != "X" and not card.unplayable:
             card = card.confused_copy(rng.randrange(CONFUSED_MAX_COST + 1))    # Canonical < 0 (Unplayable) and X keep theirs
+        chains = self.status.get(StatusId.CHAINS_OF_BINDING) if self.binding else None
+        if chains is not None and self.bound_cards < chains.amount and not card.bound:
+            card = card.bound_copy()        # ChainsOfBindingPower.AfterCardDrawn: the first few cards drawn each turn
+            self.bound_cards += 1
         self.hand.append(card)
         self.cards_drawn += 1
         if self.known_top > 0:

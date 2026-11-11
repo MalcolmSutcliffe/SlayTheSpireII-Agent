@@ -1,0 +1,889 @@
+{
+  "type": "decision",
+  "decision": "combat_play",
+  "room_type": "elite",
+  "context": {
+    "act": 3,
+    "floor": 13,
+    "ascension": 0
+  },
+  "run": {
+    "act": 3,
+    "floor": 13,
+    "ascension": 0
+  },
+  "round": 3,
+  "turn": "player",
+  "is_play_phase": null,
+  "energy": 3,
+  "max_energy": 3,
+  "hand": [
+    {
+      "index": 0,
+      "id": "BURN",
+      "name": "Burn",
+      "type": "Status",
+      "cost": "0",
+      "star_cost": null,
+      "description": "Unplayable. At the end of your turn, if this is in your Hand, take 2 damage.",
+      "target_type": "None",
+      "can_play": false,
+      "unplayable_reason": "HasUnplayableKeyword",
+      "is_upgraded": false,
+      "generated": true,
+      "enchantment": null,
+      "keywords": [
+        {
+          "name": "Unplayable",
+          "description": "Unplayable cards cannot be played."
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "id": "BURN",
+      "name": "Burn",
+      "type": "Status",
+      "cost": "0",
+      "star_cost": null,
+      "description": "Unplayable. At the end of your turn, if this is in your Hand, take 2 damage.",
+      "target_type": "None",
+      "can_play": false,
+      "unplayable_reason": "HasUnplayableKeyword",
+      "is_upgraded": false,
+      "generated": true,
+      "enchantment": null,
+      "keywords": [
+        {
+          "name": "Unplayable",
+          "description": "Unplayable cards cannot be played."
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "id": "BURN",
+      "name": "Burn",
+      "type": "Status",
+      "cost": "0",
+      "star_cost": null,
+      "description": "Unplayable. At the end of your turn, if this is in your Hand, take 2 damage.",
+      "target_type": "None",
+      "can_play": false,
+      "unplayable_reason": "HasUnplayableKeyword",
+      "is_upgraded": false,
+      "generated": true,
+      "enchantment": null,
+      "keywords": [
+        {
+          "name": "Unplayable",
+          "description": "Unplayable cards cannot be played."
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "id": "BURN",
+      "name": "Burn",
+      "type": "Status",
+      "cost": "0",
+      "star_cost": null,
+      "description": "Unplayable. At the end of your turn, if this is in your Hand, take 2 damage.",
+      "target_type": "None",
+      "can_play": false,
+      "unplayable_reason": "HasUnplayableKeyword",
+      "is_upgraded": false,
+      "generated": true,
+      "enchantment": null,
+      "keywords": [
+        {
+          "name": "Unplayable",
+          "description": "Unplayable cards cannot be played."
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "id": "STRIKE_IRONCLAD",
+      "name": "Strike",
+      "type": "Attack",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Deal 6 damage.",
+      "target_type": "AnyEnemy",
+      "can_play": true,
+      "unplayable_reason": null,
+      "is_upgraded": false,
+      "generated": false,
+      "enchantment": null,
+      "keywords": []
+    },
+    {
+      "index": 5,
+      "id": "STRIKE_IRONCLAD",
+      "name": "Strike",
+      "type": "Attack",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Deal 6 damage.",
+      "target_type": "AnyEnemy",
+      "can_play": true,
+      "unplayable_reason": null,
+      "is_upgraded": false,
+      "generated": false,
+      "enchantment": null,
+      "keywords": []
+    },
+    {
+      "index": 6,
+      "id": "DEFEND_IRONCLAD",
+      "name": "Defend",
+      "type": "Skill",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Gain 5 Block.",
+      "target_type": "Self",
+      "can_play": true,
+      "unplayable_reason": null,
+      "is_upgraded": false,
+      "generated": false,
+      "enchantment": null,
+      "keywords": [
+        {
+          "name": "Block",
+          "description": "Until next turn, prevents damage."
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "id": "BASH",
+      "name": "Bash",
+      "type": "Attack",
+      "cost": "2",
+      "star_cost": null,
+      "description": "Deal 8 damage. Apply 2 Vulnerable.",
+      "target_type": "AnyEnemy",
+      "can_play": true,
+      "unplayable_reason": null,
+      "is_upgraded": false,
+      "generated": false,
+      "enchantment": null,
+      "keywords": [
+        {
+          "name": "Vulnerable",
+          "description": "Vulnerable creatures take 50% more damage from Attacks."
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "id": "DEFEND_IRONCLAD",
+      "name": "Defend",
+      "type": "Skill",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Gain 5 Block.",
+      "target_type": "Self",
+      "can_play": true,
+      "unplayable_reason": null,
+      "is_upgraded": false,
+      "generated": false,
+      "enchantment": null,
+      "keywords": [
+        {
+          "name": "Block",
+          "description": "Until next turn, prevents damage."
+        }
+      ]
+    }
+  ],
+  "enemies": [
+    {
+      "entity_id": "MECHA_KNIGHT_0",
+      "combat_id": 1,
+      "name": "Mecha Knight",
+      "hp": 300,
+      "max_hp": 300,
+      "block": 0,
+      "status": [
+        {
+          "id": "ARTIFACT_POWER",
+          "name": "Artifact",
+          "amount": 3,
+          "type": "Buff",
+          "description": "Negates 3 debuffs.",
+          "keywords": []
+        }
+      ],
+      "move_id": "WINDUP_MOVE",
+      "follow_up_id": "HEAVY_CLEAVE_MOVE",
+      "move_log": [
+        "CHARGE_MOVE",
+        "FLAMETHROWER_MOVE",
+        "WINDUP_MOVE"
+      ],
+      "intents": [
+        {
+          "type": "Defend",
+          "label": "",
+          "title": "Defensive",
+          "description": "This enemy intends to Block on its turn."
+        },
+        {
+          "type": "Buff",
+          "label": "",
+          "title": "Empower",
+          "description": "This enemy intends to use a Buff."
+        }
+      ]
+    }
+  ],
+  "player": {
+    "character": "The Ironclad",
+    "hp": 55,
+    "max_hp": 80,
+    "block": 0,
+    "energy": 3,
+    "max_energy": 3,
+    "hand": [
+      {
+        "index": 0,
+        "id": "BURN",
+        "name": "Burn",
+        "type": "Status",
+        "cost": "0",
+        "star_cost": null,
+        "description": "Unplayable. At the end of your turn, if this is in your Hand, take 2 damage.",
+        "target_type": "None",
+        "can_play": false,
+        "unplayable_reason": "HasUnplayableKeyword",
+        "is_upgraded": false,
+        "generated": true,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Unplayable",
+            "description": "Unplayable cards cannot be played."
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "id": "BURN",
+        "name": "Burn",
+        "type": "Status",
+        "cost": "0",
+        "star_cost": null,
+        "description": "Unplayable. At the end of your turn, if this is in your Hand, take 2 damage.",
+        "target_type": "None",
+        "can_play": false,
+        "unplayable_reason": "HasUnplayableKeyword",
+        "is_upgraded": false,
+        "generated": true,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Unplayable",
+            "description": "Unplayable cards cannot be played."
+          }
+        ]
+      },
+      {
+        "index": 2,
+        "id": "BURN",
+        "name": "Burn",
+        "type": "Status",
+        "cost": "0",
+        "star_cost": null,
+        "description": "Unplayable. At the end of your turn, if this is in your Hand, take 2 damage.",
+        "target_type": "None",
+        "can_play": false,
+        "unplayable_reason": "HasUnplayableKeyword",
+        "is_upgraded": false,
+        "generated": true,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Unplayable",
+            "description": "Unplayable cards cannot be played."
+          }
+        ]
+      },
+      {
+        "index": 3,
+        "id": "BURN",
+        "name": "Burn",
+        "type": "Status",
+        "cost": "0",
+        "star_cost": null,
+        "description": "Unplayable. At the end of your turn, if this is in your Hand, take 2 damage.",
+        "target_type": "None",
+        "can_play": false,
+        "unplayable_reason": "HasUnplayableKeyword",
+        "is_upgraded": false,
+        "generated": true,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Unplayable",
+            "description": "Unplayable cards cannot be played."
+          }
+        ]
+      },
+      {
+        "index": 4,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": []
+      },
+      {
+        "index": 5,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": []
+      },
+      {
+        "index": 6,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 7,
+        "id": "BASH",
+        "name": "Bash",
+        "type": "Attack",
+        "cost": "2",
+        "star_cost": null,
+        "description": "Deal 8 damage. Apply 2 Vulnerable.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Vulnerable",
+            "description": "Vulnerable creatures take 50% more damage from Attacks."
+          }
+        ]
+      },
+      {
+        "index": 8,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      }
+    ],
+    "draw_pile_count": 5,
+    "discard_pile_count": 0,
+    "exhaust_pile_count": 0,
+    "draw_pile": [
+      {
+        "index": 0,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": []
+      },
+      {
+        "index": 1,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": []
+      },
+      {
+        "index": 2,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": []
+      },
+      {
+        "index": 3,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 4,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      }
+    ],
+    "discard_pile": [],
+    "exhaust_pile": [],
+    "gold": 99,
+    "status": [],
+    "relics": [
+      {
+        "id": "BURNING_BLOOD",
+        "name": "Burning Blood",
+        "description": "At the end of combat, heal 6 HP.",
+        "counter": null,
+        "status": "Normal",
+        "keywords": []
+      }
+    ],
+    "potions": []
+  },
+  "draw_pile_count": 5,
+  "discard_pile_count": 0,
+  "exhaust_pile_count": 0,
+  "battle": {
+    "round": 3,
+    "turn": "player",
+    "player": {
+      "character": "The Ironclad",
+      "hp": 55,
+      "max_hp": 80,
+      "block": 0,
+      "energy": 3,
+      "max_energy": 3,
+      "hand": [
+        {
+          "index": 0,
+          "id": "BURN",
+          "name": "Burn",
+          "type": "Status",
+          "cost": "0",
+          "star_cost": null,
+          "description": "Unplayable. At the end of your turn, if this is in your Hand, take 2 damage.",
+          "target_type": "None",
+          "can_play": false,
+          "unplayable_reason": "HasUnplayableKeyword",
+          "is_upgraded": false,
+          "generated": true,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Unplayable",
+              "description": "Unplayable cards cannot be played."
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "id": "BURN",
+          "name": "Burn",
+          "type": "Status",
+          "cost": "0",
+          "star_cost": null,
+          "description": "Unplayable. At the end of your turn, if this is in your Hand, take 2 damage.",
+          "target_type": "None",
+          "can_play": false,
+          "unplayable_reason": "HasUnplayableKeyword",
+          "is_upgraded": false,
+          "generated": true,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Unplayable",
+              "description": "Unplayable cards cannot be played."
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "id": "BURN",
+          "name": "Burn",
+          "type": "Status",
+          "cost": "0",
+          "star_cost": null,
+          "description": "Unplayable. At the end of your turn, if this is in your Hand, take 2 damage.",
+          "target_type": "None",
+          "can_play": false,
+          "unplayable_reason": "HasUnplayableKeyword",
+          "is_upgraded": false,
+          "generated": true,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Unplayable",
+              "description": "Unplayable cards cannot be played."
+            }
+          ]
+        },
+        {
+          "index": 3,
+          "id": "BURN",
+          "name": "Burn",
+          "type": "Status",
+          "cost": "0",
+          "star_cost": null,
+          "description": "Unplayable. At the end of your turn, if this is in your Hand, take 2 damage.",
+          "target_type": "None",
+          "can_play": false,
+          "unplayable_reason": "HasUnplayableKeyword",
+          "is_upgraded": false,
+          "generated": true,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Unplayable",
+              "description": "Unplayable cards cannot be played."
+            }
+          ]
+        },
+        {
+          "index": 4,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "generated": false,
+          "enchantment": null,
+          "keywords": []
+        },
+        {
+          "index": 5,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "generated": false,
+          "enchantment": null,
+          "keywords": []
+        },
+        {
+          "index": 6,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "generated": false,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        },
+        {
+          "index": 7,
+          "id": "BASH",
+          "name": "Bash",
+          "type": "Attack",
+          "cost": "2",
+          "star_cost": null,
+          "description": "Deal 8 damage. Apply 2 Vulnerable.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "generated": false,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Vulnerable",
+              "description": "Vulnerable creatures take 50% more damage from Attacks."
+            }
+          ]
+        },
+        {
+          "index": 8,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "generated": false,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        }
+      ],
+      "draw_pile_count": 5,
+      "discard_pile_count": 0,
+      "exhaust_pile_count": 0,
+      "draw_pile": [
+        {
+          "index": 0,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "generated": false,
+          "enchantment": null,
+          "keywords": []
+        },
+        {
+          "index": 1,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "generated": false,
+          "enchantment": null,
+          "keywords": []
+        },
+        {
+          "index": 2,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "generated": false,
+          "enchantment": null,
+          "keywords": []
+        },
+        {
+          "index": 3,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "generated": false,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        },
+        {
+          "index": 4,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "generated": false,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        }
+      ],
+      "discard_pile": [],
+      "exhaust_pile": [],
+      "gold": 99,
+      "status": [],
+      "relics": [
+        {
+          "id": "BURNING_BLOOD",
+          "name": "Burning Blood",
+          "description": "At the end of combat, heal 6 HP.",
+          "counter": null,
+          "status": "Normal",
+          "keywords": []
+        }
+      ],
+      "potions": []
+    },
+    "enemies": [
+      {
+        "entity_id": "MECHA_KNIGHT_0",
+        "combat_id": 1,
+        "name": "Mecha Knight",
+        "hp": 300,
+        "max_hp": 300,
+        "block": 0,
+        "status": [
+          {
+            "id": "ARTIFACT_POWER",
+            "name": "Artifact",
+            "amount": 3,
+            "type": "Buff",
+            "description": "Negates 3 debuffs.",
+            "keywords": []
+          }
+        ],
+        "move_id": "WINDUP_MOVE",
+        "follow_up_id": "HEAVY_CLEAVE_MOVE",
+        "move_log": [
+          "CHARGE_MOVE",
+          "FLAMETHROWER_MOVE",
+          "WINDUP_MOVE"
+        ],
+        "intents": [
+          {
+            "type": "Defend",
+            "label": "",
+            "title": "Defensive",
+            "description": "This enemy intends to Block on its turn."
+          },
+          {
+            "type": "Buff",
+            "label": "",
+            "title": "Empower",
+            "description": "This enemy intends to use a Buff."
+          }
+        ]
+      }
+    ],
+    "reviving": []
+  }
+}

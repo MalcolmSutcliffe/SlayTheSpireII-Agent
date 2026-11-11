@@ -14,6 +14,7 @@ SHRINK_MULTIPLIER = 0.7
 COLOSSUS_MULTIPLIER = 0.5
 DIAMOND_DIADEM_MULTIPLIER = 0.5
 FLUTTER_MULTIPLIER = 0.5
+SOAR_MULTIPLIER = 0.5
 SURROUND_MULTIPLIER = 1.5
 
 # game uses decimal; guards float truncation (62.999... -> 63)
@@ -37,6 +38,8 @@ def modify_damage(base : int, attacker : Creature, target : Creature, card : Car
     # Strength, Tainted and relics add, then Weak, Vulnerable, Shrink and Slow multiply; truncated once at the end.
     # `card`: damage source for relic checks. `in_play`: False when previewed from hand (Thrash's victim).
     damage = base + attacker.status_amount(StatusId.STRENGTH) + target.status_amount(StatusId.TAINTED)
+    if StatusId.VIGOR in attacker.status and hasattr(attacker, "enemy_id"):
+        damage += attacker.status[StatusId.VIGOR].amount        # VigorPower: an enemy's next attack (the player's is spent by the simulator)
     if attacker.relics:
         damage += damage_bonus(attacker, card)
     if StatusId.WEAK in attacker.status:
@@ -54,6 +57,8 @@ def modify_damage(base : int, attacker : Creature, target : Creature, card : Car
         damage *= DIAMOND_DIADEM_MULTIPLIER
     if StatusId.FLUTTER in target.status:
         damage *= FLUTTER_MULTIPLIER
+    if StatusId.SOAR in target.status:
+        damage *= SOAR_MULTIPLIER
     if StatusId.SURROUNDED in target.status and attacks_from_behind(attacker, target):
         damage *= SURROUND_MULTIPLIER
     if StatusId.SHRINK in attacker.status:

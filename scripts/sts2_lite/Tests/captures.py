@@ -7,6 +7,8 @@ from sts2_lite.combat import CombatState
 DATA = Path(__file__).parent / "data"
 ACT1 = "act1_overgrowth"
 HIVE = "act2_hive"
+GLORY = "act3_glory"
+UNDERDOCKS = "act1_underdocks"
 
 def raw(enemy : str, name : str, act : str = ACT1) -> dict:
     return json.loads((DATA / act / enemy / f"{name}.json").read_text())

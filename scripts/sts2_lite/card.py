@@ -43,6 +43,9 @@ class CardId(Enum):
     CRIMSON_MANTLE = auto()
     ANGER = auto()
     INFECTION = auto()
+    BURN = auto()
+    BECKON = auto()
+    WITHER = auto()
     BLUDGEON = auto()
     UNRELENTING = auto()
     BODY_SLAM = auto()
@@ -203,6 +206,9 @@ class CardId(Enum):
     TORIC_TOUGHNESS = auto()
 
 INFECTION_DAMAGE = 3
+BURN_DAMAGE = 2
+BECKON_HP_LOSS = 6      # Soul Fysh's Beckon: a status that can be played for 1 Energy, else costs this at the end of the turn
+WITHER_DAMAGE = 3       # and 3 more for each time Aeonglass has upgraded it
 TOXIC_DAMAGE = 5
 
 # energy cost change when upgraded (the rest of an upgrade is read from is_upgraded when the card is played)
@@ -253,7 +259,7 @@ CURSE_CARDS = frozenset({CardId.BAD_LUCK, CardId.DEBT, CardId.REGRET, CardId.DEC
                          CardId.FOLLY, CardId.GUILTY, CardId.SPORE_MIND, CardId.ASCENDERS_BANE})
 
 # cards with the Unplayable keyword
-UNPLAYABLE_CARDS = frozenset({CardId.DAZED, CardId.WOUND, CardId.NOT_IMPLEMENTED, CardId.INFECTION, CardId.SOOT,
+UNPLAYABLE_CARDS = frozenset({CardId.DAZED, CardId.WOUND, CardId.NOT_IMPLEMENTED, CardId.INFECTION, CardId.BURN, CardId.WITHER, CardId.SOOT,
                               CardId.DISINTEGRATION, CardId.MIND_ROT, CardId.SLOTH, CardId.WASTE_AWAY}
                              | (CURSE_CARDS - {CardId.SPORE_MIND}))
 
@@ -350,6 +356,9 @@ class Card:
     enchantment : EnchantmentId | None = None  # at most one per card
     enchant_amount : int = 0                   # the enchantment's X (Sharp 2, Adroit 3, ...)
     enchant_bonus : int = 0                    # damage Momentum has added this combat
+    dampened_from : Card | None = None         # Dampen: the upgraded card this one was downgraded from
+    wither_level : int = 0                     # Aeonglass's Increasing Intensity: how often this Wither has been fake-upgraded
+    bound : bool = False                       # the Queen's Chains of Binding: only one Bound card can be played a turn
     _keywords : int | None = None              # keyword mask; None: the card's canonical keywords
     generated : bool = False                   # made during this fight (the game's DeckVersion is null); the Thieving Hopper cannot take it
 
@@ -413,7 +422,9 @@ class Card:
         new_card.card_id = CardId[card["id"]]
         new_card.type = CardType[card["type"]]
         new_card.name = card["name"]
-        new_card.is_unplayable = not card["can_play"]
+        # "EnergyCostTooHigh" is only the energy left right now: the simulator decides that itself, so the flag must not follow the card
+        # into the discard pile (it made every card the player could not afford at the moment unplayable for the rest of a search)
+        new_card.is_unplayable = not card["can_play"] and card.get("unplayable_reason") != "EnergyCostTooHigh"
         if card["cost"] == "X":
             new_card.energy_cost = card["cost"]
         else:
@@ -424,10 +435,16 @@ class Card:
             new_card._keywords = keyword_mask(CardKeyword[k.upper()] for k in card["card_keywords"] if k.upper() in CardKeyword.__members__)
         if card.get("enchantment"):
             new_card._read_enchantment(card["enchantment"])
+        new_card.bound = any(k.get("name") == "Bound" for k in card.get("keywords") or ())      # Chains of Binding shows as a keyword
+        if new_card.bound and card.get("unplayable_reason") == "BlockedByHook":
+            new_card.is_unplayable = False              # only because a Bound card was played this turn: the simulator knows that itself
         if new_card.card_id == CardId.STOMP and new_card.energy_cost < 3:
             new_card.restore_cost = 3           # the shown cost already includes this turn's Attacks
         match = re.search(r"Deals?\s+(\d+)", card.get("description") or "")
         new_card.shown_damage = int(match.group(1)) if match else None
+        if new_card.card_id == CardId.WITHER:       # "Wither+2": the damage on it is 3 for every step
+            damage = re.search(r"(\d+)\s+damage", card.get("description") or "")
+            new_card.wither_level = max(0, int(damage.group(1)) // WITHER_DAMAGE - 1) if damage else 0
         replay = re.search(r"Replay (\d+)\.", card.get("description") or "")       # Hidden Gem (Glam prints "Replay 1." too, but it is the keyword)
         new_card.replay = int(replay.group(1)) if replay and new_card.card_id != CardId.HIDDEN_GEM and new_card.enchantment != EnchantmentId.GLAM else 0
         if card["target_type"] == "None":
@@ -458,6 +475,38 @@ class Card:
         c.card_id, c.name, c.type = CardId.SLIMED, "Slimed", CardType.Status
         c.energy_cost, c.target_type = 1, TargetType.NONE
         c.is_upgraded = c.is_unplayable = False
+        return c
+
+    @classmethod
+    def create_beckon(cls) -> Card:
+        c = cls()
+        c.card_id, c.name, c.type = CardId.BECKON, "Beckon", CardType.Status
+        c.energy_cost, c.target_type = 1, TargetType.NONE
+        c.is_upgraded = c.is_unplayable = False
+        return c
+
+    @classmethod
+    def create_wither(cls, level : int = 0) -> Card:
+        c = cls()
+        c.card_id, c.name, c.type = CardId.WITHER, "Wither", CardType.Status
+        c.energy_cost, c.target_type = 0, TargetType.NONE
+        c.is_upgraded = False
+        c.is_unplayable = True
+        c.wither_level = level
+        return c
+
+    def bound_copy(self, bound : bool = True) -> Card:
+        c = Card.create_copy(self)
+        c.bound = bound
+        return c
+
+    @classmethod
+    def create_burn(cls) -> Card:
+        c = cls()
+        c.card_id, c.name, c.type = CardId.BURN, "Burn", CardType.Status
+        c.energy_cost, c.target_type = 0, TargetType.NONE
+        c.is_upgraded = False
+        c.is_unplayable = True
         return c
 
     @classmethod
@@ -629,6 +678,25 @@ class Card:
     def is_upgradable(self) -> bool:
         return not self.is_upgraded and self.type != CardType.Status and self.type != CardType.Curse
 
+    def downgraded_copy(self) -> Card:
+        """Dampen: the plain version of an upgraded card (what upgraded_copy undid); shared piles stay untouched."""
+        new_card = Card.create_copy(self)
+        new_card.is_upgraded = False
+        if new_card.name.endswith("+"):
+            new_card.name = new_card.name[:-1]
+        change = UPGRADE_COST_CHANGE.get(self.card_id, 0)
+        if change and new_card.energy_cost != "X":
+            new_card.energy_cost = max(0, self.energy_cost - change)
+            if self.restore_cost is not None:
+                new_card.restore_cost = max(0, self.restore_cost - change)
+        keyword = UPGRADE_KEYWORD.get(self.card_id)
+        if keyword:
+            new_card._keywords = new_card._mask & ~keyword
+        removed = UPGRADE_REMOVED_KEYWORD.get(self.card_id)
+        if removed:
+            new_card._keywords = new_card._mask | removed
+        return new_card
+
     def upgraded_copy(self) -> Card:
         """A new, upgraded copy; the original is left alone because piles are shared between simulated states."""
         if not self.is_upgradable:
@@ -658,6 +726,12 @@ class Card:
         card_id = self.card_id
         if card_id == CardId.INFECTION:
             combat.combat_state.player.apply_damage(INFECTION_DAMAGE)
+        elif card_id == CardId.BURN:
+            combat.combat_state.player.apply_damage(BURN_DAMAGE)
+        elif card_id == CardId.BECKON:
+            combat.combat_state.player.lose_hp(BECKON_HP_LOSS)        # Unblockable | Unpowered
+        elif card_id == CardId.WITHER:
+            combat.combat_state.player.apply_damage(WITHER_DAMAGE * (1 + self.wither_level))
         elif card_id == CardId.TOXIC:
             combat.combat_state.player.apply_damage(TOXIC_DAMAGE)
         elif card_id in HAND_CURSE_EFFECTS:
@@ -680,13 +754,16 @@ class Card:
         new_card.enchantment, new_card.enchant_amount, new_card.enchant_bonus = card.enchantment, card.enchant_amount, card.enchant_bonus
         new_card._keywords = card._keywords
         new_card.generated = card.generated
+        new_card.dampened_from = card.dampened_from
+        new_card.wither_level = card.wither_level
+        new_card.bound = card.bound
         return new_card
 
     def signature(self) -> tuple:
         """Everything that decides how this card plays: two cards with equal signatures are interchangeable
         (the fields create_copy carries over, minus name/type/target which follow from the id)."""
         return (self.card_id, self.is_upgraded, self.energy_cost, self.is_unplayable, self.restore_cost, self.until_played,
-                self.bonus_damage, self.replay, self.enchantment, self.enchant_amount, self.enchant_bonus, self._mask, self.generated)
+                self.bonus_damage, self.replay, self.enchantment, self.enchant_amount, self.enchant_bonus, self._mask, self.generated, self.dampened_from is not None, self.wither_level, self.bound)
 
     def current_cost(self, player) -> int | str:
         """Energy cost now: the base cost plus Tangled on attacks."""
@@ -705,6 +782,8 @@ class Card:
         """Play the card. Raises ValueError if it cannot be played; state is restored.
         A free play (auto-play) costs nothing but still consumes Free Attack (FreeAttackPower.BeforeCardPlayed)."""
         player = combat.combat_state.player
+        if self.bound:
+            player.bound_played = True      # BeforeCardPlayed
         energy = combat.combat_state.energy
         cost = 0 if free else self.current_cost(player)
         free_attack = player.status.get(StatusId.FREE_ATTACK)
@@ -744,6 +823,8 @@ class Card:
                 self._enchantment_on_play(combat)
         except ValueError:
             combat.combat_state.energy = energy
+            if self.bound:
+                player.bound_played = False
             if counted:
                 player.plays_started_this_turn -= 1
             if free_attack:
@@ -820,6 +901,10 @@ class Card:
     def can_play_card(self, combat : CombatSimulator, target_index):
         if self.is_unplayable or self.unplayable:
             return False
+        if self.type == CardType.Skill and combat.combat_state.player.smogged:
+            return False            # Smoggy: afflicted with Smog
+        if self.bound and combat.combat_state.player.bound_played:
+            return False            # Chains of Binding: one Bound card a turn
         if StatusId.RINGING in combat.combat_state.player.status and combat.combat_state.cards_played >= 1:
             return False
         sloth = combat.combat_state.player.status.get(StatusId.SLOTH)
@@ -1445,6 +1530,9 @@ def play_knowledge_curse(card: Card, combat : CombatSimulator, target_index=0, i
 def play_spore_mind(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     pass        # only its Exhaust keyword
 
+def play_beckon(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    pass        # it does nothing; playing it only gets it out of the hand
+
 def play_slimed(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     combat.combat_state.player.draw_card()
 
@@ -1484,7 +1572,7 @@ def play_sword_boomerang(card: Card, combat : CombatSimulator, target_index=0, i
         living = _living(combat)
         if not living:
             break
-        target = living[0] if len(living) == 1 else rng.choice(living)
+        target = rng.pick_target(living)
         _attack(combat, 3, target)
         combat.resolve_deaths()
 
@@ -1695,7 +1783,7 @@ def play_volley(card: Card, combat : CombatSimulator, target_index=0, is_upgrade
         living = _living(combat)
         if not living:
             break
-        _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], living[0] if len(living) == 1 else rng.choice(living))
+        _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], rng.pick_target(living))
         combat.resolve_deaths()
 
 def play_eternal_armor(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
@@ -1747,6 +1835,7 @@ GET_CARD_FUNCTION : dict[CardId, function] = {
     CardId.BASH : play_bash,
     CardId.BATTLE_TRANCE : play_battle_trance,
     CardId.BEAT_DOWN : play_beat_down,
+    CardId.BECKON : play_beckon,
     CardId.BLOODLETTING : play_bloodletting,
     CardId.BLOOD_WALL : play_blood_wall,
     CardId.BLUDGEON : play_bludgeon,
@@ -2072,7 +2161,7 @@ _RARITY_NAMES = {
         "GIANT_ROCK"
     ),
     CardRarity.Status : (
-        "SLIMED INFECTION DAZED WOUND SOOT TOXIC FRANTIC_ESCAPE DISINTEGRATION MIND_ROT SLOTH WASTE_AWAY"
+        "SLIMED INFECTION BURN BECKON WITHER DAZED WOUND SOOT TOXIC FRANTIC_ESCAPE DISINTEGRATION MIND_ROT SLOTH WASTE_AWAY"
     ),
     CardRarity.Curse : (
         "REGRET DECAY SHAME DOUBT NORMALITY INJURY POOR_SLEEP GREED CLUMSY CURSE_OF_THE_BELL WRITHE FOLLY BAD_LUCK DEBT GUILTY SPORE_MIND "
@@ -2114,6 +2203,9 @@ HAND_CURSE_EFFECTS = {
 GENERATED_CARDS = {
     CardId.SLIMED : Card.create_slimed,
     CardId.INFECTION : Card.create_infection,
+    CardId.BURN : Card.create_burn,
+    CardId.BECKON : Card.create_beckon,
+    CardId.WITHER : Card.create_wither,
     CardId.DAZED : Card.create_dazed,
     CardId.WOUND : Card.create_wound,
     CardId.SOOT : Card.create_soot,

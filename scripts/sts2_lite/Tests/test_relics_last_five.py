@@ -79,6 +79,20 @@ def test_toasty_mittens_fires_exhaust_triggers():
     CombatSimulator(cs).end_turn()
     assert hps(cs) == [99]
 
+def test_feel_no_pain_block_from_toasty_mittens_survives_the_start_of_turn():
+    """Captured: the block comes after the turn's block is cleared, so it is still there when the player acts."""
+    cs = draw_pile(state([], RelicId.TOASTY_MITTENS))
+    cs.player.apply_status(StatusId.FEEL_NO_PAIN, 3)
+    cs.player.block = 34
+    CombatSimulator(cs).end_turn()
+    assert cs.player.block == 3
+
+def test_block_is_still_cleared_at_the_start_of_the_turn_without_it():
+    cs = draw_pile(state([], RelicId.TOASTY_MITTENS))
+    cs.player.block = 34
+    CombatSimulator(cs).end_turn()
+    assert cs.player.block == 0
+
 def test_toasty_mittens_with_nothing_to_exhaust_still_gives_strength():
     cs = state([], RelicId.TOASTY_MITTENS)
     cs.player.draw_pile, cs.player.discard_pile = [], []
