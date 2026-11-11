@@ -1,0 +1,823 @@
+{
+ "type": "decision",
+ "decision": "combat_play",
+ "room_type": "monster",
+ "context": {
+  "act": 1,
+  "floor": 5,
+  "ascension": 0
+ },
+ "run": {
+  "act": 1,
+  "floor": 5,
+  "ascension": 0
+ },
+ "round": 4,
+ "turn": "player",
+ "is_play_phase": null,
+ "energy": 3,
+ "max_energy": 3,
+ "hand": [
+  {
+   "index": 0,
+   "id": "HEMOKINESIS",
+   "name": "Hemokinesis",
+   "type": "Attack",
+   "cost": "1",
+   "star_cost": null,
+   "description": "Lose 2 HP. Deal 15 damage.",
+   "target_type": "AnyEnemy",
+   "can_play": true,
+   "unplayable_reason": null,
+   "is_upgraded": false,
+   "enchantment": null,
+   "keywords": []
+  },
+  {
+   "index": 1,
+   "id": "SLIMED",
+   "name": "Slimed",
+   "type": "Status",
+   "cost": "1",
+   "star_cost": null,
+   "description": "Draw 1 card. Exhaust.",
+   "target_type": "None",
+   "can_play": true,
+   "unplayable_reason": null,
+   "is_upgraded": false,
+   "enchantment": null,
+   "keywords": [
+    {
+     "name": "Exhaust",
+     "description": "Removed until the end of combat."
+    }
+   ]
+  },
+  {
+   "index": 2,
+   "id": "DEFEND_IRONCLAD",
+   "name": "Defend+",
+   "type": "Skill",
+   "cost": "1",
+   "star_cost": null,
+   "description": "Gain 8 Block.",
+   "target_type": "Self",
+   "can_play": true,
+   "unplayable_reason": null,
+   "is_upgraded": true,
+   "enchantment": null,
+   "keywords": [
+    {
+     "name": "Block",
+     "description": "Until next turn, prevents damage."
+    }
+   ]
+  },
+  {
+   "index": 3,
+   "id": "STRIKE_IRONCLAD",
+   "name": "Strike",
+   "type": "Attack",
+   "cost": "1",
+   "star_cost": null,
+   "description": "Deal 6 damage.",
+   "target_type": "AnyEnemy",
+   "can_play": true,
+   "unplayable_reason": null,
+   "is_upgraded": false,
+   "enchantment": null,
+   "keywords": []
+  },
+  {
+   "index": 4,
+   "id": "SLIMED",
+   "name": "Slimed",
+   "type": "Status",
+   "cost": "1",
+   "star_cost": null,
+   "description": "Draw 1 card. Exhaust.",
+   "target_type": "None",
+   "can_play": true,
+   "unplayable_reason": null,
+   "is_upgraded": false,
+   "enchantment": null,
+   "keywords": [
+    {
+     "name": "Exhaust",
+     "description": "Removed until the end of combat."
+    }
+   ]
+  }
+ ],
+ "enemies": [
+  {
+   "entity_id": "LEAF_SLIME_M_0",
+   "combat_id": 2,
+   "name": "Leaf Slime (M)",
+   "hp": 5,
+   "max_hp": 35,
+   "block": 0,
+   "status": [],
+   "intents": [
+    {
+     "type": "Attack",
+     "label": "8",
+     "title": "Aggressive",
+     "description": "This enemy intends to Attack for 8 damage."
+    }
+   ]
+  }
+ ],
+ "player": {
+  "character": "The Ironclad",
+  "hp": 75,
+  "max_hp": 80,
+  "block": 0,
+  "energy": 3,
+  "max_energy": 3,
+  "hand": [
+   {
+    "index": 0,
+    "id": "HEMOKINESIS",
+    "name": "Hemokinesis",
+    "type": "Attack",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Lose 2 HP. Deal 15 damage.",
+    "target_type": "AnyEnemy",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "enchantment": null,
+    "keywords": []
+   },
+   {
+    "index": 1,
+    "id": "SLIMED",
+    "name": "Slimed",
+    "type": "Status",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Draw 1 card. Exhaust.",
+    "target_type": "None",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Exhaust",
+      "description": "Removed until the end of combat."
+     }
+    ]
+   },
+   {
+    "index": 2,
+    "id": "DEFEND_IRONCLAD",
+    "name": "Defend+",
+    "type": "Skill",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Gain 8 Block.",
+    "target_type": "Self",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": true,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Block",
+      "description": "Until next turn, prevents damage."
+     }
+    ]
+   },
+   {
+    "index": 3,
+    "id": "STRIKE_IRONCLAD",
+    "name": "Strike",
+    "type": "Attack",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Deal 6 damage.",
+    "target_type": "AnyEnemy",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "enchantment": null,
+    "keywords": []
+   },
+   {
+    "index": 4,
+    "id": "SLIMED",
+    "name": "Slimed",
+    "type": "Status",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Draw 1 card. Exhaust.",
+    "target_type": "None",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Exhaust",
+      "description": "Removed until the end of combat."
+     }
+    ]
+   }
+  ],
+  "draw_pile_count": 11,
+  "discard_pile_count": 0,
+  "exhaust_pile_count": 0,
+  "draw_pile": [
+   {
+    "index": 0,
+    "id": "STRIKE_IRONCLAD",
+    "name": "Strike",
+    "type": "Attack",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Deal 6 damage.",
+    "target_type": "AnyEnemy",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "enchantment": null,
+    "keywords": []
+   },
+   {
+    "index": 1,
+    "id": "BASH",
+    "name": "Bash",
+    "type": "Attack",
+    "cost": "2",
+    "star_cost": null,
+    "description": "Deal 8 damage. Apply 2 Vulnerable.",
+    "target_type": "AnyEnemy",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Vulnerable",
+      "description": "Vulnerable creatures take 50% more damage from Attacks."
+     }
+    ]
+   },
+   {
+    "index": 2,
+    "id": "STRIKE_IRONCLAD",
+    "name": "Strike",
+    "type": "Attack",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Deal 6 damage.",
+    "target_type": "AnyEnemy",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "enchantment": null,
+    "keywords": []
+   },
+   {
+    "index": 3,
+    "id": "DEFEND_IRONCLAD",
+    "name": "Defend",
+    "type": "Skill",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Gain 5 Block.",
+    "target_type": "Self",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Block",
+      "description": "Until next turn, prevents damage."
+     }
+    ]
+   },
+   {
+    "index": 4,
+    "id": "SLIMED",
+    "name": "Slimed",
+    "type": "Status",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Draw 1 card. Exhaust.",
+    "target_type": "None",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Exhaust",
+      "description": "Removed until the end of combat."
+     }
+    ]
+   },
+   {
+    "index": 5,
+    "id": "SLIMED",
+    "name": "Slimed",
+    "type": "Status",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Draw 1 card. Exhaust.",
+    "target_type": "None",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Exhaust",
+      "description": "Removed until the end of combat."
+     }
+    ]
+   },
+   {
+    "index": 6,
+    "id": "STRIKE_IRONCLAD",
+    "name": "Strike+",
+    "type": "Attack",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Deal 9 damage.",
+    "target_type": "AnyEnemy",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": true,
+    "enchantment": null,
+    "keywords": []
+   },
+   {
+    "index": 7,
+    "id": "STRIKE_IRONCLAD",
+    "name": "Strike",
+    "type": "Attack",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Deal 6 damage.",
+    "target_type": "AnyEnemy",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "enchantment": null,
+    "keywords": []
+   },
+   {
+    "index": 8,
+    "id": "DEFEND_IRONCLAD",
+    "name": "Defend",
+    "type": "Skill",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Gain 5 Block.",
+    "target_type": "Self",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Block",
+      "description": "Until next turn, prevents damage."
+     }
+    ]
+   },
+   {
+    "index": 9,
+    "id": "BATTLE_TRANCE",
+    "name": "Battle Trance",
+    "type": "Skill",
+    "cost": "0",
+    "star_cost": null,
+    "description": "Draw 3 cards. You cannot draw additional cards this turn.",
+    "target_type": "Self",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "enchantment": null,
+    "keywords": []
+   },
+   {
+    "index": 10,
+    "id": "TORIC_TOUGHNESS",
+    "name": "Toric Toughness",
+    "type": "Skill",
+    "cost": "2",
+    "star_cost": null,
+    "description": "Gain 5 Block. Gain 5 Block at the start of the next 2 turns.",
+    "target_type": "Self",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Block",
+      "description": "Until next turn, prevents damage."
+     }
+    ]
+   }
+  ],
+  "discard_pile": [],
+  "exhaust_pile": [],
+  "gold": 133,
+  "status": [],
+  "relics": [
+   {
+    "id": "BURNING_BLOOD",
+    "name": "Burning Blood",
+    "description": "At the end of combat, heal 6 HP.",
+    "counter": null,
+    "status": "Normal",
+    "keywords": []
+   },
+   {
+    "id": "NEOWS_TALISMAN",
+    "name": "Neow's Talisman",
+    "description": "Upon pickup, Upgrade 1 of your Strikes and 1 of your Defends.",
+    "counter": null,
+    "status": "Normal",
+    "keywords": []
+   }
+  ],
+  "potions": [
+   {
+    "id": "FAIRY_IN_A_BOTTLE",
+    "name": "Fairy in a Bottle",
+    "description": "When your HP would be reduced to 0, instead this potion is discarded and you heal to 30% of your Max HP.",
+    "slot": 0,
+    "can_use_in_combat": false,
+    "target_type": "Self",
+    "keywords": []
+   }
+  ]
+ },
+ "draw_pile_count": 11,
+ "discard_pile_count": 0,
+ "exhaust_pile_count": 0,
+ "battle": {
+  "round": 4,
+  "turn": "player",
+  "player": {
+   "character": "The Ironclad",
+   "hp": 75,
+   "max_hp": 80,
+   "block": 0,
+   "energy": 3,
+   "max_energy": 3,
+   "hand": [
+    {
+     "index": 0,
+     "id": "HEMOKINESIS",
+     "name": "Hemokinesis",
+     "type": "Attack",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Lose 2 HP. Deal 15 damage.",
+     "target_type": "AnyEnemy",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "enchantment": null,
+     "keywords": []
+    },
+    {
+     "index": 1,
+     "id": "SLIMED",
+     "name": "Slimed",
+     "type": "Status",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Draw 1 card. Exhaust.",
+     "target_type": "None",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Exhaust",
+       "description": "Removed until the end of combat."
+      }
+     ]
+    },
+    {
+     "index": 2,
+     "id": "DEFEND_IRONCLAD",
+     "name": "Defend+",
+     "type": "Skill",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Gain 8 Block.",
+     "target_type": "Self",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": true,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Block",
+       "description": "Until next turn, prevents damage."
+      }
+     ]
+    },
+    {
+     "index": 3,
+     "id": "STRIKE_IRONCLAD",
+     "name": "Strike",
+     "type": "Attack",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Deal 6 damage.",
+     "target_type": "AnyEnemy",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "enchantment": null,
+     "keywords": []
+    },
+    {
+     "index": 4,
+     "id": "SLIMED",
+     "name": "Slimed",
+     "type": "Status",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Draw 1 card. Exhaust.",
+     "target_type": "None",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Exhaust",
+       "description": "Removed until the end of combat."
+      }
+     ]
+    }
+   ],
+   "draw_pile_count": 11,
+   "discard_pile_count": 0,
+   "exhaust_pile_count": 0,
+   "draw_pile": [
+    {
+     "index": 0,
+     "id": "STRIKE_IRONCLAD",
+     "name": "Strike",
+     "type": "Attack",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Deal 6 damage.",
+     "target_type": "AnyEnemy",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "enchantment": null,
+     "keywords": []
+    },
+    {
+     "index": 1,
+     "id": "BASH",
+     "name": "Bash",
+     "type": "Attack",
+     "cost": "2",
+     "star_cost": null,
+     "description": "Deal 8 damage. Apply 2 Vulnerable.",
+     "target_type": "AnyEnemy",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Vulnerable",
+       "description": "Vulnerable creatures take 50% more damage from Attacks."
+      }
+     ]
+    },
+    {
+     "index": 2,
+     "id": "STRIKE_IRONCLAD",
+     "name": "Strike",
+     "type": "Attack",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Deal 6 damage.",
+     "target_type": "AnyEnemy",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "enchantment": null,
+     "keywords": []
+    },
+    {
+     "index": 3,
+     "id": "DEFEND_IRONCLAD",
+     "name": "Defend",
+     "type": "Skill",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Gain 5 Block.",
+     "target_type": "Self",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Block",
+       "description": "Until next turn, prevents damage."
+      }
+     ]
+    },
+    {
+     "index": 4,
+     "id": "SLIMED",
+     "name": "Slimed",
+     "type": "Status",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Draw 1 card. Exhaust.",
+     "target_type": "None",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Exhaust",
+       "description": "Removed until the end of combat."
+      }
+     ]
+    },
+    {
+     "index": 5,
+     "id": "SLIMED",
+     "name": "Slimed",
+     "type": "Status",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Draw 1 card. Exhaust.",
+     "target_type": "None",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Exhaust",
+       "description": "Removed until the end of combat."
+      }
+     ]
+    },
+    {
+     "index": 6,
+     "id": "STRIKE_IRONCLAD",
+     "name": "Strike+",
+     "type": "Attack",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Deal 9 damage.",
+     "target_type": "AnyEnemy",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": true,
+     "enchantment": null,
+     "keywords": []
+    },
+    {
+     "index": 7,
+     "id": "STRIKE_IRONCLAD",
+     "name": "Strike",
+     "type": "Attack",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Deal 6 damage.",
+     "target_type": "AnyEnemy",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "enchantment": null,
+     "keywords": []
+    },
+    {
+     "index": 8,
+     "id": "DEFEND_IRONCLAD",
+     "name": "Defend",
+     "type": "Skill",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Gain 5 Block.",
+     "target_type": "Self",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Block",
+       "description": "Until next turn, prevents damage."
+      }
+     ]
+    },
+    {
+     "index": 9,
+     "id": "BATTLE_TRANCE",
+     "name": "Battle Trance",
+     "type": "Skill",
+     "cost": "0",
+     "star_cost": null,
+     "description": "Draw 3 cards. You cannot draw additional cards this turn.",
+     "target_type": "Self",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "enchantment": null,
+     "keywords": []
+    },
+    {
+     "index": 10,
+     "id": "TORIC_TOUGHNESS",
+     "name": "Toric Toughness",
+     "type": "Skill",
+     "cost": "2",
+     "star_cost": null,
+     "description": "Gain 5 Block. Gain 5 Block at the start of the next 2 turns.",
+     "target_type": "Self",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Block",
+       "description": "Until next turn, prevents damage."
+      }
+     ]
+    }
+   ],
+   "discard_pile": [],
+   "exhaust_pile": [],
+   "gold": 133,
+   "status": [],
+   "relics": [
+    {
+     "id": "BURNING_BLOOD",
+     "name": "Burning Blood",
+     "description": "At the end of combat, heal 6 HP.",
+     "counter": null,
+     "status": "Normal",
+     "keywords": []
+    },
+    {
+     "id": "NEOWS_TALISMAN",
+     "name": "Neow's Talisman",
+     "description": "Upon pickup, Upgrade 1 of your Strikes and 1 of your Defends.",
+     "counter": null,
+     "status": "Normal",
+     "keywords": []
+    }
+   ],
+   "potions": [
+    {
+     "id": "FAIRY_IN_A_BOTTLE",
+     "name": "Fairy in a Bottle",
+     "description": "When your HP would be reduced to 0, instead this potion is discarded and you heal to 30% of your Max HP.",
+     "slot": 0,
+     "can_use_in_combat": false,
+     "target_type": "Self",
+     "keywords": []
+    }
+   ]
+  },
+  "enemies": [
+   {
+    "entity_id": "LEAF_SLIME_M_0",
+    "combat_id": 2,
+    "name": "Leaf Slime (M)",
+    "hp": 5,
+    "max_hp": 35,
+    "block": 0,
+    "status": [],
+    "intents": [
+     {
+      "type": "Attack",
+      "label": "8",
+      "title": "Aggressive",
+      "description": "This enemy intends to Attack for 8 damage."
+     }
+    ]
+   }
+  ]
+ }
+}

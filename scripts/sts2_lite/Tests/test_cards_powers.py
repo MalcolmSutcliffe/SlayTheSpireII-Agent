@@ -600,6 +600,16 @@ def test_stampede_does_not_cost_energy_or_turn_plays():
     sim.end_turn()
     assert hps(cs) == [94]
 
+def test_stampede_plays_attacks_the_bridge_shows_as_unaffordable():
+    """Captured (engine_mismatches): at 0 energy the bridge reports can_play false for every card, but Stampede only skips the Unplayable keyword."""
+    cs = one_enemy([strike(), defend()])
+    cs.player.apply_status(StatusId.STAMPEDE, 1)
+    cs.energy = 0
+    for card in cs.player.hand:
+        card.is_unplayable = True
+    CombatSimulator(cs).end_turn()
+    assert hps(cs) == [94]
+
 def test_stampede_plays_the_amount_of_attacks():
     cs = one_enemy([strike(), strike(), strike()])
     cs.player.apply_status(StatusId.STAMPEDE, 2)
@@ -613,8 +623,9 @@ def test_stampede_with_nothing_to_play_does_nothing():
     assert hps(cs) == [100]
 
 def test_stampede_skips_unplayable_attacks():
+    from sts2_lite.card import _UNPLAYABLE
     c = strike()
-    c.is_unplayable = True
+    c._keywords = c._mask | _UNPLAYABLE          # the Unplayable keyword; the can_play flag alone does not stop Stampede (StampedePower)
     cs = one_enemy([c])
     cs.player.apply_status(StatusId.STAMPEDE, 1)
     CombatSimulator(cs).end_turn()

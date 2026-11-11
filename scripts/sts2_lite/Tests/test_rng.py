@@ -160,3 +160,32 @@ def test_cards_drawn_on_a_clone_does_not_touch_the_original():
     clone.player.draw_cards(2)
     assert clone.player.cards_drawn == before + 2
     assert cs.player.cards_drawn == 0
+
+
+def test_random_float_is_in_the_unit_interval():
+    rng.seed(0)
+    values = [rng.random_float() for _ in range(1000)]
+    assert all(0.0 <= v < 1.0 for v in values)
+    assert len(set(values)) > 990
+
+def test_random_float_is_reproducible_from_a_seed():
+    rng.seed(42)
+    a = [rng.random_float() for _ in range(5)]
+    rng.seed(42)
+    assert a == [rng.random_float() for _ in range(5)]
+
+def test_random_float_shares_the_stream_and_counts_as_a_draw():
+    rng.seed(7)
+    before = rng.calls
+    first = rng.random_float()
+    assert rng.calls == before + 1
+    rng.seed(7)
+    assert rng.choice([first, 2.0, 3.0]) in (first, 2.0, 3.0)      # the same generator serves every draw
+    rng.seed(7)
+    assert rng.random_float() == first
+
+def test_random_float_is_roughly_uniform():
+    rng.seed(1)
+    values = [rng.random_float() for _ in range(20000)]
+    assert 0.48 < sum(values) / len(values) < 0.52
+    assert 0.23 < sum(v < 0.25 for v in values) / len(values) < 0.27

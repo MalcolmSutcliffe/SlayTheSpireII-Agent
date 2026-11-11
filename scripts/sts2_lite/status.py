@@ -79,13 +79,39 @@ class StatusId(Enum):
     PANACHE = auto()
     ROLLING_BOULDER = auto()
     THE_BOMB = auto()
+    TORIC_TOUGHNESS = auto()
     THE_GAMBIT = auto()
     MAYHEM = auto()
     NOSTALGIA = auto()
     CALAMITY = auto()
     ENTROPY = auto()
+    IMBALANCED = auto()
+    REATTACH = auto()
+    PERSONAL_HIVE = auto()
+    HARD_TO_KILL = auto()
+    TENDER = auto()
+    VITAL_SPARK = auto()
+    TAINTED = auto()
+    BACK_ATTACK_LEFT = auto()
+    BACK_ATTACK_RIGHT = auto()
+    CRAB_RAGE = auto()
+    SURROUNDED = auto()
+    CURL_UP = auto()
+    HATCH = auto()
+    SLUMBER = auto()
+    SANDPIT = auto()
+    ESCAPE_ARTIST = auto()
+    SWIPE = auto()
+    FLUTTER = auto()
+    BURROWED = auto()
+    DISINTEGRATION = auto()
+    MIND_ROT = auto()
+    SLOTH = auto()
+    WASTE_AWAY = auto()
 
 INFESTED_SPAWNS = 4
+CRAB_RAGE_STRENGTH, CRAB_RAGE_BLOCK = 6, 99
+SLOTH_LIMIT = 3
 
 class StatusBehaviour(Enum):
     STATIC = auto()
@@ -98,7 +124,7 @@ STATUS_BEAVIOURS : dict[StatusId, StatusBehaviour] = {
     StatusId.VULNERABLE : StatusBehaviour.DECREASE_BY_ONE,
     StatusId.FRAIL : StatusBehaviour.DECREASE_BY_ONE,
     StatusId.DEXTERITY : StatusBehaviour.STATIC,
-    StatusId.SHRINK : StatusBehaviour.STATIC,
+    StatusId.SHRINK : StatusBehaviour.DECREASE_BY_ONE,     # a counter that ticks when its owner's side ends; negative is infinite (ShrinkPower)
     StatusId.THORNS : StatusBehaviour.STATIC,
     StatusId.RAVENOUS : StatusBehaviour.STATIC,
     StatusId.SUCK : StatusBehaviour.STATIC,
@@ -159,17 +185,42 @@ STATUS_BEAVIOURS : dict[StatusId, StatusBehaviour] = {
     StatusId.PANACHE : StatusBehaviour.STATIC,
     StatusId.ROLLING_BOULDER : StatusBehaviour.STATIC,
     StatusId.THE_BOMB : StatusBehaviour.STATIC,
+    StatusId.TORIC_TOUGHNESS : StatusBehaviour.STATIC,     # ticks itself after the block is cleared
     StatusId.THE_GAMBIT : StatusBehaviour.STATIC,
     StatusId.MAYHEM : StatusBehaviour.STATIC,
     StatusId.NOSTALGIA : StatusBehaviour.STATIC,
     StatusId.CALAMITY : StatusBehaviour.STATIC,
-    StatusId.ENTROPY : StatusBehaviour.STATIC,
-}
+    StatusId.IMBALANCED : StatusBehaviour.STATIC,     # a fully blocked attack of the owner stuns it
+    StatusId.REATTACH : StatusBehaviour.STATIC,     # Decimillipede segment: revives instead of dying
+    StatusId.PERSONAL_HIVE : StatusBehaviour.STATIC,     # a powered attack that hits the owner puts Dazed in the draw pile
+    StatusId.HARD_TO_KILL : StatusBehaviour.STATIC,     # no single hit does more than this to the owner
+    StatusId.TENDER : StatusBehaviour.STATIC,     # amount = cards played this turn; each costs 1 Strength and 1 Dexterity until the turn ends
+    StatusId.VITAL_SPARK : StatusBehaviour.STATIC,     # Skills played make the enemy attacks hit harder (Tainted)
+    StatusId.TAINTED : StatusBehaviour.STATIC,     # +amount damage from powered attacks until the enemies have acted
+    StatusId.BACK_ATTACK_LEFT : StatusBehaviour.STATIC,     # marker: the owner attacks from the left
+    StatusId.BACK_ATTACK_RIGHT : StatusBehaviour.STATIC,     # marker: the owner attacks from the right
+    StatusId.CRAB_RAGE : StatusBehaviour.STATIC,     # when an ally dies: +6 Strength and 99 Block, once
+    StatusId.SURROUNDED : StatusBehaviour.STATIC,     # takes 1.5x from the arm that is behind it
+    StatusId.CURL_UP : StatusBehaviour.STATIC,     # block after the first powered attack card that hit the owner
+    StatusId.HATCH : StatusBehaviour.STATIC,     # ticks when the enemies' turn ends
+    StatusId.SLUMBER : StatusBehaviour.STATIC,     # ticks every enemy turn and when the owner takes damage; wakes at 0
+    StatusId.SANDPIT : StatusBehaviour.STATIC,     # ticks when the enemies' turn starts; the player is eaten at 0
+    StatusId.ESCAPE_ARTIST : StatusBehaviour.STATIC,     # ticks down to 1 when the enemies' turn ends
+    StatusId.SWIPE : StatusBehaviour.STATIC,     # holds a stolen card (not modelled)
+    StatusId.FLUTTER : StatusBehaviour.STATIC,     # powered attacks do half; ticks per unblocked hit; stuns at 0
+    StatusId.BURROWED : StatusBehaviour.STATIC,     # the owner keeps its block; breaking it stuns the owner
+    StatusId.DISINTEGRATION : StatusBehaviour.STATIC,     # the owner takes this much when the player's turn ends
+    StatusId.MIND_ROT : StatusBehaviour.STATIC,     # draws this many fewer cards each turn
+    StatusId.SLOTH : StatusBehaviour.STATIC,     # at most this many cards a turn
+    StatusId.WASTE_AWAY : StatusBehaviour.STATIC,     # this much less maximum energy
+    StatusId.ENTROPY : StatusBehaviour.STATIC,}
 
 DEBUFFS = frozenset({StatusId.WEAK, StatusId.VULNERABLE, StatusId.FRAIL, StatusId.SHRINK,
                      StatusId.CONSTRICT, StatusId.TANGLED, StatusId.RINGING,
                      StatusId.NO_DRAW, StatusId.NO_ENERGY_GAIN, StatusId.MANGLE, StatusId.CONFUSED,
-                     StatusId.NO_BLOCK, StatusId.THE_GAMBIT, StatusId.DARK_SHACKLES})
+                     StatusId.NO_BLOCK, StatusId.THE_GAMBIT, StatusId.DARK_SHACKLES,
+                     StatusId.TENDER, StatusId.TAINTED, StatusId.SURROUNDED, StatusId.DISINTEGRATION, StatusId.MIND_ROT,
+                     StatusId.SLOTH, StatusId.WASTE_AWAY})
 
 def is_debuff(status_id : StatusId, amount : int) -> bool:
     return status_id in DEBUFFS or (status_id == StatusId.STRENGTH and amount < 0)
@@ -181,7 +232,10 @@ INSTANCED = {
     StatusId.PANACHE : (10, 1),                 # [cards left, damage, 1 once the Panache card itself has been played]
     StatusId.THE_BOMB : (40,),                  # [turns left, damage]
     StatusId.ROLLING_BOULDER : (),              # [damage of the next hit]
+    StatusId.TORIC_TOUGHNESS : (5,),            # [turns left, block]
 }
+# what an instanced copy's extra number is read from in the bridge's description (default: "N damage")
+INSTANCED_TEXT = {StatusId.TORIC_TOUGHNESS : r"(\d+)\D{0,20}?Block"}
 AUTOMATION_CARDS, PANACHE_CARDS = 10, 5
 ROLLING_BOULDER_STEP = 5
 
@@ -202,11 +256,15 @@ class StatusInstance:
         status_id = StatusId[status["id"][:-6]]
         amount = status["amount"]
         if status_id in INSTANCED:      # what the copy remembers beyond its shown amount is read from the text
-            damage = re.search(r"(\d+)\s+damage", status.get("description") or "")
+            damage = re.search(INSTANCED_TEXT.get(status_id, r"(\d+)\s+damage"), status.get("description") or "")
             extra = (int(damage.group(1)),) if damage and INSTANCED[status_id] else INSTANCED[status_id]
             if status_id == StatusId.PANACHE:
                 extra = (extra[0], 1)       # the card that applied it has been played if it is on the board
             return cls(status_id, amount, [[amount, *extra]])
+        if status_id == StatusId.SLOTH:
+            return cls(status_id, SLOTH_LIMIT)       # the shown amount is the cards played this turn; the limit is always 3
+        if status_id == StatusId.TENDER:
+            return cls(status_id, amount, [[amount]])       # the shown amount is the cards played this turn
         return cls(status_id, amount)
 
     @classmethod
@@ -236,6 +294,37 @@ def _shrink_on_creature_killed(combat : CombatSimulator, owner : Creature, amoun
     if killed.enemy_id.startswith("SHRINKER_BEETLE"):
         del owner.status[StatusId.SHRINK]
 
+def _crab_rage_on_creature_killed(combat : CombatSimulator, owner : Creature, amount : int, killed : Creature):
+    # an ally of the crab died: +6 Strength and 99 Block, once
+    if killed is owner or not hasattr(killed, "enemy_id") or owner.current_hp <= 0:
+        return
+    del owner.status[StatusId.CRAB_RAGE]
+    owner.apply_status(StatusId.STRENGTH, CRAB_RAGE_STRENGTH)
+    owner.apply_block(CRAB_RAGE_BLOCK)
+
+def face_target(player : Creature, target : Creature):
+    """SurroundedPower.UpdateDirection: turning to hit an arm that is behind you flips the facing."""
+    inst = player.status.get(StatusId.SURROUNDED)
+    if inst is None:
+        return
+    if not inst.records:
+        inst.records = [[0]]
+    facing = inst.records[0][0]
+    if (StatusId.BACK_ATTACK_LEFT if facing == 0 else StatusId.BACK_ATTACK_RIGHT) in target.status:
+        inst.records[0][0] = 1 - facing
+
+def _surrounded_on_creature_killed(combat : CombatSimulator, owner : Creature, amount : int, killed : Creature):
+    # when only arms of one side are left, the player turns to the first of them
+    if not hasattr(killed, "enemy_id"):
+        return
+    enemies = [e for e in combat.combat_state.enemies if e.current_hp > 0]
+    if enemies and (all(StatusId.BACK_ATTACK_LEFT in e.status for e in enemies)
+                    or all(StatusId.BACK_ATTACK_RIGHT in e.status for e in enemies)):
+        face_target(owner, enemies[0])
+
+def _disintegration_on_player_turn_ended(combat : CombatSimulator, owner : Creature, amount : int):
+    owner.apply_damage(amount)      # unpowered: only Block lessens it
+
 def _infested_on_death(combat : CombatSimulator, owner : Creature, amount : int):
     from sts2_lite.enemy import Enemy     # enemy.py imports this module
     for slot in range(INFESTED_SPAWNS):
@@ -244,6 +333,60 @@ def _infested_on_death(combat : CombatSimulator, owner : Creature, amount : int)
 def _slow_on_card_played(combat : CombatSimulator, owner : Creature, amount : int, card):
     # amount is a percent, as the bridge shows it; resets when the owner's side acts
     owner.status[StatusId.SLOW].amount += 10
+
+def _curl_up_on_card_played(combat : CombatSimulator, owner : Creature, amount : int, card):
+    # a powered attack of this card hit the owner (see Creature._after_damage): block once the card is done
+    if owner.status[StatusId.CURL_UP].records:
+        owner.apply_block(amount)
+        del owner.status[StatusId.CURL_UP]
+
+def _vital_spark_on_card_played(combat : CombatSimulator, owner : Creature, amount : int, card):
+    # every Skill is afflicted with Tainted while the owner lives: playing one taints the player until the enemies have acted
+    from sts2_lite.card import CardType     # card.py imports this module
+    if card.type == CardType.Skill:
+        combat.combat_state.player.apply_status(StatusId.TAINTED, amount)
+
+def _tainted_on_enemy_turn_end(combat : CombatSimulator, owner : Creature, amount : int):
+    del owner.status[StatusId.TAINTED]
+
+def _tender_on_card_played(combat : CombatSimulator, owner : Creature, amount : int, card):
+    # each card costs 1 Strength and 1 Dexterity until the turn ends; records[0][0] counts the cards (whatever Artifact did)
+    inst = owner.status[StatusId.TENDER]
+    if not inst.records:
+        inst.records.append([0])
+    inst.records[0][0] += 1
+    owner.apply_status(StatusId.STRENGTH, -1)
+    owner.apply_status(StatusId.DEXTERITY, -1)
+
+def _tender_on_player_turn_ended(combat : CombatSimulator, owner : Creature, amount : int):
+    inst = owner.status[StatusId.TENDER]
+    if inst.records and inst.records[0][0]:
+        owner.apply_status(StatusId.STRENGTH, inst.records[0][0], bypass_artifact=True)
+        owner.apply_status(StatusId.DEXTERITY, inst.records[0][0], bypass_artifact=True)
+        inst.records[0][0] = 0
+
+def _slumber_on_enemy_turn_end(combat : CombatSimulator, owner : Creature, amount : int):
+    # one less each enemy turn; the owner wakes up (and loses its Plating) when it runs out
+    owner.status[StatusId.SLUMBER].amount -= 1
+    if owner.status[StatusId.SLUMBER].amount <= 0:
+        del owner.status[StatusId.SLUMBER]
+        owner.status.pop(StatusId.PLATING, None)
+
+def _hatch_on_enemy_turn_end(combat : CombatSimulator, owner : Creature, amount : int):
+    owner.status[StatusId.HATCH].amount -= 1
+    if owner.status[StatusId.HATCH].amount <= 0:
+        del owner.status[StatusId.HATCH]
+
+def _escape_artist_on_enemy_turn_end(combat : CombatSimulator, owner : Creature, amount : int):
+    if amount > 1:
+        owner.status[StatusId.ESCAPE_ARTIST].amount -= 1
+
+def _sandpit_on_enemy_turn_start(combat : CombatSimulator, owner : Creature, amount : int):
+    # the player is eaten when it reaches zero, before the enemies act
+    owner.status[StatusId.SANDPIT].amount -= 1
+    if owner.status[StatusId.SANDPIT].amount <= 0:
+        del owner.status[StatusId.SANDPIT]
+        combat.combat_state.player.current_hp = 0
 
 def _tangled_on_end_turn(combat : CombatSimulator, owner : Creature, amount : int):
     # attacks cost more for the one turn it was applied for
@@ -345,7 +488,7 @@ def _aggression_on_before_player_turn(combat : CombatSimulator, owner : Creature
 def _stampede_on_end_turn(combat : CombatSimulator, owner : Creature, amount : int):
     from sts2_lite.card import CardType
     for _ in range(amount):
-        attacks = [c for c in owner.hand if c.type == CardType.Attack and not c.is_unplayable]
+        attacks = [c for c in owner.hand if c.type == CardType.Attack and not c.unplayable]
         if not attacks:
             return
         combat.auto_play(attacks[0] if len(attacks) == 1 else rng.choice(attacks))
@@ -361,6 +504,23 @@ def _block_next_turn_on_block_cleared(combat : CombatSimulator, owner : Creature
     if _own(combat, owner):
         del owner.status[StatusId.BLOCK_NEXT_TURN]
         combat.gain_block(owner, amount)
+
+def _toric_toughness_on_block_cleared(combat : CombatSimulator, owner : Creature, amount : int):
+    # ToricToughnessPower.AfterBlockCleared, per copy: unpowered block, then one turn less (fires under Barricade too)
+    if not _own(combat, owner):
+        return
+    inst = owner.status[StatusId.TORIC_TOUGHNESS]
+    kept = []
+    for record in inst.records:
+        combat.gain_block(owner, record[1])
+        record[0] -= 1
+        if record[0] > 0:
+            kept.append(record)
+    inst.records = kept
+    if kept:
+        inst.sync()
+    else:
+        del owner.status[StatusId.TORIC_TOUGHNESS]
 
 def _prep_time_on_turn_start(combat : CombatSimulator, owner : Creature, amount : int):
     if _own(combat, owner):
@@ -433,6 +593,18 @@ STATUS_HANDLERS : dict[tuple[StatusId, EventType], Callable] = HandlerTable({
     (StatusId.TERRITORIAL, EventType.ENEMY_TURN_END) : _territorial_on_enemy_turn_end,
     (StatusId.SHRINK, EventType.CREATURE_KILLED) : _shrink_on_creature_killed,
     (StatusId.SLOW, EventType.CARD_PLAYED) : _slow_on_card_played,
+    (StatusId.CURL_UP, EventType.CARD_PLAYED) : _curl_up_on_card_played,
+    (StatusId.SLUMBER, EventType.ENEMY_TURN_END) : _slumber_on_enemy_turn_end,
+    (StatusId.CRAB_RAGE, EventType.CREATURE_KILLED) : _crab_rage_on_creature_killed,
+    (StatusId.SURROUNDED, EventType.CREATURE_KILLED) : _surrounded_on_creature_killed,
+    (StatusId.DISINTEGRATION, EventType.PLAYER_TURN_ENDED) : _disintegration_on_player_turn_ended,
+    (StatusId.SANDPIT, EventType.ENEMY_TURN_START) : _sandpit_on_enemy_turn_start,
+    (StatusId.HATCH, EventType.ENEMY_TURN_END) : _hatch_on_enemy_turn_end,
+    (StatusId.ESCAPE_ARTIST, EventType.ENEMY_TURN_END) : _escape_artist_on_enemy_turn_end,
+    (StatusId.VITAL_SPARK, EventType.CARD_PLAYED) : _vital_spark_on_card_played,
+    (StatusId.TAINTED, EventType.ENEMY_TURN_END) : _tainted_on_enemy_turn_end,
+    (StatusId.TENDER, EventType.CARD_PLAYED) : _tender_on_card_played,
+    (StatusId.TENDER, EventType.PLAYER_TURN_ENDED) : _tender_on_player_turn_ended,
     (StatusId.INFESTED, EventType.DEATH) : _infested_on_death,
     (StatusId.ILLUSION, EventType.DEATH) : _illusion_on_death,
     (StatusId.TANGLED, EventType.END_TURN) : _tangled_on_end_turn,
@@ -455,6 +627,7 @@ STATUS_HANDLERS : dict[tuple[StatusId, EventType], Callable] = HandlerTable({
     (StatusId.AGGRESSION, EventType.BEFORE_PLAYER_TURN) : _aggression_on_before_player_turn,
     (StatusId.STAMPEDE, EventType.PLAY_PHASE_END) : _stampede_on_end_turn,
     (StatusId.BLOCK_NEXT_TURN, EventType.BLOCK_CLEARED) : _block_next_turn_on_block_cleared,
+    (StatusId.TORIC_TOUGHNESS, EventType.BLOCK_CLEARED) : _toric_toughness_on_block_cleared,
     (StatusId.PREP_TIME, EventType.PLAYER_TURN_START) : _prep_time_on_turn_start,
     (StatusId.ROLLING_BOULDER, EventType.PLAYER_TURN_START) : _rolling_boulder_on_turn_start,
     (StatusId.PANACHE, EventType.CARD_PLAYED) : _panache_on_card_played,

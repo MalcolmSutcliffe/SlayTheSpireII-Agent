@@ -120,7 +120,9 @@ def test_upgraded_armaments_upgrades_the_whole_hand():
 
 def test_armaments_goes_to_the_discard_pile_unupgraded():
     cs = state([armaments(), strike(), defend()])
-    play(cs)
+    sim = play(cs)
+    assert cs.player.discard_pile == []         # the card reaches its pile once the choice is answered
+    sim.choose_card(0)
     assert [c.is_upgraded for c in cs.player.discard_pile] == [False]
 
 def test_pending_choice_is_copied_with_the_state():
@@ -303,8 +305,37 @@ def test_ordinary_combat_states_have_no_pending_choice():
     from sts2_lite.Tests.captures import load
     assert load("nibbit", "butt").pending_choice is None
 
+def test_exhaust_one_card_prompt_loads_as_an_exhaust_pick():
+    """A pick the sim did not expect (Cascade played an unforeseen Brand): the screen's prompt says what it is for."""
+    import json
+    from pathlib import Path
+    cs = CombatState.from_dict(json.loads((Path(__file__).parent / "data" / "card_selection_exhaust.json").read_text()))
+    pending = cs.pending_choice
+    assert pending.kind == "exhaust" and pending.amount == 0 and pending.pile == "hand"
+    assert len(pending.indices) == 6 and pending.indices == sorted(pending.indices)      # the three Defends and two Strikes count once each
+    hand = len(cs.player.hand)
+    sim = CombatSimulator(cs)
+    sim.perform_action({"action": "choose_card", "card_index": pending.indices[0]})
+    assert cs.pending_choice is None and len(cs.player.hand) == hand - 1 and len(cs.player.exhaust_pile) == 2
+
 def test_unknown_selection_modes_are_reported():
     raw, _ = selection_state()
     raw["mode"] = "mystery_select"
     with pytest.raises(ValueError):
         CombatState.from_dict(raw)
+
+
+def test_tear_asunder_text_gives_the_times_hp_was_lost():
+    """Captured (engine_mismatches): the sim counted 16 hits where the game's text said "Hits 12 times"; the text is the game's own count."""
+    from sts2_lite.Tests.captures import raw
+    state = raw("nibbit", "butt")
+    card = dict(state["hand"][0])
+    card.update({"id": "TEAR_ASUNDER", "name": "Tear Asunder", "type": "Attack", "cost": "2", "target_type": "AnyEnemy",
+                 "description": "Deal 7 damage. Hits an additional time for each time you lost HP this combat. (Hits 12 times)"})
+    state["hand"] = [card] + state["hand"][1:]
+    cs = CombatState.from_dict(state)
+    assert cs.player.hp_loss_events == 11
+    earlier = CombatState.deepcopy(cs)
+    earlier.player.hp_loss_events = 15                  # what the sim had counted
+    cs.carry_combat_counters(earlier)
+    assert cs.player.hp_loss_events == 11               # the game's number wins over the larger simulated one

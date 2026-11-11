@@ -185,6 +185,7 @@ class Player(Creature):
         new_pl.block_play_gains = player.block_play_gains
         new_pl.cards_exhausted_this_turn = player.cards_exhausted_this_turn
         new_pl.lost_hp_this_turn = player.lost_hp_this_turn
+        new_pl.has_been_attacked_this_turn = player.has_been_attacked_this_turn
         new_pl.hp_loss_events = player.hp_loss_events
         new_pl.hp_lost_log = list(player.hp_lost_log)
         new_pl.attacks_played_this_turn = player.attacks_played_this_turn
@@ -208,7 +209,7 @@ class Player(Creature):
             self.block_cleared_hook()
         if self.returning:
             self.return_played_cards()
-        self.draw_cards(5 + hand_draw_bonus(self) if self.relics else 5, from_hand_draw=True)
+        self.draw_cards(max(0, (5 + hand_draw_bonus(self) if self.relics else 5) - self.status_amount(StatusId.MIND_ROT)), from_hand_draw=True)
 
         if StatusId.CRIMSON_MANTLE in self.status:
             self.lose_hp(max(1, self.crimson_mantle_plays))
@@ -326,13 +327,21 @@ class Player(Creature):
             for i, c in enumerate(pile):
                 if c.restore_cost is not None:
                     restored = Card.create_copy(c)
-                    restored.energy_cost, restored.restore_cost = c.restore_cost, None
+                    restored.energy_cost, restored.restore_cost, restored.until_played = c.restore_cost, None, False
                     pile[i] = restored
 
     def put_on_top(self, card : Card):
         """Place a card on top of the draw pile; the agent knows what it is."""
         self.draw_pile.append(card)
         self.known_top += 1
+
+    def insert_into_draw_pile(self, card : Card):
+        """CardPilePosition.Random: any of the len+1 places. Known top cards below the new card are no longer known
+        (their distance from the top is uncertain); those above it still are."""
+        index = rng.randrange(len(self.draw_pile) + 1)
+        if index >= len(self.draw_pile) - self.known_top:
+            self.known_top = len(self.draw_pile) - index
+        self.draw_pile.insert(index, card)
 
     def remove_from_draw_pile(self, card : Card):
         """Remove a card from the draw pile, forgetting a known top card if it was one."""

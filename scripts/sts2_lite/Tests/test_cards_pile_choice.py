@@ -123,7 +123,7 @@ def test_headbutt_deals_its_damage_before_the_choice():
     assert hps(cs) == [91]
 
 def test_game_index_matches_by_card_identity():
-    raw = json.loads((Path(__file__).parent / "data" / "headbutt_example.json").read_text())
+    raw = json.loads((Path(__file__).parent / "data" / "cards" / "ironclad" / "headbutt_example.json").read_text())
     cards = raw["cards"]
     assert game_index({"card_id": "STRIKE_IRONCLAD", "is_upgraded": False}, cards) == 4
     assert game_index({"card_id": "STRIKE_IRONCLAD", "is_upgraded": True}, cards) == 3
@@ -132,7 +132,7 @@ def test_game_index_matches_by_card_identity():
     assert game_index({"card_id": "BASH", "is_upgraded": False}, cards) is None
 
 def test_actions_from_a_pile_choice_can_be_matched_to_the_game_list():
-    raw = json.loads((Path(__file__).parent / "data" / "headbutt_example.json").read_text())
+    raw = json.loads((Path(__file__).parent / "data" / "cards" / "ironclad" / "headbutt_example.json").read_text())
     cs = state([headbutt()])
     cs.player.discard_pile = [defend(), make_card(CardId.ARMAMENTS, "Armaments", CardType.Skill, 1, TargetType.Self),
                               strike(upgraded=True), strike()]
@@ -459,7 +459,7 @@ def test_neows_fury_picks_two_cards_into_the_hand():
     assert {a["card_id"] for a in choices(sim)} == {"HEADBUTT", "TRUE_GRIT"}
     sim.choose_card(1)
     assert ids(cs.player.hand) == [CardId.BASH, CardId.TRUE_GRIT]
-    assert ids(cs.player.discard_pile) == [CardId.HEADBUTT, CardId.NEOWS_FURY]
+    assert ids(cs.player.discard_pile) == [CardId.HEADBUTT] and ids(cs.player.exhaust_pile) == [CardId.NEOWS_FURY]
     assert cs.pending_choice is None
 
 def test_neows_fury_identical_cards_are_one_choice_each_time():
@@ -482,7 +482,7 @@ def test_neows_fury_with_a_full_hand_leaves_the_cards():
     sim = play(cs)          # the played card leaves a hand of 9
     sim.choose_card(0)
     assert len(cs.player.hand) == 9 + 1 and cs.pending_choice is None
-    assert len(cs.player.discard_pile) >= 3     # Fury itself + the two unpicked
+    assert len(cs.player.discard_pile) == 2 and len(cs.player.exhaust_pile) == 1     # the two unpicked; Fury itself exhausts
 
 def test_neows_fury_capture_matches_the_sim_choice():
     """Captured screen: "Choose up to 2 cards", two identical Strikes, confirm allowed with nothing picked."""
@@ -500,3 +500,11 @@ def test_game_index_skips_indices_already_picked():
     assert game_index(action, raw["cards"]) == 0
     assert game_index(action, raw["cards"], skip=[0]) == 1
     assert game_index(action, raw["cards"], skip=[0, 1]) is None
+
+
+def test_neows_fury_exhausts_after_the_pick():
+    """Captured (engine_mismatches): the game puts it in the exhaust pile, not the discard pile."""
+    cs = with_discard([neows_fury()], [bash(), headbutt()])
+    sim = play(cs)
+    sim.confirm_choice()
+    assert ids(cs.player.exhaust_pile) == [CardId.NEOWS_FURY] and CardId.NEOWS_FURY not in ids(cs.player.discard_pile)

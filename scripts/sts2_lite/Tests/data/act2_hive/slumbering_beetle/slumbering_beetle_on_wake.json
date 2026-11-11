@@ -1,0 +1,662 @@
+{
+  "type": "decision",
+  "decision": "combat_play",
+  "room_type": "monster",
+  "context": {
+    "act": 1,
+    "floor": 10,
+    "ascension": 0
+  },
+  "run": {
+    "act": 1,
+    "floor": 10,
+    "ascension": 0
+  },
+  "round": 1,
+  "turn": "player",
+  "is_play_phase": null,
+  "energy": 0,
+  "max_energy": 3,
+  "hand": [
+    {
+      "index": 0,
+      "id": "DEFEND_IRONCLAD",
+      "name": "Defend",
+      "type": "Skill",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Gain 5 Block.",
+      "target_type": "Self",
+      "can_play": false,
+      "unplayable_reason": "EnergyCostTooHigh",
+      "is_upgraded": false,
+      "enchantment": null,
+      "keywords": [
+        {
+          "name": "Block",
+          "description": "Until next turn, prevents damage."
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "id": "STRIKE_IRONCLAD",
+      "name": "Strike",
+      "type": "Attack",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Deal 6 damage.",
+      "target_type": "AnyEnemy",
+      "can_play": false,
+      "unplayable_reason": "EnergyCostTooHigh",
+      "is_upgraded": false,
+      "enchantment": null,
+      "keywords": []
+    },
+    {
+      "index": 2,
+      "id": "DEFEND_IRONCLAD",
+      "name": "Defend",
+      "type": "Skill",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Gain 5 Block.",
+      "target_type": "Self",
+      "can_play": false,
+      "unplayable_reason": "EnergyCostTooHigh",
+      "is_upgraded": false,
+      "enchantment": null,
+      "keywords": [
+        {
+          "name": "Block",
+          "description": "Until next turn, prevents damage."
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "id": "STRIKE_IRONCLAD",
+      "name": "Strike",
+      "type": "Attack",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Deal 6 damage.",
+      "target_type": "AnyEnemy",
+      "can_play": false,
+      "unplayable_reason": "EnergyCostTooHigh",
+      "is_upgraded": false,
+      "enchantment": null,
+      "keywords": []
+    },
+    {
+      "index": 4,
+      "id": "STRIKE_IRONCLAD",
+      "name": "Strike",
+      "type": "Attack",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Deal 6 damage.",
+      "target_type": "AnyEnemy",
+      "can_play": false,
+      "unplayable_reason": "EnergyCostTooHigh",
+      "is_upgraded": false,
+      "enchantment": null,
+      "keywords": []
+    }
+  ],
+  "enemies": [
+    {
+      "entity_id": "BOWLBUG_ROCK_0",
+      "combat_id": 1,
+      "name": "Bowlbug (Rock)",
+      "hp": 45,
+      "max_hp": 45,
+      "block": 0,
+      "status": [
+        {
+          "id": "IMBALANCED_POWER",
+          "name": "Imbalanced",
+          "amount": 1,
+          "type": "Debuff",
+          "description": "If Bowlbug (Rock)'s attacks are fully blocked, it becomes Stunned.",
+          "keywords": []
+        }
+      ],
+      "move_id": "HEADBUTT_MOVE",
+      "follow_up_id": "POST_HEADBUTT",
+      "move_log": [
+        "HEADBUTT_MOVE"
+      ],
+      "intents": [
+        {
+          "type": "Attack",
+          "base_damage": 15,
+          "hits": 1,
+          "damage": 15,
+          "total_damage": 15,
+          "label": "15",
+          "title": "Aggressive",
+          "description": "This enemy intends to Attack for 15 damage."
+        }
+      ]
+    },
+    {
+      "entity_id": "BOWLBUG_SILK_0",
+      "combat_id": 2,
+      "name": "Bowlbug (Silk)",
+      "hp": 40,
+      "max_hp": 40,
+      "block": 0,
+      "status": [],
+      "move_id": "TOXIC_SPIT_MOVE",
+      "follow_up_id": "THRASH_MOVE",
+      "move_log": [
+        "TOXIC_SPIT_MOVE"
+      ],
+      "intents": [
+        {
+          "type": "Debuff",
+          "label": "",
+          "title": "Strategic",
+          "description": "This enemy intends to apply a Debuff to you."
+        }
+      ]
+    },
+    {
+      "entity_id": "SLUMBERING_BEETLE_0",
+      "combat_id": 3,
+      "name": "Slumbering Beetle",
+      "hp": 69,
+      "max_hp": 86,
+      "block": 0,
+      "status": [
+        {
+          "id": "PLATING_POWER",
+          "name": "Plating",
+          "amount": 15,
+          "type": "Buff",
+          "description": "At the end of your turn, gain 15 Block. Plating is reduced by 1 at the start of your turn.",
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        },
+        {
+          "id": "SLUMBER_POWER",
+          "name": "Slumber",
+          "amount": 2,
+          "type": "Buff",
+          "description": "Awakens upon taking turns or losing HP 2 times.",
+          "keywords": []
+        }
+      ],
+      "move_id": "SNORE_MOVE",
+      "follow_up_id": "SNORE_NEXT",
+      "move_log": [
+        "SNORE_MOVE"
+      ],
+      "intents": [
+        {
+          "type": "Sleep",
+          "label": "",
+          "title": "Sleeping",
+          "description": "This enemy is doing nothing this turn."
+        }
+      ]
+    }
+  ],
+  "player": {
+    "character": "The Ironclad",
+    "hp": 75,
+    "max_hp": 80,
+    "block": 0,
+    "energy": 0,
+    "max_energy": 3,
+    "hand": [
+      {
+        "index": 0,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": false,
+        "unplayable_reason": "EnergyCostTooHigh",
+        "is_upgraded": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": false,
+        "unplayable_reason": "EnergyCostTooHigh",
+        "is_upgraded": false,
+        "enchantment": null,
+        "keywords": []
+      },
+      {
+        "index": 2,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": false,
+        "unplayable_reason": "EnergyCostTooHigh",
+        "is_upgraded": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 3,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": false,
+        "unplayable_reason": "EnergyCostTooHigh",
+        "is_upgraded": false,
+        "enchantment": null,
+        "keywords": []
+      },
+      {
+        "index": 4,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": false,
+        "unplayable_reason": "EnergyCostTooHigh",
+        "is_upgraded": false,
+        "enchantment": null,
+        "keywords": []
+      }
+    ],
+    "draw_pile_count": 2,
+    "discard_pile_count": 1,
+    "exhaust_pile_count": 0,
+    "draw_pile": [
+      {
+        "index": 0,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": false,
+        "unplayable_reason": "EnergyCostTooHigh",
+        "is_upgraded": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "id": "BASH",
+        "name": "Bash",
+        "type": "Attack",
+        "cost": "2",
+        "star_cost": null,
+        "description": "Deal 8 damage. Apply 2 Vulnerable.",
+        "target_type": "AnyEnemy",
+        "can_play": false,
+        "unplayable_reason": "EnergyCostTooHigh",
+        "is_upgraded": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Vulnerable",
+            "description": "Vulnerable creatures take 50% more damage from Attacks."
+          }
+        ]
+      }
+    ],
+    "discard_pile": [
+      {
+        "index": 0,
+        "id": "BLUDGEON",
+        "name": "Bludgeon",
+        "type": "Attack",
+        "cost": "3",
+        "star_cost": null,
+        "description": "Deal 32 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": false,
+        "unplayable_reason": "EnergyCostTooHigh",
+        "is_upgraded": false,
+        "enchantment": null,
+        "keywords": []
+      }
+    ],
+    "exhaust_pile": [],
+    "gold": 99,
+    "status": [],
+    "relics": [
+      {
+        "id": "BURNING_BLOOD",
+        "name": "Burning Blood",
+        "description": "At the end of combat, heal 6 HP.",
+        "counter": null,
+        "status": "Normal",
+        "keywords": []
+      }
+    ],
+    "potions": []
+  },
+  "draw_pile_count": 2,
+  "discard_pile_count": 1,
+  "exhaust_pile_count": 0,
+  "battle": {
+    "round": 1,
+    "turn": "player",
+    "player": {
+      "character": "The Ironclad",
+      "hp": 75,
+      "max_hp": 80,
+      "block": 0,
+      "energy": 0,
+      "max_energy": 3,
+      "hand": [
+        {
+          "index": 0,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": false,
+          "unplayable_reason": "EnergyCostTooHigh",
+          "is_upgraded": false,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": false,
+          "unplayable_reason": "EnergyCostTooHigh",
+          "is_upgraded": false,
+          "enchantment": null,
+          "keywords": []
+        },
+        {
+          "index": 2,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": false,
+          "unplayable_reason": "EnergyCostTooHigh",
+          "is_upgraded": false,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        },
+        {
+          "index": 3,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": false,
+          "unplayable_reason": "EnergyCostTooHigh",
+          "is_upgraded": false,
+          "enchantment": null,
+          "keywords": []
+        },
+        {
+          "index": 4,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": false,
+          "unplayable_reason": "EnergyCostTooHigh",
+          "is_upgraded": false,
+          "enchantment": null,
+          "keywords": []
+        }
+      ],
+      "draw_pile_count": 2,
+      "discard_pile_count": 1,
+      "exhaust_pile_count": 0,
+      "draw_pile": [
+        {
+          "index": 0,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": false,
+          "unplayable_reason": "EnergyCostTooHigh",
+          "is_upgraded": false,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "id": "BASH",
+          "name": "Bash",
+          "type": "Attack",
+          "cost": "2",
+          "star_cost": null,
+          "description": "Deal 8 damage. Apply 2 Vulnerable.",
+          "target_type": "AnyEnemy",
+          "can_play": false,
+          "unplayable_reason": "EnergyCostTooHigh",
+          "is_upgraded": false,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Vulnerable",
+              "description": "Vulnerable creatures take 50% more damage from Attacks."
+            }
+          ]
+        }
+      ],
+      "discard_pile": [
+        {
+          "index": 0,
+          "id": "BLUDGEON",
+          "name": "Bludgeon",
+          "type": "Attack",
+          "cost": "3",
+          "star_cost": null,
+          "description": "Deal 32 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": false,
+          "unplayable_reason": "EnergyCostTooHigh",
+          "is_upgraded": false,
+          "enchantment": null,
+          "keywords": []
+        }
+      ],
+      "exhaust_pile": [],
+      "gold": 99,
+      "status": [],
+      "relics": [
+        {
+          "id": "BURNING_BLOOD",
+          "name": "Burning Blood",
+          "description": "At the end of combat, heal 6 HP.",
+          "counter": null,
+          "status": "Normal",
+          "keywords": []
+        }
+      ],
+      "potions": []
+    },
+    "enemies": [
+      {
+        "entity_id": "BOWLBUG_ROCK_0",
+        "combat_id": 1,
+        "name": "Bowlbug (Rock)",
+        "hp": 45,
+        "max_hp": 45,
+        "block": 0,
+        "status": [
+          {
+            "id": "IMBALANCED_POWER",
+            "name": "Imbalanced",
+            "amount": 1,
+            "type": "Debuff",
+            "description": "If Bowlbug (Rock)'s attacks are fully blocked, it becomes Stunned.",
+            "keywords": []
+          }
+        ],
+        "move_id": "HEADBUTT_MOVE",
+        "follow_up_id": "POST_HEADBUTT",
+        "move_log": [
+          "HEADBUTT_MOVE"
+        ],
+        "intents": [
+          {
+            "type": "Attack",
+            "base_damage": 15,
+            "hits": 1,
+            "damage": 15,
+            "total_damage": 15,
+            "label": "15",
+            "title": "Aggressive",
+            "description": "This enemy intends to Attack for 15 damage."
+          }
+        ]
+      },
+      {
+        "entity_id": "BOWLBUG_SILK_0",
+        "combat_id": 2,
+        "name": "Bowlbug (Silk)",
+        "hp": 40,
+        "max_hp": 40,
+        "block": 0,
+        "status": [],
+        "move_id": "TOXIC_SPIT_MOVE",
+        "follow_up_id": "THRASH_MOVE",
+        "move_log": [
+          "TOXIC_SPIT_MOVE"
+        ],
+        "intents": [
+          {
+            "type": "Debuff",
+            "label": "",
+            "title": "Strategic",
+            "description": "This enemy intends to apply a Debuff to you."
+          }
+        ]
+      },
+      {
+        "entity_id": "SLUMBERING_BEETLE_0",
+        "combat_id": 3,
+        "name": "Slumbering Beetle",
+        "hp": 69,
+        "max_hp": 86,
+        "block": 0,
+        "status": [
+          {
+            "id": "PLATING_POWER",
+            "name": "Plating",
+            "amount": 15,
+            "type": "Buff",
+            "description": "At the end of your turn, gain 15 Block. Plating is reduced by 1 at the start of your turn.",
+            "keywords": [
+              {
+                "name": "Block",
+                "description": "Until next turn, prevents damage."
+              }
+            ]
+          },
+          {
+            "id": "SLUMBER_POWER",
+            "name": "Slumber",
+            "amount": 2,
+            "type": "Buff",
+            "description": "Awakens upon taking turns or losing HP 2 times.",
+            "keywords": []
+          }
+        ],
+        "move_id": "SNORE_MOVE",
+        "follow_up_id": "SNORE_NEXT",
+        "move_log": [
+          "SNORE_MOVE"
+        ],
+        "intents": [
+          {
+            "type": "Sleep",
+            "label": "",
+            "title": "Sleeping",
+            "description": "This enemy is doing nothing this turn."
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,833 @@
+{
+ "type": "decision",
+ "decision": "combat_play",
+ "room_type": "monster",
+ "context": {
+  "act": 1,
+  "floor": 5,
+  "ascension": 0
+ },
+ "run": {
+  "act": 1,
+  "floor": 5,
+  "ascension": 0
+ },
+ "round": 1,
+ "turn": "player",
+ "is_play_phase": null,
+ "energy": 3,
+ "max_energy": 3,
+ "hand": [
+  {
+   "index": 0,
+   "id": "UPPERCUT",
+   "name": "Uppercut",
+   "type": "Attack",
+   "cost": "2",
+   "star_cost": null,
+   "description": "Deal 13 damage. Apply 1 Weak. Apply 1 Vulnerable.",
+   "target_type": "AnyEnemy",
+   "can_play": true,
+   "unplayable_reason": null,
+   "is_upgraded": false,
+   "enchantment": null,
+   "keywords": [
+    {
+     "name": "Weak",
+     "description": "Weakened creatures deal 25% less damage with Attacks."
+    },
+    {
+     "name": "Vulnerable",
+     "description": "Vulnerable creatures take 50% more damage from Attacks."
+    }
+   ]
+  },
+  {
+   "index": 1,
+   "id": "TRUE_GRIT",
+   "name": "True Grit",
+   "type": "Skill",
+   "cost": "1",
+   "star_cost": null,
+   "description": "Gain 7 Block. Exhaust 1 card at random.",
+   "target_type": "Self",
+   "can_play": true,
+   "unplayable_reason": null,
+   "is_upgraded": false,
+   "enchantment": null,
+   "keywords": [
+    {
+     "name": "Exhaust",
+     "description": "Removed until the end of combat."
+    },
+    {
+     "name": "Block",
+     "description": "Until next turn, prevents damage."
+    }
+   ]
+  },
+  {
+   "index": 2,
+   "id": "DEFEND_IRONCLAD",
+   "name": "Defend",
+   "type": "Skill",
+   "cost": "1",
+   "star_cost": null,
+   "description": "Gain 5 Block.",
+   "target_type": "Self",
+   "can_play": true,
+   "unplayable_reason": null,
+   "is_upgraded": false,
+   "enchantment": null,
+   "keywords": [
+    {
+     "name": "Block",
+     "description": "Until next turn, prevents damage."
+    }
+   ]
+  },
+  {
+   "index": 3,
+   "id": "STRIKE_IRONCLAD",
+   "name": "Strike",
+   "type": "Attack",
+   "cost": "1",
+   "star_cost": null,
+   "description": "Deal 6 damage.",
+   "target_type": "AnyEnemy",
+   "can_play": true,
+   "unplayable_reason": null,
+   "is_upgraded": false,
+   "enchantment": null,
+   "keywords": []
+  },
+  {
+   "index": 4,
+   "id": "STRIKE_IRONCLAD",
+   "name": "Strike",
+   "type": "Attack",
+   "cost": "1",
+   "star_cost": null,
+   "description": "Deal 6 damage.",
+   "target_type": "AnyEnemy",
+   "can_play": true,
+   "unplayable_reason": null,
+   "is_upgraded": false,
+   "enchantment": null,
+   "keywords": []
+  }
+ ],
+ "enemies": [
+  {
+   "entity_id": "LEAF_SLIME_S_0",
+   "combat_id": 1,
+   "name": "Leaf Slime (S)",
+   "hp": 11,
+   "max_hp": 11,
+   "block": 0,
+   "status": [],
+   "intents": [
+    {
+     "type": "Attack",
+     "label": "3",
+     "title": "Aggressive",
+     "description": "This enemy intends to Attack for 3 damage."
+    }
+   ]
+  },
+  {
+   "entity_id": "TWIG_SLIME_S_0",
+   "combat_id": 2,
+   "name": "Twig Slime (S)",
+   "hp": 9,
+   "max_hp": 9,
+   "block": 0,
+   "status": [],
+   "intents": [
+    {
+     "type": "Attack",
+     "label": "4",
+     "title": "Aggressive",
+     "description": "This enemy intends to Attack for 4 damage."
+    }
+   ]
+  },
+  {
+   "entity_id": "SLITHERING_STRANGLER_0",
+   "combat_id": 3,
+   "name": "Slithering Strangler",
+   "hp": 54,
+   "max_hp": 54,
+   "block": 0,
+   "status": [],
+   "intents": [
+    {
+     "type": "Debuff",
+     "label": "",
+     "title": "Strategic",
+     "description": "This enemy intends to apply a Debuff to you."
+    }
+   ]
+  }
+ ],
+ "player": {
+  "character": "The Ironclad",
+  "hp": 80,
+  "max_hp": 80,
+  "block": 0,
+  "energy": 3,
+  "max_energy": 3,
+  "hand": [
+   {
+    "index": 0,
+    "id": "UPPERCUT",
+    "name": "Uppercut",
+    "type": "Attack",
+    "cost": "2",
+    "star_cost": null,
+    "description": "Deal 13 damage. Apply 1 Weak. Apply 1 Vulnerable.",
+    "target_type": "AnyEnemy",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Weak",
+      "description": "Weakened creatures deal 25% less damage with Attacks."
+     },
+     {
+      "name": "Vulnerable",
+      "description": "Vulnerable creatures take 50% more damage from Attacks."
+     }
+    ]
+   },
+   {
+    "index": 1,
+    "id": "TRUE_GRIT",
+    "name": "True Grit",
+    "type": "Skill",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Gain 7 Block. Exhaust 1 card at random.",
+    "target_type": "Self",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Exhaust",
+      "description": "Removed until the end of combat."
+     },
+     {
+      "name": "Block",
+      "description": "Until next turn, prevents damage."
+     }
+    ]
+   },
+   {
+    "index": 2,
+    "id": "DEFEND_IRONCLAD",
+    "name": "Defend",
+    "type": "Skill",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Gain 5 Block.",
+    "target_type": "Self",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Block",
+      "description": "Until next turn, prevents damage."
+     }
+    ]
+   },
+   {
+    "index": 3,
+    "id": "STRIKE_IRONCLAD",
+    "name": "Strike",
+    "type": "Attack",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Deal 6 damage.",
+    "target_type": "AnyEnemy",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "enchantment": null,
+    "keywords": []
+   },
+   {
+    "index": 4,
+    "id": "STRIKE_IRONCLAD",
+    "name": "Strike",
+    "type": "Attack",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Deal 6 damage.",
+    "target_type": "AnyEnemy",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "enchantment": null,
+    "keywords": []
+   }
+  ],
+  "draw_pile_count": 8,
+  "discard_pile_count": 0,
+  "exhaust_pile_count": 0,
+  "draw_pile": [
+   {
+    "index": 0,
+    "id": "DEFEND_IRONCLAD",
+    "name": "Defend",
+    "type": "Skill",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Gain 5 Block.",
+    "target_type": "Self",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Block",
+      "description": "Until next turn, prevents damage."
+     }
+    ]
+   },
+   {
+    "index": 1,
+    "id": "WHIRLWIND",
+    "name": "Whirlwind",
+    "type": "Attack",
+    "cost": "X",
+    "star_cost": null,
+    "description": "Deal 5 damage to ALL enemies X times.",
+    "target_type": "AllEnemies",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "enchantment": null,
+    "keywords": []
+   },
+   {
+    "index": 2,
+    "id": "STRIKE_IRONCLAD",
+    "name": "Strike",
+    "type": "Attack",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Deal 6 damage.",
+    "target_type": "AnyEnemy",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "enchantment": null,
+    "keywords": []
+   },
+   {
+    "index": 3,
+    "id": "DEFEND_IRONCLAD",
+    "name": "Defend",
+    "type": "Skill",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Gain 5 Block.",
+    "target_type": "Self",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Block",
+      "description": "Until next turn, prevents damage."
+     }
+    ]
+   },
+   {
+    "index": 4,
+    "id": "STRIKE_IRONCLAD",
+    "name": "Strike",
+    "type": "Attack",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Deal 6 damage.",
+    "target_type": "AnyEnemy",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "enchantment": null,
+    "keywords": []
+   },
+   {
+    "index": 5,
+    "id": "STRIKE_IRONCLAD",
+    "name": "Strike",
+    "type": "Attack",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Deal 6 damage.",
+    "target_type": "AnyEnemy",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "enchantment": null,
+    "keywords": []
+   },
+   {
+    "index": 6,
+    "id": "DEFEND_IRONCLAD",
+    "name": "Defend",
+    "type": "Skill",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Gain 5 Block.",
+    "target_type": "Self",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Block",
+      "description": "Until next turn, prevents damage."
+     }
+    ]
+   },
+   {
+    "index": 7,
+    "id": "BASH",
+    "name": "Bash",
+    "type": "Attack",
+    "cost": "2",
+    "star_cost": null,
+    "description": "Deal 8 damage. Apply 2 Vulnerable.",
+    "target_type": "AnyEnemy",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Vulnerable",
+      "description": "Vulnerable creatures take 50% more damage from Attacks."
+     }
+    ]
+   }
+  ],
+  "discard_pile": [],
+  "exhaust_pile": [],
+  "gold": 296,
+  "status": [],
+  "relics": [
+   {
+    "id": "BURNING_BLOOD",
+    "name": "Burning Blood",
+    "description": "At the end of combat, heal 6 HP.",
+    "counter": null,
+    "status": "Normal",
+    "keywords": []
+   },
+   {
+    "id": "GOLDEN_PEARL",
+    "name": "Golden Pearl",
+    "description": "Upon pickup, gain 150 Gold.",
+    "counter": null,
+    "status": "Normal",
+    "keywords": []
+   }
+  ],
+  "potions": [
+   {
+    "id": "DUPLICATOR",
+    "name": "Duplicator",
+    "description": "This turn, your next card is played an extra time.",
+    "slot": 0,
+    "can_use_in_combat": true,
+    "target_type": "Self",
+    "keywords": []
+   },
+   {
+    "id": "RADIANT_TINCTURE",
+    "name": "Radiant Tincture",
+    "description": "Gain [ironclad_energy_icon.png]. Gain an additional [ironclad_energy_icon.png] at the start of your next 3 turns.",
+    "slot": 1,
+    "can_use_in_combat": true,
+    "target_type": "AnyPlayer",
+    "keywords": [
+     {
+      "name": "Energy",
+      "description": "Energy is used to play cards from your Hand."
+     }
+    ]
+   }
+  ]
+ },
+ "draw_pile_count": 8,
+ "discard_pile_count": 0,
+ "exhaust_pile_count": 0,
+ "battle": {
+  "round": 1,
+  "turn": "player",
+  "player": {
+   "character": "The Ironclad",
+   "hp": 80,
+   "max_hp": 80,
+   "block": 0,
+   "energy": 3,
+   "max_energy": 3,
+   "hand": [
+    {
+     "index": 0,
+     "id": "UPPERCUT",
+     "name": "Uppercut",
+     "type": "Attack",
+     "cost": "2",
+     "star_cost": null,
+     "description": "Deal 13 damage. Apply 1 Weak. Apply 1 Vulnerable.",
+     "target_type": "AnyEnemy",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Weak",
+       "description": "Weakened creatures deal 25% less damage with Attacks."
+      },
+      {
+       "name": "Vulnerable",
+       "description": "Vulnerable creatures take 50% more damage from Attacks."
+      }
+     ]
+    },
+    {
+     "index": 1,
+     "id": "TRUE_GRIT",
+     "name": "True Grit",
+     "type": "Skill",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Gain 7 Block. Exhaust 1 card at random.",
+     "target_type": "Self",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Exhaust",
+       "description": "Removed until the end of combat."
+      },
+      {
+       "name": "Block",
+       "description": "Until next turn, prevents damage."
+      }
+     ]
+    },
+    {
+     "index": 2,
+     "id": "DEFEND_IRONCLAD",
+     "name": "Defend",
+     "type": "Skill",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Gain 5 Block.",
+     "target_type": "Self",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Block",
+       "description": "Until next turn, prevents damage."
+      }
+     ]
+    },
+    {
+     "index": 3,
+     "id": "STRIKE_IRONCLAD",
+     "name": "Strike",
+     "type": "Attack",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Deal 6 damage.",
+     "target_type": "AnyEnemy",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "enchantment": null,
+     "keywords": []
+    },
+    {
+     "index": 4,
+     "id": "STRIKE_IRONCLAD",
+     "name": "Strike",
+     "type": "Attack",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Deal 6 damage.",
+     "target_type": "AnyEnemy",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "enchantment": null,
+     "keywords": []
+    }
+   ],
+   "draw_pile_count": 8,
+   "discard_pile_count": 0,
+   "exhaust_pile_count": 0,
+   "draw_pile": [
+    {
+     "index": 0,
+     "id": "DEFEND_IRONCLAD",
+     "name": "Defend",
+     "type": "Skill",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Gain 5 Block.",
+     "target_type": "Self",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Block",
+       "description": "Until next turn, prevents damage."
+      }
+     ]
+    },
+    {
+     "index": 1,
+     "id": "WHIRLWIND",
+     "name": "Whirlwind",
+     "type": "Attack",
+     "cost": "X",
+     "star_cost": null,
+     "description": "Deal 5 damage to ALL enemies X times.",
+     "target_type": "AllEnemies",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "enchantment": null,
+     "keywords": []
+    },
+    {
+     "index": 2,
+     "id": "STRIKE_IRONCLAD",
+     "name": "Strike",
+     "type": "Attack",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Deal 6 damage.",
+     "target_type": "AnyEnemy",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "enchantment": null,
+     "keywords": []
+    },
+    {
+     "index": 3,
+     "id": "DEFEND_IRONCLAD",
+     "name": "Defend",
+     "type": "Skill",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Gain 5 Block.",
+     "target_type": "Self",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Block",
+       "description": "Until next turn, prevents damage."
+      }
+     ]
+    },
+    {
+     "index": 4,
+     "id": "STRIKE_IRONCLAD",
+     "name": "Strike",
+     "type": "Attack",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Deal 6 damage.",
+     "target_type": "AnyEnemy",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "enchantment": null,
+     "keywords": []
+    },
+    {
+     "index": 5,
+     "id": "STRIKE_IRONCLAD",
+     "name": "Strike",
+     "type": "Attack",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Deal 6 damage.",
+     "target_type": "AnyEnemy",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "enchantment": null,
+     "keywords": []
+    },
+    {
+     "index": 6,
+     "id": "DEFEND_IRONCLAD",
+     "name": "Defend",
+     "type": "Skill",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Gain 5 Block.",
+     "target_type": "Self",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Block",
+       "description": "Until next turn, prevents damage."
+      }
+     ]
+    },
+    {
+     "index": 7,
+     "id": "BASH",
+     "name": "Bash",
+     "type": "Attack",
+     "cost": "2",
+     "star_cost": null,
+     "description": "Deal 8 damage. Apply 2 Vulnerable.",
+     "target_type": "AnyEnemy",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Vulnerable",
+       "description": "Vulnerable creatures take 50% more damage from Attacks."
+      }
+     ]
+    }
+   ],
+   "discard_pile": [],
+   "exhaust_pile": [],
+   "gold": 296,
+   "status": [],
+   "relics": [
+    {
+     "id": "BURNING_BLOOD",
+     "name": "Burning Blood",
+     "description": "At the end of combat, heal 6 HP.",
+     "counter": null,
+     "status": "Normal",
+     "keywords": []
+    },
+    {
+     "id": "GOLDEN_PEARL",
+     "name": "Golden Pearl",
+     "description": "Upon pickup, gain 150 Gold.",
+     "counter": null,
+     "status": "Normal",
+     "keywords": []
+    }
+   ],
+   "potions": [
+    {
+     "id": "DUPLICATOR",
+     "name": "Duplicator",
+     "description": "This turn, your next card is played an extra time.",
+     "slot": 0,
+     "can_use_in_combat": true,
+     "target_type": "Self",
+     "keywords": []
+    },
+    {
+     "id": "RADIANT_TINCTURE",
+     "name": "Radiant Tincture",
+     "description": "Gain [ironclad_energy_icon.png]. Gain an additional [ironclad_energy_icon.png] at the start of your next 3 turns.",
+     "slot": 1,
+     "can_use_in_combat": true,
+     "target_type": "AnyPlayer",
+     "keywords": [
+      {
+       "name": "Energy",
+       "description": "Energy is used to play cards from your Hand."
+      }
+     ]
+    }
+   ]
+  },
+  "enemies": [
+   {
+    "entity_id": "LEAF_SLIME_S_0",
+    "combat_id": 1,
+    "name": "Leaf Slime (S)",
+    "hp": 11,
+    "max_hp": 11,
+    "block": 0,
+    "status": [],
+    "intents": [
+     {
+      "type": "Attack",
+      "label": "3",
+      "title": "Aggressive",
+      "description": "This enemy intends to Attack for 3 damage."
+     }
+    ]
+   },
+   {
+    "entity_id": "TWIG_SLIME_S_0",
+    "combat_id": 2,
+    "name": "Twig Slime (S)",
+    "hp": 9,
+    "max_hp": 9,
+    "block": 0,
+    "status": [],
+    "intents": [
+     {
+      "type": "Attack",
+      "label": "4",
+      "title": "Aggressive",
+      "description": "This enemy intends to Attack for 4 damage."
+     }
+    ]
+   },
+   {
+    "entity_id": "SLITHERING_STRANGLER_0",
+    "combat_id": 3,
+    "name": "Slithering Strangler",
+    "hp": 54,
+    "max_hp": 54,
+    "block": 0,
+    "status": [],
+    "intents": [
+     {
+      "type": "Debuff",
+      "label": "",
+      "title": "Strategic",
+      "description": "This enemy intends to apply a Debuff to you."
+     }
+    ]
+   }
+  ]
+ }
+}

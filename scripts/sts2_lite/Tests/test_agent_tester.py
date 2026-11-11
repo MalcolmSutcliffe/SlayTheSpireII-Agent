@@ -60,6 +60,10 @@ def test_kind_of_classifies_states(tester):
     assert tester.kind_of({**play, "is_play_phase": False}) == "busy"
     assert tester.kind_of({**play, "enemies": []}) == "busy"        # between a kill and the spawns it triggers
     assert tester.kind_of({**play, "enemies": [{"hp": 5}]}) == "play"
+    torn_down = {**play, "player": {k: v for k, v in play["player"].items() if k != "max_hp"}}
+    assert tester.kind_of(torn_down) == "busy"          # the fight is ending: the player's data is incomplete
+    assert tester.kind_of({**play, "player": {}}) == "busy"
+    assert tester.kind_of({k: v for k, v in play.items() if k != "player"}) == "busy"
     assert tester.kind_of({"type": "decision", "decision": "map_select"}) == "away"
     assert tester.kind_of({"type": "decision", "decision": "hand_select"}) == "pick"
     assert tester.kind_of({"type": "decision", "decision": "card_select", "screen_type": "NCombatPileCardSelectScreen"}) == "pick"
@@ -250,3 +254,175 @@ def test_toolbox_screen_is_a_pick_without_skip_and_the_sim_has_no_state_for_it(t
     screen = json.loads((DATA / "relics" / "toolbox_select.json").read_text())
     assert tester.kind_of(screen, expecting_choice=True) == "pick" and not screen["can_skip"] and not screen["can_cancel"]
     assert [c["id"] for c in screen["cards"]] == ["BEAT_DOWN", "IMPATIENCE", "OMNISLICE"]
+
+
+def run_capturing(tester, monkeypatch, states, tmp_path, directory):
+    game = FakeGame(states)
+    monkeypatch.setattr(tester, "get_state", game.get_state)
+    monkeypatch.setattr(tester, "act", game.act)
+    tester.run_agent(FirstActionAgent(), log_path=str(tmp_path / "log.jsonl"), capture_dir=str(directory))
+    return game
+
+def test_the_first_state_of_every_round_is_captured(tester, monkeypatch, tmp_path):
+    first, next_round, same_round = capture(), capture(), capture()
+    first["round"] = 4
+    next_round["round"] = same_round["round"] = 5
+    out = tmp_path / "bench"
+    run_capturing(tester, monkeypatch, [first, next_round, same_round], tmp_path, out)
+    files = sorted(p for p in out.glob("*.json"))
+    assert len(files) == 2
+    assert "_r4_" in files[0].name and "_r5_" in files[1].name
+    assert json.loads(files[0].read_text()) == first
+    lines = [json.loads(l) for l in (out / "index.jsonl").read_text().splitlines()]
+    assert [l["round"] for l in lines] == [4, 5]
+    assert {l["file"] for l in lines} == {p.name for p in files}
+    assert lines[0]["hp"] == first["player"]["hp"] and lines[0]["enemies"]
+
+def test_the_file_name_holds_the_floor_and_the_enemies(tester):
+    state = capture()
+    state["context"] = {"floor": 7}
+    state["enemies"] = [{"name": "Phrog Parasite"}, {"name": "Wriggler"}, {"name": "Wriggler"}]
+    assert tester.capture_turn_start.__name__
+    import tempfile
+    with tempfile.TemporaryDirectory() as d:
+        name = tester.capture_turn_start(state, d)
+    assert name.startswith(f"f7_r{state['round']}_Phrog_Parasite+Wriggler_")
+
+def test_nothing_is_captured_unless_asked_or_when_it_is_not_the_players_turn(tester, monkeypatch, tmp_path):
+    enemy_turn = {**capture(), "turn": "enemy"}
+    out = tmp_path / "bench"
+    run_capturing(tester, monkeypatch, [enemy_turn], tmp_path, out)
+    assert not out.exists()
+    run(tester, monkeypatch, [capture()], tmp_path)
+    assert not (tmp_path / "bench").exists()
+
+def test_a_new_fight_captures_its_first_round_again(tester, monkeypatch, tmp_path):
+    class LeavesCombat(FakeGame):
+        def get_state(self):
+            state = super().get_state()
+            if state.get("decision") == "map_select":
+                self.index += 1         # nobody acts outside combat: the game moves on by itself
+            return state
+    fight_one, away, fight_two = capture(), {"type": "decision", "decision": "map_select"}, capture()
+    fight_one["round"] = fight_two["round"] = 1
+    out = tmp_path / "bench"
+    game = LeavesCombat([fight_one, away, away, away, fight_two])      # one away read goes to wait_for_change
+    monkeypatch.setattr(tester, "get_state", game.get_state)
+    monkeypatch.setattr(tester, "act", game.act)
+    tester.run_agent(FirstActionAgent(), log_path=str(tmp_path / "log.jsonl"), capture_dir=str(out))
+    assert len(list(out.glob("*.json"))) == 2
+
+
+def test_describe_action_names_cards_targets_and_picks(tester):
+    from sts2_lite.combat import CombatState
+    state = CombatState.from_dict(capture())
+    hand = state.player.hand
+    assert tester.describe_action({"action": "end_turn"}, state) == "end_turn"
+    plain = tester.describe_action({"action": "play_card", "card_index": 0, "target": 0}, state)
+    assert plain == hand[0].card_id.name + ("+" if hand[0].is_upgraded else "")
+    assert tester.describe_action({"action": "play_card", "card_index": 0, "target": 0, "target_name": "E_0"}, state).endswith(" -> E_0")
+    assert tester.describe_action({"action": "choose_card", "card_id": "HEADBUTT", "is_upgraded": True, "pile": "discard"}, state) == "pick HEADBUTT+ (discard)"
+
+def test_every_decision_is_logged_with_the_situation_and_the_move(tester, monkeypatch, tmp_path):
+    game = FakeGame([capture(), capture()])
+    monkeypatch.setattr(tester, "get_state", game.get_state)
+    monkeypatch.setattr(tester, "act", game.act)
+    path = tmp_path / "decisions.jsonl"
+    tester.run_agent(FirstActionAgent(), log_path=str(tmp_path / "log.jsonl"), decision_log=str(path))
+    lines = [json.loads(l) for l in path.read_text().splitlines()]
+    assert lines and lines[0]["n"] == 1
+    first = lines[0]
+    assert first["hand"] and first["enemies"] and first["chosen"]
+    assert first["hp"] == capture()["player"]["hp"] and first["energy"] == capture()["energy"]
+    assert first["seconds"] >= 0
+    assert first["sims"] is None and first["moves"] is None          # this agent runs no search
+
+def test_nothing_is_logged_unless_asked(tester, monkeypatch, tmp_path):
+    run(tester, monkeypatch, [capture()], tmp_path)
+    assert not (tmp_path / "decisions.jsonl").exists()
+
+def test_the_search_behind_a_decision_is_logged(tester, monkeypatch, tmp_path):
+    """The agent's MCTS is wrapped to remember its searcher: sims, why it stopped and every root move's visits and mean."""
+    class Child:
+        def __init__(self, action, visits, total):
+            self.action, self.visits, self.total_reward = action, visits, total
+    class Root:
+        children = [Child({"action": "end_turn"}, 10, -2.0), Child({"action": "play_card", "card_index": 0, "target": 0}, 90, 45.0)]
+    class FakeMCTS:
+        _root_node, _num_sims = None, 0
+        def monte_carlo_tree_search(self, state, budget=0):
+            self._root_node, self._num_sims = Root, 100
+            return {"action": "play_card", "card_index": 0, "target": 0}
+    module = types.ModuleType("agents.sts2_MCTS.MCTS")
+    module.sts2_MCTS, module.DEFAULT_MAX_SIMS = FakeMCTS, 3000
+    monkeypatch.setitem(sys.modules, "agents.sts2_MCTS.MCTS", module)
+    class SearchAgent:
+        def get_action(self, combat_state, budget=0):
+            return FakeMCTS().monte_carlo_tree_search(combat_state, budget)
+    game = FakeGame([capture(), capture()])
+    monkeypatch.setattr(tester, "get_state", game.get_state)
+    monkeypatch.setattr(tester, "act", game.act)
+    path = tmp_path / "decisions.jsonl"
+    tester.run_agent(SearchAgent(), log_path=str(tmp_path / "log.jsonl"), decision_log=str(path))
+    first = json.loads(path.read_text().splitlines()[0])
+    assert first["sims"] == 100 and first["stopped_by"] == "confidence"       # far below the time budget and the cap
+    assert [m["visits"] for m in first["moves"]] == [10, 90]
+    assert first["moves"][0]["move"] == "end_turn" and first["moves"][1]["mean"] == 0.5
+    assert first["chosen"] == first["moves"][1]["move"]
+
+
+def test_the_search_reported_stats_are_logged(tester, monkeypatch, tmp_path):
+    """A search returning (action, stats) is logged from its stats: sims, exit reason and root moves."""
+    play = {"action": "play_card", "card_index": 0, "target": 0}
+    stats = {"children": [{"action": {"action": "end_turn"}, "visits": 30, "q": -0.25},
+                          {"action": play, "visits": 170, "q": 0.61234}],
+             "num_sims": 200, "time_taken": 0.4, "exit_reason": "STATISTICAL_CONFIDENCE"}
+    class FakeMCTS:
+        def monte_carlo_tree_search(self, state, config=None):
+            return play, stats
+    module = types.ModuleType("agents.sts2_MCTS.MCTS")
+    module.sts2_MCTS, module.DEFAULT_MAX_SIMS = FakeMCTS, 3000
+    monkeypatch.setitem(sys.modules, "agents.sts2_MCTS.MCTS", module)
+    class SearchAgent:
+        def get_action(self, combat_state, budget=0):
+            action, _ = FakeMCTS().monte_carlo_tree_search(combat_state)
+            return action
+    game = FakeGame([capture(), capture()])
+    monkeypatch.setattr(tester, "get_state", game.get_state)
+    monkeypatch.setattr(tester, "act", game.act)
+    path = tmp_path / "decisions.jsonl"
+    tester.run_agent(SearchAgent(), log_path=str(tmp_path / "log.jsonl"), decision_log=str(path))
+    first = json.loads(path.read_text().splitlines()[0])
+    assert first["sims"] == 200 and first["stopped_by"] == "STATISTICAL_CONFIDENCE"
+    assert [m["visits"] for m in first["moves"]] == [30, 170]
+    assert first["moves"][1]["mean"] == 0.6123
+
+
+# ------------------------------------------------------------ cards the sim does not implement
+def _with_unknown(card_id="MADE_UP_CARD", pile="draw_pile"):
+    state = capture()
+    template = dict(state["hand"][0])
+    template.update(id=card_id, name="Made Up")
+    if pile == "hand":
+        state["hand"] = state["hand"] + [template]
+    else:
+        state["player"][pile] = list(state["player"][pile]) + [template]
+    return state
+
+def test_unimplemented_cards_are_found_in_every_pile(tester):
+    assert tester.unimplemented_cards(capture()) == {}
+    for pile in ("hand", "draw_pile", "discard_pile", "exhaust_pile"):
+        assert tester.unimplemented_cards(_with_unknown(pile=pile)) == {pile: ["MADE_UP_CARD"]}
+
+def test_an_unimplemented_card_is_logged_once_per_run(tester, monkeypatch, tmp_path):
+    _, log = run(tester, monkeypatch, [_with_unknown(), _with_unknown()], tmp_path)
+    records = [json.loads(line) for line in log.read_text().splitlines()]
+    unknown = [r for r in records if r.get("kind") == "not_implemented"]
+    assert len(unknown) == 1
+    assert unknown[0]["differences"] == ["card MADE_UP_CARD is not implemented in the sim (loaded as a Wound)"]
+    assert unknown[0]["piles"] == {"draw_pile": ["MADE_UP_CARD"]}
+
+def test_implemented_states_log_nothing_extra(tester, monkeypatch, tmp_path):
+    _, log = run(tester, monkeypatch, [capture(), capture()], tmp_path)
+    text = log.read_text() if log.exists() else ""
+    assert "not_implemented" not in text

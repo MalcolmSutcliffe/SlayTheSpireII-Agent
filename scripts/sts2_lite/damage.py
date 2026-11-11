@@ -13,15 +13,30 @@ VULNERABLE_MULTIPLIER = 1.5
 SHRINK_MULTIPLIER = 0.7
 COLOSSUS_MULTIPLIER = 0.5
 DIAMOND_DIADEM_MULTIPLIER = 0.5
+FLUTTER_MULTIPLIER = 0.5
+SURROUND_MULTIPLIER = 1.5
 
 # game uses decimal; guards float truncation (62.999... -> 63)
 EPSILON = 1e-9
 
 
+def surround_facing(target : Creature) -> int:
+    """Which way a Surrounded creature faces: 0 Right (the default), 1 Left. The game's power keeps it; the bridge does not
+    report it, so it lives in the status's records and load time works it out from the enemies' shown damage."""
+    records = target.status[StatusId.SURROUNDED].records
+    return records[0][0] if records else 0
+
+
+def attacks_from_behind(attacker : Creature, target : Creature) -> bool:
+    """Surrounded: facing Right the arm on the left is behind the target, facing Left the one on the right."""
+    behind = StatusId.BACK_ATTACK_RIGHT if surround_facing(target) else StatusId.BACK_ATTACK_LEFT
+    return behind in attacker.status
+
+
 def modify_damage(base : int, attacker : Creature, target : Creature, card : Card | None = None, in_play : bool = True) -> int:
-    # Strength and relics add, then Weak, Vulnerable, Shrink and Slow multiply; truncated once at the end.
+    # Strength, Tainted and relics add, then Weak, Vulnerable, Shrink and Slow multiply; truncated once at the end.
     # `card`: damage source for relic checks. `in_play`: False when previewed from hand (Thrash's victim).
-    damage = base + attacker.status_amount(StatusId.STRENGTH)
+    damage = base + attacker.status_amount(StatusId.STRENGTH) + target.status_amount(StatusId.TAINTED)
     if attacker.relics:
         damage += damage_bonus(attacker, card)
     if StatusId.WEAK in attacker.status:
@@ -37,6 +52,10 @@ def modify_damage(base : int, attacker : Creature, target : Creature, card : Car
         damage *= COLOSSUS_MULTIPLIER
     if StatusId.DIAMOND_DIADEM in target.status:
         damage *= DIAMOND_DIADEM_MULTIPLIER
+    if StatusId.FLUTTER in target.status:
+        damage *= FLUTTER_MULTIPLIER
+    if StatusId.SURROUNDED in target.status and attacks_from_behind(attacker, target):
+        damage *= SURROUND_MULTIPLIER
     if StatusId.SHRINK in attacker.status:
         damage *= SHRINK_MULTIPLIER
     if StatusId.SLOW in target.status:

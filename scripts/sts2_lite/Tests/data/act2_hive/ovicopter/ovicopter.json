@@ -1,0 +1,821 @@
+{
+  "type": "decision",
+  "decision": "combat_play",
+  "room_type": "monster",
+  "context": {
+    "act": 1,
+    "floor": 3,
+    "ascension": 0
+  },
+  "run": {
+    "act": 1,
+    "floor": 3,
+    "ascension": 0
+  },
+  "round": 2,
+  "turn": "player",
+  "is_play_phase": null,
+  "energy": 3,
+  "max_energy": 3,
+  "hand": [
+    {
+      "index": 0,
+      "id": "DEFEND_IRONCLAD",
+      "name": "Defend",
+      "type": "Skill",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Gain 5 Block.",
+      "target_type": "Self",
+      "can_play": true,
+      "unplayable_reason": null,
+      "is_upgraded": false,
+      "enchantment": null,
+      "keywords": [
+        {
+          "name": "Block",
+          "description": "Until next turn, prevents damage."
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "id": "DEFEND_IRONCLAD",
+      "name": "Defend",
+      "type": "Skill",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Gain 5 Block.",
+      "target_type": "Self",
+      "can_play": true,
+      "unplayable_reason": null,
+      "is_upgraded": false,
+      "enchantment": null,
+      "keywords": [
+        {
+          "name": "Block",
+          "description": "Until next turn, prevents damage."
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "id": "DEFEND_IRONCLAD",
+      "name": "Defend",
+      "type": "Skill",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Gain 5 Block.",
+      "target_type": "Self",
+      "can_play": true,
+      "unplayable_reason": null,
+      "is_upgraded": false,
+      "enchantment": null,
+      "keywords": [
+        {
+          "name": "Block",
+          "description": "Until next turn, prevents damage."
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "id": "STRIKE_IRONCLAD",
+      "name": "Strike",
+      "type": "Attack",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Deal 6 damage.",
+      "target_type": "AnyEnemy",
+      "can_play": true,
+      "unplayable_reason": null,
+      "is_upgraded": false,
+      "enchantment": null,
+      "keywords": []
+    },
+    {
+      "index": 4,
+      "id": "STRIKE_IRONCLAD",
+      "name": "Strike",
+      "type": "Attack",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Deal 6 damage.",
+      "target_type": "AnyEnemy",
+      "can_play": true,
+      "unplayable_reason": null,
+      "is_upgraded": false,
+      "enchantment": null,
+      "keywords": []
+    }
+  ],
+  "enemies": [
+    {
+      "entity_id": "TOUGH_EGG_0",
+      "combat_id": 4,
+      "name": "Tough Egg",
+      "hp": 17,
+      "max_hp": 17,
+      "block": 0,
+      "status": [
+        {
+          "id": "HATCH_POWER",
+          "name": "Hatch",
+          "amount": 1,
+          "type": "Buff",
+          "description": "Hatches after 1 turn.",
+          "keywords": []
+        },
+        {
+          "id": "MINION_POWER",
+          "name": "Minion",
+          "amount": 1,
+          "type": "Buff",
+          "description": "Minions abandon combat without their leader.",
+          "keywords": []
+        }
+      ],
+      "move_id": "HATCH_MOVE",
+      "follow_up_id": "NIBBLE_MOVE",
+      "move_log": [
+        "HATCH_MOVE"
+      ],
+      "intents": [
+        {
+          "type": "Summon",
+          "label": "",
+          "title": "Summon",
+          "description": "This enemy intends to summon Monsters."
+        }
+      ]
+    },
+    {
+      "entity_id": "TOUGH_EGG_1",
+      "combat_id": 3,
+      "name": "Tough Egg",
+      "hp": 14,
+      "max_hp": 14,
+      "block": 0,
+      "status": [
+        {
+          "id": "HATCH_POWER",
+          "name": "Hatch",
+          "amount": 1,
+          "type": "Buff",
+          "description": "Hatches after 1 turn.",
+          "keywords": []
+        },
+        {
+          "id": "MINION_POWER",
+          "name": "Minion",
+          "amount": 1,
+          "type": "Buff",
+          "description": "Minions abandon combat without their leader.",
+          "keywords": []
+        }
+      ],
+      "move_id": "HATCH_MOVE",
+      "follow_up_id": "NIBBLE_MOVE",
+      "move_log": [
+        "HATCH_MOVE"
+      ],
+      "intents": [
+        {
+          "type": "Summon",
+          "label": "",
+          "title": "Summon",
+          "description": "This enemy intends to summon Monsters."
+        }
+      ]
+    },
+    {
+      "entity_id": "TOUGH_EGG_2",
+      "combat_id": 2,
+      "name": "Tough Egg",
+      "hp": 15,
+      "max_hp": 15,
+      "block": 0,
+      "status": [
+        {
+          "id": "HATCH_POWER",
+          "name": "Hatch",
+          "amount": 1,
+          "type": "Buff",
+          "description": "Hatches after 1 turn.",
+          "keywords": []
+        },
+        {
+          "id": "MINION_POWER",
+          "name": "Minion",
+          "amount": 1,
+          "type": "Buff",
+          "description": "Minions abandon combat without their leader.",
+          "keywords": []
+        }
+      ],
+      "move_id": "HATCH_MOVE",
+      "follow_up_id": "NIBBLE_MOVE",
+      "move_log": [
+        "HATCH_MOVE"
+      ],
+      "intents": [
+        {
+          "type": "Summon",
+          "label": "",
+          "title": "Summon",
+          "description": "This enemy intends to summon Monsters."
+        }
+      ]
+    },
+    {
+      "entity_id": "OVICOPTER_0",
+      "combat_id": 1,
+      "name": "Ovicopter",
+      "hp": 130,
+      "max_hp": 130,
+      "block": 0,
+      "status": [],
+      "move_id": "SMASH_MOVE",
+      "follow_up_id": "TENDERIZER_MOVE",
+      "move_log": [
+        "LAY_EGGS_MOVE",
+        "SMASH_MOVE"
+      ],
+      "intents": [
+        {
+          "type": "Attack",
+          "base_damage": 16,
+          "hits": 1,
+          "damage": 16,
+          "total_damage": 16,
+          "label": "16",
+          "title": "Aggressive",
+          "description": "This enemy intends to Attack for 16 damage."
+        }
+      ]
+    }
+  ],
+  "player": {
+    "character": "The Ironclad",
+    "hp": 80,
+    "max_hp": 80,
+    "block": 0,
+    "energy": 3,
+    "max_energy": 3,
+    "hand": [
+      {
+        "index": 0,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 2,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 3,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "enchantment": null,
+        "keywords": []
+      },
+      {
+        "index": 4,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "enchantment": null,
+        "keywords": []
+      }
+    ],
+    "draw_pile_count": 0,
+    "discard_pile_count": 5,
+    "exhaust_pile_count": 0,
+    "draw_pile": [],
+    "discard_pile": [
+      {
+        "index": 0,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "enchantment": null,
+        "keywords": []
+      },
+      {
+        "index": 1,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "enchantment": null,
+        "keywords": []
+      },
+      {
+        "index": 2,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 3,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "enchantment": null,
+        "keywords": []
+      },
+      {
+        "index": 4,
+        "id": "BASH",
+        "name": "Bash",
+        "type": "Attack",
+        "cost": "2",
+        "star_cost": null,
+        "description": "Deal 8 damage. Apply 2 Vulnerable.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Vulnerable",
+            "description": "Vulnerable creatures take 50% more damage from Attacks."
+          }
+        ]
+      }
+    ],
+    "exhaust_pile": [],
+    "gold": 99,
+    "status": [],
+    "relics": [
+      {
+        "id": "BURNING_BLOOD",
+        "name": "Burning Blood",
+        "description": "At the end of combat, heal 6 HP.",
+        "counter": null,
+        "status": "Normal",
+        "keywords": []
+      }
+    ],
+    "potions": []
+  },
+  "draw_pile_count": 0,
+  "discard_pile_count": 5,
+  "exhaust_pile_count": 0,
+  "battle": {
+    "round": 2,
+    "turn": "player",
+    "player": {
+      "character": "The Ironclad",
+      "hp": 80,
+      "max_hp": 80,
+      "block": 0,
+      "energy": 3,
+      "max_energy": 3,
+      "hand": [
+        {
+          "index": 0,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        },
+        {
+          "index": 3,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "enchantment": null,
+          "keywords": []
+        },
+        {
+          "index": 4,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "enchantment": null,
+          "keywords": []
+        }
+      ],
+      "draw_pile_count": 0,
+      "discard_pile_count": 5,
+      "exhaust_pile_count": 0,
+      "draw_pile": [],
+      "discard_pile": [
+        {
+          "index": 0,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "enchantment": null,
+          "keywords": []
+        },
+        {
+          "index": 1,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "enchantment": null,
+          "keywords": []
+        },
+        {
+          "index": 2,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        },
+        {
+          "index": 3,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "enchantment": null,
+          "keywords": []
+        },
+        {
+          "index": 4,
+          "id": "BASH",
+          "name": "Bash",
+          "type": "Attack",
+          "cost": "2",
+          "star_cost": null,
+          "description": "Deal 8 damage. Apply 2 Vulnerable.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Vulnerable",
+              "description": "Vulnerable creatures take 50% more damage from Attacks."
+            }
+          ]
+        }
+      ],
+      "exhaust_pile": [],
+      "gold": 99,
+      "status": [],
+      "relics": [
+        {
+          "id": "BURNING_BLOOD",
+          "name": "Burning Blood",
+          "description": "At the end of combat, heal 6 HP.",
+          "counter": null,
+          "status": "Normal",
+          "keywords": []
+        }
+      ],
+      "potions": []
+    },
+    "enemies": [
+      {
+        "entity_id": "TOUGH_EGG_0",
+        "combat_id": 4,
+        "name": "Tough Egg",
+        "hp": 17,
+        "max_hp": 17,
+        "block": 0,
+        "status": [
+          {
+            "id": "HATCH_POWER",
+            "name": "Hatch",
+            "amount": 1,
+            "type": "Buff",
+            "description": "Hatches after 1 turn.",
+            "keywords": []
+          },
+          {
+            "id": "MINION_POWER",
+            "name": "Minion",
+            "amount": 1,
+            "type": "Buff",
+            "description": "Minions abandon combat without their leader.",
+            "keywords": []
+          }
+        ],
+        "move_id": "HATCH_MOVE",
+        "follow_up_id": "NIBBLE_MOVE",
+        "move_log": [
+          "HATCH_MOVE"
+        ],
+        "intents": [
+          {
+            "type": "Summon",
+            "label": "",
+            "title": "Summon",
+            "description": "This enemy intends to summon Monsters."
+          }
+        ]
+      },
+      {
+        "entity_id": "TOUGH_EGG_1",
+        "combat_id": 3,
+        "name": "Tough Egg",
+        "hp": 14,
+        "max_hp": 14,
+        "block": 0,
+        "status": [
+          {
+            "id": "HATCH_POWER",
+            "name": "Hatch",
+            "amount": 1,
+            "type": "Buff",
+            "description": "Hatches after 1 turn.",
+            "keywords": []
+          },
+          {
+            "id": "MINION_POWER",
+            "name": "Minion",
+            "amount": 1,
+            "type": "Buff",
+            "description": "Minions abandon combat without their leader.",
+            "keywords": []
+          }
+        ],
+        "move_id": "HATCH_MOVE",
+        "follow_up_id": "NIBBLE_MOVE",
+        "move_log": [
+          "HATCH_MOVE"
+        ],
+        "intents": [
+          {
+            "type": "Summon",
+            "label": "",
+            "title": "Summon",
+            "description": "This enemy intends to summon Monsters."
+          }
+        ]
+      },
+      {
+        "entity_id": "TOUGH_EGG_2",
+        "combat_id": 2,
+        "name": "Tough Egg",
+        "hp": 15,
+        "max_hp": 15,
+        "block": 0,
+        "status": [
+          {
+            "id": "HATCH_POWER",
+            "name": "Hatch",
+            "amount": 1,
+            "type": "Buff",
+            "description": "Hatches after 1 turn.",
+            "keywords": []
+          },
+          {
+            "id": "MINION_POWER",
+            "name": "Minion",
+            "amount": 1,
+            "type": "Buff",
+            "description": "Minions abandon combat without their leader.",
+            "keywords": []
+          }
+        ],
+        "move_id": "HATCH_MOVE",
+        "follow_up_id": "NIBBLE_MOVE",
+        "move_log": [
+          "HATCH_MOVE"
+        ],
+        "intents": [
+          {
+            "type": "Summon",
+            "label": "",
+            "title": "Summon",
+            "description": "This enemy intends to summon Monsters."
+          }
+        ]
+      },
+      {
+        "entity_id": "OVICOPTER_0",
+        "combat_id": 1,
+        "name": "Ovicopter",
+        "hp": 130,
+        "max_hp": 130,
+        "block": 0,
+        "status": [],
+        "move_id": "SMASH_MOVE",
+        "follow_up_id": "TENDERIZER_MOVE",
+        "move_log": [
+          "LAY_EGGS_MOVE",
+          "SMASH_MOVE"
+        ],
+        "intents": [
+          {
+            "type": "Attack",
+            "base_damage": 16,
+            "hits": 1,
+            "damage": 16,
+            "total_damage": 16,
+            "label": "16",
+            "title": "Aggressive",
+            "description": "This enemy intends to Attack for 16 damage."
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -8,6 +8,7 @@ class EventType(Enum):
     TURN_END_EARLY = auto()    # after the end-of-turn auto-plays, before END_TURN (BeforeSideTurnEndEarly)
     END_TURN = auto()          # player ends their turn
     PLAYER_TURN_ENDED = auto() # the hand is discarded; the enemies have not acted yet
+    ENEMY_TURN_START = auto()  # the enemies are about to act (BeforeSideTurnStart for their side)
     ENEMY_TURN_END = auto()    # after every enemy has acted
     CARD_PLAYED = auto()       # args: (card,)
     CARD_EXHAUSTED = auto()    # args: (card,)

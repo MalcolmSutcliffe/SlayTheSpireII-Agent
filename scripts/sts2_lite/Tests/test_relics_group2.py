@@ -333,3 +333,47 @@ def test_happy_flower_flash_reading_loads_as_zero():
     assert RelicInstance.from_dict({"id": "HAPPY_FLOWER", "counter": 3}).counter == 0
     assert RelicInstance.from_dict({"id": "HAPPY_FLOWER", "counter": 2}).counter == 2
     assert RelicInstance.from_dict({"id": "FAKE_HAPPY_FLOWER", "counter": 5}).counter == 0
+
+
+# ---------------------------------------------------------------- Letter Opener counter (live captures)
+import json as _json
+from pathlib import Path as _Path
+from sts2_lite.combat import CombatSimulator as _Sim, CombatState as _State
+from sts2_lite.relic import RelicId as _RelicId
+from sts2_lite.verify import compare as _compare
+
+_RELICS = _Path(__file__).parent / "data" / "relics"
+
+def _letter_opener(state):
+    return state.player.relics[_RelicId.LETTER_OPENER]
+
+def _load(name):
+    return _json.loads((_RELICS / name).read_text())
+
+def test_letter_opener_full_count_reads_as_a_reset():
+    """The game shows 3 while the relic flashes after the third skill; the sim has already reset to 0."""
+    flash = _State.from_dict(_load("letter_opener_third_skill_flash.json"))
+    assert _letter_opener(flash).counter == 0
+    assert _letter_opener(_State.from_dict(_load("letter_opener_second_skill_before.json"))).counter == 2
+
+def test_the_third_skill_matches_the_game_counter():
+    before = _State.from_dict(_load("letter_opener_second_skill_before.json"))
+    sim = _Sim(before)
+    sim.perform_action({"action": "play_card", "card_index": 7, "target": 0})        # Primal Force
+    after = _State.from_dict(_load("letter_opener_third_skill_flash.json"))
+    assert _letter_opener(before).counter == _letter_opener(after).counter == 0
+    assert _compare(before, after) == []
+
+def test_the_next_card_after_the_flash_keeps_the_counter_at_zero():
+    flashing = _State.from_dict(_load("letter_opener_third_skill_flash.json"))
+    assert _letter_opener(flashing).counter == 0
+    after_attack = _State.from_dict(_load("letter_opener_flash_then_attack.json"))
+    assert _letter_opener(after_attack).counter == 0
+
+def test_letter_opener_fires_and_matches_after_battle_trance():
+    before = _State.from_dict(_load("letter_opener_battle_trance_before.json"))
+    assert _letter_opener(before).counter == 2
+    sim = _Sim(before)
+    sim.perform_action({"action": "play_card", "card_index": 0, "target": 0})        # Battle Trance+, the third skill
+    after = _State.from_dict(_load("letter_opener_battle_trance_after.json"))
+    assert _letter_opener(before).counter == _letter_opener(after).counter == 0

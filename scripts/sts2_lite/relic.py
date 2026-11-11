@@ -160,8 +160,8 @@ class RelicInstance:
         counter = relic.get("counter")
         if relic_id is RelicId.BRILLIANT_SCARF and counter is None:
             counter = BRILLIANT_SCARF_CARDS         # ShowCounter is false once 5 cards are played
-        if counter is not None and counter == HAPPY_FLOWER_TURNS.get(relic_id):
-            counter = 0         # Happy Flower shows its full count while the relic flashes, which is a reset to 0
+        if counter is not None and counter == FLASHES_AT_FULL_COUNT.get(relic_id):
+            counter = 0         # these relics show their full count while they flash, which is a reset to 0 (Letter Opener: until the next card is played)
         return cls(relic_id, counter, used, relic.get("types_played") or 0)
 
     @classmethod
@@ -684,11 +684,7 @@ def _mummified_hand(combat, relic):
     card = hand[index]
     if card.energy_cost == "X" or card.energy_cost == 0:
         return                  # already free
-    free = Card.create_copy(card)
-    if free.restore_cost is None:
-        free.restore_cost = card.energy_cost
-    free.energy_cost = 0
-    hand[index] = free
+    hand[index] = card.free_this_turn()          # SetToFreeThisTurn
 
 # Attacks and Skills
 DAUGHTER_OF_THE_WIND_BLOCK = 1
@@ -787,6 +783,7 @@ def _turn(combat) -> int:
 CANDELABRA_TURN, CANDELABRA_ENERGY = 2, 2
 CHANDELIER_TURN, CHANDELIER_ENERGY = 3, 3
 HAPPY_FLOWER_TURNS = {RelicId.HAPPY_FLOWER : 3, RelicId.FAKE_HAPPY_FLOWER : 5}
+FLASHES_AT_FULL_COUNT = {**HAPPY_FLOWER_TURNS, RelicId.LETTER_OPENER : LETTER_OPENER_EVERY, RelicId.PENDULUM : 3}    # Pendulum: DisplayAmount is Turns while it activates
 HORN_CLEAT_TURN, HORN_CLEAT_BLOCK = 2, 14
 CAPTAINS_WHEEL_TURN, CAPTAINS_WHEEL_BLOCK = 3, 18
 SPARKLING_ROUGE_TURN = 3
@@ -860,9 +857,7 @@ PAELS_TEARS_ENERGY = 2
 def _crossbow(combat, relic):
     """Crossbow.AfterSideTurnStart: a random Attack from the character pool, free this turn."""
     from sts2_lite.card import Card, INFERNAL_BLADE_POOL
-    new_card = Card.create_generated(rng.choice(INFERNAL_BLADE_POOL))
-    new_card.restore_cost, new_card.energy_cost = new_card.energy_cost, 0
-    _player(combat).add_to_hand(new_card)
+    _player(combat).add_to_hand(Card.create_generated(rng.choice(INFERNAL_BLADE_POOL)).free_this_turn())     # X stays X
 
 TOASTY_MITTENS_STRENGTH = 1
 PHILOSOPHERS_STONE_STRENGTH = 1
@@ -1056,8 +1051,7 @@ def _pendulum(combat, relic):
 def _biiig_hug(combat, relic):
     """BiiigHug.AfterShuffle: a Soot at a random place in the new draw pile."""
     from sts2_lite.card import Card
-    pile = _player(combat).draw_pile
-    pile.insert(rng.randrange(len(pile) + 1), Card.create_soot())
+    _player(combat).insert_into_draw_pile(Card.create_soot())
 
 def _abacus(combat, relic):
     combat.gain_block(_player(combat), ABACUS_BLOCK)

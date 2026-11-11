@@ -3,7 +3,10 @@ from __future__ import annotations
 from collections import Counter
 from typing import TYPE_CHECKING
 
+import re
+
 from sts2_lite.card import CardId, CardType
+from sts2_lite.enemy_moves import SPAWN_HP
 from sts2_lite.status import StatusId
 
 if TYPE_CHECKING:
@@ -12,7 +15,10 @@ if TYPE_CHECKING:
 # cards whose result depends on something the bridge hides (the draw order) or on the RNG: what they
 # generate or play cannot be predicted, so their mismatches are tagged rather than trusted
 RANDOM_CARDS = frozenset({CardId.INFERNAL_BLADE, CardId.STOKE, CardId.HAVOC, CardId.SEEKER_STRIKE, CardId.JACKPOT, CardId.JACK_OF_ALL_TRADES,
-                          CardId.CATASTROPHE, CardId.BEAT_DOWN, CardId.ANOINTED, CardId.DISCOVERY, CardId.HIDDEN_GEM})
+                          CardId.CATASTROPHE, CardId.BEAT_DOWN, CardId.ANOINTED, CardId.DISCOVERY, CardId.HIDDEN_GEM,
+                          CardId.CINDER, CardId.THRASH, CardId.METAMORPHOSIS})       # Cinder / Thrash exhaust a random card
+# random only when not upgraded: the upgrade lets the player choose the card to exhaust
+RANDOM_UNLESS_UPGRADED = frozenset({CardId.TRUE_GRIT})
 
 
 def _statuses(creature) -> dict[str, int]:
@@ -46,7 +52,8 @@ def is_random_step(before : CombatState, predicted : CombatState, actions : list
     for a in actions:
         if a["action"] == "play_card":
             card = before.player.hand[a["card_index"]] if a["card_index"] < len(before.player.hand) else None
-            if card is not None and (card.card_id in RANDOM_CARDS or (card.type == CardType.Attack and StatusId.CALAMITY in before.player.status)):
+            if card is not None and (card.card_id in RANDOM_CARDS or (card.card_id in RANDOM_UNLESS_UPGRADED and not card.is_upgraded)
+                                     or (card.type == CardType.Attack and StatusId.CALAMITY in before.player.status)):
                 return True
     return False
 
@@ -64,9 +71,20 @@ def _dict_diff(name : str, expected : dict, actual : dict) -> list[str]:
             out.append(f"{name} {key}: sim {expected.get(key, 0)}, game {actual.get(key, 0)}")
     return out
 
+def _fresh_spawn_hp_is_random(pe, ae) -> bool:
+    """A monster that has just appeared with unhurt, in-range HP (Wriggler 17-21): the game rolled it, the sim sampled its own."""
+    spawn = SPAWN_HP.get(re.sub(r"_\d+$", "", str(ae.enemy_id)))
+    if spawn is None:
+        return False
+    low, high = min(spawn), max(spawn)
+    # the rolled max HP differs, the damage taken since the spawn (max - current) must not
+    # (a Wriggler hit by the rest of a Whirlwind on the turn it appeared)
+    return all(low <= e.max_hp <= high for e in (pe, ae)) and pe.max_hp - pe.current_hp == ae.max_hp - ae.current_hp
+
 def compare(predicted : CombatState, actual : CombatState, random_step : bool = False) -> list[str]:
     """Differences between the simulated state and the game's. With `random_step` only what no draw
-    or shuffle can change is checked as exact: the cards the player owns in total and the exhaust pile."""
+    or shuffle can change is checked as exact: the cards the player owns in total and the exhaust pile
+    (a random exhaust that took another card of the same deck is not a difference)."""
     diffs : list[str] = []
     pp, ap = predicted.player, actual.player
     for field, a, b in (("hp", pp.current_hp, ap.current_hp), ("max hp", pp.max_hp, ap.max_hp),
@@ -80,7 +98,7 @@ def compare(predicted : CombatState, actual : CombatState, random_step : bool = 
         diffs.append(f"enemy count: sim {len(predicted.enemies)}, game {len(actual.enemies)}")
     for i, (pe, ae) in enumerate(zip(predicted.enemies, actual.enemies)):
         label = f"enemy {i} ({ae.enemy_id})"
-        if pe.current_hp != ae.current_hp:
+        if pe.current_hp != ae.current_hp and not _fresh_spawn_hp_is_random(pe, ae):
             diffs.append(f"{label} hp: sim {pe.current_hp}, game {ae.current_hp}")
         if pe.block != ae.block:
             diffs.append(f"{label} block: sim {pe.block}, game {ae.block}")
@@ -96,6 +114,10 @@ def compare(predicted : CombatState, actual : CombatState, random_step : bool = 
     everything = lambda p: _cards(p.hand) + _cards(p.draw_pile) + _cards(p.discard_pile)
     diffs += _multiset_diff("cards owned (hand+draw+discard)", everything(pp), everything(ap))
     diffs += _multiset_diff("exhaust pile", _cards(pp.exhaust_pile), _cards(ap.exhaust_pile))
+    if random_step and any(d.startswith("cards owned") for d in diffs) and any(d.startswith("exhaust pile") for d in diffs) \
+            and everything(pp) + _cards(pp.exhaust_pile) == everything(ap) + _cards(ap.exhaust_pile):
+        # a random exhaust (Cinder, Havoc, True Grit) took a different card: the same deck, split differently between the piles
+        diffs = [d for d in diffs if not d.startswith(("cards owned", "exhaust pile"))]
     if len(pp.hand) != len(ap.hand) and not random_step:
         diffs.append(f"hand size: sim {len(pp.hand)}, game {len(ap.hand)}")
     if not random_step:

@@ -16,13 +16,18 @@ from sts2_lite.events import EventType
 from sts2_lite.relic import RelicId, PER_TURN_FLAG, ALWAYS_REPORTED, take_extra_turn, after_card_played, release_card, fire_relics, blocks_play, PHILOSOPHERS_STONE_STRENGTH, upgraded_after_play, \
     max_energy_gain, victory_heal
 
-from sts2_lite.status import StatusId, StatusBehaviour, STATUS_HANDLERS, AUTOMATION_CARDS
-from sts2_lite.enemy_moves import SUMMONS
+from sts2_lite.status import StatusId, StatusBehaviour, STATUS_HANDLERS, AUTOMATION_CARDS, face_target, SLOTH_LIMIT
+from sts2_lite.enemy_moves import SUMMONS, SEGMENTS
 
 # what the bridge calls each kind of hand selection
 HAND_SELECT_MODES = {"upgrade_select" : "upgrade"}
 
 OPTIONAL_PICKS = frozenset({"to_hand", "exhaust_any", "discover"})       # Neow's Fury, Purity, Discovery (skippable)
+
+KNOWLEDGE_CURSES = {CardId.DISINTEGRATION : StatusId.DISINTEGRATION, CardId.MIND_ROT : StatusId.MIND_ROT,
+                    CardId.SLOTH : StatusId.SLOTH, CardId.WASTE_AWAY : StatusId.WASTE_AWAY}
+KNOWLEDGE_CURSE_AMOUNTS = {CardId.MIND_ROT : 1, CardId.SLOTH : SLOTH_LIMIT, CardId.WASTE_AWAY : 1}      # Disintegration's depends on the cast
+
 
 class PendingChoice:
     """A card the player must pick before anything else can happen."""
@@ -59,7 +64,11 @@ class CombatState:
         self.enemies = []
         self.cards_played = 0   # this player turn
         self.revivals = []      # (monster, slot) killed enemies that return after the enemy turn
+        self.continuations = []     # what a card still has to do once its card choice is answered, in order: ("finish", card, ...) its after-play step,
+                                    # ("play", cards) the cards Cascade/Mayhem took off the draw pile
+        self.dormant = []       # Decimillipede segments that were killed and will reattach: out of the fight, not dead
         self.pending_choice = None
+        self.hp_loss_read = False   # the times HP was lost were read off a Tear Asunder in hand, so the earlier simulated count is not trusted
         self.won = False         # victory heals applied
 
     @classmethod
@@ -68,7 +77,8 @@ class CombatState:
             # a card-selection screen nests the fight under "battle" and has no top-level energy
             battle = combat_state["battle"]
             combat_state = {**combat_state, "enemies": battle["enemies"], "round": battle["round"],
-                            "energy": battle["player"]["energy"], "max_energy": battle["player"]["max_energy"]}
+                            "energy": battle["player"]["energy"], "max_energy": battle["player"]["max_energy"],
+                            "reviving": battle.get("reviving", [])}
         cs = cls()
         cs.player = Player.from_dict(combat_state["player"])
         cs.player.remove_displayed_tangled()
@@ -81,12 +91,20 @@ class CombatState:
         eye = cs.player.relics.get(RelicId.PAELS_EYE)
         if eye is not None:
             cs._read_paels_eye(eye, combat_state["player"].get("relics", []))
+        for raw_status in combat_state["player"].get("status", ()):
+            if raw_status["id"] == "SLOTH_POWER":
+                cs.cards_played = max(cs.cards_played, raw_status["amount"])        # Sloth shows the cards played this turn
+        cs._read_hp_loss_count(combat_state)
+        cs._infer_surround_facing(combat_state["enemies"])
         for enemy, raw in zip(cs.enemies, combat_state["enemies"]):
-            if enemy.num_attacks > 0:
+            if enemy.num_attacks > 0 and not Enemy.reads_base_damage(raw["intents"]):
                 enemy.damage_candidates = bases_from_displayed(enemy.attack_damage, enemy, cs.player)
                 enemy.attack_damage = base_from_displayed(enemy.attack_damage, enemy, cs.player)
-            enemy.identify_move(raw["intents"], cs.turn_number)
+            if enemy.move_id is None:       # not given by the bridge's move_id: infer it from the intents
+                enemy.identify_move(raw["intents"], cs.turn_number)
+            enemy.check_against_bridge(raw, cs.player)
         cs._infer_revivals()
+        cs._infer_dormant_segments(combat_state.get("reviving"))
         cs._infer_ringing_play()
         cs.energy = combat_state["energy"]
         cs.max_energy = combat_state["max_energy"]
@@ -105,6 +123,8 @@ class CombatState:
                 kind, amount = "exhaust_any", int(match.group(1)) - len(state.get("selected_cards") or [])
             elif "on top of your Draw Pile" in prompt:      # Thinking Ahead
                 kind = "to_draw_pile"
+            elif "card to Exhaust" in prompt:       # Brand, Burning Pact, True Grit+: the prompt is the same, so the pick is taken without Burning Pact's draw
+                kind = "exhaust"
             elif "to Transform" in prompt:      # Entropy: as many cards as it has stacks
                 kind, amount = "transform", max(1, self.player.status_amount(StatusId.ENTROPY) - len(state.get("selected_cards") or []))
         if kind is None:
@@ -184,13 +204,25 @@ class CombatState:
                     relic.used = True
         self.cards_played = max(self.cards_played, previous.cards_played)
 
+    def _read_hp_loss_count(self, combat_state : dict):
+        """Tear Asunder's text counts the times HP was lost this fight ("Hits 12 times"): the game's own number, which the bridge does not give otherwise."""
+        hand = combat_state.get("hand") or combat_state["player"].get("hand") or []
+        for card in hand:
+            if card.get("id") == "TEAR_ASUNDER":
+                found = re.search(r"Hits (\d+) times?", card.get("description") or "")
+                if found:
+                    self.player.hp_loss_events = int(found.group(1)) - 1
+                    self.hp_loss_read = True
+                    return
+
     def carry_combat_counters(self, previous : CombatState | None):
         """Counters that last the whole fight and that the bridge does not report: the times the player has lost
         HP (Tear Asunder) and the times Inferno and Crimson Mantle were played. Unlike the turn counters they carry across turns."""
         if previous is None:
             return
         old, new = previous.player, self.player
-        new.hp_loss_events = max(new.hp_loss_events, old.hp_loss_events)
+        if not self.hp_loss_read:
+            new.hp_loss_events = max(new.hp_loss_events, old.hp_loss_events)
         new.cards_played_total = max(new.cards_played_total, old.cards_played_total)
         for relic_id, relic in new.relics.items():
             kept = old.relics.get(relic_id)
@@ -246,6 +278,44 @@ class CombatState:
             for c in blocked:
                 c.is_unplayable = False
 
+    def _infer_surround_facing(self, raws : list[dict]):
+        """The bridge reports Surrounded without the way it faces. An arm behind the player shows 1.5x its base damage, so the facing is
+        whichever one explains every arm's shown damage (Right when nothing says: it is where a fight starts)."""
+        player = self.player
+        inst = player.status.get(StatusId.SURROUNDED)
+        if inst is None:
+            return
+        possible = {0, 1}
+        for enemy, raw in zip(self.enemies, raws):
+            if StatusId.BACK_ATTACK_LEFT not in enemy.status and StatusId.BACK_ATTACK_RIGHT not in enemy.status:
+                continue
+            for intent in raw.get("intents", ()):
+                if "base_damage" not in intent or "damage" not in intent:
+                    continue
+                enemy.attack_damage = intent["base_damage"]
+                for facing in list(possible):
+                    inst.records = [[facing]]
+                    if modify_damage(intent["base_damage"], enemy, player) != intent["damage"]:
+                        possible.discard(facing)
+        inst.records = [[min(possible) if possible else 0]]
+
+    def _infer_dormant_segments(self, reviving : list[dict] | None):
+        """Killed Decimillipede segments waiting to reattach. The bridge lists them as `reviving`, with the move they are on. Without that
+        field (an older bridge) any segment missing from the living is taken to have died on an earlier turn (its REATTACH is next)."""
+        if reviving is not None:
+            for raw in reviving:
+                dormant = Enemy.dormant_segment(raw["entity_id"].rpartition("_")[0], self.ascension, raw["max_hp"])
+                dormant.move_id = "DEAD" if raw.get("move_id") == "DEAD_MOVE" else "REATTACH"
+                self.dormant.append(dormant)
+            return
+        present = {e.enemy_id.rpartition("_")[0] for e in self.enemies}
+        if not present & set(SEGMENTS):
+            return
+        template = next(e for e in self.enemies if e.enemy_id.rpartition("_")[0] in SEGMENTS)
+        for segment in SEGMENTS:
+            if segment not in present:
+                self.dormant.append(Enemy.dormant_segment(segment, self.ascension, template.max_hp))
+
     def _infer_revivals(self):
         """A summoned monster missing from the bridge state, after its summoner has used the
         summoning move, was killed this turn and will return."""
@@ -270,6 +340,8 @@ class CombatState:
         new_cs.extra_turns = combat_state.extra_turns
         new_cs.ascension = combat_state.ascension
         new_cs.revivals = list(combat_state.revivals)
+        new_cs.dormant = [Enemy.deepcopy(e) for e in combat_state.dormant]
+        new_cs.continuations = list(combat_state.continuations)
         new_cs.cards_played = combat_state.cards_played
         new_cs.pending_choice = combat_state.pending_choice.deepcopy() if combat_state.pending_choice else None
         new_cs.won = combat_state.won
@@ -383,6 +455,10 @@ class CombatSimulator:
         """Discovery: pick one of the cards made up for the choice (or none); it joins the hand for free this turn."""
         self.combat_state.pending_choice = PendingChoice("discover", list(range(len(offers))), "offer", hidden=True, offers=offers)
 
+    def request_curse(self, offers : list[Card], disintegration : int):
+        """Knowledge Demon: choose a curse. It is a pick from the choose-a-card screen, no card is played; `amount` is what Disintegration deals."""
+        self.combat_state.pending_choice = PendingChoice("curse", list(range(len(offers))), "offer", amount=disintegration, offers=offers)
+
     def request_transform(self, amount : int):
         """Entropy: choose `amount` cards in the hand to be turned into random cards."""
         hand = self.combat_state.player.hand
@@ -423,6 +499,7 @@ class CombatSimulator:
         if pending is None or not pending.optional:
             raise IllegalActionError("there is no optional card choice to confirm")
         self.combat_state.pending_choice = None
+        self._resume_autoplay()
         self._check_hand_emptied()
 
     def choose_card(self, card_index : int):
@@ -433,16 +510,20 @@ class CombatSimulator:
             raise IllegalActionError(f"card_index {card_index} is not one of {pending.indices}")
         self.combat_state.pending_choice = None
         self._apply_choice(pending, card_index)
+        self._resume_autoplay()
         self._check_hand_emptied()
 
     def _apply_choice(self, choice : PendingChoice, index : int):
         player = self.combat_state.player
         card = (choice.offers if choice.pile == "offer" else self._pile(choice.pile))[index]
         if choice.kind == "discover":
-            free = Card.create_copy(card)
-            if free.energy_cost != "X":
-                free.restore_cost, free.energy_cost = free.energy_cost, 0       # SetToFreeThisTurn
-            player.add_to_hand(free)
+            player.add_to_hand(card.free_this_turn())
+        elif choice.kind == "curse":
+            player.apply_status(KNOWLEDGE_CURSES[card.card_id], choice.amount if card.card_id == CardId.DISINTEGRATION else KNOWLEDGE_CURSE_AMOUNTS[card.card_id])
+            if card.card_id == CardId.WASTE_AWAY:       # the bridge reports max energy with it taken off, so the sim does the same
+                self.combat_state.max_energy = max(0, self.combat_state.max_energy - KNOWLEDGE_CURSE_AMOUNTS[CardId.WASTE_AWAY])
+            if not self.is_over:
+                self._start_player_turn()           # the pick came in the enemy turn, which had finished
         elif choice.kind == "transform":
             picked = choice.picked + [index]
             eligible = [i for i, c in enumerate(player.hand) if i not in picked and transform_options(c)]
@@ -499,6 +580,7 @@ class CombatSimulator:
         hand.pop(card_index)
         original, card = card, self.private_copy(card)
         to_top = self._nostalgia_mark(card)
+        self._face_target(card, target_index)
         try:
             with self._playing(card):
                 card.play_card(self, target_index)
@@ -507,8 +589,14 @@ class CombatSimulator:
             release_card(self.combat_state.player)
             raise
         self.combat_state.cards_played += 1
-        self._finish_card_play(card, hp_loss_mark, to_top=to_top)
+        self._finish_or_wait(card, hp_loss_mark, to_top=to_top)
         self._check_hand_emptied()
+
+    def _face_target(self, card : Card, target_index : int):
+        """SurroundedPower.BeforeCardPlayed: a card aimed at an enemy turns the player towards it."""
+        cs = self.combat_state
+        if StatusId.SURROUNDED in cs.player.status and card.target_type == TargetType.AnyEnemy and 0 <= target_index < len(cs.enemies):
+            face_target(cs.player, cs.enemies[target_index])
 
     def _check_hand_emptied(self):
         """CombatManager.CheckForEmptyHand: after a manual play fully resolves, never during auto-plays."""
@@ -521,9 +609,9 @@ class CombatSimulator:
 
     @staticmethod
     def private_copy(card : Card) -> Card:
-        """Cards that change when played (Rampage, Thrash, Swift/Sown/Vigorous/Momentum/Glam) are played as a copy: card objects are shared between
+        """Cards that change when played (Rampage, Thrash, Frantic Escape, Swift/Sown/Vigorous/Momentum/Glam) are played as a copy: card objects are shared between
         simulated states, so the played one must not be changed in place. The copy goes to the discard pile."""
-        if card.card_id in (CardId.RAMPAGE, CardId.THRASH) or card.enchantment in CHANGED_ON_PLAY:
+        if card.card_id in (CardId.RAMPAGE, CardId.THRASH, CardId.FRANTIC_ESCAPE) or card.enchantment in CHANGED_ON_PLAY:
             return Card.create_copy(card)
         return card
 
@@ -623,6 +711,7 @@ class CombatSimulator:
             target = living[0] if len(living) == 1 else rng.choice(living)
         else:
             target = 0
+        self._face_target(card, target)
         if card in player.hand:
             player.hand.remove(card)
         elif card in player.draw_pile:
@@ -636,13 +725,13 @@ class CombatSimulator:
         to_top = self._nostalgia_mark(card)
         self.finish_vigor()             # an attack that led here (Pommel Strike's draw) has finished
         if player.relics and blocks_play(player):
-            self._move_played_card(card, force_exhaust)     # Velvet Choker: ShouldPlay false -> result pile unplayed
+            self._move_played_card(card, force_exhaust, played=False)     # Velvet Choker: ShouldPlay false -> result pile unplayed
             return
         auto_playing, self.auto_playing = self.auto_playing, True
         try:
             with self._playing(card):
                 card.play_card(self, target, free=True, x_value=x_value)
-            self._finish_card_play(card, hp_loss_mark, force_exhaust, dupe, to_top)
+            self._finish_or_wait(card, hp_loss_mark, force_exhaust, dupe, to_top)
         finally:
             self.auto_playing = auto_playing
 
@@ -656,13 +745,45 @@ class CombatSimulator:
             if top is None:
                 break
             taken.append(top)
-        for top in taken:
-            if self.is_over:
-                break
+        self._run_autoplay(taken)
+
+    def _run_autoplay(self, queue : list[Card]):
+        """Plays the cards in order. One that asks for a card choice holds the rest back until it is answered (the game waits for it too)."""
+        cs = self.combat_state
+        while queue and not self.is_over:
+            top = queue.pop(0)
             if top.unplayable:
-                player.discard_pile.append(top)
+                cs.player.discard_pile.append(top)
             else:
                 self.auto_play(top)
+            if cs.pending_choice is not None:
+                if queue:
+                    cs.continuations = cs.continuations + [("play", tuple(queue))]
+                return
+
+    def _finish_or_wait(self, card : Card, hp_loss_mark : int, force_exhaust : bool = False, dupe : bool = False, to_top : bool = False):
+        """A card that is waiting for a card choice is not finished: the game answers the choice first, and only then moves the card, runs
+        what follows its play (Dark Embrace's draw, say) and plays on. Doing it earlier changes the piles the choice points into."""
+        cs = self.combat_state
+        if cs.pending_choice is not None:
+            cs.continuations = cs.continuations + [("finish", card, hp_loss_mark, force_exhaust, dupe, to_top)]
+        else:
+            self._finish_card_play(card, hp_loss_mark, force_exhaust, dupe, to_top)
+
+    def _resume_autoplay(self):
+        """Carries on with what was waiting for the card choice, up to the next choice."""
+        cs = self.combat_state
+        while cs.continuations and cs.pending_choice is None:
+            if self.is_over:
+                cs.continuations = []
+                return
+            (kind, *args), *rest = cs.continuations
+            cs.continuations = []           # what the step adds (a choice of its own) goes before the rest
+            if kind == "finish":
+                self._finish_card_play(*args)
+            else:
+                self._run_autoplay(list(args[0]))
+            cs.continuations = cs.continuations + rest
 
     def _rupture(self, hp_loss_mark : int):
         """Strength for each time hit points were lost since the mark."""
@@ -696,12 +817,19 @@ class CombatSimulator:
                 self._announced_block += amount
             self.fire(EventType.BLOCK_GAINED, creature, amount)
 
-    def _move_played_card(self, card : Card, force_exhaust : bool = False, to_top : bool = False):
+    def _move_played_card(self, card : Card, force_exhaust : bool = False, to_top : bool = False, played : bool = True):
         player = self.combat_state.player
         if card.card_id in RETURNING_CARDS:
             player.returning.append((card.card_id, card.is_upgraded))        # comes back to the hand next turn (BeforeHandDraw)
-        if card.type == CardType.Power or card in player.exhaust_pile:
+        if card.type == CardType.Power:
             return
+        if card in player.exhaust_pile:             # exhausted during its own play
+            if played and card.until_played:
+                pile = player.exhaust_pile
+                pile[next(i for i, c in enumerate(pile) if c is card)] = card.cost_after_play()
+            return
+        if played:
+            card = card.cost_after_play()           # AfterCardPlayedCleanup (the game runs it after the move; same result)
         corrupted = card.type == CardType.Skill and StatusId.CORRUPTION in player.status
         if card.exhausts or force_exhaust or corrupted:
             player.exhaust_card(card)
@@ -763,6 +891,8 @@ class CombatSimulator:
             self._decrease_statuses(e)
         self.combat_state.turn_number += 1
         self._check_is_over()
+        if self.combat_state.pending_choice is not None and not self.is_over:
+            return          # Knowledge Demon's curse: the next turn starts once one is picked
         self._start_player_turn()
 
     ###
@@ -844,6 +974,8 @@ class CombatSimulator:
             if s.behaviour == StatusBehaviour.STATIC:
                 continue
             elif s.behaviour == StatusBehaviour.DECREASE_BY_ONE:
+                if s.amount < 0:
+                    continue            # Shrink below zero is infinite (the Shrinker Beetle's lasts while it lives)
                 s.amount = s.amount -1
                 if s.amount <= 0:
                     to_remove.append(s.status_id)
@@ -855,14 +987,37 @@ class CombatSimulator:
     def _play_enemy_turn(self):
         self.in_enemy_turn = True
         try:
-            for enemy in list(self.combat_state.enemies):     # enemies summoned now act next turn
+            was_alive = self.combat_state.player.current_hp > 0
+            waiting = list(self.combat_state.dormant)       # segments killed during this turn do their dead turn at the next one
+            self.fire(EventType.ENEMY_TURN_START)
+            self.resolve_deaths()
+            eaten = was_alive and self.combat_state.player.current_hp <= 0      # Sandpit: the enemies do not get to act
+            for enemy in ([] if eaten else list(self.combat_state.enemies)):     # enemies summoned now act next turn
                 enemy.perform_turn(self)
                 self.resolve_deaths()        # an attacker can die to Flame Barrier
                 self._sync_hp()
             self.fire(EventType.ENEMY_TURN_END)
+            self._reattach_segments(waiting)
         finally:
             self.in_enemy_turn = False
         self._revive()
+
+    def _reattach_segments(self, waiting : list[Enemy]):
+        """A dormant segment spends one enemy turn dead (DEAD_MOVE), and the next reattaching (REATTACH_MOVE: it heals by its Reattach amount
+        and is back, with an attack chosen at random)."""
+        cs = self.combat_state
+        for segment in waiting:
+            if segment not in cs.dormant:
+                continue
+            if segment.move_id == "DEAD":
+                segment.move_id = "REATTACH"
+                continue
+            cs.dormant.remove(segment)
+            segment.current_hp = min(segment.max_hp, segment.status[StatusId.REATTACH].amount)
+            segment._finish_move(self)
+            rank = SEGMENTS.index(segment.enemy_id.rpartition("_")[0])
+            at = sum(1 for e in cs.enemies if e.enemy_id.rpartition("_")[0] in SEGMENTS and SEGMENTS.index(e.enemy_id.rpartition("_")[0]) < rank)
+            cs.enemies.insert(at, segment)
 
     def _revive(self):
         revivals, self.combat_state.revivals = self.combat_state.revivals, []
@@ -879,6 +1034,10 @@ class CombatSimulator:
             if not dead:
                 return
             self.combat_state.enemies = [e for e in self.combat_state.enemies if e.current_hp > 0]
+            if self.combat_state.enemies:       # ReattachPower: while another segment lives a killed one only lies dead
+                for enemy in dead:
+                    if StatusId.REATTACH in enemy.status:
+                        self.combat_state.dormant.append(Enemy.lie_dead(enemy))
             for enemy in dead:
                 self._fire_death(enemy)
                 self.fire(EventType.CREATURE_KILLED, enemy)

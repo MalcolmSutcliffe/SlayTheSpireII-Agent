@@ -1,0 +1,593 @@
+{
+  "type": "decision",
+  "decision": "combat_play",
+  "room_type": "monster",
+  "context": {
+    "act": 1,
+    "floor": 4,
+    "ascension": 0
+  },
+  "run": {
+    "act": 1,
+    "floor": 4,
+    "ascension": 0
+  },
+  "round": 2,
+  "turn": "player",
+  "is_play_phase": null,
+  "energy": 3,
+  "max_energy": 3,
+  "hand": [
+    {
+      "index": 0,
+      "id": "STRIKE_IRONCLAD",
+      "name": "Strike",
+      "type": "Attack",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Deal 6 damage.",
+      "target_type": "AnyEnemy",
+      "can_play": true,
+      "unplayable_reason": null,
+      "is_upgraded": false,
+      "enchantment": null,
+      "keywords": []
+    },
+    {
+      "index": 1,
+      "id": "DEFEND_IRONCLAD",
+      "name": "Defend",
+      "type": "Skill",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Gain 5 Block.",
+      "target_type": "Self",
+      "can_play": true,
+      "unplayable_reason": null,
+      "is_upgraded": false,
+      "enchantment": null,
+      "keywords": [
+        {
+          "name": "Block",
+          "description": "Until next turn, prevents damage."
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "id": "DEFEND_IRONCLAD",
+      "name": "Defend",
+      "type": "Skill",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Gain 5 Block.",
+      "target_type": "Self",
+      "can_play": true,
+      "unplayable_reason": null,
+      "is_upgraded": false,
+      "enchantment": null,
+      "keywords": [
+        {
+          "name": "Block",
+          "description": "Until next turn, prevents damage."
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "id": "STRIKE_IRONCLAD",
+      "name": "Strike",
+      "type": "Attack",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Deal 6 damage.",
+      "target_type": "AnyEnemy",
+      "can_play": true,
+      "unplayable_reason": null,
+      "is_upgraded": false,
+      "enchantment": null,
+      "keywords": []
+    },
+    {
+      "index": 4,
+      "id": "DEFEND_IRONCLAD",
+      "name": "Defend",
+      "type": "Skill",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Gain 5 Block.",
+      "target_type": "Self",
+      "can_play": true,
+      "unplayable_reason": null,
+      "is_upgraded": false,
+      "enchantment": null,
+      "keywords": [
+        {
+          "name": "Block",
+          "description": "Until next turn, prevents damage."
+        }
+      ]
+    }
+  ],
+  "enemies": [
+    {
+      "entity_id": "THIEVING_HOPPER_0",
+      "combat_id": 1,
+      "name": "Thieving Hopper",
+      "hp": 79,
+      "max_hp": 79,
+      "block": 0,
+      "status": [
+        {
+          "id": "ESCAPE_ARTIST_POWER",
+          "name": "Escape Artist",
+          "amount": 4,
+          "type": "Buff",
+          "description": "Tries to escape the combat after 4 turns.",
+          "keywords": []
+        },
+        {
+          "id": "SWIPE_POWER",
+          "name": "Swipe",
+          "amount": 1,
+          "type": "Buff",
+          "description": "Upon killing this enemy, the stolen card is returned.",
+          "keywords": [
+            {
+              "name": "Strike",
+              "description": "Deal 6 damage."
+            }
+          ]
+        }
+      ],
+      "move_id": "FLUTTER_MOVE",
+      "follow_up_id": "HAT_TRICK_MOVE",
+      "move_log": [
+        "THIEVERY_MOVE",
+        "FLUTTER_MOVE"
+      ],
+      "intents": [
+        {
+          "type": "Buff",
+          "label": "",
+          "title": "Empower",
+          "description": "This enemy intends to use a Buff."
+        }
+      ]
+    }
+  ],
+  "player": {
+    "character": "The Ironclad",
+    "hp": 63,
+    "max_hp": 80,
+    "block": 0,
+    "energy": 3,
+    "max_energy": 3,
+    "hand": [
+      {
+        "index": 0,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "enchantment": null,
+        "keywords": []
+      },
+      {
+        "index": 1,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 2,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 3,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "enchantment": null,
+        "keywords": []
+      },
+      {
+        "index": 4,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      }
+    ],
+    "draw_pile_count": 0,
+    "discard_pile_count": 4,
+    "exhaust_pile_count": 0,
+    "draw_pile": [],
+    "discard_pile": [
+      {
+        "index": 0,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "enchantment": null,
+        "keywords": []
+      },
+      {
+        "index": 1,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "enchantment": null,
+        "keywords": []
+      },
+      {
+        "index": 2,
+        "id": "BASH",
+        "name": "Bash",
+        "type": "Attack",
+        "cost": "2",
+        "star_cost": null,
+        "description": "Deal 8 damage. Apply 2 Vulnerable.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Vulnerable",
+            "description": "Vulnerable creatures take 50% more damage from Attacks."
+          }
+        ]
+      },
+      {
+        "index": 3,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      }
+    ],
+    "exhaust_pile": [],
+    "gold": 99,
+    "status": [],
+    "relics": [
+      {
+        "id": "BURNING_BLOOD",
+        "name": "Burning Blood",
+        "description": "At the end of combat, heal 6 HP.",
+        "counter": null,
+        "status": "Normal",
+        "keywords": []
+      }
+    ],
+    "potions": []
+  },
+  "draw_pile_count": 0,
+  "discard_pile_count": 4,
+  "exhaust_pile_count": 0,
+  "battle": {
+    "round": 2,
+    "turn": "player",
+    "player": {
+      "character": "The Ironclad",
+      "hp": 63,
+      "max_hp": 80,
+      "block": 0,
+      "energy": 3,
+      "max_energy": 3,
+      "hand": [
+        {
+          "index": 0,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "enchantment": null,
+          "keywords": []
+        },
+        {
+          "index": 1,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        },
+        {
+          "index": 3,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "enchantment": null,
+          "keywords": []
+        },
+        {
+          "index": 4,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        }
+      ],
+      "draw_pile_count": 0,
+      "discard_pile_count": 4,
+      "exhaust_pile_count": 0,
+      "draw_pile": [],
+      "discard_pile": [
+        {
+          "index": 0,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "enchantment": null,
+          "keywords": []
+        },
+        {
+          "index": 1,
+          "id": "STRIKE_IRONCLAD",
+          "name": "Strike",
+          "type": "Attack",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Deal 6 damage.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "enchantment": null,
+          "keywords": []
+        },
+        {
+          "index": 2,
+          "id": "BASH",
+          "name": "Bash",
+          "type": "Attack",
+          "cost": "2",
+          "star_cost": null,
+          "description": "Deal 8 damage. Apply 2 Vulnerable.",
+          "target_type": "AnyEnemy",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Vulnerable",
+              "description": "Vulnerable creatures take 50% more damage from Attacks."
+            }
+          ]
+        },
+        {
+          "index": 3,
+          "id": "DEFEND_IRONCLAD",
+          "name": "Defend",
+          "type": "Skill",
+          "cost": "1",
+          "star_cost": null,
+          "description": "Gain 5 Block.",
+          "target_type": "Self",
+          "can_play": true,
+          "unplayable_reason": null,
+          "is_upgraded": false,
+          "enchantment": null,
+          "keywords": [
+            {
+              "name": "Block",
+              "description": "Until next turn, prevents damage."
+            }
+          ]
+        }
+      ],
+      "exhaust_pile": [],
+      "gold": 99,
+      "status": [],
+      "relics": [
+        {
+          "id": "BURNING_BLOOD",
+          "name": "Burning Blood",
+          "description": "At the end of combat, heal 6 HP.",
+          "counter": null,
+          "status": "Normal",
+          "keywords": []
+        }
+      ],
+      "potions": []
+    },
+    "enemies": [
+      {
+        "entity_id": "THIEVING_HOPPER_0",
+        "combat_id": 1,
+        "name": "Thieving Hopper",
+        "hp": 79,
+        "max_hp": 79,
+        "block": 0,
+        "status": [
+          {
+            "id": "ESCAPE_ARTIST_POWER",
+            "name": "Escape Artist",
+            "amount": 4,
+            "type": "Buff",
+            "description": "Tries to escape the combat after 4 turns.",
+            "keywords": []
+          },
+          {
+            "id": "SWIPE_POWER",
+            "name": "Swipe",
+            "amount": 1,
+            "type": "Buff",
+            "description": "Upon killing this enemy, the stolen card is returned.",
+            "keywords": [
+              {
+                "name": "Strike",
+                "description": "Deal 6 damage."
+              }
+            ]
+          }
+        ],
+        "move_id": "FLUTTER_MOVE",
+        "follow_up_id": "HAT_TRICK_MOVE",
+        "move_log": [
+          "THIEVERY_MOVE",
+          "FLUTTER_MOVE"
+        ],
+        "intents": [
+          {
+            "type": "Buff",
+            "label": "",
+            "title": "Empower",
+            "description": "This enemy intends to use a Buff."
+          }
+        ]
+      }
+    ]
+  }
+}
