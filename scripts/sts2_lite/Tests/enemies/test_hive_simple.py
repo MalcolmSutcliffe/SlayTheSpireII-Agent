@@ -514,3 +514,16 @@ def test_cards_the_game_marks_as_generated_are_read_from_the_bridge():
                            "is_upgraded": False, "target_type": "AnyEnemy", "generated": True}).generated
     assert Card.create(CardId.DAZED).generated and Card.create_generated(next(iter(GENERATABLE_CARDS))).generated
     assert not strike().generated and Card.create_copy(Card.create(CardId.DAZED)).generated
+
+
+def test_a_tunneler_stunned_by_thorns_during_its_own_attack_finishes_the_move():
+    """Found by fuzzing: thorns break the Burrowed block mid-attack, which stuns it before the move is over (was a KeyError)."""
+    cs = at("TUNNELER", "BELOW", status=[status("BURROWED")])
+    tunneler = cs.enemies[0]
+    tunneler.block = 3
+    cs.player.apply_status(StatusId.THORNS, 10)
+    cs.player.block = 0
+    turn(cs)
+    assert tunneler.move_id == "STUNNED" and tunneler.after_stun == "BITE" and StatusId.BURROWED not in tunneler.status
+    turn(cs)            # the stunned turn does nothing, then it bites
+    assert tunneler.move_id == "BITE"

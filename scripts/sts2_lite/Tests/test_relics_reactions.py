@@ -206,3 +206,10 @@ def test_self_forming_clay_ignores_blocked_hits():
     cs.player.block = 20
     to_enemy_turn(cs, 5)
     assert cs.player.block == 0 or cs.player.block == 15 - 15
+
+
+def test_pendulum_reads_its_turn_count_while_it_flashes_which_is_a_reset():
+    """Captured: the bridge shows Turns (3) for about a second after the draw, then 0."""
+    from sts2_lite.relic import RelicInstance
+    assert RelicInstance.from_dict({"id": "PENDULUM", "counter": 3}).counter == 0
+    assert RelicInstance.from_dict({"id": "PENDULUM", "counter": 2}).counter == 2

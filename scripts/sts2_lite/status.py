@@ -124,7 +124,7 @@ STATUS_BEAVIOURS : dict[StatusId, StatusBehaviour] = {
     StatusId.VULNERABLE : StatusBehaviour.DECREASE_BY_ONE,
     StatusId.FRAIL : StatusBehaviour.DECREASE_BY_ONE,
     StatusId.DEXTERITY : StatusBehaviour.STATIC,
-    StatusId.SHRINK : StatusBehaviour.STATIC,
+    StatusId.SHRINK : StatusBehaviour.DECREASE_BY_ONE,     # a counter that ticks when its owner's side ends; negative is infinite (ShrinkPower)
     StatusId.THORNS : StatusBehaviour.STATIC,
     StatusId.RAVENOUS : StatusBehaviour.STATIC,
     StatusId.SUCK : StatusBehaviour.STATIC,
@@ -488,7 +488,7 @@ def _aggression_on_before_player_turn(combat : CombatSimulator, owner : Creature
 def _stampede_on_end_turn(combat : CombatSimulator, owner : Creature, amount : int):
     from sts2_lite.card import CardType
     for _ in range(amount):
-        attacks = [c for c in owner.hand if c.type == CardType.Attack and not c.is_unplayable]
+        attacks = [c for c in owner.hand if c.type == CardType.Attack and not c.unplayable]
         if not attacks:
             return
         combat.auto_play(attacks[0] if len(attacks) == 1 else rng.choice(attacks))

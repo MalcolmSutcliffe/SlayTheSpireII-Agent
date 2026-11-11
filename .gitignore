@@ -15,3 +15,4 @@ sts2_decompiled/
 /cli-anything-sts2/agent-harness/bridge/plugin/out/
 /cli-anything-sts2/agent-harness/bridge/plugin/.dotnet-cli-home/
 /cli-anything-sts2/agent-harness/bridge/install/bridge_plugin/
+scripts/engine_mismatches.jsonl

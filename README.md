@@ -17,6 +17,10 @@ https://github.com/zhiyue/sts2-rl-agent -> headless sts2_env used for cross-refe
 
 https://int8.io/monte-carlo-tree-search-beginners-guide/ -> used as reference for initial MCTS implementation
 
+# Potential resources:
+
+https://simthespire.wordpress.com/ -> Massive dataset of fights (expected damage, good cards to take, etc.. )
+
 
 
 ## Current functionality:
@@ -35,24 +39,7 @@ No functionality
 ## known issues:
 
 - Enthralled, Splash, Strategem, and Alchemize not implemented.
-
-- common crash (happens at the end of fights):
-Traceback (most recent call last):
-  File "C:\Users\sutc0015\Documents\GitHub\SlayTheSpireII-Agent\scripts\agent_tester.py", line 470, in <module>
-    main()
-    ~~~~^^
-  File "C:\Users\sutc0015\Documents\GitHub\SlayTheSpireII-Agent\scripts\agent_tester.py", line 467, in main
-    run_agent(agent, step=args.step, verify=not args.no_verify, log_path=args.log, capture_dir=args.capture_dir, decision_log=args.decision_log)
-    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\sutc0015\Documents\GitHub\SlayTheSpireII-Agent\scripts\agent_tester.py", line 403, in run_agent
-    combat_state = CombatState.from_dict(game_state)
-  File "C:\Users\sutc0015\Documents\GitHub\SlayTheSpireII-Agent\scripts\sts2_lite\combat.py", line 82, in from_dict
-    cs.player = Player.from_dict(combat_state["player"])
-                ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\sutc0015\Documents\GitHub\SlayTheSpireII-Agent\scripts\sts2_lite\player.py", line 59, in from_dict
-    pl.max_hp = player["max_hp"]
-                ~~~~~~^^^^^^^^^^
-KeyError: 'max_hp'
+- Ovicopter crash (unreproducable)
 
 # TODO :
 
@@ -61,7 +48,7 @@ KeyError: 'max_hp'
 Add Enemy Ais (Currently assumes enemy will make the same move when looking ahead)
  - [x] Act 1 Overgrowth
  - [ ] Act 1 Underdocks
- - [ ] Act 2
+ - [x] Act 2
  - [ ] Act 3
 
 Card pools (multiplayer ignored)

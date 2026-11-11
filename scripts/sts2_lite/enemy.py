@@ -242,13 +242,14 @@ class Enemy(Creature):
         if self.move_id == STUNNED:
             self._wake_from_stun(combat)
             return
+        performed = self.move_id            # a hit taken while attacking (Thorns) can stun this enemy before the move is over
         if self.num_attacks > 0:
             player = combat.combat_state.player
             damage = combat.calculate_damage(self.attack_damage, self, player)
             player.apply_attack_damage(damage, self, self.num_attacks)
         if self.moves is not None:
             player = combat.combat_state.player
-            move = self.moves[self.move_id]
+            move = self.moves[performed]
             for status_id, amount in move.player_status:
                 player.apply_status(status_id, amount)
             for card_id, count in move.cards:
@@ -271,8 +272,7 @@ class Enemy(Creature):
                 self.current_hp = min(self.max_hp, self.current_hp + move.heal)
             if move.effect is not None:
                 move.effect(self, combat)
-            performed = self.move_id
-            self._finish_move(combat)
+            self._finish_move(combat, performed)
             if self.off_balance:        # Bowlbug Rock: the attack was fully blocked, so it is stunned and then repeats it
                 self.off_balance = False
                 self.stun(performed)
@@ -311,13 +311,16 @@ class Enemy(Creature):
         self.attack_damage = following.damage
         self.num_attacks = following.hits
 
-    def _finish_move(self, combat : CombatSimulator | None = None):
-        move = self.moves[self.move_id]
-        self.used_moves.add(self.move_id)
+    def _finish_move(self, combat : CombatSimulator | None = None, performed : str | None = None):
+        performed = performed or self.move_id
+        move = self.moves[performed]
+        self.used_moves.add(performed)
         if move.block:
             self.apply_block(move.block)
         for status_id, amount in move.self_status:
             self.apply_status(status_id, amount)
+        if self.move_id == STUNNED and performed != STUNNED:
+            return              # stunned during its own move: the stun is the next intent
         # next intent is chosen now, as the game shows it during the player's turn
         next_id = self._choose_next(move, combat)
         following = self.moves[next_id]

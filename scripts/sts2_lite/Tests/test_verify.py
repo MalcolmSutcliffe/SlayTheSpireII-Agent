@@ -113,3 +113,16 @@ def test_cinder_and_thrash_are_random_steps():
     play = [{"action": "play_card", "card_index": 0, "target": 0}]
     for card_id in (CardId.CINDER, CardId.THRASH):
         assert is_random_step(_hand_with(card_id), _hand_with(card_id), play)
+
+
+def test_a_random_exhaust_of_another_card_is_not_a_difference_but_a_lost_card_is():
+    cs = load()
+    sim, game = CombatState.deepcopy(cs), CombatState.deepcopy(cs)
+    a, b = sim.player.hand[0], next(c for c in sim.player.hand if (c.card_id, c.is_upgraded) != (sim.player.hand[0].card_id, sim.player.hand[0].is_upgraded))
+    sim.player.hand.remove(a); sim.player.exhaust_pile.append(a)
+    other = next(c for c in game.player.hand if (c.card_id, c.is_upgraded) == (b.card_id, b.is_upgraded))
+    game.player.hand.remove(other); game.player.exhaust_pile.append(other)
+    assert any("exhaust pile" in d for d in compare(sim, game))                         # a plain step still reports it
+    assert not any(d.startswith(("exhaust pile", "cards owned")) for d in compare(sim, game, random_step=True))
+    game.player.exhaust_pile.clear()                                                    # the game lost the card altogether
+    assert any(d.startswith("cards owned") for d in compare(sim, game, random_step=True))

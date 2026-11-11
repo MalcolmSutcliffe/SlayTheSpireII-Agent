@@ -323,3 +323,19 @@ def test_unknown_selection_modes_are_reported():
     raw["mode"] = "mystery_select"
     with pytest.raises(ValueError):
         CombatState.from_dict(raw)
+
+
+def test_tear_asunder_text_gives_the_times_hp_was_lost():
+    """Captured (engine_mismatches): the sim counted 16 hits where the game's text said "Hits 12 times"; the text is the game's own count."""
+    from sts2_lite.Tests.captures import raw
+    state = raw("nibbit", "butt")
+    card = dict(state["hand"][0])
+    card.update({"id": "TEAR_ASUNDER", "name": "Tear Asunder", "type": "Attack", "cost": "2", "target_type": "AnyEnemy",
+                 "description": "Deal 7 damage. Hits an additional time for each time you lost HP this combat. (Hits 12 times)"})
+    state["hand"] = [card] + state["hand"][1:]
+    cs = CombatState.from_dict(state)
+    assert cs.player.hp_loss_events == 11
+    earlier = CombatState.deepcopy(cs)
+    earlier.player.hp_loss_events = 15                  # what the sim had counted
+    cs.carry_combat_counters(earlier)
+    assert cs.player.hp_loss_events == 11               # the game's number wins over the larger simulated one

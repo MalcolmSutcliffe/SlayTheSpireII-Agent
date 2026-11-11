@@ -83,7 +83,8 @@ def _fresh_spawn_hp_is_random(pe, ae) -> bool:
 
 def compare(predicted : CombatState, actual : CombatState, random_step : bool = False) -> list[str]:
     """Differences between the simulated state and the game's. With `random_step` only what no draw
-    or shuffle can change is checked as exact: the cards the player owns in total and the exhaust pile."""
+    or shuffle can change is checked as exact: the cards the player owns in total and the exhaust pile
+    (a random exhaust that took another card of the same deck is not a difference)."""
     diffs : list[str] = []
     pp, ap = predicted.player, actual.player
     for field, a, b in (("hp", pp.current_hp, ap.current_hp), ("max hp", pp.max_hp, ap.max_hp),
@@ -113,6 +114,10 @@ def compare(predicted : CombatState, actual : CombatState, random_step : bool = 
     everything = lambda p: _cards(p.hand) + _cards(p.draw_pile) + _cards(p.discard_pile)
     diffs += _multiset_diff("cards owned (hand+draw+discard)", everything(pp), everything(ap))
     diffs += _multiset_diff("exhaust pile", _cards(pp.exhaust_pile), _cards(ap.exhaust_pile))
+    if random_step and any(d.startswith("cards owned") for d in diffs) and any(d.startswith("exhaust pile") for d in diffs) \
+            and everything(pp) + _cards(pp.exhaust_pile) == everything(ap) + _cards(ap.exhaust_pile):
+        # a random exhaust (Cinder, Havoc, True Grit) took a different card: the same deck, split differently between the piles
+        diffs = [d for d in diffs if not d.startswith(("cards owned", "exhaust pile"))]
     if len(pp.hand) != len(ap.hand) and not random_step:
         diffs.append(f"hand size: sim {len(pp.hand)}, game {len(ap.hand)}")
     if not random_step:

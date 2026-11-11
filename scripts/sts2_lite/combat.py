@@ -68,6 +68,7 @@ class CombatState:
                                     # ("play", cards) the cards Cascade/Mayhem took off the draw pile
         self.dormant = []       # Decimillipede segments that were killed and will reattach: out of the fight, not dead
         self.pending_choice = None
+        self.hp_loss_read = False   # the times HP was lost were read off a Tear Asunder in hand, so the earlier simulated count is not trusted
         self.won = False         # victory heals applied
 
     @classmethod
@@ -93,6 +94,7 @@ class CombatState:
         for raw_status in combat_state["player"].get("status", ()):
             if raw_status["id"] == "SLOTH_POWER":
                 cs.cards_played = max(cs.cards_played, raw_status["amount"])        # Sloth shows the cards played this turn
+        cs._read_hp_loss_count(combat_state)
         cs._infer_surround_facing(combat_state["enemies"])
         for enemy, raw in zip(cs.enemies, combat_state["enemies"]):
             if enemy.num_attacks > 0 and not Enemy.reads_base_damage(raw["intents"]):
@@ -202,13 +204,25 @@ class CombatState:
                     relic.used = True
         self.cards_played = max(self.cards_played, previous.cards_played)
 
+    def _read_hp_loss_count(self, combat_state : dict):
+        """Tear Asunder's text counts the times HP was lost this fight ("Hits 12 times"): the game's own number, which the bridge does not give otherwise."""
+        hand = combat_state.get("hand") or combat_state["player"].get("hand") or []
+        for card in hand:
+            if card.get("id") == "TEAR_ASUNDER":
+                found = re.search(r"Hits (\d+) times?", card.get("description") or "")
+                if found:
+                    self.player.hp_loss_events = int(found.group(1)) - 1
+                    self.hp_loss_read = True
+                    return
+
     def carry_combat_counters(self, previous : CombatState | None):
         """Counters that last the whole fight and that the bridge does not report: the times the player has lost
         HP (Tear Asunder) and the times Inferno and Crimson Mantle were played. Unlike the turn counters they carry across turns."""
         if previous is None:
             return
         old, new = previous.player, self.player
-        new.hp_loss_events = max(new.hp_loss_events, old.hp_loss_events)
+        if not self.hp_loss_read:
+            new.hp_loss_events = max(new.hp_loss_events, old.hp_loss_events)
         new.cards_played_total = max(new.cards_played_total, old.cards_played_total)
         for relic_id, relic in new.relics.items():
             kept = old.relics.get(relic_id)
@@ -960,6 +974,8 @@ class CombatSimulator:
             if s.behaviour == StatusBehaviour.STATIC:
                 continue
             elif s.behaviour == StatusBehaviour.DECREASE_BY_ONE:
+                if s.amount < 0:
+                    continue            # Shrink below zero is infinite (the Shrinker Beetle's lasts while it lives)
                 s.amount = s.amount -1
                 if s.amount <= 0:
                     to_remove.append(s.status_id)

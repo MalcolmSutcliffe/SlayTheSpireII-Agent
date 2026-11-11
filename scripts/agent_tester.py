@@ -316,8 +316,14 @@ def report_unimplemented(game_state : dict, log_path : str, reported : set[str])
         f.write(json.dumps(record) + "\n")
     print(f"MISMATCH: not implemented in the sim: {', '.join(new)}")
 
+def potions_of(state : dict) -> list:
+    return sorted(str(p.get("id")) for p in ((state.get("player") or {}).get("potions") or []))
+
 def verify_step(batch : dict, game_state : dict, actual : CombatState, log_path : str) -> bool:
     """Compare the state the sim predicted after the batch of actions with the one the game now reports."""
+    if potions_of(batch["before"]) != potions_of(game_state):
+        print("a potion was used during this step (the sim does not play potions): not compared")
+        return True
     diffs = compare(batch["predicted"], actual, random_step=batch["random_step"])
     if diffs:
         log_mismatch(log_path, batch, game_state, diffs, batch["predicted"], actual)
@@ -374,6 +380,8 @@ def run_agent(agent : BaseAgent, step : bool = False, verify : bool = True, log_
                 ended = None
 
             game_state = settled(game_state)
+            if kind_of(game_state, previous is not None and previous.pending_choice is not None) != kind:
+                continue            # the game moved on while the state settled (the last enemy died and the fight is torn down): read it again
             decision = game_state["decision"]
 
             choosing_optionally = previous is not None and previous.pending_choice is not None and previous.pending_choice.optional
