@@ -44,8 +44,14 @@ OUTCOME_ALPHA = 0.5
 
 # outcome rating constants
 WIN_BONUS = 1.0
+WIN_PREMIUM = 99.0              # added to every win, after the turn discount: a win outweighs any loss, so losses only separate lines when none wins
 HP_SCALE = 1.0
+# UCT's exploration term is sized for rewards spanning about 2 (losses -1..0, wins up to 1); a win bonus widens the span, so the term
+# grows with it. Fully scaling made the search over-explore on short budgets, none made it miss rare wins (tested on whole fights).
+REWARD_SPAN = WIN_BONUS + WIN_PREMIUM + 1.0
+EXPLORATION_SCALE = (REWARD_SPAN / 2.0) ** 0.75
 GAMMA = 0.999
+POTION_BONUS = 12
 
 # information bonus: see sts2_MCTS._information_value
 INFO_SIGMA = 0.05               # spread of the outcomes' values (reward units) at which a chance node earns 76% of the largest bonus (tanh(1))
@@ -57,6 +63,12 @@ Z_SCORE = 2.33
 TIE_MARGIN = 0.01                # root moves this close to the best (and not significantly worse) are tied
 TIE_MIN_VISITS = 30              # the top move needs this many visits before a tie is considered
 TIE_VISIT_FRACTION = 0.5         # a tied move needs this share of the top move's visits: a thin estimate is within the margin by luck
+
+# paired comparison of the root moves (see sts2_MCTS._paired_check)
+PAIRED_SCENARIOS = 300           # scenarios each contender is replayed under (0 = off)
+PAIRED_VISIT_FRACTION = 0.05     # a root move needs this share of the picked move's visits to be a contender
+PAIRED_MAX_CONTENDERS = 4        # contenders besides the picked move
+PAIRED_Z = Z_SCORE               # a contender replaces the picked move only when it is ahead by this many standard errors
 
 # rollout policy constants
 ROLLOUT_POLICY = RolloutPolicy.RarityPreference
@@ -111,6 +123,7 @@ class SearchConfig:
     rollout: RolloutPolicy = RolloutPolicy.RandomPlayblePEndTurn
     info_bonus : float = 0.0             # largest bonus for resolving a draw / random effect early, in HP of the final score (0 = off; the idea is <= 0.5)
     reuse_tree : bool = True             # keep the part of the previous search the game actually went into (needs the same sts2_MCTS object)
+    paired_scenarios : int = PAIRED_SCENARIOS   # after the search, replay the picked move and its close rivals under the same random scenarios and keep the picked move unless a rival is significantly ahead (0 = off)
 
 class sts2_Node:
     parent : sts2_Node
@@ -211,6 +224,11 @@ class sts2_MCTS:
             sim_result = self._simulate_combat_rollout(path[-1]) # simulate
             backpropagate(path, sim_result, self._information_bonuses(path))
 
+        best_child = self._pick_root_child()
+        paired = self._paired_check(best_child) if config.paired_scenarios > 0 else None
+        if paired is not None and paired["replaced"]:
+            best_child = paired["child"]
+
         stats = { 
             "children": [{"action": c.action, "visits": c.visits, "q": c.total_reward / c.visits} for c in self._root_node.children],
             "num_sims" : self._num_sims,
@@ -218,9 +236,9 @@ class sts2_MCTS:
             "exit_reason" : exit_reason,
             "reused" : reused,
             "inherited_visits" : inherited,       # visits the root already had from earlier searches
+            "paired" : None if paired is None else {k: v for k, v in paired.items() if k != "child"},
                 }
-        best_child = self._pick_root_child()
-        
+        stats["time_taken"] = time.perf_counter() - self._start_time
         return best_child.action, stats
 
     ### Tree reuse
@@ -352,6 +370,67 @@ class sts2_MCTS:
                        and c.visits >= max(TIE_MIN_VISITS, TIE_VISIT_FRACTION * top.visits) and self._tied(c, top)]
         return max(informative, key=lambda c: c.visits) if informative else top
 
+    ### Paired comparison of the root moves
+    ### The tree compares moves with independent noise: a move that is only a little better (Defend+ over Defend) is lost in the
+    ### draws and enemy rolls, and the visits settle on whichever got ahead early. Here the picked move and its close rivals are
+    ### replayed under the SAME scenarios (shuffle, random rolls) so that noise cancels in the difference. A rival replaces the
+    ### picked move only when it is ahead by PAIRED_Z standard errors of that paired difference.
+
+    def _paired_rollout(self, state : CombatState, action : dict, seed : int) -> float:
+        """Play `action` from `state`, then the rollout policy to the end, with the random source seeded from `seed`.
+        It is reseeded at the start of every turn, so the rolls of a later turn do not shift when the two lines drew a different
+        number of random numbers earlier."""
+        rng.seed(seed << 20)
+        cs = CombatState.deepcopy(state)
+        cs.player.shuffle_draw_pile()
+        c = CombatSimulator(cs)
+        c.perform_action(action)
+        turn = cs.turn_number
+        end_turn = turn + MAX_ROLLOUT_TURNS
+        while not c.is_over and cs.turn_number < end_turn:
+            if cs.turn_number != turn:
+                turn = cs.turn_number
+                rng.seed((seed << 20) + turn)
+            actions = c.get_available_actions()
+            if len(actions) == 0:
+                break
+            c.perform_action(rollout_policy(c, actions, self._search_config.rollout))
+        return self._rate_outcome(cs)
+
+    def _paired_check(self, picked : sts2_Node) -> dict | None:
+        """Compare `picked` with the root moves close to it in visits. Returns the details (and whether a rival `replaced` it),
+        or None when there is nothing to compare."""
+        n = self._search_config.paired_scenarios
+        state = self._root_node.state
+        rivals = sorted((c for c in self._root_node.children
+                         if c is not picked and c.visits >= max(1, PAIRED_VISIT_FRACTION * picked.visits)),
+                        key=lambda c: -c.visits)[:PAIRED_MAX_CONTENDERS]
+        if n < 2 or not rivals:
+            return None
+
+        seeds = [rng.randrange(1 << 30) for _ in range(n)]      # fresh scenarios every time
+        saved = rng.getstate()                                  # the rollouts reseed the shared source: put it back afterwards
+        try:
+            base = [self._paired_rollout(state, picked.action, s) for s in seeds]
+            results = []
+            for rival in rivals:
+                diffs = [self._paired_rollout(state, rival.action, s) - b for s, b in zip(seeds, base)]
+                mean = sum(diffs) / n
+                var = sum((d - mean) ** 2 for d in diffs) / (n - 1)
+                results.append((rival, mean, math.sqrt(var / n)))
+        finally:
+            rng.setstate(saved)
+
+        # a rival is significantly ahead of the picked move (a zero spread with a positive gap is a sure improvement)
+        ahead = [r for r in results if r[1] > 0 and r[1] > PAIRED_Z * r[2]]
+        best = max(ahead, key=lambda r: r[1] - PAIRED_Z * r[2]) if ahead else None
+        return {
+            "replaced" : best is not None,
+            "child" : best[0] if best else picked,
+            "scenarios" : n,
+            "compared" : [{"action" : r[0].action, "visits" : r[0].visits, "gain" : r[1], "se" : r[2]} for r in results],
+        }
+
     def _tied(self, node : sts2_Node, top : sts2_Node) -> bool:
         """`node` is within TIE_MARGIN of `top` and not significantly worse at Z_SCORE (the test the early exit uses)."""
         if node is top:
@@ -450,10 +529,11 @@ class sts2_MCTS:
         current_hp = combat_state.player.current_hp
         num_turns = combat_state.turn_number
         won = current_hp > 0 and all(e.is_minion or e.current_hp <= 0 for e in combat_state.enemies)
+        effective_hp = current_hp + POTION_BONUS*len(combat_state.player.potions)
         # if won fight: outcome is best max hp with slight bias towards less turns
         if won:
-            hp_ratio = current_hp/self._starting_hp
-            outcome = (WIN_BONUS - HP_SCALE*(1.0-math.sqrt(hp_ratio)))*(GAMMA**num_turns)
+            hp_ratio = effective_hp/self._starting_hp
+            outcome = (WIN_BONUS - HP_SCALE*(1.0-math.sqrt(hp_ratio)))*(GAMMA**num_turns) + WIN_PREMIUM
         # lost or unfinished: minimize enemy effective HP
         else:
             total_enemy_effective_hp = 0
@@ -471,7 +551,7 @@ class sts2_MCTS:
             parent = node.parent
         if node.visits == 0:
             return 0
-        return node.total_reward/node.visits + self._search_config.exploration*math.sqrt(math.log(max(1, parent.visits))/node.visits)
+        return node.total_reward/node.visits + self._search_config.exploration*EXPLORATION_SCALE*math.sqrt(math.log(max(1, parent.visits))/node.visits)
 
     def _best_uct(self, node : sts2_Node) -> sts2_Node:
         if len(node.children) == 0:

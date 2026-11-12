@@ -508,7 +508,7 @@ def test_rollout_from_a_terminal_node_returns_its_rating_immediately():
     root = expanded(winning_fight())
     kill = child_for(root, "play_card", 0)
     mcts = primed(kill.state)
-    assert mcts._simulate_random_combat(kill) == mcts._rate_outcome(kill.state)
+    assert mcts._simulate_combat_rollout(kill) == mcts._rate_outcome(kill.state)
 
 
 # ---------------------------------------------------------------- backpropagation
@@ -607,14 +607,14 @@ def random_fight():
 def test_rollouts_from_one_node_vary():
     node = sts2_DeterministicNode(None, random_fight(), None)
     mcts = primed(node.state)
-    results = {round(mcts._simulate_random_combat(node), 6) for _ in range(40)}
+    results = {round(mcts._simulate_combat_rollout(node), 6) for _ in range(40)}
     assert len(results) > 1
 
 def test_rollout_does_not_modify_the_node_state():
     node = sts2_DeterministicNode(None, random_fight(), None)
     before = (outcome_key(node.state), node.state.player.current_hp,
               node.state.turn_number, [id(c) for c in node.state.player.draw_pile])
-    primed(node.state)._simulate_random_combat(node)
+    primed(node.state)._simulate_combat_rollout(node)
     assert before == (outcome_key(node.state), node.state.player.current_hp,
                       node.state.turn_number, [id(c) for c in node.state.player.draw_pile])
 
@@ -622,9 +622,9 @@ def test_rollouts_are_reproducible_from_a_seed():
     node = sts2_DeterministicNode(None, random_fight(), None)
     mcts = primed(node.state)
     rng.seed(9)
-    a = [mcts._simulate_random_combat(node) for _ in range(10)]
+    a = [mcts._simulate_combat_rollout(node) for _ in range(10)]
     rng.seed(9)
-    b = [mcts._simulate_random_combat(node) for _ in range(10)]
+    b = [mcts._simulate_combat_rollout(node) for _ in range(10)]
     assert a == b
 
 
@@ -677,7 +677,8 @@ def test_fewer_turns_scores_higher():
     assert win_score(40, turns=3) > win_score(40, turns=8)
 
 def test_each_turn_discounts_a_win_by_gamma():
-    assert win_score(40, turns=5) == pytest.approx(win_score(40, turns=4) * GAMMA)
+    premium = mcts_module.WIN_PREMIUM       # added after the discount, so only the rest of the win is discounted
+    assert win_score(40, turns=5) - premium == pytest.approx((win_score(40, turns=4) - premium) * GAMMA)
 
 def test_turn_discount_is_small_next_to_hp():
     one_turn = win_score(40, turns=4) - win_score(40, turns=5)
@@ -758,12 +759,12 @@ def stalled_fight():
 
 def test_rollout_stops_at_the_turn_cap():
     node = sts2_DeterministicNode(None, stalled_fight(), None)
-    primed(node.state)._simulate_random_combat(node)  # would hang without the cap
+    primed(node.state)._simulate_combat_rollout(node)  # would hang without the cap
 
 def test_rollout_cap_counts_from_the_starting_turn():
     cs = stalled_fight()
     cs.turn_number = 30
-    primed(cs)._simulate_random_combat(sts2_DeterministicNode(None, cs, None))
+    primed(cs)._simulate_combat_rollout(sts2_DeterministicNode(None, cs, None))
 
 def test_unfinished_rollout_is_not_rated_as_a_win():
     cs = stalled_fight()
@@ -996,7 +997,7 @@ def test_rollouts_use_the_configured_policy(policy):
     spies = {p: (lambda c, actions, p=p, f=f: (calls.update([p]), f(c, actions))[1]) for p, f in ROLLOUT_POLICY_DICT.items()}
     with mock.patch.dict(ROLLOUT_POLICY_DICT, spies):
         mcts = primed(draw_fight(), new_mcts(SearchConfig(rollout=policy)))
-        mcts._simulate_random_combat(sts2_DeterministicNode(None, draw_fight(), None))
+        mcts._simulate_combat_rollout(sts2_DeterministicNode(None, draw_fight(), None))
     assert set(calls) == {policy}
 
 def _search_with_exit_forced(early_exit):

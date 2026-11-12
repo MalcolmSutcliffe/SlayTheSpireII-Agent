@@ -7,6 +7,7 @@ import pytest
 
 from sts2_lite import rng
 from sts2_lite.state_key import state_key
+import agents.sts2_MCTS.MCTS as mcts_module
 from agents.sts2_MCTS.MCTS import SearchConfig, sts2_MCTS, sts2_DeterministicNode, expand_node, backpropagate
 from test_mcts import make_state, strike, defend, pommel, pile, new_mcts, child_for, walk_unique
 
@@ -111,7 +112,7 @@ def test_uct_uses_the_parent_the_search_came_through():
     low = mcts.get_uct_score(shared, first)
     high = mcts.get_uct_score(shared, second)
     assert high > low
-    assert high == pytest.approx(0.5 + mcts._search_config.exploration * math.sqrt(math.log(100) / 10))
+    assert high == pytest.approx(0.5 + mcts._search_config.exploration * mcts_module.EXPLORATION_SCALE * math.sqrt(math.log(100) / 10))
     assert mcts.get_uct_score(shared) == low            # default: the first parent
 
 def test_uct_with_a_parent_of_zero_visits_is_finite():

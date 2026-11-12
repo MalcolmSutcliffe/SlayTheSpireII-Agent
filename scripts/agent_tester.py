@@ -22,8 +22,8 @@ SETTLE_READS = 3                # identical reads in a row before a state is tru
 SETTLE_INTERVAL = 0.25          # seconds between those reads
 LOCKED_READS = 8                # reads of locked-looking cards (about 3 s) before the agent acts anyway
 ACTION_TIMEOUT = 8.0            # seconds to wait for the game to react to a play_card / end_turn
-DEFAULT_LOG = "engine_mismatches.jsonl"
-DEFAULT_DECISION_LOG = "agent_decisions.jsonl"
+DEFAULT_LOG = "engine_mismatches.jsonl"     # where differences go when no run is named
+RUNS_DIR = Path(__file__).resolve().parent / "runs"
 
 TIME_BUDGET_SECONDS = 10.0       # Max time allocated for agent to think
 
@@ -440,8 +440,35 @@ def save_decision_state(state_dir : str, number : int, game_state : dict):
     path.mkdir(parents=True, exist_ok=True)
     (path / f"decision_{number:05d}.json").write_text(json.dumps(game_state))
 
+def run_paths(run : str, decisions : bool = False, fights : bool = False, states : bool = False, captures : bool = False,
+              append : bool = False, runs_dir : Path | None = None) -> dict:
+    """Where one run keeps its data: runs/<run>/ holds mismatches.jsonl always, and decisions.jsonl, fights.jsonl, states/ and
+    captures/ for the aspects asked for. A directory that already has files in it is refused unless `append` (a stopped run
+    that carries on): the numbers of the saved states would otherwise start again at 1 and overwrite the old ones.
+    Returns the keyword arguments of run_agent."""
+    runs_dir = runs_dir or RUNS_DIR
+    if not run or Path(run).name != run or run in (".", ".."):
+        raise ValueError(f"a run is a folder name inside {runs_dir.name}/, not a path: {run!r}")
+    directory = runs_dir / run
+    if directory.exists() and any(directory.iterdir()) and not append:
+        raise FileExistsError(f"{directory} already has data; pick another run name, or add --append to carry on in it")
+    directory.mkdir(parents=True, exist_ok=True)
+    first = 0
+    if append:
+        numbers = [int(m.group(1)) for p in (directory / "states").glob("decision_*.json") if (m := re.fullmatch(r"decision_(\d+)\.json", p.name))]
+        log = directory / "decisions.jsonl"
+        first = max(numbers + [sum(1 for _ in open(log)) if log.exists() else 0])
+    return {
+        "log_path": str(directory / "mismatches.jsonl"),
+        "decision_log": str(directory / "decisions.jsonl") if decisions else None,
+        "fight_log": str(directory / "fights.jsonl") if fights else None,
+        "state_dir": str(directory / "states") if states else None,
+        "capture_dir": str(directory / "captures") if captures else None,
+        "first_decision": first,
+    }
+
 def run_agent(agent : BaseAgent, step : bool = False, verify : bool = True, log_path : str = DEFAULT_LOG, capture_dir : str | None = None,
-              decision_log : str | None = None, state_dir : str | None = None, fight_log : str | None = None):
+              decision_log : str | None = None, state_dir : str | None = None, fight_log : str | None = None, first_decision : int = 0):
     previous = None     # state after the last action: the bridge reports no per-turn history
     batch = None        # actions since the last point the sim and the game could be compared
     waiting_for = None  # what the loop last said it was waiting on, so it says so once
@@ -449,7 +476,7 @@ def run_agent(agent : BaseAgent, step : bool = False, verify : bool = True, log_
     captured_round = None   # round whose first state was saved to capture_dir
     search = install_search_hook() if (decision_log or fight_log) else None
     fight = None                # summary of the fight in progress (--fight-log)
-    decisions = 0
+    decisions = first_decision     # numbers the decision log and the saved states
     just_mismatched = False
     locked_reads = 0
     checked = mismatched = 0
@@ -589,18 +616,33 @@ def run_agent(agent : BaseAgent, step : bool = False, verify : bool = True, log_
     except KeyboardInterrupt:
         print(f"\nstopped. {checked} step(s) checked, {mismatched} with differences" + (f" (see {log_path})" if mismatched else ""))
 
-def main():
-    parser = argparse.ArgumentParser(description="Let the agent play every combat; compare the sim with the game after each action.")
+def main(argv : list[str] | None = None):
+    parser = argparse.ArgumentParser(description="Let the agent play every combat; compare the sim with the game after each action. "
+                                     "Name a run to keep its data in runs/<run>/ (mismatches.jsonl is always written there).")
+    parser.add_argument("run", nargs="?", default=None, help="folder name for this run's data inside runs/, e.g. run3-a9")
+    parser.add_argument("--decisions", action="store_true", help="save decisions.jsonl: every move with its sims, time, and each move's visits and mean reward")
+    parser.add_argument("--fights", action="store_true", help="save fights.jsonl: one line per fight with enemies, HP at the start and end, rounds, outcome, search totals and the deepest tree")
+    parser.add_argument("--states", action="store_true", help="save states/decision_NNNNN.json: the game state behind every decision (numbers match --decisions)")
+    parser.add_argument("--captures", action="store_true", help="save captures/: the state at the start of every turn (benchmark material)")
+    parser.add_argument("--all", action="store_true", help="save decisions, fights, states and captures")
+    parser.add_argument("--append", action="store_true", help="carry on in a run folder that already has data (decision numbers continue)")
     parser.add_argument("--step", action="store_true", help="wait for Enter before every action")
     parser.add_argument("--no-verify", action="store_true", help="do not compare the sim with the game")
-    parser.add_argument("--log", default=DEFAULT_LOG, help="where differences are written (JSON lines)")
-    parser.add_argument("--decision-log", default=None, help="where every decision is written (JSON lines): the move, sims, time and each move's visits and mean reward")
-    parser.add_argument("--capture-dir", default=None, help="save the state at the start of every turn here (benchmark material)")
-    parser.add_argument("--fight-log", default=None, help="one JSON line per fight: enemies, HP at the start and end, rounds, outcome, search totals and the deepest tree")
-    parser.add_argument("--state-dir", default=None, help="save the game state behind every decision here (decision_00001.json ...); numbers match --decision-log")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
+    wanted = {"decisions": args.decisions or args.all, "fights": args.fights or args.all,
+              "states": args.states or args.all, "captures": args.captures or args.all}
+    if args.run is None and (any(wanted.values()) or args.append):
+        parser.error("name the run (e.g. run3-a9) to save anything")
+    if args.run is None:
+        kwargs = {"log_path": DEFAULT_LOG}
+    else:
+        try:
+            kwargs = run_paths(args.run, append=args.append, **wanted)
+        except (ValueError, FileExistsError) as error:
+            parser.error(str(error))
+        print(f"saving to {RUNS_DIR / args.run}: mismatches" + "".join(f", {name}" for name, on in wanted.items() if on))
     agent = MyAgent()
-    run_agent(agent, step=args.step, verify=not args.no_verify, log_path=args.log, capture_dir=args.capture_dir, decision_log=args.decision_log, state_dir=args.state_dir, fight_log=args.fight_log)
+    run_agent(agent, step=args.step, verify=not args.no_verify, **kwargs)
 
 if __name__ == "__main__":
     main()

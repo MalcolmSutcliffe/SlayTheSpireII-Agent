@@ -90,6 +90,7 @@ Add enchantments
  - [X] Concurrent search caching
  - [x] Identical move culling
  - [x] Benchmark harness. Create a fixed set of fights to play, use this to fine tune constants.
+ - [ ] Tied move paired RNG rollout decision (if two moves are tied at the end of search, use seeded rng to minimize noise between them)
  - [ ] Improve sim speed
  - [ ] Root parallelization
  - [ ] Neural network rollout policy

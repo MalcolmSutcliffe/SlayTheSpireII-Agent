@@ -512,3 +512,80 @@ def test_the_fight_log_gets_one_line_per_fight_with_the_decision_totals(tester, 
     row = rows[0]
     assert row["outcome"] == "won" and row["hp_lost"] == 7 and row["decisions"] == 2
     assert row["start_hp"] == 80 and row["end_hp"] == 73 and row["enemies"]
+
+
+# ---------------------------------------------------------------- run folders: runs/<run>/
+def test_a_run_keeps_everything_under_its_folder(tester, tmp_path):
+    paths = tester.run_paths("run3-a9", decisions=True, fights=True, states=True, captures=True, runs_dir=tmp_path)
+    folder = tmp_path / "run3-a9"
+    assert folder.is_dir()
+    assert paths == {"log_path": str(folder / "mismatches.jsonl"), "decision_log": str(folder / "decisions.jsonl"),
+                     "fight_log": str(folder / "fights.jsonl"), "state_dir": str(folder / "states"),
+                     "capture_dir": str(folder / "captures"), "first_decision": 0}
+
+def test_only_the_aspects_asked_for_get_a_path(tester, tmp_path):
+    paths = tester.run_paths("r", fights=True, runs_dir=tmp_path)
+    assert paths["fight_log"] and not (paths["decision_log"] or paths["state_dir"] or paths["capture_dir"])
+    assert paths["log_path"].endswith("mismatches.jsonl")
+
+@pytest.mark.parametrize("name", ["", ".", "..", "a/b", "../x", "/abs"])
+def test_a_run_name_is_a_folder_name_not_a_path(tester, tmp_path, name):
+    with pytest.raises(ValueError):
+        tester.run_paths(name, runs_dir=tmp_path)
+
+def test_a_run_folder_with_data_is_not_reused_by_accident(tester, tmp_path):
+    tester.run_paths("run3", runs_dir=tmp_path)             # empty folder: fine, also a second time
+    tester.run_paths("run3", runs_dir=tmp_path)
+    (tmp_path / "run3" / "decisions.jsonl").write_text("{}\n")
+    with pytest.raises(FileExistsError):
+        tester.run_paths("run3", decisions=True, runs_dir=tmp_path)
+
+def test_appending_carries_the_decision_numbers_on(tester, tmp_path):
+    folder = tmp_path / "run3"
+    (folder / "states").mkdir(parents=True)
+    for n in (1, 2, 7):
+        (folder / "states" / f"decision_{n:05d}.json").write_text("{}")
+    (folder / "decisions.jsonl").write_text("{}\n" * 3)
+    assert tester.run_paths("run3", decisions=True, states=True, append=True, runs_dir=tmp_path)["first_decision"] == 7
+    (folder / "decisions.jsonl").write_text("{}\n" * 9)
+    assert tester.run_paths("run3", decisions=True, append=True, runs_dir=tmp_path)["first_decision"] == 9
+
+def test_decisions_are_numbered_from_first_decision(tester, monkeypatch, tmp_path):
+    game = FakeGame([capture()])
+    monkeypatch.setattr(tester, "get_state", game.get_state)
+    monkeypatch.setattr(tester, "act", game.act)
+    tester.run_agent(FirstActionAgent(), log_path=str(tmp_path / "log.jsonl"), state_dir=str(tmp_path / "states"), first_decision=41)
+    assert [p.name for p in (tmp_path / "states").iterdir()] == ["decision_00042.json"]
+
+def run_main(tester, monkeypatch, tmp_path, argv):
+    calls = []
+    monkeypatch.setattr(tester, "RUNS_DIR", tmp_path)
+    monkeypatch.setattr(tester, "MyAgent", lambda: "agent")
+    monkeypatch.setattr(tester, "run_agent", lambda agent, **kw: calls.append((agent, kw)))
+    tester.main(argv)
+    return calls
+
+def test_main_with_a_run_and_flags_saves_there(tester, monkeypatch, tmp_path):
+    (agent, kw), = run_main(tester, monkeypatch, tmp_path, ["run3-a9", "--decisions", "--states"])
+    assert kw["decision_log"] == str(tmp_path / "run3-a9" / "decisions.jsonl") and kw["state_dir"] == str(tmp_path / "run3-a9" / "states")
+    assert kw["fight_log"] is None and kw["capture_dir"] is None and kw["verify"] is True
+
+def test_main_all_saves_every_aspect(tester, monkeypatch, tmp_path):
+    (_, kw), = run_main(tester, monkeypatch, tmp_path, ["r", "--all", "--no-verify", "--step"])
+    assert all(kw[k] for k in ("decision_log", "fight_log", "state_dir", "capture_dir")) and kw["verify"] is False and kw["step"] is True
+
+def test_main_with_no_run_saves_nothing_but_the_mismatch_log(tester, monkeypatch, tmp_path):
+    (_, kw), = run_main(tester, monkeypatch, tmp_path, [])
+    assert kw["log_path"] == tester.DEFAULT_LOG and set(kw) <= {"log_path", "step", "verify"}
+    assert not list(tmp_path.iterdir())
+
+@pytest.mark.parametrize("argv", [["--decisions"], ["--all"], ["--append"]])
+def test_saving_needs_a_run_name(tester, monkeypatch, tmp_path, argv):
+    with pytest.raises(SystemExit):
+        run_main(tester, monkeypatch, tmp_path, argv)
+
+def test_main_refuses_a_run_folder_that_has_data(tester, monkeypatch, tmp_path):
+    (tmp_path / "old").mkdir()
+    (tmp_path / "old" / "fights.jsonl").write_text("{}\n")
+    with pytest.raises(SystemExit):
+        run_main(tester, monkeypatch, tmp_path, ["old", "--fights"])

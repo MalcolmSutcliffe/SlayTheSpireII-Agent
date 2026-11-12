@@ -136,7 +136,7 @@ import contextlib
 
 @contextlib.contextmanager
 def scripted(**values):
-    with mock.patch.object(sts2_MCTS, "_simulate_random_combat", scripted_rollout(**values)), \
+    with mock.patch.object(sts2_MCTS, "_simulate_combat_rollout", scripted_rollout(**values)), \
          mock.patch.object(sts2_MCTS, "traverse_node", remembering_path(sts2_MCTS.traverse_node)):
         yield
 
@@ -145,7 +145,7 @@ def decide(info_bonus, sims=1500, seed=0, **values):
     cs = draw_or_strike()
     with scripted(**values):
         action, stats = sts2_MCTS().monte_carlo_tree_search(
-            cs, SearchConfig(max_sims=sims, early_exit=False, prefer_info=False, reuse_tree=False, info_bonus=info_bonus))
+            cs, SearchConfig(max_sims=sims, early_exit=False, prefer_info=False, reuse_tree=False, info_bonus=info_bonus, paired_scenarios=0))
     chosen = cs.player.hand[action["card_index"]].card_id.name if action["action"] == "play_card" else "end_turn"
     return chosen, stats
 

@@ -134,6 +134,7 @@ def draw_fight():
 def run_search(cs, config, seed=0):
     rng.seed(seed)
     mcts = sts2_MCTS()
+    config = dataclasses.replace(config, paired_scenarios=0)      # these tests are about the tree's own tie-break
     action, stats = mcts.monte_carlo_tree_search(cs, config)
     return mcts, action, stats
 
