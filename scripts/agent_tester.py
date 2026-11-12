@@ -197,7 +197,22 @@ def install_search_hook() -> dict:
     cls.monte_carlo_tree_search = wrapper
     return holder
 
-def log_decision(path : str, game_state : dict, combat_state : CombatState, action : dict, seconds : float, holder : dict, number : int):
+def tree_stats(root, limit : int = 400_000) -> dict:
+    """Size and depth of the search tree under `root` (chance nodes and decision nodes; a node with several parents counts once)."""
+    seen, stack, deepest = {id(root)}, [root], 0
+    while stack and len(seen) < limit:
+        node = stack.pop()
+        deepest = max(deepest, getattr(node, "depth", 0))
+        kids = getattr(node, "children", None)
+        if kids is None:
+            kids = list(getattr(node, "outcomes", {}).values())
+        for kid in kids:
+            if id(kid) not in seen:
+                seen.add(id(kid))
+                stack.append(kid)
+    return {"tree_nodes": len(seen), "tree_depth": deepest - getattr(root, "depth", 0), "tree_capped": bool(stack)}
+
+def log_decision(path : str | None, game_state : dict, combat_state : CombatState, action : dict, seconds : float, holder : dict, number : int):
     """One JSON line per decision: the situation, the move, and what the search saw (sims, time, every root move's visits and mean reward)."""
     player = game_state.get("player") or {}
     record = {
@@ -235,9 +250,74 @@ def log_decision(path : str, game_state : dict, combat_state : CombatState, acti
                 record["stopped_by"] = "time"
             else:
                 record["stopped_by"] = "confidence"
+    if searcher is not None and getattr(searcher, "_root_node", None) is not None:
+        try:
+            record.update(tree_stats(searcher._root_node))
+        except Exception:                   # the tree is the agent's; a change in its layout must not stop a run
+            pass
     holder["last"] = holder["stats"] = None
+    if path:
+        with open(path, "a") as f:
+            f.write(json.dumps(record) + "\n")
+    return record
+
+###
+### One summary line per fight
+###
+
+def fight_start(game_state : dict) -> dict:
+    """The record of a fight that has just begun (the first play state of it)."""
+    player = game_state.get("player") or {}
+    context = game_state.get("context") or {}
+    return {
+        "floor": context.get("floor"), "act": context.get("act"), "ascension": context.get("ascension"),
+        "room_type": game_state.get("room_type"),
+        "enemies": [e.get("name") for e in game_state.get("enemies", [])],
+        "start_hp": player.get("hp"), "max_hp": player.get("max_hp"), "start_time": datetime.now().isoformat(timespec="seconds"),
+        "end_hp": player.get("hp"), "rounds": game_state.get("round"), "hp_at_round_start": {},
+        "decisions": 0, "search_seconds": 0.0, "sims": 0, "stopped_by": {}, "max_tree_depth": 0, "mismatches": 0, "potions_used": 0,
+        "_potions": len(game_state.get("potions") or []),
+    }
+
+def fight_update(fight : dict, game_state : dict, record : dict | None = None, mismatched : bool = False):
+    """Fold one play state (and, once the agent has decided, its decision record) into the fight."""
+    player = game_state.get("player") or {}
+    if player.get("hp") is not None:
+        fight["end_hp"] = player["hp"]
+    rnd = game_state.get("round")
+    if rnd is not None:
+        fight["rounds"] = max(fight["rounds"] or 0, rnd)
+        fight["hp_at_round_start"].setdefault(str(rnd), player.get("hp"))
+    potions = len(game_state.get("potions") or [])
+    if potions < fight["_potions"]:
+        fight["potions_used"] += fight["_potions"] - potions
+    fight["_potions"] = potions
+    if mismatched:
+        fight["mismatches"] += 1
+    if record:
+        fight["decisions"] += 1
+        fight["search_seconds"] = round(fight["search_seconds"] + (record.get("seconds") or 0), 3)
+        fight["sims"] += record.get("sims") or 0
+        reason = record.get("stopped_by")
+        if reason:
+            fight["stopped_by"][reason] = fight["stopped_by"].get(reason, 0) + 1
+        fight["max_tree_depth"] = max(fight["max_tree_depth"], record.get("tree_depth") or 0)
+
+def fight_end(fight : dict, away_state : dict) -> dict:
+    """The finished summary: the player's HP once the fight is over (the reward screen still shows it) and whether it was won."""
+    player = away_state.get("player") or {}
+    if player.get("hp") is not None:
+        fight["end_hp"] = player["hp"]
+    name = f"{away_state.get('decision')} {away_state.get('type')} {away_state.get('screen_type')}".lower()
+    lost = fight["end_hp"] is not None and fight["end_hp"] <= 0 or "game_over" in name or "death" in name
+    out = {k: v for k, v in fight.items() if not k.startswith("_")}
+    out.update({"outcome": "lost" if lost else "won", "hp_lost": (fight["start_hp"] or 0) - (fight["end_hp"] or 0),
+                "end_time": datetime.now().isoformat(timespec="seconds"), "ended_on": away_state.get("decision") or away_state.get("type")})
+    return out
+
+def write_fight(path : str, summary : dict):
     with open(path, "a") as f:
-        f.write(json.dumps(record) + "\n")
+        f.write(json.dumps(summary) + "\n")
 
 def capture_turn_start(game_state : dict, directory : str) -> str:
     """Saves the state the agent is about to act on at the start of a turn (raw bridge output, as in Tests/data) so the
@@ -361,14 +441,16 @@ def save_decision_state(state_dir : str, number : int, game_state : dict):
     (path / f"decision_{number:05d}.json").write_text(json.dumps(game_state))
 
 def run_agent(agent : BaseAgent, step : bool = False, verify : bool = True, log_path : str = DEFAULT_LOG, capture_dir : str | None = None,
-              decision_log : str | None = None, state_dir : str | None = None):
+              decision_log : str | None = None, state_dir : str | None = None, fight_log : str | None = None):
     previous = None     # state after the last action: the bridge reports no per-turn history
     batch = None        # actions since the last point the sim and the game could be compared
     waiting_for = None  # what the loop last said it was waiting on, so it says so once
     ended = None        # {"round", "time"} of the last End Turn, until the next round starts
     captured_round = None   # round whose first state was saved to capture_dir
-    search = install_search_hook() if decision_log else None
+    search = install_search_hook() if (decision_log or fight_log) else None
+    fight = None                # summary of the fight in progress (--fight-log)
     decisions = 0
+    just_mismatched = False
     locked_reads = 0
     checked = mismatched = 0
     reported_cards = set()      # NOT_IMPLEMENTED card ids already logged this run
@@ -379,6 +461,9 @@ def run_agent(agent : BaseAgent, step : bool = False, verify : bool = True, log_
             kind = kind_of(game_state, previous is not None and previous.pending_choice is not None)
 
             if kind == "away":
+                if fight is not None and fight_log:
+                    write_fight(fight_log, fight_end(fight, game_state))
+                fight = None
                 if batch is not None and verify and batch["predicted"] is not None:
                     verify_combat_end(batch, game_state, log_path)
                     checked += 1
@@ -449,7 +534,14 @@ def run_agent(agent : BaseAgent, step : bool = False, verify : bool = True, log_
                         checked += 1
                         if not verify_step(batch, game_state, combat_state, log_path):
                             mismatched += 1
+                            just_mismatched = True
                     batch = None
+
+            if fight_log and kind == "play":
+                if fight is None:
+                    fight = fight_start(game_state)
+                fight_update(fight, game_state, mismatched=just_mismatched)
+            just_mismatched = False
 
             if capture_dir and kind == "play" and game_state.get("round") != captured_round:
                 captured_round = game_state.get("round")
@@ -462,8 +554,10 @@ def run_agent(agent : BaseAgent, step : bool = False, verify : bool = True, log_
             decisions += 1
             if state_dir:
                 save_decision_state(state_dir, decisions, game_state)
-            if decision_log:
-                log_decision(decision_log, game_state, combat_state, action, time.perf_counter() - started, search, decisions)
+            if decision_log or fight_log:
+                record = log_decision(decision_log, game_state, combat_state, action, time.perf_counter() - started, search, decisions)
+                if fight is not None:
+                    fight_update(fight, game_state, record)
 
             if batch is None:
                 batch = {"before": game_state, "actions": [], "before_sim": CombatState.deepcopy(combat_state)}
@@ -502,10 +596,11 @@ def main():
     parser.add_argument("--log", default=DEFAULT_LOG, help="where differences are written (JSON lines)")
     parser.add_argument("--decision-log", default=None, help="where every decision is written (JSON lines): the move, sims, time and each move's visits and mean reward")
     parser.add_argument("--capture-dir", default=None, help="save the state at the start of every turn here (benchmark material)")
+    parser.add_argument("--fight-log", default=None, help="one JSON line per fight: enemies, HP at the start and end, rounds, outcome, search totals and the deepest tree")
     parser.add_argument("--state-dir", default=None, help="save the game state behind every decision here (decision_00001.json ...); numbers match --decision-log")
     args = parser.parse_args()
     agent = MyAgent()
-    run_agent(agent, step=args.step, verify=not args.no_verify, log_path=args.log, capture_dir=args.capture_dir, decision_log=args.decision_log, state_dir=args.state_dir)
+    run_agent(agent, step=args.step, verify=not args.no_verify, log_path=args.log, capture_dir=args.capture_dir, decision_log=args.decision_log, state_dir=args.state_dir, fight_log=args.fight_log)
 
 if __name__ == "__main__":
     main()

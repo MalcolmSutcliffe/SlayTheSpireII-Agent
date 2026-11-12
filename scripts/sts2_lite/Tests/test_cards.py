@@ -328,6 +328,7 @@ def test_every_single_target_card_rejects_a_bad_target():
     from sts2_lite.card import GET_CARD_FUNCTION
     targeted = [cid for cid, f in GET_CARD_FUNCTION.items()
                 if cid not in (CardId.DEFEND_IRONCLAD, CardId.BLOOD_WALL, CardId.SLIMED, CardId.BECKON, CardId.SPORE_MIND,
+                               CardId.ABUNDANCE, CardId.APOTHEOSIS, CardId.APPARITION, CardId.BRIGHTEST_FLAME, CardId.RELAX, CardId.WISH,
                                CardId.BREAKTHROUGH, CardId.SHRUG_IT_OFF, CardId.THUNDERCLAP,
                                CardId.INFLAME, CardId.CRIMSON_MANTLE, CardId.IMPERVIOUS, CardId.EVIL_EYE,
                                    CardId.SECOND_WIND, CardId.BLOODLETTING, CardId.WHIRLWIND,

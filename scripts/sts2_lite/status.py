@@ -72,6 +72,8 @@ class StatusId(Enum):
     RETAIN_HAND = auto()
     NO_BLOCK = auto()
     BLOCK_NEXT_TURN = auto()
+    ENERGY_NEXT_TURN = auto()       # Relax: energy after the next turn's reset
+    DRAW_CARDS_NEXT_TURN = auto()   # Relax: cards added to the next turn's hand draw
     FASTEN = auto()
     PREP_TIME = auto()
     DARK_SHACKLES = auto()
@@ -207,6 +209,8 @@ STATUS_BEAVIOURS : dict[StatusId, StatusBehaviour] = {
     StatusId.RETAIN_HAND : StatusBehaviour.STATIC,      # one less each time the player's turn ends (CombatSimulator.end_turn)
     StatusId.NO_BLOCK : StatusBehaviour.DECREASE_BY_ONE,    # ticks when the enemies' turn ends
     StatusId.BLOCK_NEXT_TURN : StatusBehaviour.STATIC,
+    StatusId.ENERGY_NEXT_TURN : StatusBehaviour.STATIC,
+    StatusId.DRAW_CARDS_NEXT_TURN : StatusBehaviour.STATIC,
     StatusId.FASTEN : StatusBehaviour.STATIC,
     StatusId.PREP_TIME : StatusBehaviour.STATIC,
     StatusId.DARK_SHACKLES : StatusBehaviour.STATIC,    # the Strength is returned when the owner's turn ends
@@ -322,6 +326,8 @@ class StatusInstance:
         """The amount the game displays: Hardened Shell shows what is left of this turn's allowance."""
         if self.status_id == StatusId.HARDENED_SHELL:
             return max(0, self.amount - (self.records[0][0] if self.records else 0))
+        if self.status_id == StatusId.TENDER:       # TenderPower.DisplayAmount: the cards played this turn (0 until one is), not the stack
+            return self.records[0][0] if self.records else 0
         return self.amount
 
     @classmethod
@@ -490,7 +496,10 @@ def _slumber_on_enemy_turn_end(combat : CombatSimulator, owner : Creature, amoun
     owner.status[StatusId.SLUMBER].amount -= 1
     if owner.status[StatusId.SLUMBER].amount <= 0:
         del owner.status[StatusId.SLUMBER]
-        owner.status.pop(StatusId.PLATING, None)
+        plating = owner.status.pop(StatusId.PLATING, None)
+        if plating is not None:
+            # Plating's block comes (BeforeSideTurnEndEarly, from the amount it has just lost one of) before the Slumber ends and removes it
+            owner.apply_block(plating.amount - (0 if combat.combat_state.turn_number == 1 else 1))
 
 def _hatch_on_enemy_turn_end(combat : CombatSimulator, owner : Creature, amount : int):
     owner.status[StatusId.HATCH].amount -= 1

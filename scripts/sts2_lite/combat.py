@@ -980,6 +980,9 @@ class CombatSimulator:
             self.combat_state.energy += self.combat_state.max_energy        # Ice Cream: unspent energy is kept
         else:
             self.combat_state.energy = self.combat_state.max_energy
+        pending_energy = player.status.pop(StatusId.ENERGY_NEXT_TURN, None)
+        if pending_energy is not None:
+            self.gain_energy(pending_energy.amount)        # Relax: after the energy reset
         self.combat_state.cards_played = 0
         block_before = player.block
         self.fire(EventType.BEFORE_PLAYER_TURN)

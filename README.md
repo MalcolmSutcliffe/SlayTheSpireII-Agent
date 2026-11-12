@@ -29,8 +29,10 @@ https://simthespire.wordpress.com/ -> Massive dataset of fights (expected damage
 
 - Runs a monte-carlo-tree-search on card actions determining the best current action, using a sts2_lite simulator. 
 - Uses deterministic and sampled non-deterministic nodes. 
-- Uses rollout of play first card in hand
-- Uses current_hp as rollout score
+- Various rollout policies
+- Outcome score based on current HP for a win, prefering less turns.
+- On a loss, the outcoume is scored based on how close the enemy was to dying.
+- All enemy attack patterns modeled in engine.
 
 (Out of combat)
 
@@ -44,12 +46,6 @@ No functionality
 # TODO :
 
 ## STS2_Lite
-
-Add Enemy Ais (Currently assumes enemy will make the same move when looking ahead)
- - [x] Act 1 Overgrowth
- - [ ] Act 1 Underdocks
- - [x] Act 2
- - [ ] Act 3
 
 Card pools (multiplayer ignored)
  - [x] Colourless

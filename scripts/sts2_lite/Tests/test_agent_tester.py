@@ -445,3 +445,70 @@ def test_the_state_behind_a_decision_can_be_saved_for_replay(tester, tmp_path):
     tester.save_decision_state(str(tmp_path / "states"), 7, state)
     saved = json.loads((tmp_path / "states" / "decision_00007.json").read_text())
     assert saved == state
+
+
+# ---------------------------------------------------------------- fight summaries and tree size (--fight-log)
+class _Node:
+    def __init__(self, parent=None):
+        self.parent, self.depth, self.children = parent, (parent.depth + 1 if parent else 0), []
+        if parent and hasattr(parent, "children"):
+            parent.children.append(self)
+
+class _Chance:
+    def __init__(self, parent):
+        self.parent, self.depth, self.outcomes = parent, parent.depth + 1, {}
+        parent.children.append(self)
+
+def test_tree_stats_count_nodes_and_depth_through_chance_nodes(tester):
+    root = _Node()
+    a, b = _Node(root), _Node(root)
+    chance = _Chance(a)
+    chance.outcomes[("x",)] = _Node(chance)
+    stats = tester.tree_stats(root)
+    assert stats == {"tree_nodes": 5, "tree_depth": 3, "tree_capped": False}
+
+def test_a_fight_is_summarised_from_its_play_states(tester):
+    state = capture()
+    state["context"] = {"act": 1, "floor": 5, "ascension": 9}
+    state["room_type"] = "monster"
+    fight = tester.fight_start(state)
+    assert (fight["floor"], fight["ascension"], fight["start_hp"]) == (5, 9, state["player"]["hp"])
+    later = json.loads(json.dumps(state))
+    later["round"] = (state.get("round") or 1) + 1
+    later["player"]["hp"] = state["player"]["hp"] - 12
+    tester.fight_update(fight, later, {"seconds": 1.5, "sims": 800, "stopped_by": "STATISTICAL_CONFIDENCE", "tree_depth": 7})
+    tester.fight_update(fight, later, {"seconds": 0.5, "sims": 200, "stopped_by": "time", "tree_depth": 4}, mismatched=True)
+    away = {"type": "decision", "decision": "combat_rewards"}
+    summary = tester.fight_end(fight, away)
+    assert summary["outcome"] == "won" and summary["hp_lost"] == 12 and summary["decisions"] == 2
+    assert summary["sims"] == 1000 and summary["search_seconds"] == 2.0 and summary["max_tree_depth"] == 7
+    assert summary["stopped_by"] == {"STATISTICAL_CONFIDENCE": 1, "time": 1} and summary["mismatches"] == 1
+    assert not any(k.startswith("_") for k in summary)
+
+def test_a_fight_that_ends_on_the_death_screen_is_a_loss(tester):
+    fight = tester.fight_start(capture())
+    assert tester.fight_end(fight, {"type": "decision", "decision": "game_over"})["outcome"] == "lost"
+    assert tester.fight_end(fight, {"player": {"hp": 0}})["outcome"] == "lost"
+
+def test_potions_used_in_a_fight_are_counted(tester):
+    state = capture()
+    state["potions"] = [{"id": "A"}, {"id": "B"}]
+    fight = tester.fight_start(state)
+    state["potions"] = [{"id": "A"}]
+    tester.fight_update(fight, state)
+    assert fight["potions_used"] == 1
+
+def test_the_fight_log_gets_one_line_per_fight_with_the_decision_totals(tester, monkeypatch, tmp_path):
+    first, second = capture(), capture()
+    second["player"]["hp"] -= 7
+    away = {"type": "decision", "decision": "card_reward", "player": {"hp": second["player"]["hp"]}}
+    game = FakeGame([first, second, away, away])
+    monkeypatch.setattr(tester, "get_state", game.get_state)
+    monkeypatch.setattr(tester, "act", game.act)
+    fights = tmp_path / "fights.jsonl"
+    tester.run_agent(FirstActionAgent(), log_path=str(tmp_path / "log.jsonl"), fight_log=str(fights))
+    rows = [json.loads(l) for l in fights.read_text().splitlines()]
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["outcome"] == "won" and row["hp_lost"] == 7 and row["decisions"] == 2
+    assert row["start_hp"] == 80 and row["end_hp"] == 73 and row["enemies"]
