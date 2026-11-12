@@ -57,8 +57,8 @@ Card pools (multiplayer ignored)
     Not implemented:
     - [ ] Enthralled (Enforcing play order not implemented in engine)
  
- - [ ] Status
- - [ ] Ancient
+ - [X] Status
+ - [X] Ancient
  - [x] Ironclad
  - [ ] Silent
  - [ ] Necrobinder
