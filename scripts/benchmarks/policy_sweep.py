@@ -88,10 +88,10 @@ def play_policy_fight(start : CombatState, policy : RolloutPolicy, seed : int) -
 def _job(job : tuple) -> dict:
     file, seed, policy, weights = job
     with weights_applied(weights):
-        return {"file": file, "seed": seed, **play_policy_fight(load_state(file), RolloutPolicy[policy], seed)}
+        return {"file": file, "seed": seed, **play_policy_fight(load_state(file, "act1"), RolloutPolicy[policy], seed)}
 
 def evaluate(policy : str, weights : dict, seeds : int, workers : int, smoke : bool = False) -> list[dict]:
-    jobs = [(e["file"], s, policy, weights) for e in load_index(smoke) for s in range(seeds)]
+    jobs = [(e["file"], s, policy, weights) for e in load_index(smoke, suite="act1") for s in range(seeds)]
     return map_jobs(_job, jobs, workers, f"{policy} {weights or ''}")
 
 def summary(rows : list[dict]) -> dict:

@@ -403,7 +403,8 @@ def enemy_diffs(cs, want):
     return [d for d in verify.compare(cs, want) if d.startswith("enemy") and "hp" not in d]
 
 def test_every_phase_two_capture_loads_with_moves_and_damage_agreeing():
-    for enemy, names in (("gremlin_merc", ("turn_1", "turn_2", "summoning", "after_summon", "after_killed", "after_killed_next_turn")),
+    for enemy, names in (("gremlin_merc", ("turn_2", "after_killed", "after_killed_next_turn")),
+                         ("two_tailed_rats", ("turn_1", "summoning", "after_summon")),
                          ("living_fog", ("turn_1", "turn_2", "turn_3")),
                          ("terror_eel", ("before_shriek", "shriek", "after_shriek"))):
         for name in names:
@@ -467,19 +468,19 @@ def test_capture_eel_stunned_after_the_shriek_then_terrifies_then_crashes_for_tw
     assert cs.player.status_amount(StatusId.VULNERABLE) == 99
     turn(cs)
     assert cs.player.current_hp == 80 - 24
-
+# the rat captures live in two_tailed_rats: turn_1 (three rats), summoning (three, one about to call), after_summon (four)
 # the rat captures are filed under gremlin_merc: turn_1 (three rats), summoning (three, one about to call), after_summon (four)
 def test_capture_three_rats_load_with_their_histories():
-    cs = under("gremlin_merc", "summoning")
+    cs = under("two_tailed_rats", "summoning")
     parts = [(r.counter % 3, r.counter // 3 % 4, r.counter // 12) for r in cs.enemies]
     assert parts == [(2, 2, 0), (2, 0, 0), (2, 0, 0)]       # the first screeched two moves ago, so it cannot yet again
 
 def test_capture_a_rat_calls_for_backup_and_the_new_one_stands_in_front():
     for seed in range(30):
         rng.seed(seed)
-        cs = under("gremlin_merc", "summoning")
+        cs = under("two_tailed_rats", "summoning")
         turn(cs)
-        want = under("gremlin_merc", "after_summon")
+        want = under("two_tailed_rats", "after_summon")
         assert len(cs.enemies) == len(want.enemies) == 4
         assert cs.enemies[0].max_hp in range(17, 22)
         assert cs.enemies[1].move_id != "CALL_FOR_BACKUP"            # the caller used its one call
@@ -487,6 +488,6 @@ def test_capture_a_rat_calls_for_backup_and_the_new_one_stands_in_front():
         assert [r.counter // 12 for r in want.enemies] == [1, 1, 1, 1]
 
 def test_capture_after_the_summon_a_second_rat_may_already_have_chosen_to_call():
-    cs = under("gremlin_merc", "after_summon")
+    cs = under("two_tailed_rats", "after_summon")
     calling = [r for r in cs.enemies if r.move_id == "CALL_FOR_BACKUP"]
     assert len(calling) == 1 and calling[0] is cs.enemies[2]
