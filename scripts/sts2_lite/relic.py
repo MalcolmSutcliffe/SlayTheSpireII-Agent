@@ -109,6 +109,8 @@ class RelicId(Enum):
     SEAL_OF_GOLD = auto()
     PAELS_EYE = auto()
     PAELS_LEGION = auto()
+    REPTILE_TRINKET = auto()
+    BELT_BUCKLE = auto()
 
 
 # What the bridge calls a relic's state (if it reports one) when `used` is true.
@@ -1103,6 +1105,15 @@ BREAD_ENERGY = 1
 PAELS_FLESH_ENERGY = 1
 MEAT_ON_THE_BONE_HEAL = 12
 VICTORY_HEAL : dict[RelicId, int] = {RelicId.BURNING_BLOOD : 6, RelicId.BLACK_BLOOD : 12}     # AfterCombatVictory
+
+REPTILE_TRINKET_STRENGTH = 3
+BELT_BUCKLE_DEXTERITY = 2
+
+def dexterity_bonus(owner : Creature) -> int:
+    """Belt Buckle: 2 additional Dexterity while the player holds no Potions (assumed to count for card Block only, like Dexterity)."""
+    if RelicId.BELT_BUCKLE in owner.relics and not getattr(owner, "potions", True):
+        return BELT_BUCKLE_DEXTERITY
+    return 0
 
 def max_energy_gain(owner : Creature, turn : int) -> int:
     """ModifyMaxEnergy: Bread +1 from turn 2, Pael's Flesh +1 from turn 3 (player turns). The bridge already includes them once

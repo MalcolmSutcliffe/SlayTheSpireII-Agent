@@ -12,6 +12,8 @@ from sts2_lite.combat import CombatState, CombatSimulator
 from sts2_lite.card import CARD_RARITY, CardId, CardRarity, CardType, MAX_HAND_SIZE
 
 from sts2_lite.enemy import Enemy
+from sts2_lite.potion import PotionId
+
 from sts2_lite.status import StatusId
 from sts2_lite.state_key import state_key
 
@@ -51,7 +53,22 @@ HP_SCALE = 1.0
 REWARD_SPAN = WIN_BONUS + WIN_PREMIUM + 1.0
 EXPLORATION_SCALE = (REWARD_SPAN / 2.0) ** 0.75
 GAMMA = 0.999
-POTION_BONUS = 12
+MAX_HP_SCALING = 2.0
+DEFAULT_POTION_BONUS = 12
+POTION_BONUS : dict[PotionId, int] = {
+    PotionId.BLOOD_POTION : 18,
+    PotionId.FORTIFIER : 15,
+    PotionId.HEART_OF_IRON : 15,
+    PotionId.FRUIT_JUICE : 16,
+    PotionId.LUCKY_TONIC : 18,
+    PotionId.OROBIC_ACID : 20,
+    PotionId.SHACKLING_POTION : 15,
+    PotionId.SHIP_IN_A_BOTTLE : 18,
+    PotionId.GIGANTIFICATION_POTION : 18,
+    PotionId.SOLDIERS_STEW : 15,
+    PotionId.AMBERGRIS : 45,
+    PotionId.POTION_SHAPED_ROCK : 2
+    }
 
 # information bonus: see sts2_MCTS._information_value
 INFO_SIGMA = 0.05               # spread of the outcomes' values (reward units) at which a chance node earns 76% of the largest bonus (tanh(1))
@@ -176,6 +193,7 @@ class sts2_MCTS:
     _table : dict      # transposition table: state_key -> node, one per search
     _expected_total_hp : int
     _starting_hp : int
+    _starting_max_hp : int
     _search_config : SearchConfig
     _num_sims: int = 0
     _info_cap : float = 0.0      # largest information bonus, in reward units
@@ -199,6 +217,7 @@ class sts2_MCTS:
             # re-calculate expected fight hp
             self._expected_total_hp = self._calculate_expected_total_hp(combat_state)
             self._starting_hp = combat_state.player.current_hp
+            self._starting_max_hp = combat_state.player.max_hp
 
         inherited = self._root_node.visits
         hp_ratio = max(0.1, min(1.0, combat_state.player.current_hp / max(1, self._starting_hp)))
@@ -529,9 +548,17 @@ class sts2_MCTS:
         current_hp = combat_state.player.current_hp
         num_turns = combat_state.turn_number
         won = current_hp > 0 and all(e.is_minion or e.current_hp <= 0 for e in combat_state.enemies)
-        effective_hp = current_hp + POTION_BONUS*len(combat_state.player.potions)
+        effective_hp = current_hp
+        max_hp_delta = combat_state.player.max_hp - self._starting_max_hp
         # if won fight: outcome is best max hp with slight bias towards less turns
         if won:
+            # add potion bonus
+            for potion in combat_state.player.potions:
+                if potion.potion_id in POTION_BONUS:
+                    effective_hp += POTION_BONUS[potion.potion_id]
+                else:
+                    effective_hp += DEFAULT_POTION_BONUS
+            effective_hp += MAX_HP_SCALING*max_hp_delta
             hp_ratio = effective_hp/self._starting_hp
             outcome = (WIN_BONUS - HP_SCALE*(1.0-math.sqrt(hp_ratio)))*(GAMMA**num_turns) + WIN_PREMIUM
         # lost or unfinished: minimize enemy effective HP
@@ -672,6 +699,8 @@ def backpropagate(path : list[sts2_Node], result : float, bonuses : list[float] 
         node.visits += 1
 
 def rollout_policy(c : CombatSimulator, actions, policy : RolloutPolicy):
+    # rollouts never drink potions (every policy): a potion is only used by a move the tree chose, so a kept one keeps its bonus
+    actions = [a for a in actions if a["action"] != "use_potion"] or actions
     if len(actions) == 0:
         return None
     if len(actions) == 1:   

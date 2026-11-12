@@ -321,7 +321,7 @@ def test_damage_taken_counts_blocked_and_unblocked_damage():
 
 def test_every_colorless_card_has_a_play_function_and_a_table_entry():
     from sts2_lite.card import COLORLESS_CARDS, GET_CARD_FUNCTION
-    assert len(COLORLESS_CARDS) == 50
+    assert len(COLORLESS_CARDS) == 51
     for card_id in COLORLESS_CARDS:
         assert card_id in GET_CARD_FUNCTION
         assert Card.create_generated(card_id).card_id == card_id

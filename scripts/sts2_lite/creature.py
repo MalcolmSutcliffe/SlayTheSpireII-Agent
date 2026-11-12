@@ -43,7 +43,19 @@ class Creature:
         s = self.status.get(status_id)
         return s.amount if s is not None else 0
 
+    def _buffered(self) -> bool:
+        """BufferPower: the next HP loss does not happen, and the Buffer is spent."""
+        buffer = self.status.get(StatusId.BUFFER)
+        if buffer is None:
+            return False
+        buffer.amount -= 1
+        if buffer.amount <= 0:
+            del self.status[StatusId.BUFFER]
+        return True
+
     def lose_hp(self, hp_loss : int):
+        if hp_loss > 0 and StatusId.BUFFER in self.status and self._buffered():
+            return
         if hp_loss > 0 and self.relics:
             hp_loss = modify_hp_loss(self, hp_loss)
         if hp_loss > 0:
@@ -174,6 +186,8 @@ class Creature:
             if self.status[StatusId.SLIPPERY].amount == 0:
                 del self.status[StatusId.SLIPPERY]
         
+        if StatusId.BUFFER in self.status and damage > 0 and self._buffered():
+            return
         if self.relics:
             damage = modify_hp_loss(self, damage)
             if damage <= 0:

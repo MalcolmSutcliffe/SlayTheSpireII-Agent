@@ -100,6 +100,7 @@ def test_rollouts_finish_and_are_reproducible_under_a_seed(policy):
         root = sts2_DeterministicNode(None, draw_fight(), None)
         mcts._expected_total_hp = mcts._calculate_expected_total_hp(root.state)
         mcts._starting_hp = root.state.player.current_hp
+        mcts._starting_max_hp = root.state.player.max_hp
         results.append([mcts._simulate_combat_rollout(root) for _ in range(5)])
     assert results[0] == results[1]
     assert all(-1.0 <= r <= mcts_module.REWARD_SPAN for r in results[0])

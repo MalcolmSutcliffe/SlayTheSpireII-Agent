@@ -11,6 +11,7 @@ from sts2_lite.card import Card, CardId, CardType, CardKeyword, CONFUSED_MAX_COS
 BASIC_ATTACK_COSTS = {CardId.STRIKE_IRONCLAD: 1, CardId.BASH: 2}      # the starter Attacks are not in the generated-card table
 from sts2_lite.status import StatusInstance, StatusId, INSTANCED
 from sts2_lite.relic import RelicId, RelicInstance, strength_received, lizard_tail_revive, hand_draw_bonus, blocks_draw
+from sts2_lite.potion import Potion, PotionId, DEFAULT_POTION_SLOTS, FAIRY_HEAL
 
 GHOST_SEED_CARDS = frozenset({CardId.STRIKE_IRONCLAD, CardId.DEFEND_IRONCLAD})     # Basic rarity, Strike or Defend tag
 
@@ -30,6 +31,9 @@ class Player(Creature):
     known_top : int         # how many cards at the end of draw_pile (the top) the agent knows the identity and order of
     cards_exhausted_this_turn : int
     gold : int              # Player.Gold; spent in combat by Seal of Gold
+    potions : list[Potion]  # the potions held, each with the slot the game keeps it in
+    potion_slots : int      # how many the player can carry (Entropic Brew fills the free ones)
+    extra_turn_pending : bool       # Ambergris: an extra turn is taken when this one ends
 
     def __init__(self):
         super().__init__()
@@ -52,6 +56,9 @@ class Player(Creature):
         self.block_play_gains = 0         # gains made by that play
         self.cards_exhausted_this_turn = 0
         self.gold = 0
+        self.potions = []
+        self.potion_slots = DEFAULT_POTION_SLOTS
+        self.extra_turn_pending = False
         self.binding = False            # Chains of Binding is binding the cards drawn (the player's turn)
         self.bound_cards = 0            # cards bound so far this turn
         self.bound_played = False       # a Bound card has been played this turn: no other can be
@@ -64,6 +71,9 @@ class Player(Creature):
         pl.current_hp = player["hp"]
         pl.block = player["block"]
         pl.gold = player.get("gold", 0)
+        pl.potions = [Potion(potion_id, p.get("slot", i)) for i, p in enumerate(player.get("potions") or [])
+                      if (potion_id := PotionId.from_game_id(p.get("id"))) is not None]
+        pl.potion_slots = max(player.get("potion_slots", DEFAULT_POTION_SLOTS), 1 + max((p.slot for p in pl.potions), default=-1))
         pl.is_minion = False
         pl.status = {}
         for s in player["status"]:
@@ -190,6 +200,9 @@ class Player(Creature):
         for card in player.discard_pile:
             new_pl.discard_pile.append(card)
         new_pl.exhaust_pile = list(player.exhaust_pile)
+        new_pl.potions = list(player.potions)           # a Potion never changes
+        new_pl.potion_slots = player.potion_slots
+        new_pl.extra_turn_pending = player.extra_turn_pending
         new_pl.relics = {relic_id: RelicInstance.deepcopy(relic) for relic_id, relic in player.relics.items()}
         new_pl.cards_drawn = player.cards_drawn
         new_pl.unknown_draws = player.unknown_draws
@@ -238,7 +251,12 @@ class Player(Creature):
         if self.returning:
             self.return_played_cards()
         extra_draw = self.status.pop(StatusId.DRAW_CARDS_NEXT_TURN, None)       # Relax: part of the hand draw
-        self.draw_cards(max(0, (5 + hand_draw_bonus(self) if self.relics else 5) + (extra_draw.amount if extra_draw else 0) - self.status_amount(StatusId.MIND_ROT)), from_hand_draw=True)
+        clarity = self.status.get(StatusId.CLARITY_EXTRACT)     # Clarity Extract: 1 more card for a few turns
+        if clarity is not None:
+            clarity.amount -= 1
+            if clarity.amount <= 0:
+                del self.status[StatusId.CLARITY_EXTRACT]
+        self.draw_cards(max(0, (5 + hand_draw_bonus(self) if self.relics else 5) + (extra_draw.amount if extra_draw else 0) + (1 if clarity else 0) - self.status_amount(StatusId.MIND_ROT)), from_hand_draw=True)
 
         if StatusId.CRIMSON_MANTLE in self.status:
             self.lose_hp(max(1, self.crimson_mantle_plays))
@@ -277,9 +295,20 @@ class Player(Creature):
         super().apply_status(status, amount, bypass_artifact)
 
     def die(self):
+        if self.potions and self._fairy_revive():
+            return
         if self.relics and lizard_tail_revive(self):
             return
         super().die()
+
+    def _fairy_revive(self) -> bool:
+        """Fairy in a Bottle: instead of dying the potion is used up and the player is healed to 30% of Max HP (assumed to come before Lizard Tail)."""
+        fairy = next((p for p in self.potions if p.potion_id == PotionId.FAIRY_IN_A_BOTTLE), None)
+        if fairy is None:
+            return False
+        self.potions.remove(fairy)
+        self.current_hp = max(1, int(self.max_hp * FAIRY_HEAL))
+        return True
 
     def draw_cards(self, num_cards : int, from_hand_draw : bool = False):
         for i in range(num_cards):

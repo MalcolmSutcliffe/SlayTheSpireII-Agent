@@ -47,6 +47,11 @@ def act(action, game_state=None, picking_more=False):
     """`picking_more`: the sim still waits for a pick after this action, so the screen must not be confirmed yet."""
     if action["action"] == "end_turn":
             subprocess.run(["cli-anything-sts2", "end-turn"])
+    if action["action"] == "use_potion":
+        command = ["cli-anything-sts2", "use-potion", str(action["slot"])]        # the command's format is a guess: check it once on a real run
+        if "target_name" in action:
+            command += ["--target", action["target_name"]]
+        subprocess.run(command)
     if action["action"] == "choose_card":
         # both kinds of screen number only the selectable cards, in the game's own order: find the card there
         index = game_index(action, game_state["cards"], skip=picked_on_screen)
@@ -166,6 +171,8 @@ def describe_action(action : dict, combat_state : CombatState) -> str:
         card = hand[action["card_index"]] if action["card_index"] < len(hand) else None
         name = card.card_id.name + ("+" if card.is_upgraded else "") if card is not None else f"card {action['card_index']}"
         return f"{name} -> {action['target_name']}" if "target_name" in action else name
+    if kind == "use_potion":
+        return f"drink {action.get('potion_id', action['slot'])}" + (f" -> {action['target_name']}" if "target_name" in action else "")
     if kind == "choose_card":
         return f"pick {action['card_id']}{'+' if action.get('is_upgraded') else ''} ({action.get('pile', 'hand')})"
     return kind
@@ -411,8 +418,9 @@ def potions_of(state : dict) -> list:
 
 def verify_step(batch : dict, game_state : dict, actual : CombatState, log_path : str) -> bool:
     """Compare the state the sim predicted after the batch of actions with the one the game now reports."""
-    if potions_of(batch["before"]) != potions_of(game_state):
-        print("a potion was used during this step (the sim does not play potions): not compared")
+    drank = any(a["action"] == "use_potion" for a in batch["actions"])
+    if potions_of(batch["before"]) != potions_of(game_state) and not drank:
+        print("a potion changed during this step without the agent using one (Fairy in a Bottle?): not compared")
         return True
     if batch.get("unpredictable"):
         print("a card played a random card from the draw pile that the agent could not see (Havoc): not compared")
@@ -607,7 +615,7 @@ def run_agent(agent : BaseAgent, step : bool = False, verify : bool = True, log_
             if action["action"] == "end_turn":
                 ended = {"round": game_state.get("round"), "time": time.time()}
             act(action, game_state, picking_more)
-            if action["action"] in ("play_card", "end_turn") and not wait_for_change(before):
+            if action["action"] in ("play_card", "end_turn", "use_potion") and not wait_for_change(before):
                 print("the game did not react to", action)
                 log_mismatch(log_path, batch, get_state(), [f"the game ignored {action}, which the sim treats as legal"],
                              previous, None)

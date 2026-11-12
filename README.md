@@ -52,7 +52,6 @@ Card pools (multiplayer ignored)
     Not implemented:
     - [ ] Strategem (Sim doesnt have events in between turns)
     - [ ] Splash (need other character card pools)
-    - [ ] Alchemize (potions not modeled yet)
  - [x] Curse
     Not implemented:
     - [ ] Enthralled (Enforcing play order not implemented in engine)
@@ -68,11 +67,9 @@ Card pools (multiplayer ignored)
 
 Add In-combat relics
  - [x]
-    - Missing:
-    - Potion relics
 
 Add potions
- - [ ]
+ - [x]
 
 Add enchantments
  - [ ]
@@ -97,7 +94,7 @@ Add enchantments
 
  
  Waiting on engine:
- - [ ] Potion use
+ - [x] Potion use
  - [ ] end of act healing
 
  ## Out of combat actions

@@ -35,6 +35,7 @@ def primed(state, mcts=None, starting_hp=None):
     mcts = mcts or new_mcts()
     mcts._expected_total_hp = mcts._calculate_expected_total_hp(state)
     mcts._starting_hp = starting_hp or state.player.current_hp
+    mcts._starting_max_hp = state.player.max_hp
     return mcts
 
 @pytest.fixture(autouse=True)

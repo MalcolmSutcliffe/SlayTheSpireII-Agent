@@ -132,6 +132,17 @@ class StatusId(Enum):
     ASLEEP = auto()
     THIEVERY = auto()
     HEIST = auto()
+    # potions (names assumed: the bridge's ids for these are not captured yet)
+    REGEN = auto()                  # Regen Potion: heals `amount` at the end of the player's turn, then drops by 1
+    DEMISE = auto()                 # Powdered Demise: the enemy loses `amount` HP at the end of each of its turns
+    BUFFER = auto()                 # Lucky Tonic: the next time HP would be lost it is not
+    DUPLICATOR = auto()             # Duplicator: the next card this turn is played an extra time
+    GIGANTIFICATION = auto()        # Gigantification Potion: the next Attack deals triple damage
+    CLARITY_EXTRACT = auto()        # Clarity Extract: 1 extra card drawn at the start of each of the next `amount` turns
+    RADIANT_TINCTURE = auto()       # Radiant Tincture: 1 extra Energy at the start of each of the next `amount` turns
+    REPTILE_TRINKET = auto()        # Reptile Trinket: the Strength it gave this turn, lost when the turn ends
+    FLEX_POTION = auto()            # Flex Potion: the Strength it gave is lost when the turn ends
+    SPEED_POTION = auto()           # Speed Potion: the Dexterity it gave is lost when the turn ends
 
 INFESTED_SPAWNS = 4
 CRAB_RAGE_STRENGTH, CRAB_RAGE_BLOCK = 6, 99
@@ -263,14 +274,25 @@ STATUS_BEAVIOURS : dict[StatusId, StatusBehaviour] = {
     StatusId.WITHERING_PRESENCE : StatusBehaviour.STATIC,     # Aeonglass: cards left to play until a Wither
     StatusId.HIGH_VOLTAGE : StatusBehaviour.STATIC,     # Zapbot: Strength at the end of every enemy turn
     StatusId.POSSESS_SPEED : StatusBehaviour.STATIC,     # The Forgotten: gives back the Dexterity it took when it dies
-    StatusId.ENTROPY : StatusBehaviour.STATIC,}
+    StatusId.ENTROPY : StatusBehaviour.STATIC,
+    StatusId.REGEN : StatusBehaviour.STATIC,            # lowered by 1 each time it heals (_regen_on_end_turn)
+    StatusId.DEMISE : StatusBehaviour.STATIC,
+    StatusId.BUFFER : StatusBehaviour.STATIC,           # spent by the next HP loss (Creature.lose_hp, _lose_hp_from_damage)
+    StatusId.DUPLICATOR : StatusBehaviour.STATIC,       # spent by the next card (Card._extra_plays), or when the turn ends
+    StatusId.GIGANTIFICATION : StatusBehaviour.STATIC,  # spent when the next Attack has been played
+    StatusId.CLARITY_EXTRACT : StatusBehaviour.STATIC,  # turns left; Player.turn_start
+    StatusId.RADIANT_TINCTURE : StatusBehaviour.STATIC, # turns left; CombatSimulator._start_player_turn
+    StatusId.REPTILE_TRINKET : StatusBehaviour.STATIC,
+    StatusId.FLEX_POTION : StatusBehaviour.STATIC,      # the Strength is returned when the owner's turn ends
+    StatusId.SPEED_POTION : StatusBehaviour.STATIC,}
 
 DEBUFFS = frozenset({StatusId.WEAK, StatusId.VULNERABLE, StatusId.FRAIL, StatusId.SHRINK,
                      StatusId.CONSTRICT, StatusId.TANGLED, StatusId.RINGING,
                      StatusId.NO_DRAW, StatusId.NO_ENERGY_GAIN, StatusId.MANGLE, StatusId.CONFUSED,
                      StatusId.NO_BLOCK, StatusId.THE_GAMBIT, StatusId.DARK_SHACKLES,
                      StatusId.TENDER, StatusId.TAINTED, StatusId.SURROUNDED, StatusId.DISINTEGRATION, StatusId.MIND_ROT,
-                     StatusId.SLOTH, StatusId.WASTE_AWAY, StatusId.HEX, StatusId.DAMPEN, StatusId.CHAINS_OF_BINDING, StatusId.SMOGGY})
+                     StatusId.SLOTH, StatusId.WASTE_AWAY, StatusId.HEX, StatusId.DAMPEN, StatusId.CHAINS_OF_BINDING, StatusId.SMOGGY,
+                     StatusId.DEMISE})
 
 def is_debuff(status_id : StatusId, amount : int) -> bool:
     return status_id in DEBUFFS or (status_id in (StatusId.STRENGTH, StatusId.DEXTERITY) and amount < 0)
@@ -347,11 +369,30 @@ class StatusInstance:
 # Event handlers: handler(combat, owner, amount, *event_args)
 # ---
 def _ritual_on_enemy_turn_end(combat : CombatSimulator, owner : Creature, amount : int):
+    if not hasattr(owner, "enemy_id"):
+        return              # the player's Ritual (Mazaleth's Gift) works when the player's turn ends
     inst = owner.status[StatusId.RITUAL]
     if inst.records:        # RitualPower.WasJustAppliedByEnemy: the turn it was applied on does not count
         inst.records = []
         return
     owner.apply_status(StatusId.STRENGTH, amount)
+
+def _ritual_on_end_turn(combat : CombatSimulator, owner : Creature, amount : int):
+    if not hasattr(owner, "enemy_id"):
+        owner.apply_status(StatusId.STRENGTH, amount)
+
+def _regen_on_end_turn(combat : CombatSimulator, owner : Creature, amount : int):
+    owner.current_hp = min(owner.max_hp, owner.current_hp + amount)
+    owner.status[StatusId.REGEN].amount -= 1
+    if owner.status[StatusId.REGEN].amount <= 0:
+        del owner.status[StatusId.REGEN]
+
+def _demise_on_enemy_turn_end(combat : CombatSimulator, owner : Creature, amount : int):
+    if hasattr(owner, "enemy_id") and owner.current_hp > 0:
+        owner.lose_hp(amount)           # HP loss, not damage: block does not stop it
+
+def _duplicator_on_player_turn_ended(combat : CombatSimulator, owner : Creature, amount : int):
+    del owner.status[StatusId.DUPLICATOR]
 
 def _rampart_on_before_player_turn(combat : CombatSimulator, owner : Creature, amount : int):
     # RampartPower.AfterSideTurnStart: the Turret Operators behind the shield gain unpowered block
@@ -795,6 +836,10 @@ STATUS_HANDLERS : dict[tuple[StatusId, EventType], Callable] = HandlerTable({
     (StatusId.WITHERING_PRESENCE, EventType.CARD_PLAYED) : _withering_presence_on_card_played,
     (StatusId.INFERNO, EventType.PLAYER_TURN_START) : _inferno_on_turn_start,
     (StatusId.RITUAL, EventType.ENEMY_TURN_END) : _ritual_on_enemy_turn_end,
+    (StatusId.RITUAL, EventType.END_TURN) : _ritual_on_end_turn,
+    (StatusId.REGEN, EventType.END_TURN) : _regen_on_end_turn,
+    (StatusId.DEMISE, EventType.ENEMY_TURN_END) : _demise_on_enemy_turn_end,
+    (StatusId.DUPLICATOR, EventType.PLAYER_TURN_ENDED) : _duplicator_on_player_turn_ended,
     (StatusId.TERRITORIAL, EventType.ENEMY_TURN_END) : _territorial_on_enemy_turn_end,
     (StatusId.SHRINK, EventType.CREATURE_KILLED) : _shrink_on_creature_killed,
     (StatusId.SLOW, EventType.CARD_PLAYED) : _slow_on_card_played,

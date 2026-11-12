@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 # cards whose result depends on something the bridge hides (the draw order) or on the RNG: what they
 # generate or play cannot be predicted, so their mismatches are tagged rather than trusted
 RANDOM_CARDS = frozenset({CardId.INFERNAL_BLADE, CardId.STOKE, CardId.HAVOC, CardId.SEEKER_STRIKE, CardId.JACKPOT, CardId.JACK_OF_ALL_TRADES,
-                          CardId.CATASTROPHE, CardId.BEAT_DOWN, CardId.ANOINTED, CardId.DISCOVERY, CardId.HIDDEN_GEM,
+                          CardId.CATASTROPHE, CardId.BEAT_DOWN, CardId.ANOINTED, CardId.DISCOVERY, CardId.HIDDEN_GEM, CardId.ALCHEMIZE,
                           CardId.CINDER, CardId.THRASH, CardId.METAMORPHOSIS})       # Cinder / Thrash exhaust a random card
 # random only when not upgraded: the upgrade lets the player choose the card to exhaust
 RANDOM_UNLESS_UPGRADED = frozenset({CardId.TRUE_GRIT})

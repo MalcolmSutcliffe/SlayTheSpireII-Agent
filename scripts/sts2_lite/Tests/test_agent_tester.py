@@ -589,3 +589,14 @@ def test_main_refuses_a_run_folder_that_has_data(tester, monkeypatch, tmp_path):
     (tmp_path / "old" / "fights.jsonl").write_text("{}\n")
     with pytest.raises(SystemExit):
         run_main(tester, monkeypatch, tmp_path, ["old", "--fights"])
+
+
+def test_potion_actions_are_described_and_sent(tester, monkeypatch):
+    action = {"action": "use_potion", "slot": 1, "potion_id": "FIRE_POTION", "target": 0, "target_name": "LEAF_SLIME_M_0"}
+    assert tester.describe_action(action, None) == "drink FIRE_POTION -> LEAF_SLIME_M_0"
+    assert tester.describe_action({"action": "use_potion", "slot": 0, "potion_id": "BLOCK_POTION"}, None) == "drink BLOCK_POTION"
+    sent = []
+    monkeypatch.setattr(tester.subprocess, "run", lambda command, *a, **k: sent.append(command))
+    tester.act(action)
+    tester.act({"action": "use_potion", "slot": 0, "potion_id": "BLOCK_POTION"})
+    assert sent == [["cli-anything-sts2", "use-potion", "1", "--target", "LEAF_SLIME_M_0"], ["cli-anything-sts2", "use-potion", "0"]]

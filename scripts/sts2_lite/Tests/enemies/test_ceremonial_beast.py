@@ -122,7 +122,7 @@ def test_only_one_card_can_be_played_while_ringing():
     sim.play_card(index_of(cs, "DEFEND_IRONCLAD"), 0)
     with pytest.raises(IllegalActionError):
         sim.play_card(index_of(cs, "STRIKE_IRONCLAD"), 0)
-    assert all(a["action"] == "end_turn" for a in sim.get_available_actions())
+    assert not any(a["action"] == "play_card" for a in sim.get_available_actions())      # potions may still be usable
 
 def test_cards_are_unrestricted_without_ringing():
     cs = beast("crush")
@@ -158,7 +158,7 @@ def test_captured_mid_turn_after_the_one_card_is_still_locked():
     cs = beast("stomp_card_played")
     sim = CombatSimulator(cs)
     assert cs.cards_played == 1
-    assert all(a["action"] == "end_turn" for a in sim.get_available_actions())
+    assert not any(a["action"] == "play_card" for a in sim.get_available_actions())      # potions may still be usable
 
 def test_capture_before_the_card_is_not_locked():
     cs = beast("stomp")
