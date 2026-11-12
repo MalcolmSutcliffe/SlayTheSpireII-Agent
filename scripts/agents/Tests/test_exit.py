@@ -75,7 +75,39 @@ def test_identical_rewards_do_not_break_the_variance():
     mcts = searcher((100, r, 0.0), (100, r, 0.0))
     for c in mcts._root_node.children:
         c.total_reward_squared = c.visits * r * r      # rounding can make Q - S^2 / n slightly negative
-    assert exit_check(mcts) in (True, False)
+    assert exit_check(mcts) in (None, "BEST", "TIE")
 
 def test_exit_thresholds_are_sane():
     assert Z_SCORE > 1.5 and 0 < EPSILON < 0.1
+
+
+# ---------------------------------------------------------------- why the search stopped
+def test_a_clear_winner_exits_as_best():
+    assert exit_check(searcher((300, 0.8, 0.3), (150, 0.2, 0.3))) == "BEST"
+
+def test_a_single_child_exits_as_one_child():
+    assert exit_check(searcher((50, 0.5, 0.3))) == "ONE_CHILD"
+
+def test_moves_that_are_equally_good_wins_exit_as_a_tie():
+    """Both lines win (a win scores well above 0) and cannot be told apart: either is fine."""
+    assert exit_check(searcher((100, 30.0, 0.0), (100, 30.0, 0.0))) == "TIE"
+
+def test_moves_that_are_equally_lost_do_not_exit():
+    """Both lines lose with the same score: that is not confidence, it is a search that has found nothing yet."""
+    assert exit_check(searcher((100, -0.5, 0.0), (100, -0.5, 0.0))) is None
+    assert exit_check(searcher((100, -0.5, 0.001), (100, -0.5, 0.001))) is None
+
+def test_moves_that_barely_differ_in_a_loss_do_not_exit_as_a_tie():
+    assert exit_check(searcher((100, -0.50, 0.01), (100, -0.51, 0.01))) != "TIE"
+
+def children_visits(n, sims):
+    """A root of n children, the first two clearly apart and well visited."""
+    return searcher((60, 0.9, 0.1), (50, 0.1, 0.1), *[(40, 0.1, 0.1)] * (n - 2), sims=sims)
+
+def test_more_moves_need_more_sims_before_the_search_may_exit():
+    assert exit_check(children_visits(4, sims=200)) == "BEST"
+    assert exit_check(children_visits(20, sims=700)) is None        # 20 moves: 40 sims each = 800
+    assert exit_check(children_visits(20, sims=800)) == "BEST"
+
+def test_few_moves_still_only_need_the_minimum_sims():
+    assert exit_check(children_visits(2, sims=MIN_SIMS)) == "BEST"

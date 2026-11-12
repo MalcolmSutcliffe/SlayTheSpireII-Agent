@@ -54,7 +54,9 @@ def act(action, game_state=None, picking_more=False):
         subprocess.run(command)
     if action["action"] == "choose_card":
         # both kinds of screen number only the selectable cards, in the game's own order: find the card there
-        index = game_index(action, game_state["cards"], skip=picked_on_screen)
+        # the in-combat hand screen drops a picked card from its list and renumbers the rest, so earlier picks must not be skipped there;
+        # a pile screen keeps its list, and the picked indices stay
+        index = game_index(action, game_state["cards"], skip=picked_on_screen if action.get("pile", "hand") != "hand" else ())
         if index is None:
             print("card", action["card_id"], "is not in the game's list - pick it in the game")
             return
@@ -242,6 +244,13 @@ def log_decision(path : str | None, game_state : dict, combat_state : CombatStat
         record["stopped_by"] = stats.get("exit_reason")
         record["reused"] = stats.get("reused")                  # the tree of the last search was kept (and how many visits it came with)
         record["inherited_visits"] = stats.get("inherited_visits")
+        order = stats.get("order")                              # another order of the turn's plain plays was tried (None: nothing to compare)
+        if order is not None:
+            record["order"] = {k: order[k] for k in ("replaced", "plays", "distinct", "error") if k in order}
+            best = max(order.get("compared", []), key=lambda c: c["gain"], default=None)
+            if best is not None:
+                record["order"]["best_gain"] = round(best["gain"], 4)
+                record["order"]["best_first"] = describe_action(best["first"], combat_state)
         record["moves"] = [{"move": describe_action(c["action"], combat_state), "visits": c["visits"],
                             "mean": round(c["q"], 4)} for c in stats.get("children", [])]
     elif searcher is not None and getattr(searcher, "_root_node", None) is not None:
@@ -283,7 +292,7 @@ def fight_start(game_state : dict) -> dict:
         "start_hp": player.get("hp"), "max_hp": player.get("max_hp"), "start_time": datetime.now().isoformat(timespec="seconds"),
         "end_hp": player.get("hp"), "rounds": game_state.get("round"), "hp_at_round_start": {},
         "decisions": 0, "search_seconds": 0.0, "sims": 0, "stopped_by": {}, "max_tree_depth": 0, "mismatches": 0, "potions_used": 0,
-        "_potions": len(game_state.get("potions") or []),
+        "_potions": len(potions_of(game_state)),
     }
 
 def fight_update(fight : dict, game_state : dict, record : dict | None = None, mismatched : bool = False):
@@ -295,7 +304,7 @@ def fight_update(fight : dict, game_state : dict, record : dict | None = None, m
     if rnd is not None:
         fight["rounds"] = max(fight["rounds"] or 0, rnd)
         fight["hp_at_round_start"].setdefault(str(rnd), player.get("hp"))
-    potions = len(game_state.get("potions") or [])
+    potions = len(potions_of(game_state))
     if potions < fight["_potions"]:
         fight["potions_used"] += fight["_potions"] - potions
     fight["_potions"] = potions

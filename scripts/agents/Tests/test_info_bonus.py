@@ -154,15 +154,15 @@ def test_without_the_bonus_the_better_valued_strike_is_played():
     assert decide(0.0)[0] == "STRIKE_IRONCLAD"
 
 def test_with_the_bonus_the_draw_is_played_first():
-    chosen, _ = decide(5.0)                      # a cap of 0.05, above the 0.04 the draw is behind
+    chosen, _ = decide(5.0)                      # a cap of 0.1 (5 HP of 50), above the 0.04 the draw is behind
     assert chosen == "POMMEL_STRIKE"
 
 def test_a_bonus_that_is_too_small_does_not_flip_the_choice():
-    """The bonus is bounded: 2 HP gives a cap of 0.02, which cannot cover the 0.04 gap."""
-    assert decide(2.0)[0] == "STRIKE_IRONCLAD"
+    """The bonus is bounded: 1 HP gives a cap of 0.02, which cannot cover the 0.04 gap."""
+    assert decide(1.0)[0] == "STRIKE_IRONCLAD"
 
 def test_half_an_hp_adds_at_most_half_an_hp_of_reward_to_the_draw():
-    """cap = 0.5 / (2 * sqrt(hp ratio) * starting hp) = 0.005 for a full-health 50 HP player."""
+    """cap = 0.5 / starting hp = 0.01 for a 50 HP player."""
     rng.seed(0)
     cs = draw_or_strike()
     with scripted():
@@ -171,9 +171,30 @@ def test_half_an_hp_adds_at_most_half_an_hp_of_reward_to_the_draw():
     chance = next(c for c in m._root_node.children if c.is_chance_node and c.action["action"] == "play_card")
     below = sum(o.total_reward for o in chance.outcomes.values()) / sum(o.visits for o in chance.outcomes.values())
     added = chance.total_reward / chance.visits - below
-    assert m._info_cap == pytest.approx(0.005)
-    assert 0.0 < added <= 0.005 + 1e-9
+    assert m._info_cap == pytest.approx(0.01)
+    assert 0.0 < added <= 0.01 + 1e-9
     assert decide(0.5)[0] == "STRIKE_IRONCLAD"           # and it does not close a 0.04 gap
+
+def test_an_hp_of_bonus_is_an_hp_of_win_reward():
+    """A win is rated linearly in HP, so the cap for `info_bonus` HP is the reward of that many HP more at the end of a win."""
+    def win(hp):
+        cs = make_state([])
+        cs.enemies[0].current_hp = 0
+        cs.player.current_hp = hp
+        return cs
+    mcts = sts2_MCTS()
+    mcts.monte_carlo_tree_search(draw_or_strike(), SearchConfig(max_sims=100, early_exit=False, reuse_tree=False, info_bonus=1.0))
+    one_hp = mcts._rate_outcome(win(41)) - mcts._rate_outcome(win(40))
+    assert mcts._info_cap == pytest.approx(one_hp)
+
+@pytest.mark.parametrize("hp", [10, 50, 80])
+def test_the_cap_is_the_bonus_over_the_starting_hp(hp):
+    cs = draw_or_strike()
+    cs.player.max_hp = 80
+    cs.player.current_hp = hp
+    mcts = sts2_MCTS()
+    mcts.monte_carlo_tree_search(cs, SearchConfig(max_sims=100, early_exit=False, reuse_tree=False, info_bonus=0.5))
+    assert mcts._info_cap == pytest.approx(0.5 / hp)
 
 def test_the_outcomes_own_values_stay_free_of_the_bonus():
     _, _ = decide(5.0)

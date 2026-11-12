@@ -112,7 +112,8 @@ def test_uct_uses_the_parent_the_search_came_through():
     low = mcts.get_uct_score(shared, first)
     high = mcts.get_uct_score(shared, second)
     assert high > low
-    assert high == pytest.approx(0.5 + mcts._search_config.exploration * mcts_module.EXPLORATION_SCALE * math.sqrt(math.log(100) / 10))
+    scale = (mcts_module.MIN_REWARD_SPAN / 2.0) ** mcts_module.EXPLORATION_POWER       # no rollout has run: the span is the minimum
+    assert high == pytest.approx(0.5 + mcts._search_config.exploration * scale * math.sqrt(math.log(100) / 10))
     assert mcts.get_uct_score(shared) == low            # default: the first parent
 
 def test_uct_with_a_parent_of_zero_visits_is_finite():

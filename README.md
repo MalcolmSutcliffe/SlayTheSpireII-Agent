@@ -87,10 +87,11 @@ Add enchantments
  - [x] Identical move culling
  - [x] Benchmark harness. Create a fixed set of fights to play, use this to fine tune constants.
  - [x] Tied move paired RNG rollout decision (if two moves are tied at the end of search, use seeded rng to minimize noise between them)
+ - [x] Check card order permuatations under stricter bounds to differentiate small differences in turn order
  - [ ] Improve sim speed
  - [ ] Root parallelization
  - [ ] Neural network rollout policy
- - [ ] Seeded rollouts to reduce noise
+ - [x] Seeded rollouts to reduce noise -> greedy heuristic rollout that is deterministic
 
  
  Waiting on engine:

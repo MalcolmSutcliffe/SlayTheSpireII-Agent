@@ -34,8 +34,16 @@ def test_the_potion_is_used_when_it_is_the_only_way_to_win(seed):
 
 @pytest.mark.parametrize("seed", range(3))
 def test_the_potion_is_used_when_it_is_the_only_way_to_win_with_a_full_hand(seed):
-    cs = scenario([strike(), defend(), defend()], hp=1, enemy_hp=15, damage=8)
+    """At 1 HP, against 20 damage the hand cannot block (2 Defends = 10) or outrun (one Strike = 6 of 15 HP): only the potion wins."""
+    cs = scenario([strike(), defend(), defend()], hp=1, enemy_hp=15, damage=20)
     assert drinks(first_move(cs, seed))
+
+@pytest.mark.parametrize("seed", range(5))
+def test_the_potion_is_kept_when_blocking_wins_without_it(seed):
+    """The same hand against 8 damage: Defend, Defend, Strike every turn takes 3 turns and loses no HP, so the potion (worth 12 HP) stays.
+    Taking it would be a sure win, but a win with the potion kept is worth more, even at 1 HP."""
+    cs = scenario([strike(), defend(), defend()], hp=1, enemy_hp=15, damage=8)
+    assert not drinks(first_move(cs, seed))
 
 
 # 2. A win without the potion: keep it, every time

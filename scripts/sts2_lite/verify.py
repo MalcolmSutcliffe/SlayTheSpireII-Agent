@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 import re
 
-from sts2_lite.card import CardId, CardType, COLORLESS_CARDS, ZERO_COST_POOL
+from sts2_lite.card import CardId, CardType, COLORLESS_CARDS, ZERO_COST_POOL, STOKE_POOL
 from sts2_lite.enemy_moves import HATCHLING_HP, SPAWN_HP, TOUGH_ASCENSION
 from sts2_lite.status import StatusId
 
@@ -169,10 +169,10 @@ def compare(predicted : CombatState, actual : CombatState, random_step : bool = 
         # a random exhaust (Cinder, Havoc, True Grit) took a different card: the same deck, split differently between the piles
         diffs = [d for d in diffs if not d.startswith(("cards owned", "exhaust pile"))]
     if random_step and any(d.startswith("cards owned") for d in diffs):
-        # Jack of All Trades / Jackpot generate random colorless cards: the same number of cards, but a different pick
+        # Jack of All Trades / Jackpot generate random colorless cards, Stoke random Ironclad ones: the same number of cards, but a different pick
         sim_owned, game_owned = everything(pp), everything(ap)
         extra_cards = (sim_owned - game_owned) + (game_owned - sim_owned)
-        pool = set(COLORLESS_CARDS) | set(ZERO_COST_POOL)
+        pool = set(COLORLESS_CARDS) | set(ZERO_COST_POOL) | set(STOKE_POOL)
         if sum(sim_owned.values()) == sum(game_owned.values()) and all(CardId[name.split("[")[0]] in pool for name, _ in extra_cards):
             diffs = [d for d in diffs if not d.startswith("cards owned")]
     if random_step and predicted.energy != actual.energy:

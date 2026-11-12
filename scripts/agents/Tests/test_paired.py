@@ -75,12 +75,23 @@ def test_the_input_state_is_not_changed():
     assert before == (cs.player.current_hp, cs.energy, len(cs.player.hand), len(cs.player.draw_pile), cs.enemies[0].current_hp)
 
 def test_the_full_search_picks_the_better_block_and_reports_it():
+    """Exploration is set to 1.0 so the Defend keeps enough visits to be compared: at the default of 0.5 the search puts ~99% of its
+    visits on the Defend+ here and has no rival for the paired check to look at (see the next test)."""
     for seed in range(5):
         rng.seed(seed)
-        action, stats = sts2_MCTS().monte_carlo_tree_search(block_choice(), SearchConfig(max_sims=300, reuse_tree=False))
+        action, stats = sts2_MCTS().monte_carlo_tree_search(block_choice(), SearchConfig(max_sims=300, reuse_tree=False, exploration=1.0))
         assert action["card_index"] == 1
         assert stats["paired"]["scenarios"] == SearchConfig().paired_scenarios
         assert "child" not in stats["paired"]
+
+def test_a_search_that_is_sure_of_its_move_has_no_rival_to_compare():
+    """With nothing but a sliver of visits on the other moves (under PAIRED_VISIT_FRACTION) the paired check has nothing to do.
+    (Built on the tree: at an exploration this low a full search locks onto whichever move got ahead first, so which move it ends on,
+    and whether another gets a few visits, depends on luck and on the rollout policy.)"""
+    mcts, root = root_with_visits(block_choice(), SearchConfig(paired_scenarios=60), visits=1)
+    plus = child_for(root, "play_card", 1)
+    plus.visits = 300
+    assert mcts._paired_check(plus) is None
 
 def test_off_means_no_paired_stats():
     _, stats = sts2_MCTS().monte_carlo_tree_search(block_choice(), SearchConfig(max_sims=200, paired_scenarios=0, reuse_tree=False))
