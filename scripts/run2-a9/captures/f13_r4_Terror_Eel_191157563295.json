@@ -1,0 +1,1098 @@
+{
+ "type": "decision",
+ "decision": "combat_play",
+ "room_type": "elite",
+ "context": {
+  "act": 1,
+  "floor": 13,
+  "ascension": 9
+ },
+ "run": {
+  "act": 1,
+  "floor": 13,
+  "ascension": 9
+ },
+ "round": 4,
+ "turn": "player",
+ "is_play_phase": null,
+ "energy": 3,
+ "max_energy": 3,
+ "hand": [
+  {
+   "index": 0,
+   "id": "STRIKE_IRONCLAD",
+   "name": "Strike",
+   "type": "Attack",
+   "cost": "1",
+   "star_cost": null,
+   "description": "Deal 11 damage.",
+   "target_type": "AnyEnemy",
+   "can_play": true,
+   "unplayable_reason": null,
+   "is_upgraded": false,
+   "generated": false,
+   "enchantment": null,
+   "keywords": []
+  },
+  {
+   "index": 1,
+   "id": "STRIKE_IRONCLAD",
+   "name": "Strike",
+   "type": "Attack",
+   "cost": "1",
+   "star_cost": null,
+   "description": "Deal 11 damage.",
+   "target_type": "AnyEnemy",
+   "can_play": true,
+   "unplayable_reason": null,
+   "is_upgraded": false,
+   "generated": false,
+   "enchantment": null,
+   "keywords": []
+  },
+  {
+   "index": 2,
+   "id": "STRIKE_IRONCLAD",
+   "name": "Strike",
+   "type": "Attack",
+   "cost": "1",
+   "star_cost": null,
+   "description": "Deal 11 damage.",
+   "target_type": "AnyEnemy",
+   "can_play": true,
+   "unplayable_reason": null,
+   "is_upgraded": false,
+   "generated": false,
+   "enchantment": null,
+   "keywords": []
+  },
+  {
+   "index": 3,
+   "id": "HOWL_FROM_BEYOND",
+   "name": "Howl from Beyond",
+   "type": "Attack",
+   "cost": "3",
+   "star_cost": null,
+   "description": "Deal 21 damage to ALL enemies. At the end of your turn, if this is in your Exhaust Pile, play it.",
+   "target_type": "AllEnemies",
+   "can_play": true,
+   "unplayable_reason": null,
+   "is_upgraded": false,
+   "generated": false,
+   "enchantment": null,
+   "keywords": [
+    {
+     "name": "Exhaust",
+     "description": "Removed until the end of combat."
+    }
+   ]
+  },
+  {
+   "index": 4,
+   "id": "DEFEND_IRONCLAD",
+   "name": "Defend",
+   "type": "Skill",
+   "cost": "1",
+   "star_cost": null,
+   "description": "Gain 11 Block.",
+   "target_type": "Self",
+   "can_play": true,
+   "unplayable_reason": null,
+   "is_upgraded": false,
+   "generated": false,
+   "enchantment": null,
+   "keywords": [
+    {
+     "name": "Block",
+     "description": "Until next turn, prevents damage."
+    }
+   ]
+  }
+ ],
+ "enemies": [
+  {
+   "entity_id": "TERROR_EEL_0",
+   "combat_id": 1,
+   "name": "Terror Eel",
+   "hp": 87,
+   "max_hp": 150,
+   "block": 0,
+   "status": [
+    {
+     "id": "SHRIEK_POWER",
+     "name": "Shriek",
+     "amount": 75,
+     "type": "Debuff",
+     "description": "The first time Terror Eel's HP reaches 75 or below, it becomes Stunned.",
+     "keywords": [
+      {
+       "name": "Stun",
+       "description": "Prevent the enemy from acting on its next turn."
+      }
+     ]
+    },
+    {
+     "id": "STRENGTH_POWER",
+     "name": "Strength",
+     "amount": 1,
+     "type": "Buff",
+     "description": "Increases attack damage by 1.",
+     "keywords": []
+    }
+   ],
+   "move_id": "THRASH_MOVE",
+   "follow_up_id": "CRASH_MOVE",
+   "move_log": [
+    "CRASH_MOVE",
+    "THRASH_MOVE",
+    "CRASH_MOVE",
+    "THRASH_MOVE"
+   ],
+   "intents": [
+    {
+     "type": "Attack",
+     "base_damage": 4,
+     "hits": 3,
+     "damage": 5,
+     "total_damage": 15,
+     "label": "5x3",
+     "title": "Aggressive",
+     "description": "This enemy intends to Attack for 5 damage 3 times."
+    },
+    {
+     "type": "Buff",
+     "label": "",
+     "title": "Empower",
+     "description": "This enemy intends to use a Buff."
+    }
+   ]
+  }
+ ],
+ "player": {
+  "character": "The Ironclad",
+  "hp": 19,
+  "max_hp": 80,
+  "block": 0,
+  "energy": 3,
+  "max_energy": 3,
+  "hand": [
+   {
+    "index": 0,
+    "id": "STRIKE_IRONCLAD",
+    "name": "Strike",
+    "type": "Attack",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Deal 11 damage.",
+    "target_type": "AnyEnemy",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "generated": false,
+    "enchantment": null,
+    "keywords": []
+   },
+   {
+    "index": 1,
+    "id": "STRIKE_IRONCLAD",
+    "name": "Strike",
+    "type": "Attack",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Deal 11 damage.",
+    "target_type": "AnyEnemy",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "generated": false,
+    "enchantment": null,
+    "keywords": []
+   },
+   {
+    "index": 2,
+    "id": "STRIKE_IRONCLAD",
+    "name": "Strike",
+    "type": "Attack",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Deal 11 damage.",
+    "target_type": "AnyEnemy",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "generated": false,
+    "enchantment": null,
+    "keywords": []
+   },
+   {
+    "index": 3,
+    "id": "HOWL_FROM_BEYOND",
+    "name": "Howl from Beyond",
+    "type": "Attack",
+    "cost": "3",
+    "star_cost": null,
+    "description": "Deal 21 damage to ALL enemies. At the end of your turn, if this is in your Exhaust Pile, play it.",
+    "target_type": "AllEnemies",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "generated": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Exhaust",
+      "description": "Removed until the end of combat."
+     }
+    ]
+   },
+   {
+    "index": 4,
+    "id": "DEFEND_IRONCLAD",
+    "name": "Defend",
+    "type": "Skill",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Gain 11 Block.",
+    "target_type": "Self",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "generated": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Block",
+      "description": "Until next turn, prevents damage."
+     }
+    ]
+   }
+  ],
+  "draw_pile_count": 11,
+  "discard_pile_count": 0,
+  "exhaust_pile_count": 1,
+  "draw_pile": [
+   {
+    "index": 0,
+    "id": "STRIKE_IRONCLAD",
+    "name": "Strike",
+    "type": "Attack",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Deal 6 damage.",
+    "target_type": "AnyEnemy",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "generated": false,
+    "enchantment": null,
+    "keywords": []
+   },
+   {
+    "index": 1,
+    "id": "BARRICADE",
+    "name": "Barricade",
+    "type": "Power",
+    "cost": "3",
+    "star_cost": null,
+    "description": "Block is not removed at the start of your turn.",
+    "target_type": "Self",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "generated": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Block",
+      "description": "Until next turn, prevents damage."
+     }
+    ]
+   },
+   {
+    "index": 2,
+    "id": "EQUILIBRIUM",
+    "name": "Equilibrium",
+    "type": "Skill",
+    "cost": "2",
+    "star_cost": null,
+    "description": "Gain 13 Block. Retain your Hand this turn.",
+    "target_type": "Self",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "generated": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Retain",
+      "description": "Retained cards are not discarded at the end of turn."
+     },
+     {
+      "name": "Block",
+      "description": "Until next turn, prevents damage."
+     }
+    ]
+   },
+   {
+    "index": 3,
+    "id": "FIGHT_ME",
+    "name": "Fight Me!",
+    "type": "Attack",
+    "cost": "2",
+    "star_cost": null,
+    "description": "Deal 7 damage twice. Gain 3 Strength. The enemy gains 1 Strength.",
+    "target_type": "AnyEnemy",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "generated": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Strength",
+      "description": "Strength adds additional damage to Attacks."
+     }
+    ]
+   },
+   {
+    "index": 4,
+    "id": "STRIKE_IRONCLAD",
+    "name": "Strike",
+    "type": "Attack",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Deal 8 damage.",
+    "target_type": "AnyEnemy",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "generated": false,
+    "enchantment": null,
+    "keywords": []
+   },
+   {
+    "index": 5,
+    "id": "DEFEND_IRONCLAD",
+    "name": "Defend",
+    "type": "Skill",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Gain 11 Block.",
+    "target_type": "Self",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "generated": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Block",
+      "description": "Until next turn, prevents damage."
+     }
+    ]
+   },
+   {
+    "index": 6,
+    "id": "BASH",
+    "name": "Bash",
+    "type": "Attack",
+    "cost": "2",
+    "star_cost": null,
+    "description": "Deal 8 damage. Apply 2 Vulnerable.",
+    "target_type": "AnyEnemy",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "generated": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Vulnerable",
+      "description": "Vulnerable creatures take 50% more damage from Attacks."
+     }
+    ]
+   },
+   {
+    "index": 7,
+    "id": "DEFEND_IRONCLAD",
+    "name": "Defend",
+    "type": "Skill",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Gain 11 Block.",
+    "target_type": "Self",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "generated": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Block",
+      "description": "Until next turn, prevents damage."
+     }
+    ]
+   },
+   {
+    "index": 8,
+    "id": "DEFEND_IRONCLAD",
+    "name": "Defend",
+    "type": "Skill",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Gain 11 Block.",
+    "target_type": "Self",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "generated": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Block",
+      "description": "Until next turn, prevents damage."
+     }
+    ]
+   },
+   {
+    "index": 9,
+    "id": "HEMOKINESIS",
+    "name": "Hemokinesis",
+    "type": "Attack",
+    "cost": "1",
+    "star_cost": null,
+    "description": "Lose 2 HP. Deal 25 damage.",
+    "target_type": "AnyEnemy",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "generated": false,
+    "enchantment": null,
+    "keywords": []
+   },
+   {
+    "index": 10,
+    "id": "UNRELENTING",
+    "name": "Unrelenting",
+    "type": "Attack",
+    "cost": "2",
+    "star_cost": null,
+    "description": "Deal 16 damage. The next Attack you play costs 0 [ironclad_energy_icon.png].",
+    "target_type": "AnyEnemy",
+    "can_play": true,
+    "unplayable_reason": null,
+    "is_upgraded": false,
+    "generated": false,
+    "enchantment": null,
+    "keywords": []
+   }
+  ],
+  "discard_pile": [],
+  "exhaust_pile": [
+   {
+    "index": 0,
+    "id": "ASCENDERS_BANE",
+    "name": "Ascender's Bane",
+    "type": "Curse",
+    "cost": "0",
+    "star_cost": null,
+    "description": "Unplayable. Ethereal. Eternal.",
+    "target_type": "None",
+    "can_play": false,
+    "unplayable_reason": "HasUnplayableKeyword",
+    "is_upgraded": false,
+    "generated": false,
+    "enchantment": null,
+    "keywords": [
+     {
+      "name": "Eternal",
+      "description": "Cannot be removed or transformed from your Deck."
+     },
+     {
+      "name": "Unplayable",
+      "description": "Unplayable cards cannot be played."
+     },
+     {
+      "name": "Ethereal",
+      "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+     },
+     {
+      "name": "Exhaust",
+      "description": "Removed until the end of combat."
+     }
+    ]
+   }
+  ],
+  "gold": 52,
+  "status": [
+   {
+    "id": "STRENGTH_POWER",
+    "name": "Strength",
+    "amount": 5,
+    "type": "Buff",
+    "description": "Increases attack damage by 5.",
+    "keywords": []
+   },
+   {
+    "id": "FASTEN_POWER",
+    "name": "Fasten",
+    "amount": 6,
+    "type": "Buff",
+    "description": "Gain an additional 6 Block from Defend cards.",
+    "keywords": [
+     {
+      "name": "Block",
+      "description": "Until next turn, prevents damage."
+     }
+    ]
+   }
+  ],
+  "relics": [
+   {
+    "id": "BURNING_BLOOD",
+    "name": "Burning Blood",
+    "description": "At the end of combat, heal 6 HP.",
+    "counter": null,
+    "status": "Normal",
+    "keywords": []
+   },
+   {
+    "id": "LEAD_PAPERWEIGHT",
+    "name": "Lead Paperweight",
+    "description": "Upon pickup, choose 1 of 2 Colorless cards to add to your Deck.",
+    "counter": null,
+    "status": "Normal",
+    "keywords": []
+   },
+   {
+    "id": "BAG_OF_MARBLES",
+    "name": "Bag of Marbles",
+    "description": "At the start of each combat, apply 1 Vulnerable to ALL enemies.",
+    "counter": null,
+    "status": "Normal",
+    "keywords": [
+     {
+      "name": "Vulnerable",
+      "description": "Vulnerable creatures take 50% more damage from Attacks."
+     }
+    ]
+   },
+   {
+    "id": "LUCKY_FYSH",
+    "name": "Lucky Fysh",
+    "description": "Whenever you add a card to your Deck, gain 15 Gold.",
+    "counter": null,
+    "status": "Normal",
+    "keywords": []
+   }
+  ],
+  "potions": [
+   {
+    "id": "EXPLOSIVE_AMPOULE",
+    "name": "Explosive Ampoule",
+    "description": "Deal 10 damage to ALL enemies.",
+    "slot": 0,
+    "can_use_in_combat": true,
+    "target_type": "AllEnemies",
+    "keywords": []
+   }
+  ]
+ },
+ "draw_pile_count": 11,
+ "discard_pile_count": 0,
+ "exhaust_pile_count": 1,
+ "battle": {
+  "round": 4,
+  "turn": "player",
+  "player": {
+   "character": "The Ironclad",
+   "hp": 19,
+   "max_hp": 80,
+   "block": 0,
+   "energy": 3,
+   "max_energy": 3,
+   "hand": [
+    {
+     "index": 0,
+     "id": "STRIKE_IRONCLAD",
+     "name": "Strike",
+     "type": "Attack",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Deal 11 damage.",
+     "target_type": "AnyEnemy",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "generated": false,
+     "enchantment": null,
+     "keywords": []
+    },
+    {
+     "index": 1,
+     "id": "STRIKE_IRONCLAD",
+     "name": "Strike",
+     "type": "Attack",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Deal 11 damage.",
+     "target_type": "AnyEnemy",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "generated": false,
+     "enchantment": null,
+     "keywords": []
+    },
+    {
+     "index": 2,
+     "id": "STRIKE_IRONCLAD",
+     "name": "Strike",
+     "type": "Attack",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Deal 11 damage.",
+     "target_type": "AnyEnemy",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "generated": false,
+     "enchantment": null,
+     "keywords": []
+    },
+    {
+     "index": 3,
+     "id": "HOWL_FROM_BEYOND",
+     "name": "Howl from Beyond",
+     "type": "Attack",
+     "cost": "3",
+     "star_cost": null,
+     "description": "Deal 21 damage to ALL enemies. At the end of your turn, if this is in your Exhaust Pile, play it.",
+     "target_type": "AllEnemies",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "generated": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Exhaust",
+       "description": "Removed until the end of combat."
+      }
+     ]
+    },
+    {
+     "index": 4,
+     "id": "DEFEND_IRONCLAD",
+     "name": "Defend",
+     "type": "Skill",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Gain 11 Block.",
+     "target_type": "Self",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "generated": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Block",
+       "description": "Until next turn, prevents damage."
+      }
+     ]
+    }
+   ],
+   "draw_pile_count": 11,
+   "discard_pile_count": 0,
+   "exhaust_pile_count": 1,
+   "draw_pile": [
+    {
+     "index": 0,
+     "id": "STRIKE_IRONCLAD",
+     "name": "Strike",
+     "type": "Attack",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Deal 6 damage.",
+     "target_type": "AnyEnemy",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "generated": false,
+     "enchantment": null,
+     "keywords": []
+    },
+    {
+     "index": 1,
+     "id": "BARRICADE",
+     "name": "Barricade",
+     "type": "Power",
+     "cost": "3",
+     "star_cost": null,
+     "description": "Block is not removed at the start of your turn.",
+     "target_type": "Self",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "generated": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Block",
+       "description": "Until next turn, prevents damage."
+      }
+     ]
+    },
+    {
+     "index": 2,
+     "id": "EQUILIBRIUM",
+     "name": "Equilibrium",
+     "type": "Skill",
+     "cost": "2",
+     "star_cost": null,
+     "description": "Gain 13 Block. Retain your Hand this turn.",
+     "target_type": "Self",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "generated": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Retain",
+       "description": "Retained cards are not discarded at the end of turn."
+      },
+      {
+       "name": "Block",
+       "description": "Until next turn, prevents damage."
+      }
+     ]
+    },
+    {
+     "index": 3,
+     "id": "FIGHT_ME",
+     "name": "Fight Me!",
+     "type": "Attack",
+     "cost": "2",
+     "star_cost": null,
+     "description": "Deal 7 damage twice. Gain 3 Strength. The enemy gains 1 Strength.",
+     "target_type": "AnyEnemy",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "generated": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Strength",
+       "description": "Strength adds additional damage to Attacks."
+      }
+     ]
+    },
+    {
+     "index": 4,
+     "id": "STRIKE_IRONCLAD",
+     "name": "Strike",
+     "type": "Attack",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Deal 8 damage.",
+     "target_type": "AnyEnemy",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "generated": false,
+     "enchantment": null,
+     "keywords": []
+    },
+    {
+     "index": 5,
+     "id": "DEFEND_IRONCLAD",
+     "name": "Defend",
+     "type": "Skill",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Gain 11 Block.",
+     "target_type": "Self",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "generated": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Block",
+       "description": "Until next turn, prevents damage."
+      }
+     ]
+    },
+    {
+     "index": 6,
+     "id": "BASH",
+     "name": "Bash",
+     "type": "Attack",
+     "cost": "2",
+     "star_cost": null,
+     "description": "Deal 8 damage. Apply 2 Vulnerable.",
+     "target_type": "AnyEnemy",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "generated": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Vulnerable",
+       "description": "Vulnerable creatures take 50% more damage from Attacks."
+      }
+     ]
+    },
+    {
+     "index": 7,
+     "id": "DEFEND_IRONCLAD",
+     "name": "Defend",
+     "type": "Skill",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Gain 11 Block.",
+     "target_type": "Self",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "generated": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Block",
+       "description": "Until next turn, prevents damage."
+      }
+     ]
+    },
+    {
+     "index": 8,
+     "id": "DEFEND_IRONCLAD",
+     "name": "Defend",
+     "type": "Skill",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Gain 11 Block.",
+     "target_type": "Self",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "generated": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Block",
+       "description": "Until next turn, prevents damage."
+      }
+     ]
+    },
+    {
+     "index": 9,
+     "id": "HEMOKINESIS",
+     "name": "Hemokinesis",
+     "type": "Attack",
+     "cost": "1",
+     "star_cost": null,
+     "description": "Lose 2 HP. Deal 25 damage.",
+     "target_type": "AnyEnemy",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "generated": false,
+     "enchantment": null,
+     "keywords": []
+    },
+    {
+     "index": 10,
+     "id": "UNRELENTING",
+     "name": "Unrelenting",
+     "type": "Attack",
+     "cost": "2",
+     "star_cost": null,
+     "description": "Deal 16 damage. The next Attack you play costs 0 [ironclad_energy_icon.png].",
+     "target_type": "AnyEnemy",
+     "can_play": true,
+     "unplayable_reason": null,
+     "is_upgraded": false,
+     "generated": false,
+     "enchantment": null,
+     "keywords": []
+    }
+   ],
+   "discard_pile": [],
+   "exhaust_pile": [
+    {
+     "index": 0,
+     "id": "ASCENDERS_BANE",
+     "name": "Ascender's Bane",
+     "type": "Curse",
+     "cost": "0",
+     "star_cost": null,
+     "description": "Unplayable. Ethereal. Eternal.",
+     "target_type": "None",
+     "can_play": false,
+     "unplayable_reason": "HasUnplayableKeyword",
+     "is_upgraded": false,
+     "generated": false,
+     "enchantment": null,
+     "keywords": [
+      {
+       "name": "Eternal",
+       "description": "Cannot be removed or transformed from your Deck."
+      },
+      {
+       "name": "Unplayable",
+       "description": "Unplayable cards cannot be played."
+      },
+      {
+       "name": "Ethereal",
+       "description": "If this card is in your Hand at the end of this turn, it is Exhausted."
+      },
+      {
+       "name": "Exhaust",
+       "description": "Removed until the end of combat."
+      }
+     ]
+    }
+   ],
+   "gold": 52,
+   "status": [
+    {
+     "id": "STRENGTH_POWER",
+     "name": "Strength",
+     "amount": 5,
+     "type": "Buff",
+     "description": "Increases attack damage by 5.",
+     "keywords": []
+    },
+    {
+     "id": "FASTEN_POWER",
+     "name": "Fasten",
+     "amount": 6,
+     "type": "Buff",
+     "description": "Gain an additional 6 Block from Defend cards.",
+     "keywords": [
+      {
+       "name": "Block",
+       "description": "Until next turn, prevents damage."
+      }
+     ]
+    }
+   ],
+   "relics": [
+    {
+     "id": "BURNING_BLOOD",
+     "name": "Burning Blood",
+     "description": "At the end of combat, heal 6 HP.",
+     "counter": null,
+     "status": "Normal",
+     "keywords": []
+    },
+    {
+     "id": "LEAD_PAPERWEIGHT",
+     "name": "Lead Paperweight",
+     "description": "Upon pickup, choose 1 of 2 Colorless cards to add to your Deck.",
+     "counter": null,
+     "status": "Normal",
+     "keywords": []
+    },
+    {
+     "id": "BAG_OF_MARBLES",
+     "name": "Bag of Marbles",
+     "description": "At the start of each combat, apply 1 Vulnerable to ALL enemies.",
+     "counter": null,
+     "status": "Normal",
+     "keywords": [
+      {
+       "name": "Vulnerable",
+       "description": "Vulnerable creatures take 50% more damage from Attacks."
+      }
+     ]
+    },
+    {
+     "id": "LUCKY_FYSH",
+     "name": "Lucky Fysh",
+     "description": "Whenever you add a card to your Deck, gain 15 Gold.",
+     "counter": null,
+     "status": "Normal",
+     "keywords": []
+    }
+   ],
+   "potions": [
+    {
+     "id": "EXPLOSIVE_AMPOULE",
+     "name": "Explosive Ampoule",
+     "description": "Deal 10 damage to ALL enemies.",
+     "slot": 0,
+     "can_use_in_combat": true,
+     "target_type": "AllEnemies",
+     "keywords": []
+    }
+   ]
+  },
+  "enemies": [
+   {
+    "entity_id": "TERROR_EEL_0",
+    "combat_id": 1,
+    "name": "Terror Eel",
+    "hp": 87,
+    "max_hp": 150,
+    "block": 0,
+    "status": [
+     {
+      "id": "SHRIEK_POWER",
+      "name": "Shriek",
+      "amount": 75,
+      "type": "Debuff",
+      "description": "The first time Terror Eel's HP reaches 75 or below, it becomes Stunned.",
+      "keywords": [
+       {
+        "name": "Stun",
+        "description": "Prevent the enemy from acting on its next turn."
+       }
+      ]
+     },
+     {
+      "id": "STRENGTH_POWER",
+      "name": "Strength",
+      "amount": 1,
+      "type": "Buff",
+      "description": "Increases attack damage by 1.",
+      "keywords": []
+     }
+    ],
+    "move_id": "THRASH_MOVE",
+    "follow_up_id": "CRASH_MOVE",
+    "move_log": [
+     "CRASH_MOVE",
+     "THRASH_MOVE",
+     "CRASH_MOVE",
+     "THRASH_MOVE"
+    ],
+    "intents": [
+     {
+      "type": "Attack",
+      "base_damage": 4,
+      "hits": 3,
+      "damage": 5,
+      "total_damage": 15,
+      "label": "5x3",
+      "title": "Aggressive",
+      "description": "This enemy intends to Attack for 5 damage 3 times."
+     },
+     {
+      "type": "Buff",
+      "label": "",
+      "title": "Empower",
+      "description": "This enemy intends to use a Buff."
+     }
+    ]
+   }
+  ],
+  "reviving": []
+ }
+}

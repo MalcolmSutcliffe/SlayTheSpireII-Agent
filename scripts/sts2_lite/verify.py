@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING
 
 import re
 
-from sts2_lite.card import CardId, CardType
-from sts2_lite.enemy_moves import HATCHLING_HP, SPAWN_HP
+from sts2_lite.card import CardId, CardType, COLORLESS_CARDS, ZERO_COST_POOL
+from sts2_lite.enemy_moves import HATCHLING_HP, SPAWN_HP, TOUGH_ASCENSION
 from sts2_lite.status import StatusId
 
 if TYPE_CHECKING:
@@ -59,10 +59,15 @@ def is_random_step(before : CombatState, predicted : CombatState, actions : list
 
 def is_unpredictable_step(before : CombatState, actions : list[dict]) -> bool:
     """True when the step played a card whose result the sim cannot know: Havoc plays the top card of the draw pile, and unless
-    the agent knows that card (`known_top`) the game's choice is a different one than the sim's guess."""
+    the agent knows that card (`known_top`) the game's choice is a different one than the sim's guess; Stampede picks a random Attack."""
     for a in actions:
         if a["action"] == "play_card" and a["card_index"] < len(before.player.hand):
             if before.player.hand[a["card_index"]].card_id == CardId.HAVOC and before.player.known_top == 0:
+                return True
+        if a["action"] == "end_turn" and StatusId.STAMPEDE in before.player.status:
+            # Stampede plays a random Attack of the hand as the turn ends: with more than one kind in hand the game's pick is not the sim's
+            attacks = {c.card_id for c in before.player.hand if c.type == CardType.Attack and not c.unplayable}
+            if len(attacks) > 1:
                 return True
     return False
 
@@ -108,14 +113,15 @@ def _dict_diff(name : str, expected : dict, actual : dict) -> list[str]:
             out.append(f"{name} {key}: sim {expected.get(key, 0)}, game {actual.get(key, 0)}")
     return out
 
-def _fresh_spawn_hp_is_random(pe, ae) -> bool:
-    """A monster that has just appeared with unhurt, in-range HP (Wriggler 17-21): the game rolled it, the sim sampled its own."""
+def _fresh_spawn_hp_is_random(pe, ae, ascension : int = 0) -> bool:
+    """A monster that has just appeared with unhurt, in-range HP (Wriggler 17-21, 18-22 from Ascension 8): the game rolled it, the sim sampled its own."""
     spawn = SPAWN_HP.get(re.sub(r"_\d+$", "", str(ae.enemy_id)))
     if spawn is None:
         return False
-    low, high = min(spawn), max(spawn)
+    low, high = spawn[2:] if ascension >= TOUGH_ASCENSION else spawn[:2]
     if str(ae.enemy_id).startswith("TOUGH_EGG"):
-        low, high = min(low, *HATCHLING_HP[0], *HATCHLING_HP[1]), max(high, *HATCHLING_HP[0], *HATCHLING_HP[1])     # a hatched egg keeps its id, with a hatchling's HP
+        hatchling = HATCHLING_HP[1 if ascension >= TOUGH_ASCENSION else 0]
+        low, high = min(low, *hatchling), max(high, *hatchling)     # a hatched egg keeps its id, with a hatchling's HP
     # the rolled max HP differs, the damage taken since the spawn (max - current) must not
     # (a Wriggler hit by the rest of a Whirlwind on the turn it appeared)
     return all(low <= e.max_hp <= high for e in (pe, ae)) and pe.max_hp - pe.current_hp == ae.max_hp - ae.current_hp
@@ -142,7 +148,7 @@ def compare(predicted : CombatState, actual : CombatState, random_step : bool = 
         if random_target and len(predicted.enemies) > 1 and len(predicted.enemies) == len(actual.enemies):
             break
         label = f"enemy {i} ({ae.enemy_id})"
-        if pe.current_hp != ae.current_hp and not _fresh_spawn_hp_is_random(pe, ae):
+        if pe.current_hp != ae.current_hp and not _fresh_spawn_hp_is_random(pe, ae, predicted.ascension):
             diffs.append(f"{label} hp: sim {pe.current_hp}, game {ae.current_hp}")
         if pe.block != ae.block:
             diffs.append(f"{label} block: sim {pe.block}, game {ae.block}")
@@ -162,6 +168,19 @@ def compare(predicted : CombatState, actual : CombatState, random_step : bool = 
             and everything(pp) + _cards(pp.exhaust_pile) == everything(ap) + _cards(ap.exhaust_pile):
         # a random exhaust (Cinder, Havoc, True Grit) took a different card: the same deck, split differently between the piles
         diffs = [d for d in diffs if not d.startswith(("cards owned", "exhaust pile"))]
+    if random_step and any(d.startswith("cards owned") for d in diffs):
+        # Jack of All Trades / Jackpot generate random colorless cards: the same number of cards, but a different pick
+        sim_owned, game_owned = everything(pp), everything(ap)
+        extra_cards = (sim_owned - game_owned) + (game_owned - sim_owned)
+        pool = set(COLORLESS_CARDS) | set(ZERO_COST_POOL)
+        if sum(sim_owned.values()) == sum(game_owned.values()) and all(CardId[name.split("[")[0]] in pool for name, _ in extra_cards):
+            diffs = [d for d in diffs if not d.startswith("cards owned")]
+    if random_step and predicted.energy != actual.energy:
+        # Drum of Battle gives energy when it is exhausted: a random exhaust (Toasty Mittens off a reshuffled pile) that took it in the
+        # sim but another card in the game (or the reverse) moves the energy by what the Drum gives
+        drum = lambda p: sum((3 if c.is_upgraded else 2) for c in p.exhaust_pile if c.card_id == CardId.DRUM_OF_BATTLE)
+        if predicted.energy - actual.energy == drum(pp) - drum(ap) != 0:
+            diffs = [d for d in diffs if not d.startswith("player energy")]
     if len(pp.hand) != len(ap.hand) and not random_step:
         diffs.append(f"hand size: sim {len(pp.hand)}, game {len(ap.hand)}")
     if not random_step:

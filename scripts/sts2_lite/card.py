@@ -204,6 +204,14 @@ class CardId(Enum):
     ENLIGHTENMENT = auto()
     METAMORPHOSIS = auto()
     TORIC_TOUGHNESS = auto()
+    ABUNDANCE = auto()
+    APOTHEOSIS = auto()
+    APPARITION = auto()
+    BRIGHTEST_FLAME = auto()
+    MAUL = auto()
+    RELAX = auto()
+    WHISTLE = auto()
+    WISH = auto()
 
 INFECTION_DAMAGE = 3
 BURN_DAMAGE = 2
@@ -217,6 +225,7 @@ UPGRADE_COST_CHANGE = {
     CardId.UNMOVABLE : -1, CardId.HAVOC : -1, CardId.EXPECT_A_FIGHT : -1, CardId.INFERNAL_BLADE : -1,
     CardId.BODY_SLAM : -1, CardId.HELLRAISER : -1, CardId.MIND_BLAST : -1,
     CardId.AUTOMATION : -1, CardId.MAYHEM : -1, CardId.NOSTALGIA : -1, CardId.CALAMITY : -1,
+    CardId.APOTHEOSIS : -1, CardId.ABUNDANCE : -1,
 }
 # CardModel base cost of the cards above (an upgrade caps a rolled Confused cost at base + change)
 UPGRADE_BASE_COST = {
@@ -224,11 +233,12 @@ UPGRADE_BASE_COST = {
     CardId.UNMOVABLE : 2, CardId.HAVOC : 1, CardId.EXPECT_A_FIGHT : 2, CardId.INFERNAL_BLADE : 1,
     CardId.BODY_SLAM : 1, CardId.HELLRAISER : 2, CardId.MIND_BLAST : 1,
     CardId.AUTOMATION : 1, CardId.MAYHEM : 2, CardId.NOSTALGIA : 1, CardId.CALAMITY : 3,
+    CardId.APOTHEOSIS : 2, CardId.ABUNDANCE : 1,
 }
 # keyword an upgrade removes (Exhaust)
-UPGRADE_REMOVED_KEYWORD = {CardId.SECRET_TECHNIQUE : 1, CardId.SECRET_WEAPON : 1, CardId.THINKING_AHEAD : 1, CardId.PROLONG : 1, CardId.DISCOVERY : 1}
+UPGRADE_REMOVED_KEYWORD = {CardId.SECRET_TECHNIQUE : 1, CardId.SECRET_WEAPON : 1, CardId.THINKING_AHEAD : 1, CardId.PROLONG : 1, CardId.DISCOVERY : 1, CardId.APPARITION : 2}      # Exhaust x5, Ethereal for Apparition
 # keyword an upgrade adds
-UPGRADE_KEYWORD = {CardId.SCRAWL : 16, CardId.GOLD_AXE : 16, CardId.ANOINTED : 16, CardId.ENTROPY : 4}       # Retain, Retain, Retain, Innate
+UPGRADE_KEYWORD = {CardId.SCRAWL : 16, CardId.GOLD_AXE : 16, CardId.ANOINTED : 16, CardId.ENTROPY : 4, CardId.WISH : 16}       # Retain, Retain, Retain, Innate
 CONFUSED_MAX_COST = 3
 
 class CardKeyword(Enum):
@@ -251,7 +261,8 @@ EXHAUSTING_CARDS = frozenset({CardId.SLIMED, CardId.TREMBLE, CardId.IMPERVIOUS, 
                               CardId.PRODUCTION, CardId.MASTER_OF_STRATEGY, CardId.DRAMATIC_ENTRANCE, CardId.SHOCKWAVE,
                               CardId.SCRAWL, CardId.PURITY, CardId.SECRET_TECHNIQUE, CardId.SECRET_WEAPON, CardId.THINKING_AHEAD,
                               CardId.PANIC_BUTTON, CardId.PROLONG, CardId.DARK_SHACKLES, CardId.JACK_OF_ALL_TRADES, CardId.ANOINTED, CardId.DISCOVERY,
-                              CardId.ENLIGHTENMENT, CardId.METAMORPHOSIS, CardId.NEOWS_FURY})
+                              CardId.ENLIGHTENMENT, CardId.METAMORPHOSIS, CardId.NEOWS_FURY,
+                              CardId.ABUNDANCE, CardId.APOTHEOSIS, CardId.APPARITION, CardId.RELAX, CardId.WHISTLE, CardId.WISH})
 
 # curses (Enthralled is not modelled; Debt's gold loss is not either: the sim does not track gold)
 CURSE_CARDS = frozenset({CardId.BAD_LUCK, CardId.DEBT, CardId.REGRET, CardId.DECAY, CardId.SHAME, CardId.DOUBT, CardId.NORMALITY, CardId.INJURY,
@@ -264,11 +275,11 @@ UNPLAYABLE_CARDS = frozenset({CardId.DAZED, CardId.WOUND, CardId.NOT_IMPLEMENTED
                              | (CURSE_CARDS - {CardId.SPORE_MIND}))
 
 # cards with the Ethereal keyword: exhausted instead of discarded if still in hand at end of turn
-ETHEREAL_CARDS = frozenset({CardId.DAZED, CardId.CLUMSY, CardId.FOLLY, CardId.ASCENDERS_BANE})
+ETHEREAL_CARDS = frozenset({CardId.APPARITION, CardId.DAZED, CardId.CLUMSY, CardId.FOLLY, CardId.ASCENDERS_BANE})
 
 # Retain / Innate / Eternal: only Retain acts in combat (Innate and Eternal are deck-level)
 RETAINING_CARDS = frozenset({CardId.POOR_SLEEP, CardId.RESTLESSNESS, CardId.PURITY})
-INNATE_CARDS = frozenset({CardId.WRITHE, CardId.FOLLY, CardId.DRAMATIC_ENTRANCE, CardId.MIND_BLAST})
+INNATE_CARDS = frozenset({CardId.APOTHEOSIS, CardId.WRITHE, CardId.FOLLY, CardId.DRAMATIC_ENTRANCE, CardId.MIND_BLAST})
 ETERNAL_CARDS = frozenset({CardId.BAD_LUCK, CardId.ASCENDERS_BANE, CardId.CURSE_OF_THE_BELL, CardId.GREED, CardId.FOLLY})
 
 NORMALITY_CARD_LIMIT = 3
@@ -600,7 +611,7 @@ class Card:
     @classmethod
     def create_generated(cls, card_id : CardId, upgraded : bool = False) -> Card:
         """A fresh copy of a card that a card effect adds to the player's piles (Infernal Blade, Stoke)."""
-        name, card_type, cost, target = (GENERATABLE_CARDS.get(card_id) or COLORLESS_CARDS.get(card_id) or EVENT_CARDS.get(card_id)
+        name, card_type, cost, target = (GENERATABLE_CARDS.get(card_id) or COLORLESS_CARDS.get(card_id) or EVENT_CARDS.get(card_id) or ANCIENT_CARDS.get(card_id)
                                          or TOKEN_CARDS[card_id])
         c = cls()
         c.card_id, c.name, c.type = card_id, name, card_type
@@ -1025,7 +1036,7 @@ PLAIN_DAMAGE = {        # id : (damage, damage upgraded) of the cards that print
     CardId.HOWL_FROM_BEYOND : (16, 21), CardId.IRON_WAVE : (5, 7), CardId.MANGLE : (15, 20),
     CardId.FISTICUFFS : (7, 9), CardId.FLASH_OF_STEEL : (5, 8), CardId.HAND_OF_GREED : (20, 25), CardId.OMNISLICE : (8, 11),
     CardId.ULTIMATE_STRIKE : (14, 20), CardId.SEEKER_STRIKE : (9, 12), CardId.VOLLEY : (10, 14), CardId.DRAMATIC_ENTRANCE : (11, 15),
-    CardId.MOLTEN_FIST : (10, 14), CardId.NEOWS_FURY : (10, 14), CardId.PACTS_END : (17, 23), CardId.PILLAGE : (6, 9), CardId.POMMEL_STRIKE : (9, 10),
+    CardId.MAUL : (5, 6), CardId.WHISTLE : (33, 44), CardId.MOLTEN_FIST : (10, 14), CardId.NEOWS_FURY : (10, 14), CardId.PACTS_END : (17, 23), CardId.PILLAGE : (6, 9), CardId.POMMEL_STRIKE : (9, 10),
     CardId.BOLAS : (3, 4), CardId.SALVO : (12, 16), CardId.THRUMMING_HATCHET : (11, 14), CardId.JACKPOT : (25, 30),
     CardId.SETUP_STRIKE : (7, 9), CardId.SPITE : (5, 5), CardId.STOMP : (12, 15), CardId.STRIKE_IRONCLAD : (6, 9),
     CardId.SWORD_BOOMERANG : (3, 3), CardId.TEAR_ASUNDER : (5, 7), CardId.THUNDERCLAP : (4, 7),
@@ -1052,6 +1063,8 @@ def _printed_damage(card : Card, combat : CombatSimulator) -> int:
         return 6 + (3 if up else 2) * _strikes(player)
     if card.card_id == CardId.RAMPAGE:
         return 9 + card.bonus_damage
+    if card.card_id == CardId.MAUL:
+        return (6 if up else 5) + card.bonus_damage
     if card.card_id == CardId.THRASH:
         return (6 if up else 4) + card.bonus_damage
     return PLAIN_DAMAGE[card.card_id][up]
@@ -1059,6 +1072,59 @@ def _printed_damage(card : Card, combat : CombatSimulator) -> int:
 ###
 ### Card Functions, in alphabetical order
 ###
+
+### Ancient cards that are not in the decompiled source: written from the cards' text
+
+def play_abundance(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    # three different Powers, Upgraded; the one picked joins the hand for free this turn (the game's own three are adopted)
+    powers = [cid for cid, (_, card_type, _, _) in GENERATABLE_CARDS.items() if card_type == CardType.Power]
+    combat.request_discovery([Card.create_generated(cid, True) for cid in rng.sample(powers, min(3, len(powers)))])
+
+def play_apotheosis(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    player = combat.combat_state.player
+    for pile in (player.hand, player.draw_pile, player.discard_pile, player.exhaust_pile):
+        for i, c in enumerate(pile):
+            if c.is_upgradable:
+                pile[i] = c.upgraded_copy()         # in place: a known top card stays where it is
+
+def play_apparition(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    combat.combat_state.player.apply_status(StatusId.INTANGIBLE, 1)
+
+def play_brightest_flame(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    player = combat.combat_state.player
+    amount = 3 if is_upgraded else 2
+    combat.gain_energy(amount)
+    player.draw_cards(amount)
+    player.lose_max_hp(1)
+
+def play_maul(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    # `card` is this play's own copy; every Maul of the fight grows, in every pile
+    target = _enemy(combat, target_index)
+    _attack(combat, (6 if is_upgraded else 5) + card.bonus_damage, target, 2)
+    step = 3 if is_upgraded else 2
+    card.bonus_damage += step
+    player = combat.combat_state.player
+    for pile in (player.hand, player.draw_pile, player.discard_pile, player.exhaust_pile):
+        for c in pile:
+            if c.card_id == CardId.MAUL:
+                c.bonus_damage += step
+
+def play_relax(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    _gain_block(combat, 18 if is_upgraded else 16)
+    player = combat.combat_state.player
+    player.apply_status(StatusId.ENERGY_NEXT_TURN, 3 if is_upgraded else 2)
+    player.apply_status(StatusId.DRAW_CARDS_NEXT_TURN, 3 if is_upgraded else 2)
+
+def play_whistle(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    target = _enemy(combat, target_index)
+    _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], target)
+    if target.current_hp > 0:
+        target.stun()           # the move it was about to make comes after the stun
+
+def play_wish(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    draw = combat.combat_state.player.draw_pile
+    combat.request_choice("draw_to_hand", list(range(len(draw))), pile="draw")
+
 
 def play_aggression(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     combat.combat_state.player.apply_status(StatusId.AGGRESSION, 1)
@@ -1127,8 +1193,13 @@ def play_break(card: Card, combat : CombatSimulator, target_index=0, is_upgraded
     _attack(combat, 30 if is_upgraded else 20, target)
     _vulnerable(combat, target, 7 if is_upgraded else 5)
 
+def _lose_hp_first(combat : CombatSimulator, amount : int):
+    """HP lost before the card's damage: Red Skull (at half HP) acts before the hit, not after the card."""
+    combat.combat_state.player.lose_hp(amount)
+    combat._sync_hp()
+
 def play_breakthrough(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    combat.combat_state.player.lose_hp(1)
+    _lose_hp_first(combat, 1)
     for target in list(combat.combat_state.enemies):
         _attack(combat, 13 if is_upgraded else 9, target)
 
@@ -1392,7 +1463,7 @@ def play_hellraiser(card: Card, combat : CombatSimulator, target_index=0, is_upg
 
 def play_hemokinesis(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     target = _enemy(combat, target_index)
-    combat.combat_state.player.lose_hp(2)
+    _lose_hp_first(combat, 2)
     _attack(combat, 20 if is_upgraded else 15, target)
 
 def play_howl_from_beyond(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
@@ -1825,9 +1896,12 @@ def play_thinking_ahead(card: Card, combat : CombatSimulator, target_index=0, is
     combat.request_choice("to_draw_pile", list(range(len(player.hand))), pile="hand")
 
 GET_CARD_FUNCTION : dict[CardId, function] = {
+    CardId.ABUNDANCE : play_abundance,
     CardId.AGGRESSION : play_aggression,
     CardId.ANGER : play_anger,
     CardId.ANOINTED : play_anointed,
+    CardId.APOTHEOSIS : play_apotheosis,
+    CardId.APPARITION : play_apparition,
     CardId.ARMAMENTS : play_armaments,
     CardId.ASHEN_STRIKE : play_ashen_strike,
     CardId.AUTOMATION : play_automation,
@@ -1844,6 +1918,7 @@ GET_CARD_FUNCTION : dict[CardId, function] = {
     CardId.BRAND : play_brand,
     CardId.BREAK : play_break,
     CardId.BREAKTHROUGH : play_breakthrough,
+    CardId.BRIGHTEST_FLAME : play_brightest_flame,
     CardId.BULLY : play_bully,
     CardId.BURNING_PACT : play_burning_pact,
     CardId.BYRD_SWOOP : play_byrd_swoop,
@@ -1905,6 +1980,7 @@ GET_CARD_FUNCTION : dict[CardId, function] = {
     CardId.JUGGLING : play_juggling,
     CardId.MANGLE : play_mangle,
     CardId.MASTER_OF_STRATEGY : play_master_of_strategy,
+    CardId.MAUL : play_maul,
     CardId.MAYHEM : play_mayhem,
     CardId.METAMORPHOSIS : play_metamorphosis,
     CardId.MIND_BLAST : play_mind_blast,
@@ -1932,6 +2008,7 @@ GET_CARD_FUNCTION : dict[CardId, function] = {
     CardId.PYRE : play_pyre,
     CardId.RAGE : play_rage,
     CardId.RAMPAGE : play_rampage,
+    CardId.RELAX : play_relax,
     CardId.REND : play_rend,
     CardId.RESTLESSNESS : play_restlessness,
     CardId.ROLLING_BOULDER : play_rolling_boulder,
@@ -1978,6 +2055,8 @@ GET_CARD_FUNCTION : dict[CardId, function] = {
     CardId.VOLLEY : play_volley,
     CardId.WASTE_AWAY : play_knowledge_curse,
     CardId.WHIRLWIND : play_whirlwind,
+    CardId.WHISTLE : play_whistle,
+    CardId.WISH : play_wish,
 }
 
 # the Ironclad cards that card effects can add to the player's piles (no Basic or Ancient cards, Feed and Not Yet
@@ -2102,6 +2181,14 @@ COLORLESS_CARDS = {
     CardId.HIDDEN_GEM : ("Hidden Gem", CardType.Skill, 1, S),
 }
 
+# Ancient cards the sim could not read from the decompiled source (name, type, cost, target)
+ANCIENT_CARDS = {
+    CardId.ABUNDANCE : ("Abundance", CardType.Skill, 1, S), CardId.APOTHEOSIS : ("Apotheosis", CardType.Skill, 2, S),
+    CardId.APPARITION : ("Apparition", CardType.Skill, 1, S), CardId.BRIGHTEST_FLAME : ("Brightest Flame", CardType.Skill, 0, S),
+    CardId.MAUL : ("Maul", CardType.Attack, 1, A), CardId.RELAX : ("Relax", CardType.Skill, 3, S),
+    CardId.WHISTLE : ("Whistle", CardType.Attack, 2, A), CardId.WISH : ("Wish", CardType.Skill, 0, S),
+}
+
 # what Jack of All Trades can make: Hand of Greed (and Alchemize and Hidden Gem) cannot be generated in combat, and it makes no Jack of All Trades
 NOT_GENERATED_COLORLESS = frozenset({CardId.HAND_OF_GREED, CardId.HIDDEN_GEM, CardId.JACK_OF_ALL_TRADES})
 JACK_POOL = [cid for cid in COLORLESS_CARDS if cid not in NOT_GENERATED_COLORLESS]
@@ -2113,7 +2200,7 @@ def transform_options(card : Card) -> list[CardId]:
     Empty for Statuses and Curses, which cannot be transformed here."""
     if card.type in (CardType.Status, CardType.Curse):
         return []
-    colorless = card.card_id in COLORLESS_CARDS or card.card_id == CardId.NEOWS_FURY
+    colorless = card.card_id in COLORLESS_CARDS or card.card_id == CardId.NEOWS_FURY or card.card_id in ANCIENT_CARDS
     return [cid for cid in (TRANSFORM_COLORLESS if colorless else GENERATABLE_CARDS) if cid != card.card_id]
 class CardRarity(Enum):
     """CardRarity of the game. Basic / Ancient / Event / Token / Status / Curse cards are never in a card reward pool."""
@@ -2152,7 +2239,7 @@ _RARITY_NAMES = {
         "OFFERING PACTS_END BRAND HELLRAISER MANGLE PRIMAL_FORCE STOKE TEAR_ASUNDER THRASH"
     ),
     CardRarity.Ancient : (
-        "BREAK NEOWS_FURY CORRUPTION"
+        "BREAK NEOWS_FURY CORRUPTION ABUNDANCE APOTHEOSIS APPARITION BRIGHTEST_FLAME MAUL RELAX WHISTLE WISH"
     ),
     CardRarity.Event : (
         "BYRD_SWOOP EXTERMINATE PECK SQUASH ENLIGHTENMENT METAMORPHOSIS TORIC_TOUGHNESS"

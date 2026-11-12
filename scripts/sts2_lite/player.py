@@ -146,7 +146,7 @@ class Player(Creature):
                     self.cards_played_total = max(self.cards_played_total, base_from_displayed(shown, self, Creature()) if pile is self.hand else shown)
                     continue
                 momentum = card.enchantment == EnchantmentId.MOMENTUM and card.card_id in PLAIN_DAMAGE
-                if card.shown_damage is None or not (momentum or card.card_id in (CardId.RAMPAGE, CardId.THRASH)):
+                if card.shown_damage is None or not (momentum or card.card_id in (CardId.RAMPAGE, CardId.THRASH, CardId.MAUL)):
                     continue
                 shown = card.shown_damage
                 if pile is self.hand:
@@ -156,6 +156,8 @@ class Player(Creature):
                 elif card.card_id == CardId.RAMPAGE:
                     step = 9 if card.is_upgraded else 5
                     card.bonus_damage = max(0, round((shown - 9) / step)) * step
+                elif card.card_id == CardId.MAUL:
+                    card.bonus_damage = max(0, shown - (6 if card.is_upgraded else 5))
                 else:
                     card.bonus_damage = max(0, shown - (6 if card.is_upgraded else 4))
 
@@ -235,7 +237,8 @@ class Player(Creature):
             self.block_cleared_hook()
         if self.returning:
             self.return_played_cards()
-        self.draw_cards(max(0, (5 + hand_draw_bonus(self) if self.relics else 5) - self.status_amount(StatusId.MIND_ROT)), from_hand_draw=True)
+        extra_draw = self.status.pop(StatusId.DRAW_CARDS_NEXT_TURN, None)       # Relax: part of the hand draw
+        self.draw_cards(max(0, (5 + hand_draw_bonus(self) if self.relics else 5) + (extra_draw.amount if extra_draw else 0) - self.status_amount(StatusId.MIND_ROT)), from_hand_draw=True)
 
         if StatusId.CRIMSON_MANTLE in self.status:
             self.lose_hp(max(1, self.crimson_mantle_plays))
