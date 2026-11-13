@@ -1,5 +1,6 @@
 """Rollout policies. Run from scripts/."""
 import contextlib
+import dataclasses
 import io
 from collections import Counter
 from unittest import mock
@@ -8,11 +9,20 @@ import pytest
 
 from sts2_lite import rng
 from sts2_lite.combat import CombatSimulator
-from agents.sts2_MCTS import MCTS as mcts_module
-from agents.sts2_MCTS.MCTS import (RolloutPolicy, ROLLOUT_POLICY_DICT, rollout_policy, first_action, random_playable,
-                         random_playable_p_end_turn, sts2_DeterministicNode, SearchConfig)
+from agents.sts2_MCTS import rollout_policy as policy_module
+from agents.sts2_MCTS import params as params_module
+from agents.sts2_MCTS.params import DEFAULT_CONFIG
+from agents.sts2_MCTS.MCTS import sts2_DeterministicNode
+from agents.sts2_MCTS.rollout_policy import ROLLOUT_POLICY_DICT, rollout_policy, first_action, random_playable, random_playable_p_end_turn
+from agents.sts2_MCTS.params import RolloutPolicy, SearchConfig
 from agents.Tests.test_mcts import new_mcts, make_state, strike, defend, bash, draw_fight
 
+
+@contextlib.contextmanager
+def tuned(**values):
+    """The policies' default parameters with these values changed (a policy called without parameters reads them)."""
+    with mock.patch.object(params_module, "DEFAULT_HEURISTIC", dataclasses.replace(params_module.DEFAULT_HEURISTIC, **values)):
+        yield
 
 def playing_sim(state):
     sim = CombatSimulator(state)
@@ -53,16 +63,16 @@ def test_random_playable_never_ends_the_turn_while_a_card_is_playable():
 
 def test_p_end_turn_zero_never_ends_and_one_always_ends():
     sim, actions = playing_sim(make_state([strike(), defend()]))
-    with mock.patch.object(mcts_module, "P_END_TURN", 0.0):
+    with tuned(p_end_turn=0.0):
         counts, by_id = pick_many(random_playable_p_end_turn, actions, sim=sim)
         assert all(by_id[i]["action"] != "end_turn" for i in counts)
-    with mock.patch.object(mcts_module, "P_END_TURN", 1.0):
+    with tuned(p_end_turn=1.0):
         counts, by_id = pick_many(random_playable_p_end_turn, actions, sim=sim)
         assert all(by_id[i]["action"] == "end_turn" for i in counts)
 
 def test_p_end_turn_ends_about_that_often():
     sim, actions = playing_sim(make_state([strike(), defend()]))
-    with mock.patch.object(mcts_module, "P_END_TURN", 0.2):
+    with tuned(p_end_turn=0.2):
         counts, by_id = pick_many(random_playable_p_end_turn, actions, n=5000, sim=sim)
     ended = sum(c for i, c in counts.items() if by_id[i]["action"] == "end_turn")
     assert 0.17 < ended / 5000 < 0.23
@@ -80,7 +90,7 @@ def pending_choice_actions(optional):
 def test_every_option_of_a_pending_choice_can_be_picked(policy):
     sim, actions = pending_choice_actions(optional=False)
     assert all(a["action"] == "choose_card" for a in actions)
-    with mock.patch.object(mcts_module, "P_END_TURN", 0.0):
+    with tuned(p_end_turn=0.0):
         counts, _ = pick_many(policy, actions, sim=sim)
     assert set(counts) == {id(a) for a in actions}
 
@@ -103,7 +113,7 @@ def test_rollouts_finish_and_are_reproducible_under_a_seed(policy):
         mcts._starting_max_hp = root.state.player.max_hp
         results.append([mcts._simulate_combat_rollout(root) for _ in range(5)])
     assert results[0] == results[1]
-    assert all(-1.0 <= r <= mcts_module.WIN_BASE + 1.0 for r in results[0])      # a loss is -1..0, a win at full health WIN_BASE + 1
+    assert all(-1.0 <= r <= DEFAULT_CONFIG.reward.win_base + 1.0 for r in results[0])      # a loss is -1..0, a win at full health WIN_BASE + 1
 
 
 # --- weighted policies (RarityPreference, Heuristic) ---
@@ -111,8 +121,8 @@ from agents.Tests.test_mcts import pommel, make_card
 from sts2_lite.card import CardId, CardType, TargetType
 from sts2_lite.status import StatusId
 
-WEIGHTED = [mcts_module.rarity_preference, mcts_module.claude_heuristic]
-GREEDY = mcts_module.claude_heuristic_greedy
+WEIGHTED = [policy_module.rarity_preference, policy_module.claude_heuristic]
+GREEDY = policy_module.claude_heuristic_greedy
 WEIGHTED_ALL = WEIGHTED + [GREEDY]          # for the tests that hold however the policy picks among its weights
 
 def frequency(policy, sim, actions, card_id, n=3000, seed=1):
@@ -126,10 +136,10 @@ def rare(card_id=CardId.BARRICADE):
 @pytest.mark.parametrize("policy", WEIGHTED)
 def test_weighted_policies_end_the_turn_only_by_the_random_action_roll(policy):
     sim, actions = playing_sim(make_state([strike(), defend()]))
-    with mock.patch.object(mcts_module, "P_RANDOM_ACTION", 0.0):
+    with tuned(p_random_action=0.0):
         counts, by_id = pick_many(policy, actions, sim=sim)
     assert all(by_id[i]["action"] != "end_turn" for i in counts)
-    with mock.patch.object(mcts_module, "P_RANDOM_ACTION", 1.0):
+    with tuned(p_random_action=1.0):
         counts, by_id = pick_many(policy, actions, sim=sim)
     assert any(by_id[i]["action"] == "end_turn" for i in counts)
 
@@ -140,24 +150,24 @@ def test_weighted_policies_reach_every_option_of_a_pending_choice(policy):
     assert set(counts) == {id(a) for a in actions}
 
 def test_rarity_preference_orders_by_rarity_and_treats_bash_as_a_common():
-    with mock.patch.object(mcts_module, "P_RANDOM_ACTION", 0.0), mock.patch.object(mcts_module, "BLOCK_MULT", 0.0):
+    with tuned(p_random_action=0.0), tuned(block_mult=0.0):
         sim, actions = playing_sim(make_state([strike(), rare(), bash()]))
-        assert frequency(mcts_module.rarity_preference, sim, actions, CardId.BARRICADE) > \
-            frequency(mcts_module.rarity_preference, sim, actions, CardId.BASH)
+        assert frequency(policy_module.rarity_preference, sim, actions, CardId.BARRICADE) > \
+            frequency(policy_module.rarity_preference, sim, actions, CardId.BASH)
     # weights: rare 8, bash (common) 2, strike 1 -> with Bash unable to be a vulnerable-first pick (all enemies vulnerable)
     sim.combat_state.enemies[0].apply_status(StatusId.VULNERABLE, 2)
-    with mock.patch.object(mcts_module, "P_RANDOM_ACTION", 0.0), mock.patch.object(mcts_module, "BLOCK_MULT", 0.0):
-        f_bash = frequency(mcts_module.rarity_preference, sim, actions, CardId.BASH)
-        f_strike = frequency(mcts_module.rarity_preference, sim, actions, CardId.STRIKE_IRONCLAD)
+    with tuned(p_random_action=0.0), tuned(block_mult=0.0):
+        f_bash = frequency(policy_module.rarity_preference, sim, actions, CardId.BASH)
+        f_strike = frequency(policy_module.rarity_preference, sim, actions, CardId.STRIKE_IRONCLAD)
     assert f_bash == pytest.approx(2/11, abs=0.03) and f_strike == pytest.approx(1/11, abs=0.03)
 
 @pytest.mark.parametrize("policy", WEIGHTED_ALL)
 def test_vulnerable_is_played_before_attacks(policy):
     sim, actions = playing_sim(make_state([strike(), strike(), bash()]))
-    with mock.patch.object(mcts_module, "P_RANDOM_ACTION", 0.0):
+    with tuned(p_random_action=0.0):
         assert frequency(policy, sim, actions, CardId.BASH) > 0.7
     sim.combat_state.enemies[0].apply_status(StatusId.VULNERABLE, 2)           # already vulnerable: attacks are free to go
-    with mock.patch.object(mcts_module, "P_RANDOM_ACTION", 0.0):
+    with tuned(p_random_action=0.0):
         assert frequency(policy, sim, actions, CardId.BASH) < 0.5
 
 @pytest.mark.parametrize("policy", WEIGHTED_ALL)
@@ -165,7 +175,7 @@ def test_block_is_preferred_only_while_damage_is_unblocked(policy):
     cs = make_state([strike(), defend()])
     cs.enemies[0].attack_damage = 20
     sim, actions = playing_sim(cs)
-    with mock.patch.object(mcts_module, "P_RANDOM_ACTION", 0.0):
+    with tuned(p_random_action=0.0):
         under_attack = frequency(policy, sim, actions, CardId.DEFEND_IRONCLAD)
         cs.player.block = 20
         covered = frequency(policy, sim, actions, CardId.DEFEND_IRONCLAD)
@@ -178,14 +188,14 @@ def test_block_preference_grows_with_incoming_damage(policy):
         cs = make_state([strike(), defend()])
         cs.enemies[0].attack_damage = dmg
         sim, actions = playing_sim(cs)
-        with mock.patch.object(mcts_module, "P_RANDOM_ACTION", 0.0):
+        with tuned(p_random_action=0.0):
             out.append(frequency(policy, sim, actions, CardId.DEFEND_IRONCLAD, n=4000))
     assert out[0] < out[1] < out[2]
 
 @pytest.mark.parametrize("policy", WEIGHTED_ALL)
 def test_draw_cards_are_played_first_only_with_room_in_hand(policy):
     sim, actions = playing_sim(make_state([strike(), strike(), pommel()]))
-    with mock.patch.object(mcts_module, "P_RANDOM_ACTION", 0.0), mock.patch.object(mcts_module, "BLOCK_MULT", 0.0):
+    with tuned(p_random_action=0.0), tuned(block_mult=0.0):
         roomy = frequency(policy, sim, actions, CardId.POMMEL_STRIKE)
         sim.combat_state.player.hand = [strike() for _ in range(9)] + [pommel()]
         actions = sim.get_available_actions()
@@ -195,8 +205,8 @@ def test_draw_cards_are_played_first_only_with_room_in_hand(policy):
 def test_heuristic_plays_powers_first():
     power = make_card(CardId.INFLAME, "Inflame", CardType.Power, 1, TargetType.Self)
     sim, actions = playing_sim(make_state([strike(), strike(), power]))
-    with mock.patch.object(mcts_module, "P_RANDOM_ACTION", 0.0):
-        assert frequency(mcts_module.claude_heuristic, sim, actions, CardId.INFLAME) > 0.55
+    with tuned(p_random_action=0.0):
+        assert frequency(policy_module.claude_heuristic, sim, actions, CardId.INFLAME) > 0.55
 
 
 # --- focus fire ---
@@ -214,27 +224,27 @@ def targets_chosen(policy, cs, n=400):
     sim = CombatSimulator(cs)
     actions = sim.get_available_actions()
     rng.seed(2)
-    with mock.patch.object(mcts_module, "P_RANDOM_ACTION", 0.0):
+    with tuned(p_random_action=0.0):
         return {policy(sim, actions)["target"] for _ in range(n)}
 
 @pytest.mark.parametrize("policy", WEIGHTED)
 @pytest.mark.parametrize("focus,expected", [("none", {0, 1}), ("first", {0}), ("lowest_hp", {1}), ("lowest_hp_block", {1})])
 def test_focus_modes_pick_the_expected_enemy(policy, focus, expected):
-    with mock.patch.object(mcts_module, "FOCUS", focus):
+    with tuned(focus=focus):
         assert targets_chosen(policy, two_enemies(30, 12)) == expected
 
 @pytest.mark.parametrize("policy", WEIGHTED_ALL)
 def test_focus_counts_block(policy):
     cs = two_enemies(hp_a=20, hp_b=12, block_b=15)           # 20 against 27 effective
-    with mock.patch.object(mcts_module, "FOCUS", "lowest_hp_block"):
+    with tuned(focus="lowest_hp_block"):
         assert targets_chosen(policy, cs) == {0}
-    with mock.patch.object(mcts_module, "FOCUS", "lowest_hp"):
+    with tuned(focus="lowest_hp"):
         assert targets_chosen(policy, two_enemies(hp_a=20, hp_b=12, block_b=15)) == {1}
 
 @pytest.mark.parametrize("policy", WEIGHTED_ALL)
 def test_focus_skips_a_minion_while_another_enemy_lives(policy):
     cs = two_enemies(hp_a=40, hp_b=3, minion_b=True)
-    with mock.patch.object(mcts_module, "FOCUS", "lowest_hp_block"):
+    with tuned(focus="lowest_hp_block"):
         assert targets_chosen(policy, cs) == {0}
 
 @pytest.mark.parametrize("policy", WEIGHTED)
@@ -244,13 +254,13 @@ def test_focus_leaves_untargeted_cards_and_the_ending_of_the_turn_alone(policy):
     sim = CombatSimulator(cs)
     actions = sim.get_available_actions()
     rng.seed(4)
-    with mock.patch.object(mcts_module, "FOCUS", "lowest_hp_block"), mock.patch.object(mcts_module, "P_RANDOM_ACTION", 0.0):
+    with tuned(focus="lowest_hp_block"), tuned(p_random_action=0.0):
         picks = [policy(sim, actions) for _ in range(300)]
     assert any("target_name" not in a for a in picks)                 # Defend still played
     assert {a["target"] for a in picks if "target_name" in a} == {1}
 
 def test_focus_default_is_one_of_the_modes():
-    assert mcts_module.FOCUS in ("none", "first", "lowest_hp", "lowest_hp_block")
+    assert DEFAULT_CONFIG.heuristic.focus in ("none", "first", "lowest_hp", "lowest_hp_block")
 
 
 
@@ -262,7 +272,7 @@ def test_greedy_plays_the_same_action_every_time():
 
 def test_greedy_never_rolls_the_random_action():
     sim, actions = playing_sim(make_state([strike(), defend()]))
-    with mock.patch.object(mcts_module, "P_RANDOM_ACTION", 1.0):
+    with tuned(p_random_action=1.0):
         counts, by_id = pick_many(GREEDY, actions, sim=sim)
     assert all(by_id[i]["action"] != "end_turn" for i in counts)
 
@@ -285,15 +295,15 @@ def test_greedy_picks_the_heuristics_most_likely_play():
     cs = make_state([strike(), defend(), bash(), pommel()])
     cs.enemies[0].attack_damage = 12
     sim, actions = playing_sim(cs)
-    counts, by_id = pick_many(mcts_module.claude_heuristic, actions, n=4000, sim=sim)
-    with mock.patch.object(mcts_module, "P_RANDOM_ACTION", 0.0):
-        counts, by_id = pick_many(mcts_module.claude_heuristic, actions, n=4000, sim=sim)
+    counts, by_id = pick_many(policy_module.claude_heuristic, actions, n=4000, sim=sim)
+    with tuned(p_random_action=0.0):
+        counts, by_id = pick_many(policy_module.claude_heuristic, actions, n=4000, sim=sim)
     modal = max(counts, key=counts.get)
     assert GREEDY(sim, actions) is by_id[modal]
 
 @pytest.mark.parametrize("focus,expected", [("none", {0}), ("first", {0}), ("lowest_hp", {1}), ("lowest_hp_block", {1})])
 def test_greedy_aims_at_one_enemy(focus, expected):
-    with mock.patch.object(mcts_module, "FOCUS", focus):
+    with tuned(focus=focus):
         assert targets_chosen(GREEDY, two_enemies(30, 12)) == expected
 
 def test_greedy_ends_the_turn_when_nothing_can_be_played():
@@ -310,7 +320,7 @@ def test_greedy_leaves_untargeted_cards_alone_and_aims_attacks_by_focus():
         e.attack_damage = 20
     sim = CombatSimulator(cs)
     actions = sim.get_available_actions()
-    with mock.patch.object(mcts_module, "FOCUS", "lowest_hp_block"):
+    with tuned(focus="lowest_hp_block"):
         assert "target_name" not in GREEDY(sim, actions)                          # damage coming: Defend, which has no target
         cs.player.block = 99
         sim = CombatSimulator(cs)
@@ -321,7 +331,7 @@ def test_greedy_leaves_untargeted_cards_alone_and_aims_attacks_by_focus():
 # --- the heuristic: upgraded cards, and the pick of a pending card choice ---
 from sts2_lite.potion import Potion, PotionId
 
-HEURISTIC = [mcts_module.claude_heuristic, mcts_module.claude_heuristic_greedy]
+HEURISTIC = [policy_module.claude_heuristic, policy_module.claude_heuristic_greedy]
 
 def card_of_id(card_id, name, card_type=CardType.Skill, cost=1, target=TargetType.Self, upgraded=False, unplayable=False):
     card = make_card(card_id, name, card_type, cost, target)
@@ -354,7 +364,7 @@ def reaching_choice(hand, played, damage=8, block=0, energy=3):
 def picks_of(policy, sim, n=1500, seed=1):
     actions = sim.get_available_actions()
     rng.seed(seed)
-    with mock.patch.object(mcts_module, "P_RANDOM_ACTION", 0.0):
+    with tuned(p_random_action=0.0):
         return Counter(sim.combat_state.player.hand[a["card_index"]].card_id if a["action"] == "choose_card" else a["action"]
                        for a in (policy(sim, actions) for _ in range(n)))
 
@@ -362,9 +372,9 @@ def picks_of(policy, sim, n=1500, seed=1):
 # upgraded cards weigh half as much again
 def share_of_upgraded(base, upgraded, n=3000):
     sim, actions = playing_sim(make_state([base, upgraded]))
-    with mock.patch.object(mcts_module, "P_RANDOM_ACTION", 0.0):
+    with tuned(p_random_action=0.0):
         rng.seed(3)
-        picks = [mcts_module.claude_heuristic(sim, actions) for _ in range(n)]
+        picks = [policy_module.claude_heuristic(sim, actions) for _ in range(n)]
     hand = sim.combat_state.player.hand
     return sum(hand[a["card_index"]].is_upgraded for a in picks) / n
 
@@ -373,20 +383,20 @@ def test_an_upgraded_card_is_played_one_and_a_half_times_as_often():
 
 def test_a_cost_reducing_upgrade_does_not_weigh_more():
     base = card_of_id(CardId.HAVOC, "Havoc")
-    assert CardId.HAVOC in mcts_module.UPGRADE_UNSCALED
+    assert CardId.HAVOC in policy_module.UPGRADE_UNSCALED
     assert share_of_upgraded(base, base.upgraded_copy()) == pytest.approx(0.5, abs=0.03)
 
 def test_a_keyword_upgrade_does_not_weigh_more():
     base = card_of_id(CardId.SCRAWL, "Scrawl")                                     # the upgrade adds Retain
-    assert CardId.SCRAWL in mcts_module.UPGRADE_UNSCALED
+    assert CardId.SCRAWL in policy_module.UPGRADE_UNSCALED
     assert share_of_upgraded(base, base.upgraded_copy()) == pytest.approx(0.5, abs=0.03)
 
 def test_the_greedy_heuristic_plays_the_upgraded_card():
     sim, actions = playing_sim(make_state([strike(), strike().upgraded_copy()]))
-    assert all(sim.combat_state.player.hand[mcts_module.claude_heuristic_greedy(sim, actions)["card_index"]].is_upgraded for _ in range(20))
+    assert all(sim.combat_state.player.hand[policy_module.claude_heuristic_greedy(sim, actions)["card_index"]].is_upgraded for _ in range(20))
 
 def test_the_default_policy_is_the_sampled_heuristic():
-    assert mcts_module.SearchConfig().rollout == mcts_module.ROLLOUT_POLICY == RolloutPolicy.ClaudeHeuristic
+    assert SearchConfig().rollout == RolloutPolicy.ClaudeHeuristic
 
 
 # a card to exhaust: the one the policy would play least
@@ -400,10 +410,10 @@ def test_unplayable_cards_are_exhausted_first_and_the_ones_that_stay_before_the_
 
 def test_the_card_played_most_is_exhausted_least():
     under_attack = reaching_choice([strike(), defend()], true_grit_plus(), damage=20)
-    picks = picks_of(mcts_module.claude_heuristic, under_attack)
+    picks = picks_of(policy_module.claude_heuristic, under_attack)
     assert picks[CardId.STRIKE_IRONCLAD] / sum(picks.values()) > 0.9              # a Defend is worth playing while damage is coming
     covered = reaching_choice([strike(), defend()], true_grit_plus(), damage=20, block=99)
-    picks = picks_of(mcts_module.claude_heuristic, covered)
+    picks = picks_of(policy_module.claude_heuristic, covered)
     assert picks[CardId.DEFEND_IRONCLAD] / sum(picks.values()) > 0.7              # and not when it is covered
 
 def test_an_upgraded_card_is_exhausted_less_often_than_its_plain_copy():
@@ -411,13 +421,13 @@ def test_an_upgraded_card_is_exhausted_less_often_than_its_plain_copy():
     hand = sim.combat_state.player.hand
     actions = sim.get_available_actions()
     rng.seed(2)
-    with mock.patch.object(mcts_module, "P_RANDOM_ACTION", 0.0):
-        picks = [hand[mcts_module.claude_heuristic(sim, actions)["card_index"]].is_upgraded for _ in range(3000)]
+    with tuned(p_random_action=0.0):
+        picks = [hand[policy_module.claude_heuristic(sim, actions)["card_index"]].is_upgraded for _ in range(3000)]
     assert sum(picks) / len(picks) == pytest.approx(1 / 2.5, abs=0.03)              # 1 : 1.5 against
 
 def test_the_greedy_heuristic_exhausts_the_least_wanted_card():
     sim = reaching_choice([strike(), defend()], true_grit_plus(), damage=20)
-    assert picks_of(mcts_module.claude_heuristic_greedy, sim, n=50) == Counter({CardId.STRIKE_IRONCLAD: 50})
+    assert picks_of(policy_module.claude_heuristic_greedy, sim, n=50) == Counter({CardId.STRIKE_IRONCLAD: 50})
 
 @pytest.mark.parametrize("policy", HEURISTIC)
 def test_a_choice_of_any_number_exhausts_the_unplayable_cards_and_stops(policy):
@@ -426,7 +436,7 @@ def test_a_choice_of_any_number_exhausts_the_unplayable_cards_and_stops(policy):
     sim = CombatSimulator(cs)
     sim.perform_action({"action": "use_potion", "slot": 0, "potion_id": "ASHWATER", "target": 0})
     rng.seed(5)
-    with mock.patch.object(mcts_module, "P_RANDOM_ACTION", 0.0):
+    with tuned(p_random_action=0.0):
         for _ in range(10):
             if sim.combat_state.pending_choice is None:
                 break
@@ -447,13 +457,13 @@ def test_a_choice_of_any_number_with_nothing_unplayable_exhausts_nothing(policy)
 # Armaments: the card it upgrades is picked with the weights cards are played by
 def test_armaments_picks_the_card_by_the_weights_cards_are_played_by():
     sim = reaching_choice([strike(), defend()], armaments(), damage=20)
-    picks = picks_of(mcts_module.claude_heuristic, sim)
+    picks = picks_of(policy_module.claude_heuristic, sim)
     upgrade_share = picks[CardId.DEFEND_IRONCLAD] / sum(picks.values())
     play_sim, actions = playing_sim(make_state([strike(), defend()]))
     play_sim.combat_state.enemies[0].attack_damage = 20
-    with mock.patch.object(mcts_module, "P_RANDOM_ACTION", 0.0):
+    with tuned(p_random_action=0.0):
         rng.seed(1)
-        played = [mcts_module.claude_heuristic(play_sim, actions) for _ in range(1500)]
+        played = [policy_module.claude_heuristic(play_sim, actions) for _ in range(1500)]
     play_share = sum(play_sim.combat_state.player.hand[a["card_index"]].card_id == CardId.DEFEND_IRONCLAD for a in played) / 1500
     assert upgrade_share == pytest.approx(play_share, abs=0.04) and upgrade_share > 0.8
 
@@ -461,4 +471,4 @@ def test_armaments_does_not_upgrade_an_unplayable_card_while_another_can_be():
     """(A Wound cannot be upgraded at all; this is a card that can be, and cannot be played just now.)"""
     stuck = card_of_id(CardId.STRIKE_IRONCLAD, "Strike", CardType.Attack, target=TargetType.AnyEnemy, unplayable=True)
     sim = reaching_choice([stuck, defend()], armaments())
-    assert picks_of(mcts_module.claude_heuristic, sim, n=300) == Counter({CardId.DEFEND_IRONCLAD: 300})
+    assert picks_of(policy_module.claude_heuristic, sim, n=300) == Counter({CardId.DEFEND_IRONCLAD: 300})

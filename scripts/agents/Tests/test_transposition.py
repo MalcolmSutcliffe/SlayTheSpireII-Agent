@@ -6,10 +6,12 @@ from collections import Counter
 import pytest
 
 from sts2_lite import rng
-from sts2_lite.state_key import state_key
+from agents.sts2_MCTS.state_key import state_key
 import agents.sts2_MCTS.MCTS as mcts_module
-from agents.sts2_MCTS.MCTS import SearchConfig, sts2_MCTS, sts2_DeterministicNode, expand_node, backpropagate
+from agents.sts2_MCTS.MCTS import sts2_MCTS, sts2_DeterministicNode, expand_node, backpropagate
+from agents.sts2_MCTS.params import SearchConfig
 from test_mcts import make_state, strike, defend, pommel, pile, new_mcts, child_for, walk_unique
+from agents.sts2_MCTS.params import DEFAULT_CONFIG
 
 
 def two_plays():
@@ -112,7 +114,7 @@ def test_uct_uses_the_parent_the_search_came_through():
     low = mcts.get_uct_score(shared, first)
     high = mcts.get_uct_score(shared, second)
     assert high > low
-    scale = (mcts_module.MIN_REWARD_SPAN / 2.0) ** mcts_module.EXPLORATION_POWER       # no rollout has run: the span is the minimum
+    scale = (DEFAULT_CONFIG.uct.min_reward_span / 2.0) ** DEFAULT_CONFIG.uct.exploration_power       # no rollout has run: the span is the minimum
     assert high == pytest.approx(0.5 + mcts._search_config.exploration * scale * math.sqrt(math.log(100) / 10))
     assert mcts.get_uct_score(shared) == low            # default: the first parent
 

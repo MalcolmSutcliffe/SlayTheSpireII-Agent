@@ -3,7 +3,7 @@ from __future__ import annotations
 from sts2_lite import rng
 from sts2_lite.card import CardId, Card
 from sts2_lite.combat import CombatSimulator, CombatState
-from sts2_lite.verify import compare, is_random_step
+from agents.verify import compare, is_random_step
 from agents.Tests.test_mcts import make_state, strike, defend, bash
 
 

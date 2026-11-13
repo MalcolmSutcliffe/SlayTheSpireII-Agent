@@ -6,7 +6,7 @@ from sts2_lite.combat import CombatSimulator, CombatState
 from sts2_lite.creature import Creature
 from sts2_lite.enemy import Enemy
 from sts2_lite.player import Player
-from sts2_lite.status import STATUS_BEAVIOURS, StatusId
+from sts2_lite.status import StatusId
 
 
 # ---------------------------------------------------------------- helpers
@@ -86,10 +86,9 @@ def test_status_is_stored_under_its_own_id():
 
 @pytest.mark.parametrize("status_id", list(StatusId))
 def test_every_status_id_can_be_applied(status_id):
-    # every StatusId needs a STATUS_BEAVIOURS entry
     c = make_creature()
     c.apply_status(status_id, 1)
-    assert c.status[status_id].behaviour == STATUS_BEAVIOURS[status_id]
+    assert c.status_amount(status_id) == 1
 
 def test_statuses_are_not_shared_between_creatures():
     a, b = make_creature(), make_creature()

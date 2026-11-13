@@ -7,9 +7,11 @@ import pytest
 
 from sts2_lite import rng
 from sts2_lite.combat import CombatSimulator, CombatState
-from sts2_lite.state_key import state_key
-from agents.sts2_MCTS.MCTS import SearchConfig, sts2_MCTS, MIN_SIMS
+from agents.sts2_MCTS.state_key import state_key
+from agents.sts2_MCTS.MCTS import sts2_MCTS
+from agents.sts2_MCTS.params import SearchConfig
 from test_mcts import make_state, strike, defend, bash, pommel, pile, draw_fight, walk_unique
+from agents.sts2_MCTS.params import DEFAULT_CONFIG
 
 CFG = SearchConfig(max_sims=400, early_exit=False)
 
@@ -71,7 +73,7 @@ def test_the_first_searchs_reward_scale_is_kept():
     end_turn = next(c for c in mcts._root_node.children if c.action["action"] == "end_turn")
     observed = CombatState.deepcopy(next(iter(end_turn.outcomes.values())).state)      # the enemy's turn has hit the player
     assert observed.player.current_hp < start_hp
-    _, stats = mcts.monte_carlo_tree_search(observed, SearchConfig(max_sims=MIN_SIMS, early_exit=False))
+    _, stats = mcts.monte_carlo_tree_search(observed, SearchConfig(max_sims=DEFAULT_CONFIG.min_sims, early_exit=False))
     assert stats["reused"] and (mcts._starting_hp, mcts._expected_total_hp) == (start_hp, total)
 
 def test_a_fresh_tree_gets_a_new_reward_scale():
@@ -106,7 +108,7 @@ def test_statistics_follow_the_card_when_the_hand_is_reordered():
         if c.action["action"] == "play_card":
             old_by_card[old_hand[c.action["card_index"]].card_id] = c.visits
     observed.player.hand.reverse()
-    mcts.monte_carlo_tree_search(observed, SearchConfig(max_sims=MIN_SIMS, early_exit=False))
+    mcts.monte_carlo_tree_search(observed, SearchConfig(max_sims=DEFAULT_CONFIG.min_sims, early_exit=False))
     for c in mcts._root_node.children:
         if c.action["action"] == "play_card":
             cid = observed.player.hand[c.action["card_index"]].card_id
@@ -120,18 +122,18 @@ def test_a_sampled_draw_outcome_is_reused():
     chance = next(c for c in mcts._root_node.children if c.is_chance_node and c.action["action"] == "play_card")
     outcome = max(chance.outcomes.values(), key=lambda o: o.visits)
     observed = CombatState.deepcopy(outcome.state)
-    _, stats = mcts.monte_carlo_tree_search(observed, SearchConfig(max_sims=MIN_SIMS, early_exit=False))
+    _, stats = mcts.monte_carlo_tree_search(observed, SearchConfig(max_sims=DEFAULT_CONFIG.min_sims, early_exit=False))
     assert stats["reused"] is True and stats["inherited_visits"] >= outcome.visits > 0
 
 def test_a_draw_outcome_that_was_not_sampled_starts_a_fresh_tree():
     cs = draw_fight()
-    mcts, _, _ = searched(cs, SearchConfig(max_sims=MIN_SIMS, early_exit=False))
+    mcts, _, _ = searched(cs, SearchConfig(max_sims=DEFAULT_CONFIG.min_sims, early_exit=False))
     chance = next(c for c in mcts._root_node.children if c.is_chance_node and c.action["action"] == "play_card")
     observed = CombatState.deepcopy(chance.pre_state)
     sim = CombatSimulator(observed)
     sim.perform_action(chance.action)
     observed.player.hand.append(bash())                  # a hand the search cannot have drawn
-    _, stats = mcts.monte_carlo_tree_search(observed, SearchConfig(max_sims=MIN_SIMS, early_exit=False))
+    _, stats = mcts.monte_carlo_tree_search(observed, SearchConfig(max_sims=DEFAULT_CONFIG.min_sims, early_exit=False))
     assert stats["reused"] is False
 
 
@@ -139,7 +141,7 @@ def test_the_old_tree_is_released():
     cs = three_cards()
     mcts, action, _ = searched(cs)
     old_root = weakref.ref(mcts._root_node)
-    mcts.monte_carlo_tree_search(after(cs, action), SearchConfig(max_sims=MIN_SIMS, early_exit=False))
+    mcts.monte_carlo_tree_search(after(cs, action), SearchConfig(max_sims=DEFAULT_CONFIG.min_sims, early_exit=False))
     gc.collect()
     assert old_root() is None
 
@@ -171,7 +173,7 @@ def test_searching_the_same_state_again_keeps_what_was_learned():
     cs = three_cards()
     mcts, _, _ = searched(cs)
     before = mcts._root_node.visits
-    _, stats = mcts.monte_carlo_tree_search(cs, SearchConfig(max_sims=MIN_SIMS, early_exit=False))
+    _, stats = mcts.monte_carlo_tree_search(cs, SearchConfig(max_sims=DEFAULT_CONFIG.min_sims, early_exit=False))
     assert stats["reused"] and stats["inherited_visits"] == before
 
 def test_children_visits_cover_the_root_after_reuse():

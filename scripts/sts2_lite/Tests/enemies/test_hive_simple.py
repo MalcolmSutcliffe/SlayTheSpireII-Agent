@@ -202,7 +202,7 @@ def test_the_fight_is_won_when_only_the_parafright_is_left():
     assert sim.is_over and cs.won
 
 
-# ---------------------------------------------------------------- batch 2: Exoskeleton, Hunter Killer, Entomancer, Prism, Louse
+# ---------------------------------------------------------------- Exoskeleton, Hunter Killer, Entomancer, Prism, Louse
 from sts2_lite import rng
 from sts2_lite.card import Card, CardType, TargetType
 
@@ -351,7 +351,7 @@ def test_curl_up_pays_out_once_after_the_card():
     assert cs.enemies[0].block == 14 and StatusId.CURL_UP not in cs.enemies[0].status
 
 
-# ---------------------------------------------------------------- batch 3: Tunneler, Slumbering Beetle, Ovicopter, Tough Egg, Thieving Hopper
+# ---------------------------------------------------------------- Tunneler, Slumbering Beetle, Ovicopter, Tough Egg, Thieving Hopper
 from sts2_lite.card import CARD_RARITY, CardRarity
 
 

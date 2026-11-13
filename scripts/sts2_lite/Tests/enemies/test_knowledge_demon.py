@@ -8,7 +8,7 @@ from sts2_lite.combat import CombatSimulator
 from sts2_lite.enemy_moves import MOVE_TABLES
 from sts2_lite.status import StatusId
 from sts2_lite.Tests import captures
-from sts2_lite.Tests.test_cards import make_card
+from sts2_lite.Tests.card.test_card import make_card
 from sts2_lite.Tests.enemies.test_hive_simple import at, moves_over, turn
 
 

@@ -7,12 +7,12 @@ import math
 import pytest
 
 import agents.sts2_MCTS.MCTS as mcts_module
-from agents.sts2_MCTS.MCTS import (
-    EXPLORATION_POWER, MIN_REWARD_SPAN, SearchConfig, WIN_BASE, sts2_DeterministicNode, sts2_MCTS,
-)
+from agents.sts2_MCTS.MCTS import sts2_DeterministicNode, sts2_MCTS
+from agents.sts2_MCTS.params import SearchConfig
 from test_mcts import defend, make_state, new_mcts, stalled_fight, strike
+from agents.sts2_MCTS.params import DEFAULT_CONFIG
 
-LEGACY_SCALE = ((WIN_BASE + 1.0) / 2.0) ** EXPLORATION_POWER      # the scale the fixed constant used to be
+LEGACY_SCALE = ((DEFAULT_CONFIG.reward.win_base + 1.0) / 2.0) ** DEFAULT_CONFIG.uct.exploration_power      # the scale the fixed constant used to be
 
 
 def seen(lo, hi):
@@ -28,16 +28,16 @@ def search(cs, sims=300):
 
 # ---------------------------------------------------------------- the scale
 def test_before_any_rollout_the_span_is_the_minimum():
-    assert new_mcts()._exploration_scale() == pytest.approx((MIN_REWARD_SPAN / 2) ** EXPLORATION_POWER)
+    assert new_mcts()._exploration_scale() == pytest.approx((DEFAULT_CONFIG.uct.min_reward_span / 2) ** DEFAULT_CONFIG.uct.exploration_power)
 
 def test_a_span_below_the_minimum_is_raised_to_it():
     assert seen(-0.50, -0.45)._exploration_scale() == pytest.approx(new_mcts()._exploration_scale())
 
 def test_the_scale_is_half_the_span_to_the_power():
-    assert seen(-1.0, -0.2)._exploration_scale() == pytest.approx((0.8 / 2) ** EXPLORATION_POWER)
+    assert seen(-1.0, -0.2)._exploration_scale() == pytest.approx((0.8 / 2) ** DEFAULT_CONFIG.uct.exploration_power)
 
 def test_a_win_seen_gives_the_scale_a_fixed_one_of_that_size_used():
-    win = WIN_BASE + 1.0            # a win at full health
+    win = DEFAULT_CONFIG.reward.win_base + 1.0            # a win at full health
     assert seen(-1.0, win - 1.0)._exploration_scale() == pytest.approx(LEGACY_SCALE)
 
 def test_the_scale_grows_with_the_span():
@@ -46,11 +46,13 @@ def test_the_scale_grows_with_the_span():
 def test_a_losing_search_explores_far_less_than_one_that_has_found_a_win():
     assert seen(-1.0, -0.3)._exploration_scale() < 0.2 * seen(-1.0, 21.0)._exploration_scale()
 
-def test_a_fixed_scale_overrides_the_rewards_seen(monkeypatch):
+def test_a_fixed_scale_overrides_the_rewards_seen():
     """The benchmark's reference searches set one."""
-    monkeypatch.setattr(mcts_module, "EXPLORATION_SCALE", 60.0)
-    assert seen(-1.0, -0.3)._exploration_scale() == 60.0
-    assert seen(-1.0, 21.0)._exploration_scale() == 60.0
+    fixed = SearchConfig().tuned(exploration_scale=60.0)
+    for lo, hi in ((-1.0, -0.3), (-1.0, 21.0)):
+        mcts = seen(lo, hi)
+        mcts._search_config = fixed
+        assert mcts._exploration_scale() == 60.0
 
 
 # ---------------------------------------------------------------- the UCT score
@@ -92,8 +94,8 @@ def mixed_fight():
 
 def test_a_fight_with_wins_and_losses_widens_the_scale():
     mcts = search(mixed_fight())
-    assert mcts._reward_lo < 0 and mcts._reward_hi > WIN_BASE
-    assert mcts._exploration_scale() == pytest.approx(((mcts._reward_hi - mcts._reward_lo) / 2) ** EXPLORATION_POWER)
+    assert mcts._reward_lo < 0 and mcts._reward_hi > DEFAULT_CONFIG.reward.win_base
+    assert mcts._exploration_scale() == pytest.approx(((mcts._reward_hi - mcts._reward_lo) / 2) ** DEFAULT_CONFIG.uct.exploration_power)
     assert mcts._exploration_scale() == pytest.approx(LEGACY_SCALE, rel=0.1)
 
 def test_a_fight_that_is_only_won_keeps_a_small_scale():
@@ -101,7 +103,7 @@ def test_a_fight_that_is_only_won_keeps_a_small_scale():
     cs = make_state([strike()])
     cs.enemies[0].current_hp = 6
     mcts = search(cs)
-    assert mcts._reward_lo > WIN_BASE
+    assert mcts._reward_lo > DEFAULT_CONFIG.reward.win_base
     assert mcts._exploration_scale() < 1.0
 
 def test_the_range_is_the_rollout_rewards_not_the_information_bonus():

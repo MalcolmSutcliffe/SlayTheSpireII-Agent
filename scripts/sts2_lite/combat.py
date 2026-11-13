@@ -16,7 +16,7 @@ from sts2_lite.events import EventType
 from sts2_lite.relic import RelicId, dexterity_bonus, PER_TURN_FLAG, ALWAYS_REPORTED, take_extra_turn, after_card_played, release_card, fire_relics, blocks_play, PHILOSOPHERS_STONE_STRENGTH, upgraded_after_play, \
     max_energy_gain, victory_heal
 
-from sts2_lite.status import StatusId, StatusBehaviour, STATUS_HANDLERS, AUTOMATION_CARDS, face_target, SLOTH_LIMIT, _nemesis_toggle
+from sts2_lite.status import StatusId, TICKS_DOWN, RESETS_EACH_TURN, STATUS_HANDLERS, AUTOMATION_CARDS, face_target, SLOTH_LIMIT, nemesis_toggle
 from sts2_lite.enemy_moves import SUMMONS, SEGMENTS, ALLY_DEATH_HOOKS
 from sts2_lite.potion import use_potion, usable_potion_actions
 
@@ -413,16 +413,6 @@ class CombatState:
         new_cs.pending_choice = combat_state.pending_choice.deepcopy() if combat_state.pending_choice else None
         new_cs.won = combat_state.won
         return new_cs
-        
-    def readable(self) -> str:
-        output = ""
-        output += "Turn : " + str(self.turn_number) + "\n"
-        output += "Energy : " + str(self.energy) + "\n"
-        output += "Player : \n" + self.player.readable()
-        output += "Enemies : \n"
-        for enemy in self.enemies:
-            output += enemy.readable()
-        return output
 
 class IllegalActionError(ValueError):
     """Raised when an action is not legal in the current state."""
@@ -1011,7 +1001,7 @@ class CombatSimulator:
             first_round = self.combat_state.turn_number == 1
             self._decrease_statuses(e, skip={StatusId.PLATING} if first_round else frozenset())
             if StatusId.NEMESIS in e.status:
-                _nemesis_toggle(self, e)
+                nemesis_toggle(self, e)
         self.combat_state.turn_number += 1
         self._check_is_over()
         if self.combat_state.pending_choice is not None and not self.is_over:
@@ -1112,15 +1102,13 @@ class CombatSimulator:
         for s in creature.status.values():
             if s.status_id in skip:
                 continue
-            if s.behaviour == StatusBehaviour.STATIC:
-                continue
-            elif s.behaviour == StatusBehaviour.DECREASE_BY_ONE:
+            if s.status_id in TICKS_DOWN:
                 if s.amount < 0:
                     continue            # Shrink below zero is infinite (the Shrinker Beetle's lasts while it lives)
-                s.amount = s.amount -1
+                s.amount -= 1
                 if s.amount <= 0:
                     to_remove.append(s.status_id)
-            elif s.behaviour == StatusBehaviour.RESET_TO_ZERO:
+            elif s.status_id in RESETS_EACH_TURN:
                 s.amount = 0
         for s in to_remove:
             del creature.status[s]

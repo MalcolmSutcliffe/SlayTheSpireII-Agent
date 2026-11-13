@@ -5,7 +5,7 @@ from sts2_lite.creature import Creature
 from sts2_lite.enemy import Enemy
 from sts2_lite.events import EventType
 from sts2_lite.player import Player
-from sts2_lite.status import StatusId, StatusInstance
+from sts2_lite.status import StatusId, StatusInstance, TICKS_DOWN
 
 
 # ---------------------------------------------------------------- helpers
@@ -174,3 +174,46 @@ def test_handler_fires_for_clones_without_any_setup():
     CombatSimulator(clone).fire(EventType.ENEMY_TURN_END)
     assert clone.enemies[0].status_amount(StatusId.STRENGTH) == 2
     assert cs.enemies[0].status_amount(StatusId.STRENGTH) == 0
+
+
+# ---------------------------------------------------------------- ticking down
+def tick(creature):
+    cs = make_state()
+    CombatSimulator(cs)._decrease_statuses(creature)
+    return creature
+
+def test_a_duration_status_loses_one_per_tick_and_goes_at_zero():
+    c = Creature()
+    c.apply_status(StatusId.WEAK, 2)
+    assert tick(c).status_amount(StatusId.WEAK) == 1
+    assert StatusId.WEAK not in tick(c).status
+
+def test_every_ticking_status_counts_down():
+    for status_id in TICKS_DOWN:
+        c = Creature()
+        c.apply_status(status_id, 3)
+        assert tick(c).status_amount(status_id) == 2, status_id
+
+def test_a_negative_shrink_never_runs_out():
+    c = Creature()
+    c.apply_status(StatusId.SHRINK, -1)
+    assert tick(c).status_amount(StatusId.SHRINK) == -1
+
+def test_slow_resets_to_zero_but_stays():
+    c = Creature()
+    c.apply_status(StatusId.SLOW, 4)
+    assert tick(c).status_amount(StatusId.SLOW) == 0
+    assert StatusId.SLOW in c.status
+
+def test_other_statuses_are_left_alone():
+    c = Creature()
+    c.apply_status(StatusId.STRENGTH, 3)
+    c.apply_status(StatusId.THORNS, 2)
+    tick(c)
+    assert (c.status_amount(StatusId.STRENGTH), c.status_amount(StatusId.THORNS)) == (3, 2)
+
+def test_skipped_statuses_do_not_tick():
+    c = Creature()
+    c.apply_status(StatusId.VULNERABLE, 2)
+    CombatSimulator(make_state())._decrease_statuses(c, skip={StatusId.VULNERABLE})
+    assert c.status_amount(StatusId.VULNERABLE) == 2

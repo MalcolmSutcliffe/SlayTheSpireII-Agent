@@ -8,7 +8,7 @@ from sts2_lite.combat import CombatSimulator
 from sts2_lite.enemy_moves import MOVE_TABLES
 from sts2_lite.status import StatusId
 from sts2_lite.Tests.enemies.test_glory_simple import at, moves_over, status, turn
-from sts2_lite.Tests.test_curses import end_turn
+from sts2_lite.Tests.card.test_curses import end_turn
 
 
 @pytest.fixture(autouse=True)

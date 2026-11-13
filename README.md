@@ -1,8 +1,6 @@
-
-
 # Agent for Slay the Spire 2.
 
-### DISCLAIMER : Claude Sonnet 5.5 and Opus 5.5 were used for bug-fixing, writing sts2_lite (from decompiled sts2 code), and Test suites.
+### DISCLAIMER : Claude Sonnet 5.5 and Opus 5.5 were used for writing sts2_lite (from decompiled sts2 code), Test suites, bug-fixing, and code refactoring.
 
 ## REFERENCES:
 
@@ -44,16 +42,16 @@ No functionality
 
 # TODO :
 
-## STS2_Lite
+## sts_lite (slay the spire II headless imitator)
 
 Card pools (multiplayer ignored)
  - [x] Colourless
     Not implemented:
-    - [ ] Strategem (Sim doesnt have events in between turns)
-    - [ ] Splash (need other character card pools)
+    - Strategem (Sim doesnt have events in between turns)
+    - Splash (need other character card pools)
  - [x] Curse
     Not implemented:
-    - [ ] Enthralled (Enforcing play order not implemented in engine)
+    - Enthralled (Enforcing play order not implemented in engine)
  
  - [X] Status
  - [X] Ancient
@@ -63,15 +61,11 @@ Card pools (multiplayer ignored)
  - [ ] Regent
  - [ ] Defect
 
-
-Add In-combat relics
- - [x]
-
-Add potions
- - [x]
-
-Add enchantments
- - [x]
+Other features:
+ - [x] In-combat relics
+ - [x] Potions
+ - [x] Enchantments
+ 
 
  ## MCTS :
 
@@ -91,12 +85,12 @@ Add enchantments
  - [ ] Improve sim speed
  - [ ] Root parallelization
  - [ ] Neural network rollout policy
- - [x] Seeded rollouts to reduce noise -> greedy heuristic rollout that is deterministic
+ - [x] Seeded rollouts to reduce noise
 
  
  Waiting on engine:
  - [x] Potion use
- - [ ] end of act healing
+ - [ ] end of act healing. Not strictly neccesarry. Most hp is still best
 
  ## Out of combat actions
  - Needs to be addressed

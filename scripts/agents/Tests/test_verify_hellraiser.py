@@ -5,9 +5,10 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from sts2_lite.combat import CombatState
 from sts2_lite.relic import RelicId
 from sts2_lite.status import StatusId
-from sts2_lite.verify import compare
+from agents.verify import compare
+from data_paths import SEARCH
 
-AFTER = json.load(open(os.path.join(os.path.dirname(__file__), "fixtures", "hellraiser_after.json")))
+AFTER = json.load(open(SEARCH / "hellraiser_after.json"))
 
 
 def _pair():

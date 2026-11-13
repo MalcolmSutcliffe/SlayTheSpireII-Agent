@@ -5,7 +5,7 @@ from sts2_lite import enemy as enemy_module
 from sts2_lite.combat import CombatSimulator
 from sts2_lite.enemy_moves import MOVE_TABLES, SEGMENTS
 from sts2_lite.status import StatusId
-from sts2_lite.state_key import state_key
+from agents.sts2_MCTS.state_key import state_key
 from sts2_lite.Tests import captures
 from sts2_lite.Tests.enemies.test_bridge_moves import attack, load, raw_enemy
 
@@ -160,5 +160,5 @@ def test_segments_killed_a_turn_apart_come_back_a_turn_apart():
     cs, game = played_turn("front_reattached_middle_dead_before", "front_reattached_middle_dead_after")
     assert [e.enemy_id for e in cs.enemies] == [e.enemy_id for e in game.enemies]
     assert [(d.enemy_id, d.move_id) for d in cs.dormant] == [("DECIMILLIPEDE_SEGMENT_MIDDLE_0", "REATTACH")]
-    from sts2_lite.verify import compare
+    from agents.verify import compare
     assert compare(cs, game, random_step=True) == []

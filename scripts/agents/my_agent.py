@@ -2,7 +2,8 @@ from agents.base_agent import BaseAgent
 
 from sts2_lite.combat import CombatState, CombatSimulator
 
-from agents.sts2_MCTS.MCTS import sts2_MCTS, SearchConfig
+from agents.sts2_MCTS.MCTS import sts2_MCTS
+from agents.sts2_MCTS.params import SearchConfig
     
 # Phase constants
 PHASE_MAP_CHOICE = "MAP_CHOICE"

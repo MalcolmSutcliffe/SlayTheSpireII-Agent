@@ -1,4 +1,3 @@
-from __future__ import annotations
 """The order of the turn's plain plays (sts2_MCTS._order_check). Run from scripts/: python -m pytest agents/Tests"""
 import pytest
 
@@ -6,8 +5,10 @@ from sts2_lite import rng
 from sts2_lite.card import CardId, CardType, TargetType
 from sts2_lite.potion import Potion, PotionId
 import agents.sts2_MCTS.MCTS as mcts_module
+import agents.sts2_MCTS.order_check as order_module
 from sts2_lite.combat import CombatSimulator
-from agents.sts2_MCTS.MCTS import SearchConfig, RolloutPolicy, sts2_MCTS, sts2_DeterministicNode, expand_node
+from agents.sts2_MCTS.MCTS import sts2_MCTS, sts2_DeterministicNode, expand_node
+from agents.sts2_MCTS.params import SearchConfig, RolloutPolicy
 from test_mcts import make_state, make_card, strike, defend, bash, new_mcts, primed
 
 SCENARIOS = 60
@@ -107,7 +108,7 @@ def test_a_random_first_play_is_left_alone():
     assert mcts._order_check(first) is None
 
 def test_a_line_with_too_many_plays_keeps_the_trees_order(monkeypatch):
-    monkeypatch.setattr(mcts_module, "ORDER_MAX_UNITS", 1)
+    monkeypatch.setattr(order_module, "ORDER_MAX_UNITS", 1)
     mcts, first = tree_with_line(dexterity_turn(), [CardId.DEFEND_IRONCLAD, "potion", "end_turn"])
     assert mcts._order_check(first) is None
 

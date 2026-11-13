@@ -301,7 +301,7 @@ def test_new_withers_are_made_at_the_current_level():
 
 def test_with_the_subject_dead_the_player_can_only_end_the_turn_and_a_copy_keeps_the_respawn():
     from sts2_lite.combat import CombatState
-    from sts2_lite.state_key import state_key
+    from agents.sts2_MCTS.state_key import state_key
     cs = subject()
     sim = kill(cs)
     assert [a["action"] for a in sim.get_available_actions()] == ["end_turn"]
@@ -311,8 +311,8 @@ def test_with_the_subject_dead_the_player_can_only_end_the_turn_and_a_copy_keeps
     assert copy.enemies[0].max_hp == 200 and len(cs.dormant) == 1
 
 
-# ---------------------------------------------------------------- captured from the game (Tests/data/act3_glory)
-from sts2_lite import verify
+# ---------------------------------------------------------------- captured from the game (data/enemies/act3_glory)
+from agents import verify
 from sts2_lite.Tests import captures
 
 

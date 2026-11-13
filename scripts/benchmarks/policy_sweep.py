@@ -4,11 +4,11 @@ on the policy shows up without search noise. Score and pairing are the fights su
 Usage (from scripts/):
   python -m benchmarks.policy_sweep eval  --policy RarityPreference [--w BLOCK_MULT=6 --w RARITY.Rare=12] [--seeds 100]
   python -m benchmarks.policy_sweep sweep --policy RarityPreference [--seeds 100]      # one-at-a-time grids around the defaults
-A --w name is a module constant of agents.sts2_MCTS.MCTS, or RARITY.<CardRarity> for an entry of RARITY_WEIGHTS."""
+A --w name is a field of HeuristicParams (agents/sts2_MCTS/params.py), in capitals, or RARITY.<CardRarity> for an entry of its rarity_weights."""
 from __future__ import annotations
 
 import argparse
-import contextlib
+import dataclasses
 import json
 import statistics
 import sys
@@ -18,8 +18,8 @@ SCRIPTS_DIR = Path(__file__).resolve().parents[1]
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
-from agents.sts2_MCTS import MCTS as M
-from agents.sts2_MCTS.MCTS import RolloutPolicy, rollout_policy
+from agents.sts2_MCTS.rollout_policy import rollout_policy
+from agents.sts2_MCTS.params import DEFAULT_HEURISTIC, HeuristicParams, RolloutPolicy
 from benchmarks.bench import (DEATH_PENALTY, FIGHT_TURN_CAP, RESULTS_DIR, default_workers, fmt, is_won, load_index, load_state,
                               map_jobs, paired_diff)
 from sts2_lite import rng
@@ -43,24 +43,19 @@ def parse_weights(pairs : list[str]) -> dict[str, float]:
         out[name] = float(raw)
     return out
 
-@contextlib.contextmanager
-def weights_applied(weights : dict[str, float]):
-    saved = []
-    try:
-        for name, value in weights.items():
-            if name.startswith("RARITY."):
-                key = CardRarity[name.split(".", 1)[1]]
-                saved.append((M.RARITY_WEIGHTS, key, M.RARITY_WEIGHTS[key]))
-                M.RARITY_WEIGHTS[key] = value
-            else:
-                saved.append((vars(M), name, getattr(M, name)))
-                setattr(M, name, value)
-        yield
-    finally:
-        for target, key, old in reversed(saved):
-            target[key] = old
+def heuristic_with(weights : dict[str, float]) -> HeuristicParams:
+    """The default heuristic parameters with the swept weights changed."""
+    params = DEFAULT_HEURISTIC
+    for name, value in weights.items():
+        if name.startswith("RARITY."):
+            rarity = CardRarity[name.split(".", 1)[1]]
+            params = dataclasses.replace(params, rarity_weights={**params.rarity_weights, rarity: value})
+        else:
+            current = getattr(params, name.lower())
+            params = dataclasses.replace(params, **{name.lower(): type(current)(value)})
+    return params
 
-def play_policy_fight(start : CombatState, policy : RolloutPolicy, seed : int) -> dict:
+def play_policy_fight(start : CombatState, policy : RolloutPolicy, params : HeuristicParams, seed : int) -> dict:
     """World (draws, enemy rolls) and policy use separate rng streams, as in bench.play_fight."""
     rng.seed(seed);                       world = rng.getstate()
     rng.seed(AGENT_SEED_OFFSET + seed);   agent = rng.getstate()
@@ -75,7 +70,7 @@ def play_policy_fight(start : CombatState, policy : RolloutPolicy, seed : int) -
         if not actions:
             break
         rng.setstate(agent)
-        action = rollout_policy(sim, actions, policy)
+        action = rollout_policy(sim, actions, policy, params)
         agent = rng.getstate()
         rng.setstate(world)
         sim.perform_action(action)
@@ -87,8 +82,7 @@ def play_policy_fight(start : CombatState, policy : RolloutPolicy, seed : int) -
 
 def _job(job : tuple) -> dict:
     file, seed, policy, weights = job
-    with weights_applied(weights):
-        return {"file": file, "seed": seed, **play_policy_fight(load_state(file, "act1"), RolloutPolicy[policy], seed)}
+    return {"file": file, "seed": seed, **play_policy_fight(load_state(file, "act1"), RolloutPolicy[policy], heuristic_with(weights), seed)}
 
 def evaluate(policy : str, weights : dict, seeds : int, workers : int, smoke : bool = False) -> list[dict]:
     jobs = [(e["file"], s, policy, weights) for e in load_index(smoke, suite="act1") for s in range(seeds)]

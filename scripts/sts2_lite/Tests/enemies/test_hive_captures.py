@@ -1,4 +1,4 @@
-"""Act 2 states captured from the game (Tests/data/act2_hive). Run from scripts/: python -m pytest sts2_lite/Tests"""
+"""Act 2 states captured from the game (data/enemies/act2_hive). Run from scripts/: python -m pytest sts2_lite/Tests"""
 import pytest
 
 from sts2_lite import enemy as enemy_module

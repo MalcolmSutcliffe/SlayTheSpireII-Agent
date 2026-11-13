@@ -34,22 +34,24 @@ SCRIPTS_DIR = Path(__file__).resolve().parents[1]
 if str(SCRIPTS_DIR) not in sys.path:                       # allow `python benchmarks/bench.py`
     sys.path.insert(0, str(SCRIPTS_DIR))
 
+from data_paths import BENCHMARKS
 from sts2_lite import rng
 from sts2_lite.combat import CombatState, CombatSimulator
-from agents.sts2_MCTS.MCTS import sts2_MCTS, SearchConfig, RolloutPolicy
+from agents.sts2_MCTS.MCTS import sts2_MCTS
+from agents.sts2_MCTS.params import GROUPS, SearchConfig, RolloutPolicy
 
-BENCH_DIR = Path(__file__).resolve().parent
+BENCH_DIR = Path(__file__).resolve().parent            # results/ lives here; the suites and reference files are in data/benchmarks/
 RESULTS_DIR = BENCH_DIR / "results"
-SUITES = ("run4", "act1")        # a suite is a folder of state files + index.jsonl; run4 = real states from runs/run4-a9 (current reward)
+SUITES = ("run4", "act1")        # a suite is a folder of state files + index.jsonl; run4 = real states from data/runs/run4-a9 (current reward)
 DEFAULT_SUITE = "run4"
 
 def states_dir(suite: str = DEFAULT_SUITE) -> Path:
     if suite not in SUITES:
         raise SystemExit(f"unknown suite {suite!r}; choose from {SUITES}")
-    return BENCH_DIR / suite
+    return BENCHMARKS / suite
 
 def puzzles_path(suite: str = DEFAULT_SUITE) -> Path:
-    return BENCH_DIR / f"puzzles_{suite}.json"
+    return BENCHMARKS / f"puzzles_{suite}.json"
 
 TIE_EPS = 0.05              # regret (reward units) at or below this counts as agreeing with the reference: about one HP near full health
 REF_EXPLORATION_SCALE = 60.0   # the reference searches explore widely (the live scale lets an early lucky winner starve the other moves); this is set for them only
@@ -86,7 +88,7 @@ def load_index(smoke: bool = False, subset: str | None = None, suite: str = DEFA
     return entries
 
 def reference_path(subset: str | None = None, suite: str = DEFAULT_SUITE) -> Path:
-    return BENCH_DIR / (f"reference_{suite}.jsonl" if subset is None else f"reference_{suite}_{subset}.jsonl")
+    return BENCHMARKS / (f"reference_{suite}.jsonl" if subset is None else f"reference_{suite}_{subset}.jsonl")
 
 @lru_cache(maxsize=None)
 def _raw_state(file: str, suite: str = DEFAULT_SUITE) -> str:
@@ -97,16 +99,26 @@ def load_state(file: str, suite: str = DEFAULT_SUITE) -> CombatState:
     with contextlib.redirect_stdout(io.StringIO()):         # sim warnings (unimplemented cards) once per load
         return CombatState.from_dict(json.loads(_raw_state(file, suite)))
 
-def parse_overrides(pairs: list[str]) -> dict:
-    """['exploration=1.0', 'rollout=FirstAction'] -> typed field values for SearchConfig."""
-    fields = {f.name: f for f in dataclasses.fields(SearchConfig)}
+def search_fields() -> dict[str, tuple]:
+    """Every parameter of a search by name -> (default value, the dataclass field). Fields of the groups (reward, uct, ...) are flat here."""
     defaults = SearchConfig()
+    fields = {f.name: (getattr(defaults, f.name), f) for f in dataclasses.fields(SearchConfig) if f.name not in GROUPS}
+    for group in GROUPS:
+        for f in dataclasses.fields(getattr(defaults, group)):
+            fields[f.name] = (getattr(getattr(defaults, group), f.name), f)
+    return fields
+
+def parse_overrides(pairs: list[str]) -> dict:
+    """['exploration=1.0', 'rollout=FirstAction', 'p_random_action=0'] -> typed values for SearchConfig.tuned (a group's fields are named directly)."""
+    fields = search_fields()
     out = {}
     for pair in pairs or []:
         name, _, raw = pair.partition("=")
         if name not in fields:
-            raise SystemExit(f"unknown SearchConfig field '{name}' (fields: {', '.join(fields)})")
-        current = getattr(defaults, name)
+            raise SystemExit(f"unknown search parameter '{name}' (parameters: {', '.join(fields)})")
+        current = fields[name][0]
+        if isinstance(current, dict):
+            raise SystemExit(f"'{name}' is a table; change it in agents/sts2_MCTS/params.py or policy_sweep.py")
         if isinstance(current, RolloutPolicy) or name == "rollout":
             out[name] = RolloutPolicy[raw]
         elif isinstance(current, bool):
@@ -115,22 +127,20 @@ def parse_overrides(pairs: list[str]) -> dict:
             out[name] = None
         elif isinstance(current, int):
             out[name] = int(float(raw))
+        elif isinstance(current, str):
+            out[name] = raw
         else:
             out[name] = float(raw)
     return out
 
 def make_config(name: str, overrides: list[str] | None = None) -> SearchConfig:
-    return dataclasses.replace(CONFIGS[name], **parse_overrides(overrides))
+    return CONFIGS[name].tuned(**parse_overrides(overrides))
 
 def config_dict(config: SearchConfig) -> dict:
-    d = dataclasses.asdict(config)
-    d["rollout"] = config.rollout.name
-    return d
+    return config.to_dict()
 
 def config_from_dict(d: dict) -> SearchConfig:
-    d = dict(d)
-    d["rollout"] = RolloutPolicy[d["rollout"]]
-    return SearchConfig(**d)
+    return SearchConfig.from_dict(d)
 
 def action_key(action: dict) -> str:
     """Stable within one state (same state -> same indices); never compare across states."""
@@ -146,12 +156,7 @@ def run_search(state: CombatState, config: SearchConfig, seed: int) -> tuple[dic
 # ---------------------------------------------------------------- reference
 def _reference_job(job: tuple) -> dict:
     file, seed, config_d, suite = job
-    from agents.sts2_MCTS import MCTS as mcts_module
-    live_scale, mcts_module.EXPLORATION_SCALE = mcts_module.EXPLORATION_SCALE, REF_EXPLORATION_SCALE
-    try:
-        action, stats = run_search(load_state(file, suite), config_from_dict(config_d), seed)
-    finally:
-        mcts_module.EXPLORATION_SCALE = live_scale
+    action, stats = run_search(load_state(file, suite), config_from_dict(config_d).tuned(exploration_scale=REF_EXPLORATION_SCALE), seed)
     return {"file": file, "seed": seed, "pick": action_key(action),
             "children": [{"key": action_key(c["action"]), "visits": c["visits"], "q": c["q"]} for c in stats["children"]]}
 

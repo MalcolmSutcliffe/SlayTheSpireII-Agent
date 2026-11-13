@@ -7,8 +7,10 @@ import pytest
 
 from sts2_lite import rng
 from agents.sts2_MCTS import MCTS as mcts_module
-from agents.sts2_MCTS.MCTS import (SearchConfig, sts2_MCTS, sts2_ChanceNode, sts2_DeterministicNode, backpropagate, INFO_SIGMA)
+from agents.sts2_MCTS.MCTS import sts2_MCTS, sts2_ChanceNode, sts2_DeterministicNode, backpropagate
+from agents.sts2_MCTS.params import SearchConfig
 from test_mcts import make_state, strike, defend, pommel, new_mcts
+from agents.sts2_MCTS.params import DEFAULT_CONFIG
 
 
 # ---------------------------------------------------------------- hand-built nodes
@@ -37,7 +39,7 @@ def searcher(info_bonus=5.0, cap=0.05):
 
 def test_a_chance_node_with_clearly_different_outcomes_earns_nearly_the_cap():
     node = chance_with([(0.2, 10, {}), (0.8, 10, {})])
-    assert searcher()._information_value(node) == pytest.approx(0.05 * math.tanh(0.3 / INFO_SIGMA), rel=1e-6)
+    assert searcher()._information_value(node) == pytest.approx(0.05 * math.tanh(0.3 / DEFAULT_CONFIG.uct.info_sigma), rel=1e-6)
 
 def test_outcomes_of_equal_value_earn_nothing():
     assert searcher()._information_value(chance_with([(0.5, 10, {}), (0.5, 10, {}), (0.5, 3, {})])) == 0.0

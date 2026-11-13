@@ -3,8 +3,9 @@ from __future__ import annotations
 import json, os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from agent_tester import chained_into_new_fight
+from data_paths import SEARCH
 
-IDS = json.load(open(os.path.join(os.path.dirname(__file__), "fixtures", "double_boss_ids.json")))
+IDS = json.load(open(SEARCH / "double_boss_ids.json"))
 
 
 def test_the_next_boss_after_a_predicted_win_is_a_new_fight():

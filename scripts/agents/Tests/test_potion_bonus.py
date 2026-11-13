@@ -4,8 +4,10 @@ import pytest
 
 from sts2_lite import rng
 from sts2_lite.potion import Potion, PotionId
-from agents.sts2_MCTS.MCTS import SearchConfig, sts2_MCTS, DEFAULT_POTION_BONUS
+from agents.sts2_MCTS.MCTS import sts2_MCTS
+from agents.sts2_MCTS.params import SearchConfig
 from test_mcts import make_state, strike, defend
+from agents.sts2_MCTS.params import DEFAULT_CONFIG
 
 
 def scenario(hand, draw=(), hp=50, enemy_hp=60, damage=8, potions=(PotionId.FIRE_POTION,)):
@@ -40,7 +42,7 @@ def test_the_potion_is_used_when_it_is_the_only_way_to_win_with_a_full_hand(seed
 
 @pytest.mark.parametrize("seed", range(5))
 def test_the_potion_is_kept_when_blocking_wins_without_it(seed):
-    """The same hand against 8 damage: Defend, Defend, Strike every turn takes 3 turns and loses no HP, so the potion (worth 12 HP) stays.
+    """The same hand against 8 damage: Defend, Defend, Strike every turn takes 3 turns and loses no HP, so the potion (worth 16 HP) stays.
     Taking it would be a sure win, but a win with the potion kept is worth more, even at 1 HP."""
     cs = scenario([strike(), defend(), defend()], hp=1, enemy_hp=15, damage=8)
     assert not drinks(first_move(cs, seed))
@@ -55,12 +57,12 @@ def test_the_potion_is_kept_when_the_fight_is_won_without_it(seed):
 
 @pytest.mark.parametrize("seed", range(4))
 def test_the_potion_is_kept_over_a_long_but_safe_win(seed):
-    """Two turns of Strikes beat a weak enemy, taking 8 once: a 20-damage potion is not worth 12 HP here."""
+    """Two turns of Strikes beat a weak enemy, taking 8 once: a 20-damage potion is not worth 16 HP here."""
     cs = scenario([strike(), strike()], draw=[strike(), strike(), strike()], hp=50, enemy_hp=18, damage=2)
     assert not drinks(first_move(cs, seed))
 
 
-# 3. The potion saves 20 HP (worth more than the 12 it costs) against winning a turn later
+# 3. The potion saves 20 HP (worth more than the 16 it costs) against winning a turn later
 @pytest.mark.parametrize("seed", range(5))
 def test_the_potion_is_used_when_it_saves_more_hp_than_it_is_worth(seed):
     cs = scenario([strike()], draw=[strike() for _ in range(6)], hp=50, enemy_hp=12, damage=20)
@@ -68,7 +70,7 @@ def test_the_potion_is_used_when_it_saves_more_hp_than_it_is_worth(seed):
 
 @pytest.mark.parametrize("seed", range(3))
 def test_the_potion_is_kept_when_it_saves_less_than_it_is_worth(seed):
-    """The same fight, but the enemy hits for 8: using the potion saves 8 HP and costs 12."""
+    """The same fight, but the enemy hits for 8: using the potion saves 8 HP and costs 16."""
     cs = scenario([strike()], draw=[strike() for _ in range(6)], hp=50, enemy_hp=12, damage=8)
     assert not drinks(first_move(cs, seed))
 
@@ -91,11 +93,12 @@ def test_every_potion_gets_a_bonus_without_an_error():
 
 def test_the_specific_bonus_beats_the_default_for_a_valued_potion():
     assert rated(scenario([strike()], hp=30), [PotionId.AMBERGRIS]) > rated(scenario([strike()], hp=30), [PotionId.FIRE_POTION])
-    assert DEFAULT_POTION_BONUS == 12
+    assert DEFAULT_CONFIG.reward.default_potion_bonus == 16
 
 
 # rollouts never drink potions
-from agents.sts2_MCTS.MCTS import RolloutPolicy, ROLLOUT_POLICY_DICT, rollout_policy
+from agents.sts2_MCTS.rollout_policy import ROLLOUT_POLICY_DICT, rollout_policy
+from agents.sts2_MCTS.params import RolloutPolicy
 from sts2_lite.combat import CombatSimulator
 
 @pytest.mark.parametrize("policy", list(RolloutPolicy))
@@ -124,7 +127,6 @@ def test_a_whole_rollout_keeps_the_potions():
 
 
 # max HP gained in the fight (Feed, Fruit Juice) counts MAX_HP_SCALING HP per point on a win
-from agents.sts2_MCTS.MCTS import MAX_HP_SCALING
 
 def rated_with_max_hp(gain, hp=30):
     cs = scenario([strike()], hp=hp)
@@ -139,7 +141,7 @@ def test_a_win_that_raised_max_hp_scores_higher():
 
 def test_each_max_hp_point_is_worth_as_much_as_that_many_hp_points():
     """+3 max HP (times MAX_HP_SCALING) matches ending with that much more HP."""
-    assert rated_with_max_hp(3, hp=30) == pytest.approx(rated_with_max_hp(0, hp=30 + MAX_HP_SCALING * 3))
+    assert rated_with_max_hp(3, hp=30) == pytest.approx(rated_with_max_hp(0, hp=30 + DEFAULT_CONFIG.reward.max_hp_scaling * 3))
 
 def test_max_hp_does_not_matter_in_a_loss():
     cs = scenario([strike()], hp=0)

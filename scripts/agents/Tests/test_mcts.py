@@ -15,12 +15,10 @@ from sts2_lite.enemy import Enemy
 from sts2_lite.enemy_moves import nibbit
 from sts2_lite.player import Player
 import agents.sts2_MCTS.MCTS as mcts_module
-from agents.sts2_MCTS.MCTS import (
-    MIN_SIMS, SearchConfig,
-    sts2_MCTS, sts2_DeterministicNode, sts2_ChanceNode, expand_node, backpropagate,
-    outcome_key, OUTCOME_ALPHA, MAX_ROLLOUT_TURNS,
-    RolloutPolicy, ROLLOUT_POLICY_DICT,
-)
+from agents.sts2_MCTS.MCTS import sts2_MCTS, sts2_DeterministicNode, sts2_ChanceNode, expand_node, backpropagate, outcome_key
+from agents.sts2_MCTS.rollout_policy import ROLLOUT_POLICY_DICT
+from agents.sts2_MCTS.params import SearchConfig, RolloutPolicy
+from agents.sts2_MCTS.params import DEFAULT_CONFIG
 
 
 def new_mcts(config=None):
@@ -297,7 +295,7 @@ def test_outcome_count_is_capped():
     for _ in range(500):
         chance.visits = 1
         mcts._sample_outcome(chance)
-    assert len(chance.outcomes) <= math.ceil(mcts._search_config.outcome_c * 1 ** OUTCOME_ALPHA)
+    assert len(chance.outcomes) <= math.ceil(mcts._search_config.outcome_c * 1 ** DEFAULT_CONFIG.outcome_alpha)
 
 def test_cap_grows_with_visits():
     root, chance = pommel_chance()
@@ -429,7 +427,7 @@ def test_outcome_count_stays_under_the_cap_throughout_the_tree():
     _, mcts = search(draw_fight(), 400)
     for n in walk(mcts._root_node):
         if n.is_chance_node:
-            assert len(n.outcomes) <= max(1, math.ceil(mcts._search_config.outcome_c * n.visits ** OUTCOME_ALPHA))
+            assert len(n.outcomes) <= max(1, math.ceil(mcts._search_config.outcome_c * n.visits ** DEFAULT_CONFIG.outcome_alpha))
 
 
 # ---------------------------------------------------------------- terminal nodes
@@ -566,13 +564,13 @@ def test_sim_cap_ends_the_search():
 @pytest.mark.parametrize("budget", [0, 1e-9])
 def test_an_exhausted_time_budget_still_runs_the_minimum_sims(budget):
     _, mcts = search(draw_fight(), 5000, time_budget=budget)
-    assert mcts._root_node.visits == MIN_SIMS
+    assert mcts._root_node.visits == DEFAULT_CONFIG.min_sims
 
 def test_time_budget_ends_the_search_before_the_sim_cap():
     start = time.perf_counter()
     _, mcts = search(draw_fight(), 10**9, time_budget=0.3)
     elapsed = time.perf_counter() - start
-    assert MIN_SIMS <= mcts._root_node.visits < 10**9
+    assert DEFAULT_CONFIG.min_sims <= mcts._root_node.visits < 10**9
     assert 0.3 <= elapsed < 3.0
 
 def test_a_longer_budget_allows_more_sims():
@@ -592,7 +590,7 @@ def test_search_returns_root_stats_and_exit_reason():
     with contextlib.redirect_stdout(io.StringIO()):
         action, stats = sts2_MCTS().monte_carlo_tree_search(draw_fight(), SearchConfig(max_sims=200))
     assert action in [c["action"] for c in stats["children"]]
-    assert sum(c["visits"] for c in stats["children"]) == stats["num_sims"] >= MIN_SIMS
+    assert sum(c["visits"] for c in stats["children"]) == stats["num_sims"] >= DEFAULT_CONFIG.min_sims
     assert stats["exit_reason"] in ("MAX_SIMS", "TIME_BUDGET", "STATISTICAL_CONFIDENCE")
     assert stats["time_taken"] > 0
 
@@ -630,7 +628,6 @@ def test_rollouts_are_reproducible_from_a_seed():
 
 
 # ---------------------------------------------------------------- reward
-from agents.sts2_MCTS.MCTS import WIN_BASE, TURN_COST
 
 def win_score(hp, max_hp=80, turns=3, start=None):
     """Score of a win ending at `hp`, for a fight that began at `start` HP (default: full HP)."""
@@ -680,15 +677,14 @@ def test_fewer_turns_scores_higher():
     assert win_score(40, turns=3) > win_score(40, turns=8)
 
 def test_each_turn_costs_a_win_turn_cost_hp():
-    assert win_score(40, turns=4) - win_score(40, turns=5) == pytest.approx(TURN_COST / 80)
+    assert win_score(40, turns=4) - win_score(40, turns=5) == pytest.approx(DEFAULT_CONFIG.reward.turn_cost / 80)
 
 def test_turn_discount_is_small_next_to_hp():
     one_turn = win_score(40, turns=4) - win_score(40, turns=5)
     assert 0 < one_turn < 0.25 * (win_score(60) - win_score(40))      # 20 HP of 80 outweighs a turn
 
 def test_discounting_keeps_wins_positive_and_above_losses_at_the_rollout_limit():
-    from agents.sts2_MCTS.MCTS import MAX_ROLLOUT_TURNS
-    assert win_score(1, 80, MAX_ROLLOUT_TURNS) > 0 > loss_score([1], [90])
+    assert win_score(1, 80, DEFAULT_CONFIG.max_rollout_turns) > 0 > loss_score([1], [90])
 
 def test_a_win_without_losing_hp_scores_best():
     assert win_score(80, max_hp=80, turns=0) > win_score(79, max_hp=80, turns=0)
@@ -697,7 +693,7 @@ def test_healing_during_the_fight_is_rewarded():
     assert win_score(60, max_hp=80, start=40) > win_score(40, max_hp=80, start=40) > win_score(30, max_hp=80, start=40)
 
 def test_ending_above_the_starting_hp_does_not_fail():
-    assert win_score(70, max_hp=80, start=10) > WIN_BASE
+    assert win_score(70, max_hp=80, start=10) > DEFAULT_CONFIG.reward.win_base
 
 def test_hp_is_worth_the_same_wherever_it_is_lost():
     """Linear in remaining HP: 10 HP costs the same near death as at full health."""
@@ -746,6 +742,7 @@ def hard_fight(seed):
         n += 1
     return sim
 
+@pytest.mark.slow
 @pytest.mark.parametrize("seed", [0, 1, 2])
 def test_agent_wins_the_narrow_race(seed):
     sim = hard_fight(seed)
@@ -770,8 +767,8 @@ def test_rollout_cap_counts_from_the_starting_turn():
 
 def test_unfinished_rollout_is_not_rated_as_a_win():
     cs = stalled_fight()
-    cs.turn_number += MAX_ROLLOUT_TURNS
-    assert primed(cs)._rate_outcome(cs) < win_score(1, 80, MAX_ROLLOUT_TURNS)
+    cs.turn_number += DEFAULT_CONFIG.max_rollout_turns
+    assert primed(cs)._rate_outcome(cs) < win_score(1, 80, DEFAULT_CONFIG.max_rollout_turns)
 
 def test_unfinished_rollout_rates_below_any_win():
     mcts = primed(stalled_fight())
@@ -912,7 +909,7 @@ def test_sampled_outcomes_never_reshuffle_the_known_top_card():
 
 
 # ---------------------------------------------------------------- effective HP (enemies that spawn others)
-from agents.sts2_MCTS.MCTS import _effective_hp
+from agents.sts2_MCTS.outcome_score import effective_hp as _effective_hp
 
 def phrog_fight(count=1):
     cs = make_state([])
@@ -997,7 +994,7 @@ def test_exploration_scales_the_uct_bonus():
 @pytest.mark.parametrize("policy", list(RolloutPolicy))
 def test_rollouts_use_the_configured_policy(policy):
     calls = Counter()
-    spies = {p: (lambda c, actions, p=p, f=f: (calls.update([p]), f(c, actions))[1]) for p, f in ROLLOUT_POLICY_DICT.items()}
+    spies = {p: (lambda c, actions, params, p=p, f=f: (calls.update([p]), f(c, actions, params))[1]) for p, f in ROLLOUT_POLICY_DICT.items()}
     with mock.patch.dict(ROLLOUT_POLICY_DICT, spies):
         mcts = primed(draw_fight(), new_mcts(SearchConfig(rollout=policy)))
         mcts._simulate_combat_rollout(sts2_DeterministicNode(None, draw_fight(), None))
@@ -1013,7 +1010,7 @@ def _search_with_exit_forced(early_exit):
 def test_statistical_exit_stops_the_search_when_enabled():
     mcts, reason = _search_with_exit_forced(early_exit=True)
     assert reason == "STATISTICAL_CONFIDENCE: BEST"
-    assert mcts._root_node.visits == MIN_SIMS
+    assert mcts._root_node.visits == DEFAULT_CONFIG.min_sims
 
 def test_disabling_early_exit_runs_to_the_sim_cap():
     mcts, reason = _search_with_exit_forced(early_exit=False)
