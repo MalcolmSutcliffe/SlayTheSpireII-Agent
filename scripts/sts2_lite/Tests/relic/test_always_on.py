@@ -1,15 +1,11 @@
-"""Relics that change the numbers: Miniature Cannon, Paper Phrog, Paper Krane, Vambrace, Tungsten Rod, Beating Remnant,
-Ruined Helmet, Unsettling Lamp, Chemical X, Ice Cream, Ringing Triangle, Sturdy Clamp and Lizard Tail.
-Run from scripts/: python -m pytest sts2_lite/Tests"""
 import pytest
-
 from sts2_lite.card import CardId, CardType, TargetType
 from sts2_lite.combat import CombatSimulator, CombatState
 from sts2_lite.damage import modify_damage
 from sts2_lite.player import Player
 from sts2_lite.relic import RelicId, RelicInstance
 from sts2_lite.status import StatusId
-from sts2_lite.Tests.test_cards import make_card, make_state, play, hps
+from sts2_lite.Tests.card.test_card import make_card, make_state, play, hps
 
 
 def card(card_id, cost, kind, target=TargetType.AnyEnemy, upgraded=False):
@@ -708,7 +704,7 @@ def test_a_card_that_fails_after_giving_block_does_not_leave_vambrace_waiting(mo
 def _saved(name):
     import json
     from pathlib import Path
-    raw = json.loads((Path(__file__).parent / "data" / "relics" / f"{name}.json").read_text())
+    raw = json.loads((Path(__file__).parents[1] / "data" / "relics" / f"{name}.json").read_text())
     return CombatState.from_dict(raw)
 
 def _play_from_hand(cs, card_name):

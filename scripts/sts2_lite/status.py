@@ -150,141 +150,16 @@ SLOTH_LIMIT = 3
 GIANT_ABOUT_TO_BLOW_HP = 999999999     # SetMaxAndCurrentHp of the Waterfall Giant once it has been killed with Steam Eruption
 HARDENED_SHELL_CAP = 20       # the bridge shows what is left of it this turn (DisplayAmount)
 
-class StatusBehaviour(Enum):
-    STATIC = auto()
-    DECREASE_BY_ONE = auto()
-    RESET_TO_ZERO = auto()
-
-STATUS_BEAVIOURS : dict[StatusId, StatusBehaviour] = {
-    StatusId.STRENGTH : StatusBehaviour.STATIC,
-    StatusId.WEAK : StatusBehaviour.DECREASE_BY_ONE,
-    StatusId.VULNERABLE : StatusBehaviour.DECREASE_BY_ONE,
-    StatusId.FRAIL : StatusBehaviour.DECREASE_BY_ONE,
-    StatusId.DEXTERITY : StatusBehaviour.STATIC,
-    StatusId.SHRINK : StatusBehaviour.DECREASE_BY_ONE,     # a counter that ticks when its owner's side ends; negative is infinite (ShrinkPower)
-    StatusId.THORNS : StatusBehaviour.STATIC,
-    StatusId.RAVENOUS : StatusBehaviour.STATIC,       # when another enemy dies: stunned, and Strength (_ravenous_on_creature_killed)
-    StatusId.ASLEEP : StatusBehaviour.STATIC,           # Lagavulin Matriarch: counts down at the end of the enemy turn (_asleep_on_enemy_turn_end)
-    StatusId.SURPRISE : StatusBehaviour.STATIC,         # Gremlin Merc: the Sneaky and Fat Gremlins come out when it dies
-    StatusId.THIEVERY : StatusBehaviour.STATIC,         # Gremlin Merc: gold taken per hit move (instanced; records[0] = [amount, gold stolen so far])
-    StatusId.HEIST : StatusBehaviour.STATIC,            # Fat Gremlin: the gold it carries, given back when it is killed
-    StatusId.HARDENED_SHELL : StatusBehaviour.STATIC,   # caps the hit points lost each turn (Creature._lose_hp_from_damage); records[0][0] = lost so far
-    StatusId.SUCK : StatusBehaviour.STATIC,
-    StatusId.SLOW : StatusBehaviour.RESET_TO_ZERO,
-    StatusId.TERRITORIAL : StatusBehaviour.STATIC,
-    StatusId.CRIMSON_MANTLE : StatusBehaviour.STATIC,
-    StatusId.INFESTED : StatusBehaviour.STATIC,
-    StatusId.FREE_ATTACK : StatusBehaviour.STATIC,
-    StatusId.SLIPPERY : StatusBehaviour.STATIC,
-    StatusId.RITUAL : StatusBehaviour.STATIC,
-    StatusId.PLATING : StatusBehaviour.DECREASE_BY_ONE,
-    StatusId.SKITTISH : StatusBehaviour.STATIC,
-    StatusId.SHRIEK : StatusBehaviour.STATIC,
-    StatusId.VIGOR : StatusBehaviour.STATIC,
-    StatusId.SMOGGY : StatusBehaviour.STATIC,
-    StatusId.MINION : StatusBehaviour.STATIC,
-    StatusId.STEAM_ERUPTION : StatusBehaviour.STATIC,
-    StatusId.TANGLED : StatusBehaviour.STATIC,
-    StatusId.CONSTRICT : StatusBehaviour.STATIC,
-    StatusId.ARTIFACT : StatusBehaviour.STATIC,
-    StatusId.ILLUSION : StatusBehaviour.STATIC,
-    StatusId.PLOW : StatusBehaviour.STATIC,
-    StatusId.RINGING : StatusBehaviour.STATIC,
-    StatusId.BARRICADE : StatusBehaviour.STATIC,
-    StatusId.COLOSSUS : StatusBehaviour.DECREASE_BY_ONE,
-    StatusId.CORRUPTION : StatusBehaviour.STATIC,
-    StatusId.CRUELTY : StatusBehaviour.STATIC,
-    StatusId.DARK_EMBRACE : StatusBehaviour.STATIC,
-    StatusId.DEMON_FORM : StatusBehaviour.STATIC,
-    StatusId.FEEL_NO_PAIN : StatusBehaviour.STATIC,
-    StatusId.FLAME_BARRIER : StatusBehaviour.STATIC,
-    StatusId.DIAMOND_DIADEM : StatusBehaviour.STATIC,
-    StatusId.JUGGERNAUT : StatusBehaviour.STATIC,
-    StatusId.JUGGLING : StatusBehaviour.STATIC,
-    StatusId.ONE_TWO_PUNCH : StatusBehaviour.STATIC,
-    StatusId.PYRE : StatusBehaviour.STATIC,
-    StatusId.RAGE : StatusBehaviour.STATIC,
-    StatusId.RUPTURE : StatusBehaviour.STATIC,
-    StatusId.STAMPEDE : StatusBehaviour.STATIC,
-    StatusId.UNMOVABLE : StatusBehaviour.STATIC,
-    StatusId.VICIOUS : StatusBehaviour.STATIC,
-    StatusId.AGGRESSION : StatusBehaviour.STATIC,
-    StatusId.NO_DRAW : StatusBehaviour.STATIC,          # both are removed when the player's turn ends
-    StatusId.NO_ENERGY_GAIN : StatusBehaviour.STATIC,
-    StatusId.SETUP_STRIKE : StatusBehaviour.STATIC,     # the Strength is returned when the owner's turn ends
-    StatusId.MANGLE : StatusBehaviour.STATIC,
-    StatusId.HELLRAISER : StatusBehaviour.STATIC,
-    StatusId.INFERNO : StatusBehaviour.STATIC,
-    StatusId.SELF_FORMING_CLAY : StatusBehaviour.STATIC,     # paid out and removed at the start of the next turn
-    StatusId.CONFUSED : StatusBehaviour.STATIC,     # Snecko Eye; rolls drawn cards' costs (Player.draw_card)
-    StatusId.RETAIN_HAND : StatusBehaviour.STATIC,      # one less each time the player's turn ends (CombatSimulator.end_turn)
-    StatusId.NO_BLOCK : StatusBehaviour.DECREASE_BY_ONE,    # ticks when the enemies' turn ends
-    StatusId.BLOCK_NEXT_TURN : StatusBehaviour.STATIC,
-    StatusId.ENERGY_NEXT_TURN : StatusBehaviour.STATIC,
-    StatusId.DRAW_CARDS_NEXT_TURN : StatusBehaviour.STATIC,
-    StatusId.FASTEN : StatusBehaviour.STATIC,
-    StatusId.PREP_TIME : StatusBehaviour.STATIC,
-    StatusId.DARK_SHACKLES : StatusBehaviour.STATIC,    # the Strength is returned when the owner's turn ends
-    StatusId.AUTOMATION : StatusBehaviour.STATIC,
-    StatusId.PANACHE : StatusBehaviour.STATIC,
-    StatusId.ROLLING_BOULDER : StatusBehaviour.STATIC,
-    StatusId.THE_BOMB : StatusBehaviour.STATIC,
-    StatusId.TORIC_TOUGHNESS : StatusBehaviour.STATIC,     # ticks itself after the block is cleared
-    StatusId.THE_GAMBIT : StatusBehaviour.STATIC,
-    StatusId.MAYHEM : StatusBehaviour.STATIC,
-    StatusId.NOSTALGIA : StatusBehaviour.STATIC,
-    StatusId.CALAMITY : StatusBehaviour.STATIC,
-    StatusId.IMBALANCED : StatusBehaviour.STATIC,     # a fully blocked attack of the owner stuns it
-    StatusId.REATTACH : StatusBehaviour.STATIC,     # Decimillipede segment: revives instead of dying
-    StatusId.PERSONAL_HIVE : StatusBehaviour.STATIC,     # a powered attack that hits the owner puts Dazed in the draw pile
-    StatusId.HARD_TO_KILL : StatusBehaviour.STATIC,     # no single hit does more than this to the owner
-    StatusId.TENDER : StatusBehaviour.STATIC,     # amount = cards played this turn; each costs 1 Strength and 1 Dexterity until the turn ends
-    StatusId.VITAL_SPARK : StatusBehaviour.STATIC,     # Skills played make the enemy attacks hit harder (Tainted)
-    StatusId.TAINTED : StatusBehaviour.STATIC,     # +amount damage from powered attacks until the enemies have acted
-    StatusId.BACK_ATTACK_LEFT : StatusBehaviour.STATIC,     # marker: the owner attacks from the left
-    StatusId.BACK_ATTACK_RIGHT : StatusBehaviour.STATIC,     # marker: the owner attacks from the right
-    StatusId.CRAB_RAGE : StatusBehaviour.STATIC,     # when an ally dies: +6 Strength and 99 Block, once
-    StatusId.SURROUNDED : StatusBehaviour.STATIC,     # takes 1.5x from the arm that is behind it
-    StatusId.CURL_UP : StatusBehaviour.STATIC,     # block after the first powered attack card that hit the owner
-    StatusId.HATCH : StatusBehaviour.STATIC,     # ticks when the enemies' turn ends
-    StatusId.SLUMBER : StatusBehaviour.STATIC,     # ticks every enemy turn and when the owner takes damage; wakes at 0
-    StatusId.SANDPIT : StatusBehaviour.STATIC,     # ticks when the enemies' turn starts; the player is eaten at 0
-    StatusId.ESCAPE_ARTIST : StatusBehaviour.STATIC,     # ticks down to 1 when the enemies' turn ends
-    StatusId.SWIPE : StatusBehaviour.STATIC,     # holds a stolen card (not modelled)
-    StatusId.FLUTTER : StatusBehaviour.STATIC,     # powered attacks do half; ticks per unblocked hit; stuns at 0
-    StatusId.BURROWED : StatusBehaviour.STATIC,     # the owner keeps its block; breaking it stuns the owner
-    StatusId.DISINTEGRATION : StatusBehaviour.STATIC,     # the owner takes this much when the player's turn ends
-    StatusId.MIND_ROT : StatusBehaviour.STATIC,     # draws this many fewer cards each turn
-    StatusId.SLOTH : StatusBehaviour.STATIC,     # at most this many cards a turn
-    StatusId.WASTE_AWAY : StatusBehaviour.STATIC,     # this much less maximum energy
-    StatusId.STOCK : StatusBehaviour.STATIC,     # Axebot: lives left; it comes back when it dies
-    StatusId.GALVANIC : StatusBehaviour.STATIC,     # Globe Head: playing a Power costs the player this many hit points
-    StatusId.PAPER_CUTS : StatusBehaviour.STATIC,     # Scroll of Biting: each unblocked attack hit costs this much maximum HP
-    StatusId.POSSESS_STRENGTH : StatusBehaviour.STATIC,     # The Lost: gives back the Strength it took when it dies (records[0][0])
-    StatusId.RAMPART : StatusBehaviour.STATIC,     # Living Shield: Turret Operators gain this much block as each player turn starts
-    StatusId.SOAR : StatusBehaviour.STATIC,     # Owl Magistrate in flight: attacks against it deal half damage
-    StatusId.HEX : StatusBehaviour.STATIC,     # Spectral Knight: every card is Ethereal while it lives
-    StatusId.DAMPEN : StatusBehaviour.STATIC,     # Magi Knight: upgraded cards are downgraded while it lives
-    StatusId.INTANGIBLE : StatusBehaviour.DECREASE_BY_ONE,     # damage taken is capped at 1; ticks at the end of the enemy turn
-    StatusId.ENRAGE : StatusBehaviour.STATIC,     # Test Subject: gains this much Strength whenever a Skill is played
-    StatusId.ADAPTABLE : StatusBehaviour.STATIC,     # Test Subject: killing it only sends it to its next form (twice)
-    StatusId.PAINFUL_STABS : StatusBehaviour.STATIC,     # an attack that gets through Block adds this many Wounds per hit
-    StatusId.NEMESIS : StatusBehaviour.STATIC,     # Test Subject's last form: Intangible every other turn (records[0][0]: 1 when it applies it next)
-    StatusId.CHAINS_OF_BINDING : StatusBehaviour.STATIC,     # Queen: this many cards a turn are Bound
-    StatusId.WITHERING_PRESENCE : StatusBehaviour.STATIC,     # Aeonglass: cards left to play until a Wither
-    StatusId.HIGH_VOLTAGE : StatusBehaviour.STATIC,     # Zapbot: Strength at the end of every enemy turn
-    StatusId.POSSESS_SPEED : StatusBehaviour.STATIC,     # The Forgotten: gives back the Dexterity it took when it dies
-    StatusId.ENTROPY : StatusBehaviour.STATIC,
-    StatusId.REGEN : StatusBehaviour.STATIC,            # lowered by 1 each time it heals (_regen_on_end_turn)
-    StatusId.DEMISE : StatusBehaviour.STATIC,
-    StatusId.BUFFER : StatusBehaviour.STATIC,           # spent by the next HP loss (Creature.lose_hp, _lose_hp_from_damage)
-    StatusId.DUPLICATION : StatusBehaviour.STATIC,       # spent by the next card (Card._extra_plays), or when the turn ends
-    StatusId.GIGANTIFICATION : StatusBehaviour.STATIC,  # spent when the next Attack has been played
-    StatusId.CLARITY_EXTRACT : StatusBehaviour.STATIC,  # turns left; Player.turn_start
-    StatusId.RADIANT_TINCTURE : StatusBehaviour.STATIC, # turns left; CombatSimulator._start_player_turn
-    StatusId.REPTILE_TRINKET : StatusBehaviour.STATIC,
-    StatusId.FLEX_POTION : StatusBehaviour.STATIC,      # the Strength is returned when the owner's turn ends
-    StatusId.SPEED_POTION : StatusBehaviour.STATIC,}
+# The few statuses whose amount changes by itself when their owner's side ends its turn; every other status is either static or reacts
+# through the event handlers below.
+TICKS_DOWN = frozenset({
+    StatusId.WEAK, StatusId.VULNERABLE, StatusId.FRAIL,
+    StatusId.SHRINK,        # a counter that ticks when its owner's side ends; negative is infinite (ShrinkPower)
+    StatusId.PLATING, StatusId.COLOSSUS,
+    StatusId.NO_BLOCK,      # ticks when the enemies' turn ends
+    StatusId.INTANGIBLE,    # damage taken is capped at 1; ticks at the end of the enemy turn
+})
+RESETS_EACH_TURN = frozenset({StatusId.SLOW})
 
 DEBUFFS = frozenset({StatusId.WEAK, StatusId.VULNERABLE, StatusId.FRAIL, StatusId.SHRINK,
                      StatusId.CONSTRICT, StatusId.TANGLED, StatusId.RINGING,
@@ -315,13 +190,11 @@ ROLLING_BOULDER_STEP = 5
 class StatusInstance:
     status_id : StatusId
     amount : int
-    behaviour : StatusBehaviour
     records : list[list[int]]
 
     def __init__(self, status_id : StatusId, amount : int, records : list[list[int]] | None = None):
         self.status_id = status_id
         self.amount = amount
-        self.behaviour = STATUS_BEAVIOURS[status_id]
         self.records = records if records is not None else []
 
     @classmethod

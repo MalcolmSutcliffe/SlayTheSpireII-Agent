@@ -1,15 +1,10 @@
-"""Relics that act on a particular turn or on every turn after the first: Candelabra, Chandelier, Happy Flower, Horn Cleat,
-Captain's Wheel, Sparkling Rouge, Mercury Hourglass, Brimstone, Stone Calendar, Orichalcum, Cloak Clasp, Screaming Flagon and
-Parrying Shield. Relics that only act on turn 1 are not modelled: the state the bridge gives already has their effect.
-Run from scripts/: python -m pytest sts2_lite/Tests"""
 import pytest
-
 from sts2_lite.combat import CombatSimulator
 from sts2_lite.events import EventType
 from sts2_lite.relic import RelicId, RelicInstance
 from sts2_lite.status import StatusId
-from sts2_lite.Tests.test_relics_always_on import defend, strike, inflame, relic, state
-from sts2_lite.Tests.test_relics_counters import draw_pile, status, with_counter
+from sts2_lite.Tests.relic.test_always_on import defend, strike, inflame, relic, state
+from sts2_lite.Tests.relic.test_counters import draw_pile, status, with_counter
 
 
 def on_turn(turn, *relic_ids, hand=None, enemies=1, enemy_hp=100):
@@ -262,7 +257,7 @@ def test_ruined_helmet_that_has_doubled_strength_is_not_doubled_again():
 
 # ---------------------------------------------------------------- states saved from the game
 def _capture(name):
-    from sts2_lite.Tests.test_relics_counters import _capture as load
+    from sts2_lite.Tests.relic.test_counters import _capture as load
     return load(name)
 
 def test_saved_permafrost_reads_as_waiting_then_spent():

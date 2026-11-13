@@ -1,12 +1,9 @@
-"""Relics that react to what happens: Centennial Puzzle, Gremlin Horn, Pendulum, The Abacus, Unceasing Top, Demon Tongue,
-Red Skull and Self-Forming Clay. Run from scripts/: python -m pytest sts2_lite/Tests"""
 import pytest
-
 from sts2_lite.combat import CombatSimulator
 from sts2_lite.relic import RelicId, RelicInstance
 from sts2_lite.status import StatusId
-from sts2_lite.Tests.test_relics_always_on import bloodletting, defend, enemy_attack, relic, state, strike
-from sts2_lite.Tests.test_relics_counters import draw_pile, status, with_counter
+from sts2_lite.Tests.relic.test_always_on import bloodletting, defend, enemy_attack, relic, state, strike
+from sts2_lite.Tests.relic.test_counters import draw_pile, status, with_counter
 
 
 def hurt_by_card(*relic_ids, hp=50, hand=None):

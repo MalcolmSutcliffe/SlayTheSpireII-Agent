@@ -2,7 +2,7 @@
 
 # Agent for Slay the Spire 2.
 
-### DISCLAIMER : Claude Sonnet 5.5 and Opus 5.5 were used for bug-fixing, writing sts2_lite (from decompiled sts2 code), and Test suites.
+### DISCLAIMER : Claude Sonnet 5.5 and Opus 5.5 were used for writing sts2_lite (from decompiled sts2 code), Test suites, bug-fixing, and code refactoring.
 
 ## REFERENCES:
 
@@ -91,12 +91,12 @@ Add enchantments
  - [ ] Improve sim speed
  - [ ] Root parallelization
  - [ ] Neural network rollout policy
- - [x] Seeded rollouts to reduce noise -> greedy heuristic rollout that is deterministic
+ - [x] Seeded rollouts to reduce noise
 
  
  Waiting on engine:
  - [x] Potion use
- - [ ] end of act healing
+ - [ ] end of act healing. Not strictly neccesarry. Most hp is still best
 
  ## Out of combat actions
  - Needs to be addressed

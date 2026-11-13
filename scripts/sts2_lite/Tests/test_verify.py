@@ -1,11 +1,10 @@
-"""State comparison used by agent_tester to find drift between the sim and the game."""
 import json
 from pathlib import Path
-
-from sts2_lite.card import Card, CardId
+from sts2_lite.card import Card, CardId, CardType, TargetType
 from sts2_lite.combat import CombatSimulator, CombatState
 from sts2_lite.status import StatusId
 from sts2_lite.verify import compare, snapshot, is_random_step
+
 
 DATA = Path(__file__).parent / "data"
 
@@ -107,7 +106,7 @@ def test_a_wriggler_hurt_by_the_same_amount_is_not_a_difference():
 
 # ---------------------------------------------------------------- cards that exhaust a random card
 def _hand_with(card_id, upgraded=False):
-    from test_cards import make_card, make_state
+    from sts2_lite.Tests.card.test_card import make_card, make_state
     from sts2_lite.card import CardType, TargetType
     card = make_card(card_id, "x", CardType.Skill, 1, TargetType.Self)
     card.is_upgraded = upgraded
@@ -172,3 +171,105 @@ def test_random_targets_that_differ_in_vulnerability_are_matched_by_replaying():
     assert some_target_roll_matches(before, [action], after, random_step=False)
     after.enemies[0].current_hp -= 1                    # a wrong amount is still caught
     assert not some_target_roll_matches(before, [action], after, random_step=False, tries=60)
+
+
+DATA_mismatch_fixes = Path(__file__).parent / "data" / "mismatches"
+
+def load_mismatch_fixes(name):
+    d = json.loads((DATA_mismatch_fixes / f"{name}.json").read_text())
+    return CombatState.from_dict(d["before"]), CombatState.from_dict(d["after"]), d["actions"]
+
+def test_red_skull_strength_applies_to_breakthrough_hit():
+    before, after, actions = load_mismatch_fixes("breakthrough_red_skull")
+    CombatSimulator(before).play_card(actions[0]["card_index"], actions[0].get("target", 0))
+    assert compare(before, after) == []
+
+def test_toasty_mittens_drum_of_battle_random_exhaust_is_not_an_energy_mismatch():
+    before, after, actions = load_mismatch_fixes("toasty_drum_of_battle")
+    pre = CombatState.deepcopy(before)
+    CombatSimulator(before).end_turn()
+    assert compare(before, after, random_step=is_random_step(pre, before, actions)) == []
+
+def test_jack_of_all_trades_random_card_is_tolerated():
+    before, after, actions = load_mismatch_fixes("jack_of_all_trades")
+    pre = CombatState.deepcopy(before)
+    sim = CombatSimulator(before)
+    sim.play_card(actions[0]["card_index"], actions[0].get("target", 0))
+    assert compare(before, after, random_step=is_random_step(pre, before, actions)) == []
+
+
+def replay(name):
+    before, after, actions = load_mismatch_fixes(name)
+    pre = CombatState.deepcopy(before)
+    sim = CombatSimulator(before)
+    for a in actions:
+        sim.perform_action(a)
+    return pre, before, after, actions
+
+def test_tender_shows_the_cards_played_not_the_stack():
+    pre, predicted, after, actions = replay("tender_applied")
+    assert compare(predicted, after, random_step=is_random_step(pre, predicted, actions)) == []
+
+def test_tender_counts_the_card_that_was_just_played():
+    pre, predicted, after, actions = replay("tender_card_played")
+    assert compare(predicted, after) == []
+
+def test_the_beetle_keeps_the_plating_block_it_gained_before_it_woke():
+    from sts2_lite.status import StatusId
+    pre, predicted, after, actions = replay("beetle_wakes_with_plating_block")
+    beetle = predicted.enemies[2]
+    assert beetle.block == 17 and StatusId.PLATING not in beetle.status
+    assert compare(predicted, after, random_step=is_random_step(pre, predicted, actions)) == []
+
+def test_stampede_picking_between_attacks_is_not_compared():
+    from sts2_lite.verify import is_unpredictable_step
+    before, after, actions = load_mismatch_fixes("stampede_random_attack")
+    assert is_unpredictable_step(before, actions)
+    before.player.hand = [c for c in before.player.hand if c.card_id.name == "BODY_SLAM"]
+    assert not is_unpredictable_step(before, actions)        # one kind of Attack left: only that one can be played
+
+
+CASES = Path(__file__).parent / "data" / "log_cases"
+
+def case(name):
+    return json.loads((CASES / f"{name}.json").read_text())
+
+def simulate(raw_before, actions):
+    cs = CombatState.from_dict(raw_before)
+    sim = CombatSimulator(cs)
+    for a in actions:
+        sim.perform_action(a)
+    return cs
+
+def test_armaments_screen_lists_selectable_cards_by_their_own_index():
+    screen = case("armaments_select_screen")
+    cs = CombatState.from_dict(screen)
+    assert cs.pending_choice is not None and cs.pending_choice.kind == "upgrade"
+    assert len(cs.pending_choice.indices) == 1                 # two identical Defends are one option
+    assert [cs.player.hand[i].card_id for i in cs.pending_choice.indices] == [CardId.DEFEND_IRONCLAD]
+
+def test_selectable_cards_are_matched_to_the_hand_by_identity():
+    """The screen skips cards that cannot be upgraded (Dazed), so its indices are not hand positions."""
+    screen = case("armaments_select_screen")
+    hand = screen["player"]["hand"]
+    dazed = {**hand[0], "id": "DAZED", "name": "Dazed", "type": "Status", "cost": "0", "can_play": False}
+    screen["player"]["hand"] = [dazed] + hand
+    for i, c in enumerate(screen["player"]["hand"]):
+        c["index"] = i
+    cs = CombatState.from_dict(screen)
+    assert cs.pending_choice.indices == [1]                    # the first Defend, behind the Dazed card
+
+def test_armaments_with_two_identical_defends_resolves_like_the_game():
+    c = case("armaments_identical_defends")
+    predicted = simulate(c["before"], c["actions"])
+    final = case("armaments_choose_defend")["after"]
+    assert compare(predicted, CombatState.from_dict(final)) == []
+
+
+def test_armaments_among_other_cards_offers_only_what_can_be_upgraded():
+    c = case("armaments_two_cards_apart")
+    cs = CombatState.from_dict(c["before"])
+    sim = CombatSimulator(cs)
+    sim.perform_action(c["actions"][0])
+    picks = [a for a in sim.get_available_actions() if a["action"] == "choose_card"]
+    assert {a["card_id"] for a in picks} == {"DEFEND_IRONCLAD", "STRIKE_IRONCLAD"}     # not the Dazed

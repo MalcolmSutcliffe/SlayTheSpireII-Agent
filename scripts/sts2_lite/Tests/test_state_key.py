@@ -12,7 +12,7 @@ from sts2_lite.combat import CombatSimulator, CombatState
 from sts2_lite.relic import RelicId, RelicInstance
 from sts2_lite.state_key import state_key
 from sts2_lite.status import StatusId
-from test_cards import make_card, make_state
+from sts2_lite.Tests.card.test_card import make_card, make_state
 
 BENCH_STATES = Path(__file__).resolve().parents[2] / "benchmarks" / "act1"
 

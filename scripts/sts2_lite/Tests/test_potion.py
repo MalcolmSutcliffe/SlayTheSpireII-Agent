@@ -1,17 +1,16 @@
-"""Potions: the wiki's list for the Ironclad (the decompiled source has none), so these are written from the potions' text.
-Run from scripts/: python -m pytest sts2_lite/Tests"""
 import json
 import pytest
-
 from sts2_lite import rng
-from sts2_lite.card import Card, CardId, CardType, TargetType, STRIKE_CARDS
+from sts2_lite.card import Card, CardId, CardType, TargetType, STRIKE_CARDS, JACK_POOL, TRANSFORM_COLORLESS, CARD_RARITY, CardRarity, COLORLESS_CARDS
 from sts2_lite.combat import CombatState, CombatSimulator, IllegalActionError
 from sts2_lite.player import Player
-from sts2_lite.potion import (Potion, PotionId, PotionRarity, POTION_INFO, EFFECTS, usable_potion_actions, use_potion, RANDOM_POTION_POOL)
+from sts2_lite.potion import Potion, PotionId, PotionRarity, POTION_INFO, EFFECTS, usable_potion_actions, use_potion, RANDOM_POTION_POOL
 from sts2_lite.state_key import state_key
 from sts2_lite.status import StatusId
-from sts2_lite.Tests.test_cards import make_card, make_state, make_enemy
-from sts2_lite.Tests.test_cards_powers import strike, defend, skill, power, one_enemy
+from sts2_lite.Tests.card.test_card import make_card, make_state, make_enemy
+from sts2_lite.Tests.card.test_powers import strike, defend, skill, power, one_enemy
+from sts2_lite.relic import RelicId, RelicInstance
+from pathlib import Path
 
 
 def holding(cs, *potions):
@@ -161,7 +160,7 @@ def test_energy_swift_and_cure_all():
 @pytest.mark.parametrize("potion, status, amount", [
     (PotionId.STRENGTH_POTION, StatusId.STRENGTH, 2), (PotionId.DEXTERITY_POTION, StatusId.DEXTERITY, 2),
     (PotionId.REGEN_POTION, StatusId.REGEN, 5), (PotionId.HEART_OF_IRON, StatusId.PLATING, 7), (PotionId.LIQUID_BRONZE, StatusId.THORNS, 3),
-    (PotionId.LUCKY_TONIC, StatusId.BUFFER, 1), (PotionId.MAZALETHS_GIFT, StatusId.RITUAL, 1), (PotionId.DUPLICATOR, StatusId.DUPLICATOR, 1),
+    (PotionId.LUCKY_TONIC, StatusId.BUFFER, 1), (PotionId.MAZALETHS_GIFT, StatusId.RITUAL, 1), (PotionId.DUPLICATOR, StatusId.DUPLICATION, 1),
     (PotionId.GIGANTIFICATION_POTION, StatusId.GIGANTIFICATION, 1), (PotionId.STABLE_SERUM, StatusId.RETAIN_HAND, 2)])
 def test_potions_that_give_the_player_a_status(potion, status, amount):
     cs = solo(potion); drink(cs)
@@ -365,7 +364,7 @@ def test_duplicator_plays_the_next_card_twice_once():
 def test_duplicator_goes_when_the_turn_ends():
     cs = solo(PotionId.DUPLICATOR); drink(cs)
     CombatSimulator(cs).end_turn()
-    assert StatusId.DUPLICATOR not in cs.player.status
+    assert StatusId.DUPLICATION not in cs.player.status
 
 def test_clarity_extract_draws_one_now_and_one_more_for_three_turns():
     cs = solo(PotionId.CLARITY_EXTRACT, hand=[]); cs.player.draw_pile = [strike() for _ in range(40)]; drink(cs)
@@ -600,8 +599,6 @@ def test_the_search_can_use_potions():
 
 
 # ---------------------------------------------------------------- potion relics (the wiki's text; the decompiled source has no potion relics)
-from sts2_lite.relic import RelicId, RelicInstance
-from pathlib import Path
 
 def with_relic(cs, relic):
     cs.player.relics[relic] = RelicInstance(relic)
@@ -696,7 +693,6 @@ def test_cards_already_ticked_on_the_screen_count_as_discarded():
 
 
 # ---------------------------------------------------------------- Alchemize (Rare colorless Skill, 1 Energy, Exhaust; the upgrade costs 0)
-from sts2_lite.card import JACK_POOL, TRANSFORM_COLORLESS, CARD_RARITY, CardRarity, COLORLESS_CARDS
 
 def alchemize_state(potions=(), upgraded=False):
     cs = holding(one_enemy([Card.create_generated(CardId.ALCHEMIZE, upgraded)]), *potions)

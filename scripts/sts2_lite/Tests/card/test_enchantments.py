@@ -1,16 +1,14 @@
-"""Enchantments. Captures: Tests/data/enchantments/. Run from scripts/: python -m pytest sts2_lite/Tests"""
 import json
-from pathlib import Path
-
 import pytest
-
+from pathlib import Path
 from sts2_lite.card import Card, CardId, CardKeyword, CardType, EnchantmentId, TargetType
 from sts2_lite.combat import CombatSimulator, CombatState
 from sts2_lite.status import StatusId
 from sts2_lite.verify import compare
-from test_cards import make_card, make_state, hps
+from sts2_lite.Tests.card.test_card import make_card, make_state, hps
 
-DATA = Path(__file__).parent / "data" / "enchantments"
+
+DATA = Path(__file__).parents[1] / "data" / "enchantments"
 E = EnchantmentId
 
 def capture(name):

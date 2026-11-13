@@ -1,14 +1,12 @@
-"""Brilliant Scarf, Velvet Choker, Throwing Axe, Music Box, Diamond Diadem; card play count (CardModel.GeneratePlayCount).
-Run from scripts/: python -m pytest sts2_lite/Tests"""
 import pytest
-
 from sts2_lite.card import CardId, CardType, TargetType
 from sts2_lite.combat import CombatSimulator
 from sts2_lite.player import Player
 from sts2_lite.relic import RelicId, RelicInstance
 from sts2_lite.status import StatusId, StatusInstance
-from sts2_lite.Tests.test_cards import hps
-from sts2_lite.Tests.test_relics_always_on import card, strike, bash, defend, inflame, state, relic, enemy_attack, plays
+from sts2_lite.Tests.card.test_card import hps
+from sts2_lite.Tests.relic.test_always_on import card, strike, bash, defend, inflame, state, relic, enemy_attack, plays
+
 
 GROUP_4 = ["BRILLIANT_SCARF", "VELVET_CHOKER", "THROWING_AXE", "MUSIC_BOX", "DIAMOND_DIADEM"]
 

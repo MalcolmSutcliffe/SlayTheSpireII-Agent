@@ -1,13 +1,10 @@
-"""Battle Trance, Offering, Fiend Fire, Infernal Blade, Forgotten Ritual, Cascade, Expect a Fight, Drum of Battle,
-Howl from Beyond, Not Yet, Pact's End and Conflagration. Run from scripts/: python -m pytest sts2_lite/Tests"""
 import pytest
-
 from sts2_lite import rng
 from sts2_lite.card import Card, CardId, CardType, TargetType, GENERATABLE_CARDS, INFERNAL_BLADE_POOL
 from sts2_lite.combat import CombatSimulator, CombatState
 from sts2_lite.events import EventType
 from sts2_lite.status import StatusId, StatusInstance
-from sts2_lite.Tests.test_cards import make_card, make_state, play, hps
+from sts2_lite.Tests.card.test_card import make_card, make_state, play, hps
 
 
 def card(card_id, cost, kind, target, upgraded=False):

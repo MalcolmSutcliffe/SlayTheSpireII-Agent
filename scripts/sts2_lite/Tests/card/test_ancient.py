@@ -1,11 +1,9 @@
-"""Ancient cards: Abundance, Apotheosis, Apparition, Brightest Flame, Maul, Relax, Whistle, Wish.
-Written from the cards' text (they are not in the decompiled source). Run from scripts/: python -m pytest sts2_lite/Tests"""
 from sts2_lite.card import Card, CardId, CardType, INNATE_CARDS, TargetType
 from sts2_lite.combat import CombatSimulator
 from sts2_lite.status import StatusId
 from sts2_lite.Tests.enemies.test_glory_simple import at
-from sts2_lite.Tests.test_cards import make_card, make_state, play, hps
-from sts2_lite.Tests.test_cards_powers import strike, defend, skill, power, one_enemy
+from sts2_lite.Tests.card.test_card import make_card, make_state, play, hps
+from sts2_lite.Tests.card.test_powers import strike, defend, skill, power, one_enemy
 
 
 def ancient(card_id, upgraded=False, kind=CardType.Skill, target=TargetType.Self):

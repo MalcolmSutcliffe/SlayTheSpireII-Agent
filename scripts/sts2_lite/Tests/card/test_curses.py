@@ -1,10 +1,9 @@
-"""Curse cards. Run from scripts/: python -m pytest sts2_lite/Tests"""
 import pytest
-
 from sts2_lite.card import Card, CardId, CardType, CardKeyword, CURSE_CARDS, GENERATED_CARDS, ETERNAL_CARDS
 from sts2_lite.combat import CombatSimulator
 from sts2_lite.status import StatusId
-from test_cards import make_card, make_state, TargetType
+from sts2_lite.Tests.card.test_card import make_card, make_state, TargetType
+
 
 def curse(card_id):
     return Card.create(card_id)

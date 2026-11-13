@@ -1,15 +1,10 @@
-"""Relics that count cards played or exhausted: Pen Nib, Nunchaku, Kunai, Shuriken, Kusarigama, Letter Opener, Ornamental Fan,
-Tuning Fork, Rainbow Ring, Pocketwatch, Art of War, Ripple Basin, Permafrost, Game Piece, Mummified Hand, Razor Tooth,
-Daughter of the Wind, Intimidating Helmet, Joss Paper, Burning Sticks and Charon's Ashes.
-Run from scripts/: python -m pytest sts2_lite/Tests"""
 import pytest
-
 from sts2_lite.card import CardId, CardType, TargetType
 from sts2_lite.combat import CombatSimulator, CombatState
 from sts2_lite.relic import RelicId, RelicInstance, SEEN_ATTACK, SEEN_SKILL
 from sts2_lite.status import StatusId
-from sts2_lite.Tests.test_relics_always_on import card, strike, twin_strike, defend, bash, inflame, whirlwind, held, relic, state, enemy_attack, plays
-from sts2_lite.Tests.test_cards import hps
+from sts2_lite.Tests.relic.test_always_on import card, strike, twin_strike, defend, bash, inflame, whirlwind, held, relic, state, enemy_attack, plays
+from sts2_lite.Tests.card.test_card import hps
 
 
 def impervious():
@@ -583,7 +578,7 @@ def _capture(name, energy=None):
     """A saved state; `energy` is for captures taken with nothing left to spend."""
     import json
     from pathlib import Path
-    cs = CombatState.from_dict(json.loads((Path(__file__).parent / "data" / "relics" / f"{name}.json").read_text()))
+    cs = CombatState.from_dict(json.loads((Path(__file__).parents[1] / "data" / "relics" / f"{name}.json").read_text()))
     if energy is not None:
         cs.energy = energy
         for c in cs.player.hand:
