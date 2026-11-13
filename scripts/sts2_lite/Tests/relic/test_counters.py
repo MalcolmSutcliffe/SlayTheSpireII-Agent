@@ -26,15 +26,15 @@ def draw_pile(cs, n=20):
 
 
 # ---------------------------------------------------------------- loading
-GROUP_2 = ["PEN_NIB", "NUNCHAKU", "KUNAI", "SHURIKEN", "KUSARIGAMA", "LETTER_OPENER", "ORNAMENTAL_FAN", "TUNING_FORK", "RAINBOW_RING",
+COUNTED_RELICS = ["PEN_NIB", "NUNCHAKU", "KUNAI", "SHURIKEN", "KUSARIGAMA", "LETTER_OPENER", "ORNAMENTAL_FAN", "TUNING_FORK", "RAINBOW_RING",
            "POCKETWATCH", "ART_OF_WAR", "RIPPLE_BASIN", "PERMAFROST", "GAME_PIECE", "MUMMIFIED_HAND", "RAZOR_TOOTH",
            "DAUGHTER_OF_THE_WIND", "INTIMIDATING_HELMET", "JOSS_PAPER", "BURNING_STICKS", "CHARONS_ASHES"]
 
-@pytest.mark.parametrize("name", GROUP_2)
+@pytest.mark.parametrize("name", COUNTED_RELICS)
 def test_every_relic_loads_from_its_bridge_id(name):
     assert RelicInstance.from_dict({"id": name, "counter": None}).relic_id == RelicId[name]
 
-@pytest.mark.parametrize("name", GROUP_2)
+@pytest.mark.parametrize("name", COUNTED_RELICS)
 def test_the_bridge_counter_is_kept(name):
     assert RelicInstance.from_dict({"id": name, "counter": 2}).counter == 2
 

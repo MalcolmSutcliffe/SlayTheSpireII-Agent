@@ -393,7 +393,7 @@ def test_shriek_goes_off_once_and_a_tough_eel_screams_at_seventy_five():
 
 
 # ---------------------------------------------------------------- captured from the game (Tests/data/act1_underdocks)
-from sts2_lite import verify
+from agents import verify
 from sts2_lite.Tests import captures
 
 def under(enemy, name):

@@ -341,7 +341,7 @@ def test_negative_dexterity_is_a_debuff_for_artifact():
 # ---------------------------------------------------------------- captured from the game (Tests/data/act3_glory)
 def test_globe_head_galvanic_matches_the_game_capture():
     """Inflame with 10 block and Galvanic 6: the block takes the damage (10 -> 4), hit points stay."""
-    from sts2_lite import verify
+    from agents import verify
     from sts2_lite.Tests import captures
     before = captures.load("globe_head", "before_power", captures.GLORY)
     after = captures.load("globe_head", "after_power", captures.GLORY)

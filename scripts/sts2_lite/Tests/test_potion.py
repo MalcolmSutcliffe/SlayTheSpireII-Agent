@@ -5,7 +5,7 @@ from sts2_lite.card import Card, CardId, CardType, TargetType, STRIKE_CARDS, JAC
 from sts2_lite.combat import CombatState, CombatSimulator, IllegalActionError
 from sts2_lite.player import Player
 from sts2_lite.potion import Potion, PotionId, PotionRarity, POTION_INFO, EFFECTS, usable_potion_actions, use_potion, RANDOM_POTION_POOL
-from sts2_lite.state_key import state_key
+from agents.sts2_MCTS.state_key import state_key
 from sts2_lite.status import StatusId
 from sts2_lite.Tests.card.test_card import make_card, make_state, make_enemy
 from sts2_lite.Tests.card.test_powers import strike, defend, skill, power, one_enemy

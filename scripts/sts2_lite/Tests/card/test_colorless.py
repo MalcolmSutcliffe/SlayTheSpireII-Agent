@@ -5,7 +5,7 @@ from sts2_lite.combat import CombatSimulator, CombatState
 from sts2_lite.status import StatusId, StatusInstance
 from sts2_lite.Tests.card.test_card import make_card, make_state, hps
 from pathlib import Path
-from sts2_lite.verify import compare, is_random_step
+from agents.verify import compare, is_random_step
 from sts2_lite.selection import game_index
 from sts2_lite import rng
 
@@ -1284,7 +1284,7 @@ def test_rare_table_matches_the_game_for_a_few_cards():
 
 # ------------------------------------------------------------ the verifier treats these as chance events
 def test_verify_tags_random_card_plays_and_calamity_attacks():
-    from sts2_lite.verify import is_random_step
+    from agents.verify import is_random_step
     from sts2_lite.combat import CombatState
     cs = one_enemy([card(CardId.JACKPOT), strike()])
     assert is_random_step(cs, cs, [{"action": "play_card", "card_index": 0, "target": 0}])
@@ -1293,7 +1293,7 @@ def test_verify_tags_random_card_plays_and_calamity_attacks():
     assert is_random_step(cs, cs, [{"action": "play_card", "card_index": 1, "target": 0}])
 
 def test_havoc_with_an_unseen_top_card_cannot_be_predicted_but_a_known_top_card_can():
-    from sts2_lite.verify import is_unpredictable_step
+    from agents.verify import is_unpredictable_step
     from sts2_lite.card import CardType, TargetType
     from sts2_lite.Tests.enemies.test_hive_simple import make_card
     havoc = make_card(CardId.HAVOC, "Havoc", CardType.Skill, 1, TargetType.Self)

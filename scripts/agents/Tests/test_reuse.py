@@ -7,7 +7,7 @@ import pytest
 
 from sts2_lite import rng
 from sts2_lite.combat import CombatSimulator, CombatState
-from sts2_lite.state_key import state_key
+from agents.sts2_MCTS.state_key import state_key
 from agents.sts2_MCTS.MCTS import SearchConfig, sts2_MCTS, MIN_SIMS
 from test_mcts import make_state, strike, defend, bash, pommel, pile, draw_fight, walk_unique
 

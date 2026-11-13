@@ -8,7 +8,7 @@ from sts2_lite.relic import RelicId, RelicInstance, RelicId as _RelicId, block_m
 from sts2_lite.status import StatusId
 from sts2_lite.Tests.card.test_card import hps
 from sts2_lite.Tests.relic.test_always_on import card, strike, twin_strike, defend, inflame, state, relic, enemy_attack, plays, iron_wave
-from sts2_lite.verify import compare as _compare
+from agents.verify import compare as _compare
 from sts2_lite import rng
 from sts2_lite.Tests.card.test_draw_energy import infernal_blade
 from sts2_lite.Tests.card.test_ironclad import stomp, hellraiser
@@ -17,8 +17,10 @@ from sts2_lite.enemy import Enemy
 
 RELICS = Path(__file__).parents[1] / "data" / "relics"
 
-GROUP_2 = ["SAI", "MR_STRUGGLES", "PAELS_TEARS", "PAELS_FLESH", "LOST_WISP", "FORGOTTEN_SOUL", "IRON_CLUB",
-           "HAND_DRILL", "THE_BOOT", "FAKE_ORICHALCUM", "FAKE_STRIKE_DUMMY", "FAKE_HAPPY_FLOWER"]
+BRIDGE_IDS = ["SAI", "MR_STRUGGLES", "PAELS_TEARS", "PAELS_FLESH", "LOST_WISP", "FORGOTTEN_SOUL", "IRON_CLUB",
+              "HAND_DRILL", "THE_BOOT", "FAKE_ORICHALCUM", "FAKE_STRIKE_DUMMY", "FAKE_HAPPY_FLOWER",
+              "SEAL_OF_GOLD", "PAELS_EYE", "PAELS_LEGION",
+              "RUNIC_PYRAMID", "TOASTY_MITTENS", "HISTORY_COURSE", "SPIKED_GAUNTLETS", "PHILOSOPHERS_STONE"]
 
 def next_turn(cs):
     cs.player.draw_pile = [defend() for _ in range(20)]
@@ -33,7 +35,7 @@ def thunderclap():
     return card(CardId.THUNDERCLAP, 1, CardType.Attack, TargetType.AllEnemies)
 
 
-@pytest.mark.parametrize("bridge_id", GROUP_2)
+@pytest.mark.parametrize("bridge_id", BRIDGE_IDS)
 def test_loads_from_the_bridge(bridge_id):
     assert RelicInstance.from_dict({"id": bridge_id, "counter": None}).relic_id == RelicId[bridge_id]
 
@@ -378,10 +380,6 @@ def test_letter_opener_fires_and_matches_after_battle_trance():
 
 RELICS = Path(__file__).parents[1] / "data" / "relics"
 
-
-@pytest.mark.parametrize("bridge_id", ["SEAL_OF_GOLD", "PAELS_EYE", "PAELS_LEGION"])
-def test_loads_from_the_bridge_group6(bridge_id):
-    assert RelicInstance.from_dict({"id": bridge_id, "counter": None}).relic_id == RelicId[bridge_id]
 
 
 # ---------------------------------------------------------------- Seal of Gold (AfterSideTurnStart)
@@ -805,8 +803,6 @@ def test_bridge_stomp_under_confused_is_the_roll():
 
 RELICS = Path(__file__).parents[1] / "data" / "relics"
 
-LAST_FIVE = ["RUNIC_PYRAMID", "TOASTY_MITTENS", "HISTORY_COURSE", "SPIKED_GAUNTLETS", "PHILOSOPHERS_STONE"]
-
 def draw_pile(cs, n=30):
     cs.player.draw_pile = [defend() for _ in range(n)]
     return cs
@@ -814,10 +810,6 @@ def draw_pile(cs, n=30):
 def names(pile):
     return [c.card_id.name for c in pile]
 
-
-@pytest.mark.parametrize("bridge_id", LAST_FIVE)
-def test_loads_from_the_bridge_last_five(bridge_id):
-    assert RelicInstance.from_dict({"id": bridge_id, "counter": None}).relic_id == RelicId[bridge_id]
 
 
 # ---------------------------------------------------------------- Runic Pyramid (ShouldFlush)

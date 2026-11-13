@@ -4,7 +4,7 @@ import json, os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from sts2_lite import rng
 from sts2_lite.combat import CombatState, CombatSimulator
-from sts2_lite.verify import compare
+from agents.verify import compare
 
 CASE = json.load(open(os.path.join(os.path.dirname(__file__), "fixtures", "duplicated_brand.json")))
 

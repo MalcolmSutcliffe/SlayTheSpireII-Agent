@@ -223,7 +223,7 @@ def test_guardbot_blocks_the_fabricator_for_fifteen_and_noisebot_adds_two_dazed(
 
 
 # ---------------------------------------------------------------- captured from the game (Tests/data/act3_glory)
-from sts2_lite import verify
+from agents import verify
 from sts2_lite.Tests import captures
 
 

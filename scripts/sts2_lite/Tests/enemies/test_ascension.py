@@ -12,7 +12,7 @@ from sts2_lite.combat import CombatSimulator
 from sts2_lite.enemy import Enemy
 from sts2_lite.enemy_moves import HATCHLING_HP, MOVE_TABLES, SPAWN_HP
 from sts2_lite.status import StatusId
-from sts2_lite.verify import _fresh_spawn_hp_is_random
+from agents.verify import _fresh_spawn_hp_is_random
 from sts2_lite.Tests.enemies.test_glory_simple import at, turn
 
 DECOMPILED = Path(os.environ.get("STS2_DECOMPILED") or Path(__file__).resolve().parents[4] / "sts2_decompiled")

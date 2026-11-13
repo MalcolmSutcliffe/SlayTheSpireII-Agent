@@ -312,7 +312,7 @@ def test_hardened_shell_does_not_stop_losing_hit_points_directly():
 
 
 # ---------------------------------------------------------------- captured from the game (Tests/data/act1_underdocks)
-from sts2_lite import verify
+from agents import verify
 from sts2_lite.Tests import captures
 
 def under(enemy, name):

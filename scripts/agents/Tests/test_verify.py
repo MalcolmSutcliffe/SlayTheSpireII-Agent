@@ -3,10 +3,10 @@ from pathlib import Path
 from sts2_lite.card import Card, CardId, CardType, TargetType
 from sts2_lite.combat import CombatSimulator, CombatState
 from sts2_lite.status import StatusId
-from sts2_lite.verify import compare, snapshot, is_random_step
+from agents.verify import compare, snapshot, is_random_step
 
 
-DATA = Path(__file__).parent / "data"
+DATA = Path(__file__).resolve().parents[2] / "sts2_lite" / "Tests" / "data"
 
 def load(name="relics/spiked_gauntlets.json"):
     return CombatState.from_dict(json.loads((DATA / name).read_text()))
@@ -163,7 +163,7 @@ def test_picking_among_several_enemies_is_counted_and_one_enemy_is_not():
 def test_random_targets_that_differ_in_vulnerability_are_matched_by_replaying():
     """Captured: Sword Boomerang's three hits all went to the Crusher in the game; the Rocket has Vulnerable, so the totals differ."""
     from sts2_lite import enemy as enemy_module
-    from sts2_lite.verify import some_target_roll_matches
+    from agents.verify import some_target_roll_matches
     enemy_module.STRICT_BRIDGE_CHECKS = True
     before = CombatState.from_dict(json.loads((DATA / "act2_hive/kaiser_crab/boomerang_before.json").read_text()))
     after = CombatState.from_dict(json.loads((DATA / "act2_hive/kaiser_crab/boomerang_after.json").read_text()))
@@ -173,25 +173,25 @@ def test_random_targets_that_differ_in_vulnerability_are_matched_by_replaying():
     assert not some_target_roll_matches(before, [action], after, random_step=False, tries=60)
 
 
-DATA_mismatch_fixes = Path(__file__).parent / "data" / "mismatches"
+MISMATCHES = DATA / "mismatches"
 
-def load_mismatch_fixes(name):
-    d = json.loads((DATA_mismatch_fixes / f"{name}.json").read_text())
+def load_mismatch(name):
+    d = json.loads((MISMATCHES / f"{name}.json").read_text())
     return CombatState.from_dict(d["before"]), CombatState.from_dict(d["after"]), d["actions"]
 
 def test_red_skull_strength_applies_to_breakthrough_hit():
-    before, after, actions = load_mismatch_fixes("breakthrough_red_skull")
+    before, after, actions = load_mismatch("breakthrough_red_skull")
     CombatSimulator(before).play_card(actions[0]["card_index"], actions[0].get("target", 0))
     assert compare(before, after) == []
 
 def test_toasty_mittens_drum_of_battle_random_exhaust_is_not_an_energy_mismatch():
-    before, after, actions = load_mismatch_fixes("toasty_drum_of_battle")
+    before, after, actions = load_mismatch("toasty_drum_of_battle")
     pre = CombatState.deepcopy(before)
     CombatSimulator(before).end_turn()
     assert compare(before, after, random_step=is_random_step(pre, before, actions)) == []
 
 def test_jack_of_all_trades_random_card_is_tolerated():
-    before, after, actions = load_mismatch_fixes("jack_of_all_trades")
+    before, after, actions = load_mismatch("jack_of_all_trades")
     pre = CombatState.deepcopy(before)
     sim = CombatSimulator(before)
     sim.play_card(actions[0]["card_index"], actions[0].get("target", 0))
@@ -199,7 +199,7 @@ def test_jack_of_all_trades_random_card_is_tolerated():
 
 
 def replay(name):
-    before, after, actions = load_mismatch_fixes(name)
+    before, after, actions = load_mismatch(name)
     pre = CombatState.deepcopy(before)
     sim = CombatSimulator(before)
     for a in actions:
@@ -222,14 +222,14 @@ def test_the_beetle_keeps_the_plating_block_it_gained_before_it_woke():
     assert compare(predicted, after, random_step=is_random_step(pre, predicted, actions)) == []
 
 def test_stampede_picking_between_attacks_is_not_compared():
-    from sts2_lite.verify import is_unpredictable_step
-    before, after, actions = load_mismatch_fixes("stampede_random_attack")
+    from agents.verify import is_unpredictable_step
+    before, after, actions = load_mismatch("stampede_random_attack")
     assert is_unpredictable_step(before, actions)
     before.player.hand = [c for c in before.player.hand if c.card_id.name == "BODY_SLAM"]
     assert not is_unpredictable_step(before, actions)        # one kind of Attack left: only that one can be played
 
 
-CASES = Path(__file__).parent / "data" / "log_cases"
+CASES = DATA / "log_cases"
 
 def case(name):
     return json.loads((CASES / f"{name}.json").read_text())

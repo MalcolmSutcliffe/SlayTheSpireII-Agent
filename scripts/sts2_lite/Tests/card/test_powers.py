@@ -6,7 +6,7 @@ from sts2_lite.combat import CombatSimulator, CombatState
 from sts2_lite.Tests.card.test_card import make_card, make_state, play, hps
 from sts2_lite.status import StatusId
 from pathlib import Path
-from sts2_lite.verify import compare
+from agents.verify import compare
 
 
 def card(card_id, cost=1, kind=CardType.Attack, target=TargetType.AnyEnemy, upgraded=False):

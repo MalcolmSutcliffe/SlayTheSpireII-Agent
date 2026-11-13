@@ -5,7 +5,7 @@ from sts2_lite import rng
 from sts2_lite.card import CardId, CardType
 from sts2_lite.combat import CombatState, CombatSimulator
 from sts2_lite.selection import game_index
-from sts2_lite.verify import compare, snapshot, is_random_step, is_unpredictable_step, some_target_roll_matches
+from agents.verify import compare, snapshot, is_random_step, is_unpredictable_step, some_target_roll_matches
 
 import argparse
 import functools

@@ -490,56 +490,53 @@ def test_cinder_exhausts_a_random_card():
     assert exhausted == {CardId.STRIKE_IRONCLAD, CardId.DEFEND_IRONCLAD}
 
 
-def card_cards_last(card_id, cost, kind, target, upgraded=False):
-    return make_card(card_id, card_id.name.title(), kind, cost, target, upgraded)
-
 def strike(up=False):
-    return card_cards_last(CardId.STRIKE_IRONCLAD, 1, CardType.Attack, TargetType.AnyEnemy, up)
+    return card(CardId.STRIKE_IRONCLAD, 1, CardType.Attack, TargetType.AnyEnemy, up)
 
 def defend():
-    return card_cards_last(CardId.DEFEND_IRONCLAD, 1, CardType.Skill, TargetType.Self)
+    return card(CardId.DEFEND_IRONCLAD, 1, CardType.Skill, TargetType.Self)
 
 def bash():
-    return card_cards_last(CardId.BASH, 2, CardType.Attack, TargetType.AnyEnemy)
+    return card(CardId.BASH, 2, CardType.Attack, TargetType.AnyEnemy)
 
 def pommel():
-    return card_cards_last(CardId.POMMEL_STRIKE, 1, CardType.Attack, TargetType.AnyEnemy)
+    return card(CardId.POMMEL_STRIKE, 1, CardType.Attack, TargetType.AnyEnemy)
 
 def brand(up=False):
-    return card_cards_last(CardId.BRAND, 0, CardType.Skill, TargetType.Self, up)
+    return card(CardId.BRAND, 0, CardType.Skill, TargetType.Self, up)
 
 def hellraiser(up=False):
-    return card_cards_last(CardId.HELLRAISER, 1 if up else 2, CardType.Power, TargetType.Self, up)
+    return card(CardId.HELLRAISER, 1 if up else 2, CardType.Power, TargetType.Self, up)
 
 def inferno(up=False):
-    return card_cards_last(CardId.INFERNO, 1, CardType.Power, TargetType.Self, up)
+    return card(CardId.INFERNO, 1, CardType.Power, TargetType.Self, up)
 
 def mangle(up=False):
-    return card_cards_last(CardId.MANGLE, 3, CardType.Attack, TargetType.AnyEnemy, up)
+    return card(CardId.MANGLE, 3, CardType.Attack, TargetType.AnyEnemy, up)
 
 def pillage(up=False):
-    return card_cards_last(CardId.PILLAGE, 1, CardType.Attack, TargetType.AnyEnemy, up)
+    return card(CardId.PILLAGE, 1, CardType.Attack, TargetType.AnyEnemy, up)
 
 def primal_force(up=False):
-    return card_cards_last(CardId.PRIMAL_FORCE, 0, CardType.Skill, TargetType.Self, up)
+    return card(CardId.PRIMAL_FORCE, 0, CardType.Skill, TargetType.Self, up)
 
 def rampage(up=False):
-    return card_cards_last(CardId.RAMPAGE, 1, CardType.Attack, TargetType.AnyEnemy, up)
+    return card(CardId.RAMPAGE, 1, CardType.Attack, TargetType.AnyEnemy, up)
 
 def setup_strike(up=False):
-    return card_cards_last(CardId.SETUP_STRIKE, 1, CardType.Attack, TargetType.AnyEnemy, up)
+    return card(CardId.SETUP_STRIKE, 1, CardType.Attack, TargetType.AnyEnemy, up)
 
 def stoke(up=False):
-    return card_cards_last(CardId.STOKE, 1, CardType.Skill, TargetType.Self, up)
+    return card(CardId.STOKE, 1, CardType.Skill, TargetType.Self, up)
 
 def stomp(cost=3, up=False):
-    return card_cards_last(CardId.STOMP, cost, CardType.Attack, TargetType.AllEnemies, up)
+    return card(CardId.STOMP, cost, CardType.Attack, TargetType.AllEnemies, up)
 
 def tear_asunder(up=False):
-    return card_cards_last(CardId.TEAR_ASUNDER, 2, CardType.Attack, TargetType.AnyEnemy, up)
+    return card(CardId.TEAR_ASUNDER, 2, CardType.Attack, TargetType.AnyEnemy, up)
 
 def thrash(up=False):
-    return card_cards_last(CardId.THRASH, 1, CardType.Attack, TargetType.AnyEnemy, up)
+    return card(CardId.THRASH, 1, CardType.Attack, TargetType.AnyEnemy, up)
 
 def state(hand, enemies=1, hp=100):
     return make_state(hand, enemy_count=enemies, enemy_hp=hp)
@@ -606,10 +603,10 @@ def test_brand_at_one_hp_kills_the_player():
 
 # ---------------------------------------------------------------- Giant Rock
 def test_giant_rock_deals_sixteen_and_twenty_upgraded():
-    cs = state([card_cards_last(CardId.GIANT_ROCK, 1, CardType.Attack, TargetType.AnyEnemy)])
+    cs = state([card(CardId.GIANT_ROCK, 1, CardType.Attack, TargetType.AnyEnemy)])
     play(cs)
     assert hps(cs) == [84]
-    cs = state([card_cards_last(CardId.GIANT_ROCK, 1, CardType.Attack, TargetType.AnyEnemy, True)])
+    cs = state([card(CardId.GIANT_ROCK, 1, CardType.Attack, TargetType.AnyEnemy, True)])
     play(cs)
     assert hps(cs) == [80]
 
@@ -685,7 +682,7 @@ def test_two_setup_strikes_stack_and_both_are_returned():
     assert st(cs.player, StatusId.STRENGTH) == 0
 
 def perfected_strike(up=False):
-    return card_cards_last(CardId.PERFECTED_STRIKE, 2, CardType.Attack, TargetType.AnyEnemy, up)
+    return card(CardId.PERFECTED_STRIKE, 2, CardType.Attack, TargetType.AnyEnemy, up)
 
 def test_perfected_strike_counts_itself():
     cs = state([perfected_strike()])
@@ -693,22 +690,22 @@ def test_perfected_strike_counts_itself():
     assert hps(cs) == [100 - 8]
 
 def test_perfected_strike_counts_strikes_in_every_pile():
-    cs = state([perfected_strike(), card_cards_last(CardId.STRIKE_IRONCLAD, 1, CardType.Attack, TargetType.AnyEnemy)])
-    cs.player.draw_pile = [card_cards_last(CardId.TWIN_STRIKE, 1, CardType.Attack, TargetType.AnyEnemy)]
-    cs.player.discard_pile = [card_cards_last(CardId.POMMEL_STRIKE, 1, CardType.Attack, TargetType.AnyEnemy)]
-    cs.player.exhaust_pile = [card_cards_last(CardId.ASHEN_STRIKE, 1, CardType.Attack, TargetType.AnyEnemy)]
+    cs = state([perfected_strike(), card(CardId.STRIKE_IRONCLAD, 1, CardType.Attack, TargetType.AnyEnemy)])
+    cs.player.draw_pile = [card(CardId.TWIN_STRIKE, 1, CardType.Attack, TargetType.AnyEnemy)]
+    cs.player.discard_pile = [card(CardId.POMMEL_STRIKE, 1, CardType.Attack, TargetType.AnyEnemy)]
+    cs.player.exhaust_pile = [card(CardId.ASHEN_STRIKE, 1, CardType.Attack, TargetType.AnyEnemy)]
     play(cs)
     assert hps(cs) == [100 - (6 + 2 * 5)]       # itself, hand, draw, discard and exhaust
 
 def test_perfected_strike_counts_a_generated_strike_and_ignores_other_cards():
-    cs = state([perfected_strike(True), card_cards_last(CardId.DEFEND_IRONCLAD, 1, CardType.Skill, TargetType.Self)])
+    cs = state([perfected_strike(True), card(CardId.DEFEND_IRONCLAD, 1, CardType.Skill, TargetType.Self)])
     cs.player.discard_pile = [Card.create_generated(CardId.SETUP_STRIKE)]
     play(cs)
     assert hps(cs) == [100 - (6 + 3 * 2)]
 
 def test_perfected_strike_counts_a_strike_exhausted_during_the_fight():
     cs = state([perfected_strike()])
-    cs.player.exhaust_pile = [card_cards_last(CardId.STRIKE_IRONCLAD, 1, CardType.Attack, TargetType.AnyEnemy)]
+    cs.player.exhaust_pile = [card(CardId.STRIKE_IRONCLAD, 1, CardType.Attack, TargetType.AnyEnemy)]
     play(cs)
     assert hps(cs) == [100 - (6 + 2 * 2)]
 
@@ -916,7 +913,7 @@ def test_fully_blocked_hits_do_not_count_for_tear_asunder():
     assert hps(cs) == [95]
 
 def test_tear_asunder_counts_hp_lost_to_cards():
-    cs = state([card_cards_last(CardId.BLOODLETTING, 0, CardType.Skill, TargetType.Self), tear_asunder()])
+    cs = state([card(CardId.BLOODLETTING, 0, CardType.Skill, TargetType.Self), tear_asunder()])
     sim = play(cs)
     sim.play_card(0, 0)
     assert hps(cs) == [90]
@@ -1070,10 +1067,10 @@ def test_thrash_with_one_attack_uses_no_rng():
     assert rng.calls == before
 
 def test_thrash_uses_the_current_damage_of_special_cards():
-    cs = state([thrash(), card_cards_last(CardId.BODY_SLAM, 1, CardType.Attack, TargetType.AnyEnemy)]); cs.player.block = 11
+    cs = state([thrash(), card(CardId.BODY_SLAM, 1, CardType.Attack, TargetType.AnyEnemy)]); cs.player.block = 11
     play(cs)
     assert cs.player.discard_pile[0].bonus_damage == 11
-    cs = state([thrash(), card_cards_last(CardId.ASHEN_STRIKE, 1, CardType.Attack, TargetType.AnyEnemy)])
+    cs = state([thrash(), card(CardId.ASHEN_STRIKE, 1, CardType.Attack, TargetType.AnyEnemy)])
     cs.player.exhaust_pile = fresh(2)
     play(cs)
     assert cs.player.discard_pile[0].bonus_damage == 12
@@ -1204,7 +1201,7 @@ def test_hellraiser_applies_its_power_once():
     assert st(cs.player, StatusId.HELLRAISER) == 1
 
 def test_hellraiser_costs_two_and_one_upgraded():
-    assert card_cards_last(CardId.HELLRAISER, 2, CardType.Power, TargetType.Self).upgraded_copy().energy_cost == 1
+    assert card(CardId.HELLRAISER, 2, CardType.Power, TargetType.Self).upgraded_copy().energy_cost == 1
 
 def test_a_drawn_strike_is_played_at_once():
     cs = state([]); cs.player.apply_status(StatusId.HELLRAISER, 1)
@@ -1283,7 +1280,7 @@ def test_hellraiser_on_a_copy_works_once_it_is_wrapped():
     assert hps(copy) == [94] and hps(cs) == [100]
 
 def test_cascade_taking_a_strike_does_not_trigger_hellraiser():
-    cs = state([card_cards_last(CardId.CASCADE, "X", CardType.Skill, TargetType.Self)]); cs.energy = 1
+    cs = state([card(CardId.CASCADE, "X", CardType.Skill, TargetType.Self)]); cs.energy = 1
     cs.player.apply_status(StatusId.HELLRAISER, 1)
     cs.player.draw_pile = [strike()]
     play(cs)
@@ -1318,7 +1315,7 @@ def test_two_inferno_plays_cost_two_hp_in_one_loss_that_hurts_once():
     assert cs.player.current_hp == 48 and hps(cs) == [100 - 12]       # one loss of HP, one burst of damage
 
 def test_inferno_hurts_enemies_whenever_a_card_costs_hp():
-    cs = state([card_cards_last(CardId.BLOODLETTING, 0, CardType.Skill, TargetType.Self)], enemies=2)
+    cs = state([card(CardId.BLOODLETTING, 0, CardType.Skill, TargetType.Self)], enemies=2)
     cs.player.apply_status(StatusId.INFERNO, 6)
     play(cs)
     assert hps(cs) == [94, 94]
@@ -1337,14 +1334,14 @@ def test_inferno_ignores_blocked_hits_and_unrelated_turns():
     assert hps(cs) == [100]
 
 def test_inferno_is_blocked_by_enemy_block_and_ignores_strength():
-    cs = state([card_cards_last(CardId.BLOODLETTING, 0, CardType.Skill, TargetType.Self)])
+    cs = state([card(CardId.BLOODLETTING, 0, CardType.Skill, TargetType.Self)])
     cs.player.apply_status(StatusId.INFERNO, 6); cs.player.apply_status(StatusId.STRENGTH, 5)
     cs.enemies[0].block = 4
     play(cs)
     assert hps(cs) == [98]
 
 def test_inferno_can_kill_enemies():
-    cs = state([card_cards_last(CardId.BLOODLETTING, 0, CardType.Skill, TargetType.Self)], hp=5)
+    cs = state([card(CardId.BLOODLETTING, 0, CardType.Skill, TargetType.Self)], hp=5)
     cs.player.apply_status(StatusId.INFERNO, 6)
     sim = play(cs)
     assert sim.is_over
@@ -1356,7 +1353,7 @@ def test_inferno_and_rupture_both_react_to_the_turn_start_loss():
     assert st(cs.player, StatusId.STRENGTH) == 1
 
 def test_inferno_counts_every_hp_loss_in_one_card():
-    cs = state([card_cards_last(CardId.HEMOKINESIS, 1, CardType.Attack, TargetType.AnyEnemy)])
+    cs = state([card(CardId.HEMOKINESIS, 1, CardType.Attack, TargetType.AnyEnemy)])
     cs.player.apply_status(StatusId.INFERNO, 6)
     play(cs)
     assert hps(cs) == [100 - 15 - 6]

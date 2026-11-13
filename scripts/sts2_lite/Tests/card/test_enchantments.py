@@ -4,7 +4,7 @@ from pathlib import Path
 from sts2_lite.card import Card, CardId, CardKeyword, CardType, EnchantmentId, TargetType
 from sts2_lite.combat import CombatSimulator, CombatState
 from sts2_lite.status import StatusId
-from sts2_lite.verify import compare
+from agents.verify import compare
 from sts2_lite.Tests.card.test_card import make_card, make_state, hps
 
 

@@ -10,7 +10,7 @@ from sts2_lite import rng
 from sts2_lite.card import Card, CardId, CardType, TargetType
 from sts2_lite.combat import CombatSimulator, CombatState
 from sts2_lite.relic import RelicId, RelicInstance
-from sts2_lite.state_key import state_key
+from agents.sts2_MCTS.state_key import state_key
 from sts2_lite.status import StatusId
 from sts2_lite.Tests.card.test_card import make_card, make_state
 

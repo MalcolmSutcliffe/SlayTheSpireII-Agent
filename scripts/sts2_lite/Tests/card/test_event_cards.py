@@ -243,7 +243,7 @@ def test_toric_toughness_power_loads_from_the_bridge():
 
 CAPTURES = Path(__file__).parents[1] / "data" / "cards" / "colorless"
 
-def one_enemy_until_played(hand, hp=200):
+def tough_enemy(hand, hp=200):
     return make_state(hand, enemy_count=1, enemy_hp=hp)
 
 def bludgeon(cost=3):
@@ -260,7 +260,7 @@ def test_free_this_turn_is_marked_until_played():
     assert bludgeon().cheaper_this_turn(1).until_played is False          # Stomp: AddThisTurn lasts the turn
 
 def test_playing_a_free_card_gives_its_cost_back():
-    cs = one_enemy_until_played([bludgeon().free_this_turn()])
+    cs = tough_enemy([bludgeon().free_this_turn()])
     CombatSimulator(cs).play_card(0, 0)
     played, = everywhere(cs, CardId.BLUDGEON)
     assert cs.energy == 3 and (played.energy_cost, played.restore_cost, played.until_played) == (3, None, False)
@@ -268,7 +268,7 @@ def test_playing_a_free_card_gives_its_cost_back():
 def test_card_returned_to_hand_the_same_turn_costs_full_price():
     """Infernal Blade's free card, played, then pulled back with Neow's Fury: it costs 3 again."""
     fury = make_card(CardId.NEOWS_FURY, "Neow's Fury", CardType.Attack, 1, TargetType.AnyEnemy)
-    cs = one_enemy_until_played([bludgeon().free_this_turn(), fury])
+    cs = tough_enemy([bludgeon().free_this_turn(), fury])
     sim = CombatSimulator(cs)
     sim.play_card(0, 0)
     sim.play_card(0, 0)
@@ -277,7 +277,7 @@ def test_card_returned_to_hand_the_same_turn_costs_full_price():
     assert back.energy_cost == 3 and not back.until_played
 
 def test_enlightenment_discount_ends_when_the_card_is_played():
-    cs = one_enemy_until_played([event_card(CardId.ENLIGHTENMENT), bludgeon()])
+    cs = tough_enemy([event_card(CardId.ENLIGHTENMENT), bludgeon()])
     sim = CombatSimulator(cs)
     sim.play_card(0, 0)
     assert cs.player.hand[0].energy_cost == 1 and cs.player.hand[0].until_played
@@ -286,7 +286,7 @@ def test_enlightenment_discount_ends_when_the_card_is_played():
     assert [c.energy_cost for c in everywhere(cs, CardId.BLUDGEON)] == [3]
 
 def test_upgraded_enlightenment_survives_the_play():
-    cs = one_enemy_until_played([event_card(CardId.ENLIGHTENMENT, True), bludgeon()])
+    cs = tough_enemy([event_card(CardId.ENLIGHTENMENT, True), bludgeon()])
     sim = CombatSimulator(cs)
     sim.play_card(0, 0)
     sim.play_card(0, 0)
@@ -294,7 +294,7 @@ def test_upgraded_enlightenment_survives_the_play():
     assert played.energy_cost == 1 and not played.until_played
 
 def test_upgraded_enlightenment_on_a_free_card_leaves_it_at_one_after_the_play():
-    cs = one_enemy_until_played([event_card(CardId.ENLIGHTENMENT, True), bludgeon().free_this_turn()])
+    cs = tough_enemy([event_card(CardId.ENLIGHTENMENT, True), bludgeon().free_this_turn()])
     sim = CombatSimulator(cs)
     sim.play_card(0, 0)
     sim.play_card(0, 0)
@@ -303,14 +303,14 @@ def test_upgraded_enlightenment_on_a_free_card_leaves_it_at_one_after_the_play()
 
 def test_stomp_discount_is_kept_after_the_play():
     stomp = make_card(CardId.STOMP, "Stomp", CardType.Attack, 3, TargetType.AllEnemies).cheaper_this_turn(2)
-    cs = one_enemy_until_played([stomp])
+    cs = tough_enemy([stomp])
     CombatSimulator(cs).play_card(0, 0)
     played, = everywhere(cs, CardId.STOMP)
     assert (played.energy_cost, played.restore_cost) == (1, 3)
 
 def test_an_auto_played_card_gives_its_cost_back():
     free = bludgeon().free_this_turn()
-    cs = one_enemy_until_played([])
+    cs = tough_enemy([])
     cs.player.draw_pile = [defend(), free]
     CombatSimulator(cs).auto_play(free)
     played, = everywhere(cs, CardId.BLUDGEON)
@@ -318,7 +318,7 @@ def test_an_auto_played_card_gives_its_cost_back():
 
 def test_an_exhausting_free_card_is_reset_in_the_exhaust_pile():
     offering = make_card(CardId.SHRUG_IT_OFF, "Shrug It Off", CardType.Skill, 1, TargetType.Self).free_this_turn()
-    cs = one_enemy_until_played([offering])
+    cs = tough_enemy([offering])
     cs.player.apply_status(StatusId.CORRUPTION, 1)          # Skills exhaust
     CombatSimulator(cs).play_card(0, 0)
     played, = cs.player.exhaust_pile
@@ -333,11 +333,11 @@ def test_until_played_is_part_of_the_signature():
 def test_crossbow_and_mummified_hand_freebies_are_until_played():
     from sts2_lite.relic import _crossbow, _mummified_hand
     for seed in range(5):                   # Crossbow's random Attack; Whirlwind would stay X
-        cs = one_enemy_until_played([])
+        cs = tough_enemy([])
         _crossbow(CombatSimulator(cs), None)
         made = cs.player.hand[-1]
         assert made.until_played or made.energy_cost == "X"
-    cs = one_enemy_until_played([bludgeon(2)])
+    cs = tough_enemy([bludgeon(2)])
     _mummified_hand(CombatSimulator(cs), None)
     assert cs.player.hand[0].energy_cost == 0 and cs.player.hand[0].until_played
 

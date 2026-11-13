@@ -16,7 +16,7 @@ from sts2_lite.enemy import Enemy
 from sts2_lite.potion import PotionId
 
 from sts2_lite.status import StatusId
-from sts2_lite.state_key import state_key
+from agents.sts2_MCTS.state_key import state_key
 
 class RolloutPolicy(Enum):
     FirstAction = auto()            # just play first action (works surprisingly well)

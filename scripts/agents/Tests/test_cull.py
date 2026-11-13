@@ -4,7 +4,7 @@ import pytest
 from sts2_lite import rng
 from sts2_lite.card import CardId
 from sts2_lite.combat import CombatSimulator, CombatState
-from sts2_lite.verify import snapshot
+from agents.verify import snapshot
 from agents.sts2_MCTS.MCTS import cull_identical_actions, expand_node, sts2_DeterministicNode, _action_key
 from agents.Tests.test_mcts import make_state, strike, defend, bash, pile
 
