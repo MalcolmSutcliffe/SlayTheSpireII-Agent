@@ -2,7 +2,7 @@ from __future__ import annotations
 """Act 3 at Ascension 10 has two bosses: when the first falls the game goes straight into the second, and the sim's finished fight is not compared with it."""
 import json, os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
-from agent_tester import chained_into_new_fight
+from agent_runner.combat_session import chained_into_new_fight
 from data_paths import SEARCH
 
 IDS = json.load(open(SEARCH / "double_boss_ids.json"))
