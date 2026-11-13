@@ -55,6 +55,7 @@ class CombatState:
     turn_number : int       # CombatState.RoundNumber: enemies' move patterns
     extra_turns : int = 0   # extra player turns taken (Pael's Eye); the round does not advance for them
     ascension : int = 0
+    final_fight : bool = False      # the last fight of the run: nothing after it, so a potion left over is worth nothing
 
     @property
     def player_turn(self) -> int:
@@ -385,6 +386,7 @@ class CombatState:
         new_cs.turn_number = combat_state.turn_number
         new_cs.extra_turns = combat_state.extra_turns
         new_cs.ascension = combat_state.ascension
+        new_cs.final_fight = combat_state.final_fight
         new_cs.revivals = list(combat_state.revivals)
         new_cs.dormant = [Enemy.deepcopy(e) for e in combat_state.dormant]
         new_cs.continuations = list(combat_state.continuations)

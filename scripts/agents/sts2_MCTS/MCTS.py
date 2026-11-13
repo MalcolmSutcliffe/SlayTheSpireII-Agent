@@ -457,6 +457,13 @@ class sts2_MCTS:
             c.perform_action(rollout_policy(c, actions, self._search_config.rollout))
         return self._rate_outcome(cs)
 
+    def _contender_line(self, node : sts2_Node) -> list:
+        """The root move `node` and the line the tree follows after it (see _principal_line), for the paired replay."""
+        line, tail = self._principal_line(node)
+        if not line:
+            return [node.action]            # a random play: the move itself
+        return line + ([tail] if tail is not None else [])
+
     def _paired_check(self, picked : sts2_Node) -> dict | None:
         """Compare `picked` with the root moves close to it in visits. Returns the details (and whether a rival `replaced` it),
         or None when there is nothing to compare."""
@@ -471,10 +478,13 @@ class sts2_MCTS:
         seeds = [rng.randrange(1 << 30) for _ in range(n)]      # fresh scenarios every time
         saved = rng.getstate()                                  # the rollouts reseed the shared source: put it back afterwards
         try:
-            base = [self._paired_rollout(state, picked.action, s) for s in seeds]
+            # each move is replayed along the line the tree found after it (the second Strike that is lethal), not as its first play
+            # followed by the rollout policy, which need not find that line and then rates the move below one that is merely safe
+            base = [self._paired_line_rollout(state, self._contender_line(picked), s) for s in seeds]
             results = []
             for rival in rivals:
-                diffs = [self._paired_rollout(state, rival.action, s) - b for s, b in zip(seeds, base)]
+                line = self._contender_line(rival)
+                diffs = [self._paired_line_rollout(state, line, s) - b for s, b in zip(seeds, base)]
                 mean = sum(diffs) / n
                 var = sum((d - mean) ** 2 for d in diffs) / (n - 1)
                 results.append((rival, mean, math.sqrt(var / n)))
@@ -794,8 +804,9 @@ class sts2_MCTS:
         # if won fight: outcome is best max hp with slight bias towards less turns
         if won:
             hp_score = current_hp
-            hp_score += sum(POTION_BONUS.get(p.potion_id, DEFAULT_POTION_BONUS) for p in combat_state.player.potions)
-            hp_score += MAX_HP_SCALING * max_hp_delta
+            if not combat_state.final_fight:        # in the last fight a kept potion is of no use later: drinking one costs nothing
+                hp_score += sum(POTION_BONUS.get(p.potion_id, DEFAULT_POTION_BONUS) for p in combat_state.player.potions)
+                hp_score += MAX_HP_SCALING * max_hp_delta
             hp_score += -TURN_COST * num_turns                     
             return WIN_BASE + hp_score / self._starting_hp         # linear in HP
         

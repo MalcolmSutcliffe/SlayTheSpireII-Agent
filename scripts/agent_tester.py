@@ -41,6 +41,20 @@ def confirm_if_ready():
     elif state.get("decision") == "card_select":
         subprocess.run(["cli-anything-sts2", "confirm-selection"])
 
+act3_boss_floors : set[int] = set()     # floors of the Act 3 boss fights seen in this run
+
+def is_final_fight(game_state : dict, seen_floors : set[int]) -> bool:
+    """True in the fight after which the run is won. Act 3's boss is the last fight; from Ascension 10 there is a second final boss,
+    so the last fight is the Act 3 boss fight that comes after another one (a floor not seen before). `seen_floors` is filled here.
+    Restarting the agent in the middle of the second boss fight reads it as the first: potions stay priced, which is the safe side."""
+    context = game_state.get("context") or game_state.get("run") or {}
+    if game_state.get("room_type") != "boss" or context.get("act", 0) < 3:
+        return False
+    floor = context.get("floor")
+    others = {f for f in seen_floors if f != floor}
+    seen_floors.add(floor)
+    return context.get("ascension", 0) < 10 or bool(others)
+
 picked_on_screen = []       # game indices already selected on an "up to N" pile screen (Neow's Fury)
 
 def act(action, game_state=None, picking_more=False):
@@ -88,16 +102,22 @@ def act(action, game_state=None, picking_more=False):
 ### Reading the game
 ###
 
-def kind_of(game_state : dict, expecting_choice : bool = False) -> str:
+def in_subject_fight(combat_state : CombatState | None) -> bool:
+    """The fight the simulated state belongs to has the Test Subject in it, alive or lying dead."""
+    return combat_state is not None and any(e.enemy_id.startswith("TEST_SUBJECT") for e in combat_state.enemies + combat_state.dormant)
+
+def kind_of(game_state : dict, expecting_choice : bool = False, subject_fight : bool = False) -> str:
     """What the loop should do with a state: "play" (agent's turn), "pick" (a card choice during combat),
-    "busy" (combat, but the game is animating or it is the enemies' turn) or "away" (not in combat)."""
+    "busy" (combat, but the game is animating or it is the enemies' turn) or "away" (not in combat).
+    `subject_fight`: the fight is against the Test Subject, which is not listed while it lies dead between its forms: an empty enemy list
+    in the player's turn is then a turn to play (the cards that need a target cannot be played, so it ends the turn), not a fight being set up."""
     if game_state.get("type") != "decision":
         return "busy"
     decision = game_state.get("decision")
     if decision == "combat_play":
         if game_state.get("turn") != "player" or game_state.get("is_play_phase") is False:
             return "busy"
-        if game_state.get("enemies") == []:
+        if game_state.get("enemies") == [] and not subject_fight:
             return "busy"       # the killed enemy is gone but its spawns (Phrog Parasite's Wrigglers) are not there yet, or the fight is ending
         if not all(key in (game_state.get("player") or {}) for key in ("hp", "max_hp", "block", "status", "hand")):
             return "busy"       # the player's data is gone as the last enemy dies and the fight is torn down
@@ -502,7 +522,7 @@ def run_agent(agent : BaseAgent, step : bool = False, verify : bool = True, log_
     try:
         while True:
             game_state = get_state()
-            kind = kind_of(game_state, previous is not None and previous.pending_choice is not None)
+            kind = kind_of(game_state, previous is not None and previous.pending_choice is not None, in_subject_fight(previous))
 
             if kind == "away":
                 if fight is not None and fight_log:
@@ -532,7 +552,7 @@ def run_agent(agent : BaseAgent, step : bool = False, verify : bool = True, log_
 
             game_state = settled(game_state, cards_owed)
             cards_owed = None
-            if kind_of(game_state, previous is not None and previous.pending_choice is not None) != kind:
+            if kind_of(game_state, previous is not None and previous.pending_choice is not None, in_subject_fight(previous)) != kind:
                 continue            # the game moved on while the state settled (the last enemy died and the fight is torn down): read it again
             decision = game_state["decision"]
 
@@ -561,6 +581,7 @@ def run_agent(agent : BaseAgent, step : bool = False, verify : bool = True, log_
                 continue
             else:
                 combat_state = CombatState.from_dict(game_state)
+                combat_state.final_fight = is_final_fight(game_state, act3_boss_floors)
                 report_unimplemented(game_state, log_path, reported_cards)
                 combat_state.carry_turn_counters(previous)
                 combat_state.carry_known_top(previous)    # cards the agent put on top (Headbutt)
