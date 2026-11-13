@@ -693,7 +693,7 @@ def _withering_presence_on_card_played(combat : CombatSimulator, owner : Creatur
         inst.amount = WITHERING_PRESENCE_CARDS
         combat.combat_state.player.add_to_hand(Card.create_wither(combat.wither_level()))
 
-def _nemesis_toggle(combat : CombatSimulator, owner : Creature):
+def nemesis_toggle(combat : CombatSimulator, owner : Creature):
     """NemesisPower.AfterSideTurnEnd: Intangible every other enemy turn (it comes after the turn's own Intangible tick)."""
     inst = owner.status[StatusId.NEMESIS]
     if not inst.records:

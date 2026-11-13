@@ -11,6 +11,7 @@ import re
 from enum import Enum, auto
 
 from sts2_lite import rng
+from sts2_lite.helpers import enemy_at, living_enemies
 from sts2_lite.events import EventType
 from sts2_lite.status import StatusId, is_debuff, AUTOMATION_CARDS, PANACHE_CARDS
 from sts2_lite.relic import block_multiplier, block_gained, debuff_multiplier, x_bonus, before_card_played, snapshot, restore, RelicId, extra_plays, free_by_relic, blocks_play
@@ -957,13 +958,7 @@ _SCARF, _CHOKER, _AXE = RelicId.BRILLIANT_SCARF, RelicId.VELVET_CHOKER, RelicId.
 ### Helpers
 ###
 
-def _enemy(combat : CombatSimulator, target_index : int) -> Enemy:
-    if not 0 <= target_index < len(combat.combat_state.enemies):
-        raise ValueError(f"Target index {target_index} out of bounds")
-    return combat.combat_state.enemies[target_index]
 
-def _living(combat : CombatSimulator) -> list[Enemy]:
-    return [e for e in combat.combat_state.enemies if e.current_hp > 0]
 
 def _attack(combat : CombatSimulator, base : int, target : Creature, hits : int = 1):
     owner = combat.combat_state.player
@@ -1034,7 +1029,7 @@ def _vulnerable(combat : CombatSimulator, target : Creature, amount : int):
     if target.status_amount(StatusId.VULNERABLE) > before:      # Vicious: not if Artifact stopped it
         player.draw_cards(player.status_amount(StatusId.VICIOUS))
 
-def _temp_strength(target : Creature, marker : StatusId, amount : int, sign : int, combat : CombatSimulator | None = None):
+def temp_strength(target : Creature, marker : StatusId, amount : int, sign : int, combat : CombatSimulator | None = None):
     """Strength that is taken back when the target's turn ends (Setup Strike, Mangle). `sign` is -1 for a loss."""
     if sign < 0 and combat is not None and combat.combat_state.player.relics:
         amount *= debuff_multiplier(combat.combat_state.player, combat.card_in_play, target)      # Unsettling Lamp doubles the marker, which doubles the Strength it takes
@@ -1116,7 +1111,7 @@ def play_brightest_flame(card: Card, combat : CombatSimulator, target_index=0, i
 
 def play_maul(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     # `card` is this play's own copy; every Maul of the fight grows, in every pile
-    target = _enemy(combat, target_index)
+    target = enemy_at(combat, target_index)
     _attack(combat, (6 if is_upgraded else 5) + card.bonus_damage, target, 2)
     step = 3 if is_upgraded else 2
     card.bonus_damage += step
@@ -1133,7 +1128,7 @@ def play_relax(card: Card, combat : CombatSimulator, target_index=0, is_upgraded
     player.apply_status(StatusId.DRAW_CARDS_NEXT_TURN, 3 if is_upgraded else 2)
 
 def play_whistle(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    target = _enemy(combat, target_index)
+    target = enemy_at(combat, target_index)
     _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], target)
     if target.current_hp > 0:
         target.stun()           # the move it was about to make comes after the stun
@@ -1147,7 +1142,7 @@ def play_aggression(card: Card, combat : CombatSimulator, target_index=0, is_upg
     combat.combat_state.player.apply_status(StatusId.AGGRESSION, 1)
 
 def play_anger(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    target = _enemy(combat, target_index)
+    target = enemy_at(combat, target_index)
     combat.combat_state.player.discard_pile.append(Card.create_copy(card))
     _attack(combat, 8 if is_upgraded else 6, target)
 
@@ -1162,7 +1157,7 @@ def play_armaments(card: Card, combat : CombatSimulator, target_index=0, is_upgr
         combat.request_choice("upgrade", upgradable)
 
 def play_ashen_strike(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    target = _enemy(combat, target_index)
+    target = enemy_at(combat, target_index)
     per_exhausted = 4 if is_upgraded else 3
     _attack(combat, 6 + per_exhausted * len(combat.combat_state.player.exhaust_pile), target)
 
@@ -1172,7 +1167,7 @@ def play_barricade(card: Card, combat : CombatSimulator, target_index=0, is_upgr
         player.apply_status(StatusId.BARRICADE, 1)
 
 def play_bash(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    target = _enemy(combat, target_index)
+    target = enemy_at(combat, target_index)
     _attack(combat, 10 if is_upgraded else 8, target)
     _vulnerable(combat, target, 3 if is_upgraded else 2)
 
@@ -1191,11 +1186,11 @@ def play_bloodletting(card: Card, combat : CombatSimulator, target_index=0, is_u
     combat.gain_energy(3 if is_upgraded else 2)
 
 def play_bludgeon(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    target = _enemy(combat, target_index)
+    target = enemy_at(combat, target_index)
     _attack(combat, 42 if is_upgraded else 32, target)
 
 def play_body_slam(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    target = _enemy(combat, target_index)
+    target = enemy_at(combat, target_index)
     _attack(combat, combat.combat_state.player.block, target)
 
 def play_brand(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
@@ -1206,7 +1201,7 @@ def play_brand(card: Card, combat : CombatSimulator, target_index=0, is_upgraded
         combat.request_choice("exhaust", list(range(len(player.hand))))
 
 def play_break(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    target = _enemy(combat, target_index)
+    target = enemy_at(combat, target_index)
     _attack(combat, 30 if is_upgraded else 20, target)
     _vulnerable(combat, target, 7 if is_upgraded else 5)
 
@@ -1221,7 +1216,7 @@ def play_breakthrough(card: Card, combat : CombatSimulator, target_index=0, is_u
         _attack(combat, 13 if is_upgraded else 9, target)
 
 def play_bully(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    target = _enemy(combat, target_index)
+    target = enemy_at(combat, target_index)
     per_vulnerable = 3 if is_upgraded else 2
     _attack(combat, 4 + per_vulnerable * target.status_amount(StatusId.VULNERABLE), target)
 
@@ -1237,7 +1232,7 @@ def play_equilibrium(card: Card, combat : CombatSimulator, target_index=0, is_up
     combat.combat_state.player.apply_status(StatusId.RETAIN_HAND, 1)
 
 def play_salvo(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], _enemy(combat, target_index))
+    _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], enemy_at(combat, target_index))
     combat.combat_state.player.apply_status(StatusId.RETAIN_HAND, 1)
 
 def play_panic_button(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
@@ -1256,7 +1251,7 @@ def play_prep_time(card: Card, combat : CombatSimulator, target_index=0, is_upgr
     combat.combat_state.player.apply_status(StatusId.PREP_TIME, 6 if is_upgraded else 4)
 
 def play_dark_shackles(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    _temp_strength(_enemy(combat, target_index), StatusId.DARK_SHACKLES, 15 if is_upgraded else 9, -1, combat)
+    temp_strength(enemy_at(combat, target_index), StatusId.DARK_SHACKLES, 15 if is_upgraded else 9, -1, combat)
 
 def play_automation(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     combat.combat_state.player.add_instance(StatusId.AUTOMATION, [AUTOMATION_CARDS])
@@ -1281,13 +1276,13 @@ def play_nostalgia(card: Card, combat : CombatSimulator, target_index=0, is_upgr
     combat.combat_state.player.apply_status(StatusId.NOSTALGIA, 1)
 
 def play_bolas(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], _enemy(combat, target_index))
+    _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], enemy_at(combat, target_index))
 
 def play_thrumming_hatchet(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], _enemy(combat, target_index))
+    _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], enemy_at(combat, target_index))
 
 def play_jackpot(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], _enemy(combat, target_index))
+    _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], enemy_at(combat, target_index))
     for _ in range(3):      # CardFactory.GetForCombat: with repeats
         combat.combat_state.player.add_to_hand(Card.create_generated(rng.choice(ZERO_COST_POOL), is_upgraded))
 
@@ -1337,7 +1332,7 @@ def play_hidden_gem(card: Card, combat : CombatSimulator, target_index=0, is_upg
     player.draw_pile[i] = gained            # in place: a known top card stays where it is
 
 def play_cinder(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    target = _enemy(combat, target_index)
+    target = enemy_at(combat, target_index)
     _attack(combat, 24 if is_upgraded else 18, target)
     hand = combat.combat_state.player.hand
     if hand:
@@ -1350,7 +1345,7 @@ def play_colossus(card: Card, combat : CombatSimulator, target_index=0, is_upgra
     combat.combat_state.player.apply_status(StatusId.COLOSSUS, 1)
 
 def play_conflagration(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    for target in _living(combat):
+    for target in living_enemies(combat):
         _attack(combat, 2, target, 5 if is_upgraded else 4)
 
 def play_corruption(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
@@ -1376,12 +1371,12 @@ def play_demon_form(card: Card, combat : CombatSimulator, target_index=0, is_upg
     combat.combat_state.player.apply_status(StatusId.DEMON_FORM, 3 if is_upgraded else 2)
 
 def play_dismantle(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    target = _enemy(combat, target_index)
+    target = enemy_at(combat, target_index)
     hits = 2 if StatusId.VULNERABLE in target.status else 1
     _attack(combat, 10 if is_upgraded else 8, target, hits)
 
 def play_dominate(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    target = _enemy(combat, target_index)
+    target = enemy_at(combat, target_index)
     _vulnerable(combat, target, 2 if is_upgraded else 1)
     combat.combat_state.player.apply_status(StatusId.STRENGTH, target.status_amount(StatusId.VULNERABLE))
 
@@ -1399,7 +1394,7 @@ def play_expect_a_fight(card: Card, combat : CombatSimulator, target_index=0, is
     player.apply_status(StatusId.NO_ENERGY_GAIN, 1)
 
 def play_feed(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    target = _enemy(combat, target_index)
+    target = enemy_at(combat, target_index)
     _attack(combat, 12 if is_upgraded else 10, target)
     if target.current_hp <= 0 and StatusId.MINION not in target.status:
         gain = 4 if is_upgraded else 3
@@ -1411,7 +1406,7 @@ def play_feel_no_pain(card: Card, combat : CombatSimulator, target_index=0, is_u
     combat.combat_state.player.apply_status(StatusId.FEEL_NO_PAIN, 4 if is_upgraded else 3)
 
 def play_fiend_fire(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    target = _enemy(combat, target_index)
+    target = enemy_at(combat, target_index)
     player = combat.combat_state.player
     exhausted = list(player.hand)
     for victim in exhausted:
@@ -1421,7 +1416,7 @@ def play_fiend_fire(card: Card, combat : CombatSimulator, target_index=0, is_upg
         _attack(combat, 10 if is_upgraded else 7, target, len(exhausted))
 
 def play_fight_me(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    target = _enemy(combat, target_index)
+    target = enemy_at(combat, target_index)
     _attack(combat, 6 if is_upgraded else 5, target, 2)
     combat.combat_state.player.apply_status(StatusId.STRENGTH, 4 if is_upgraded else 3)
     target.apply_status(StatusId.STRENGTH, 1)
@@ -1435,7 +1430,7 @@ def play_forgotten_ritual(card: Card, combat : CombatSimulator, target_index=0, 
         combat.gain_energy(4 if is_upgraded else 3)
 
 def play_giant_rock(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    target = _enemy(combat, target_index)
+    target = enemy_at(combat, target_index)
     _attack(combat, 20 if is_upgraded else 16, target)
 
 def play_havoc(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
@@ -1454,12 +1449,12 @@ def play_havoc(card: Card, combat : CombatSimulator, target_index=0, is_upgraded
         combat.auto_play(top, force_exhaust=True)
 
 def play_headbutt(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    target = _enemy(combat, target_index)
+    target = enemy_at(combat, target_index)
     _attack(combat, 12 if is_upgraded else 9, target)
     combat.request_choice("to_draw_pile", list(range(len(combat.combat_state.player.discard_pile))), pile="discard")
 
 def play_neows_fury(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    target = _enemy(combat, target_index)
+    target = enemy_at(combat, target_index)
     _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], target)
     player = combat.combat_state.player
     discard = player.discard_pile
@@ -1471,12 +1466,12 @@ def play_hellraiser(card: Card, combat : CombatSimulator, target_index=0, is_upg
         player.apply_status(StatusId.HELLRAISER, 1)
 
 def play_hemokinesis(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    target = _enemy(combat, target_index)
+    target = enemy_at(combat, target_index)
     _lose_hp_first(combat, 2)
     _attack(combat, 20 if is_upgraded else 15, target)
 
 def play_howl_from_beyond(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    for target in _living(combat):
+    for target in living_enemies(combat):
         _attack(combat, 21 if is_upgraded else 16, target)
 
 def play_impervious(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
@@ -1495,7 +1490,7 @@ def play_inflame(card: Card, combat : CombatSimulator, target_index=0, is_upgrad
     combat.combat_state.player.apply_status(StatusId.STRENGTH, 3 if is_upgraded else 2)
 
 def play_iron_wave(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    target = _enemy(combat, target_index)
+    target = enemy_at(combat, target_index)
     _gain_block(combat, 7 if is_upgraded else 5)
     _attack(combat, 7 if is_upgraded else 5, target)
 
@@ -1509,12 +1504,12 @@ def play_luminesce(card: Card, combat : CombatSimulator, target_index=0, is_upgr
     combat.gain_energy(3 if is_upgraded else 2)
 
 def play_mangle(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    target = _enemy(combat, target_index)
+    target = enemy_at(combat, target_index)
     _attack(combat, 20 if is_upgraded else 15, target)
-    _temp_strength(target, StatusId.MANGLE, 15 if is_upgraded else 10, -1, combat)
+    temp_strength(target, StatusId.MANGLE, 15 if is_upgraded else 10, -1, combat)
 
 def play_molten_fist(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    target = _enemy(combat, target_index)
+    target = enemy_at(combat, target_index)
     _attack(combat, 14 if is_upgraded else 10, target)
     vulnerable = target.status_amount(StatusId.VULNERABLE)
     if target.current_hp > 0 and vulnerable > 0:
@@ -1536,16 +1531,16 @@ def play_one_two_punch(card: Card, combat : CombatSimulator, target_index=0, is_
 
 def play_pacts_end(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     if len(combat.combat_state.player.exhaust_pile) >= 3:
-        for target in _living(combat):
+        for target in living_enemies(combat):
             _attack(combat, 23 if is_upgraded else 17, target)
 
 def play_perfected_strike(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    target = _enemy(combat, target_index)
+    target = enemy_at(combat, target_index)
     strikes = _strikes(combat.combat_state.player, card)
     _attack(combat, 6 + (3 if is_upgraded else 2) * strikes, target)
 
 def play_pillage(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    target = _enemy(combat, target_index)
+    target = enemy_at(combat, target_index)
     _attack(combat, 9 if is_upgraded else 6, target)
     player = combat.combat_state.player
     while True:                 # draw until something that is not an Attack comes up, or the hand is full
@@ -1554,7 +1549,7 @@ def play_pillage(card: Card, combat : CombatSimulator, target_index=0, is_upgrad
             break
 
 def play_pommel_strike(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    target = _enemy(combat, target_index)
+    target = enemy_at(combat, target_index)
     _attack(combat, 10 if is_upgraded else 9, target)
     combat.combat_state.player.draw_cards(2 if is_upgraded else 1)
 
@@ -1574,7 +1569,7 @@ def play_rage(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=
 
 def play_rampage(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     # `card` is this play's own copy (see CombatSimulator.private_copy), so it can remember the growth
-    target = _enemy(combat, target_index)
+    target = enemy_at(combat, target_index)
     _attack(combat, 9 + card.bonus_damage, target)
     card.bonus_damage += 9 if is_upgraded else 5
 
@@ -1589,9 +1584,9 @@ def play_second_wind(card: Card, combat : CombatSimulator, target_index=0, is_up
         _gain_block(combat, 7 if is_upgraded else 5)
 
 def play_setup_strike(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    target = _enemy(combat, target_index)
+    target = enemy_at(combat, target_index)
     _attack(combat, 9 if is_upgraded else 7, target)
-    _temp_strength(combat.combat_state.player, StatusId.SETUP_STRIKE, 3 if is_upgraded else 2, 1)
+    temp_strength(combat.combat_state.player, StatusId.SETUP_STRIKE, 3 if is_upgraded else 2, 1)
 
 def play_shrug_it_off(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     _gain_block(combat, 11 if is_upgraded else 8)
@@ -1620,7 +1615,7 @@ def play_slimed(card: Card, combat : CombatSimulator, target_index=0, is_upgrade
     combat.combat_state.player.draw_card()
 
 def play_spite(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    target = _enemy(combat, target_index)
+    target = enemy_at(combat, target_index)
     repeat = 3 if is_upgraded else 2
     _attack(combat, 5, target, repeat if combat.combat_state.player.lost_hp_this_turn else 1)
 
@@ -1640,19 +1635,19 @@ def play_stoke(card: Card, combat : CombatSimulator, target_index=0, is_upgraded
         player.add_to_hand(new_card)
 
 def play_stomp(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    for target in _living(combat):
+    for target in living_enemies(combat):
         _attack(combat, 15 if is_upgraded else 12, target)
 
 def play_stone_armor(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     combat.combat_state.player.apply_status(StatusId.PLATING, 6 if is_upgraded else 4)
 
 def play_strike(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    target = _enemy(combat, target_index)
+    target = enemy_at(combat, target_index)
     _attack(combat, 9 if is_upgraded else 6, target)
 
 def play_sword_boomerang(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     for _ in range(4 if is_upgraded else 3):
-        living = _living(combat)
+        living = living_enemies(combat)
         if not living:
             break
         target = rng.pick_target(living)
@@ -1660,12 +1655,12 @@ def play_sword_boomerang(card: Card, combat : CombatSimulator, target_index=0, i
         combat.resolve_deaths()
 
 def play_taunt(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    target = _enemy(combat, target_index)
+    target = enemy_at(combat, target_index)
     _gain_block(combat, 8 if is_upgraded else 7)
     _vulnerable(combat, target, 2 if is_upgraded else 1)
 
 def play_tear_asunder(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    target = _enemy(combat, target_index)
+    target = enemy_at(combat, target_index)
     # one hit, and one more for every time the player has lost HP in this fight
     _attack(combat, 7 if is_upgraded else 5, target, 1 + combat.combat_state.player.hp_loss_events)
 
@@ -1675,19 +1670,19 @@ METAMORPHOSIS_CARDS = (3, 5)
 ENLIGHTENMENT_COST = 1
 
 def play_byrd_swoop(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], _enemy(combat, target_index))
+    _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], enemy_at(combat, target_index))
 
 def play_peck(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], _enemy(combat, target_index), 4 if is_upgraded else 3)
+    _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], enemy_at(combat, target_index), 4 if is_upgraded else 3)
 
 def play_exterminate(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     for _ in range(4):                  # each hit goes to every living enemy
-        for target in _living(combat):
+        for target in living_enemies(combat):
             _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], target)
         combat.resolve_deaths()
 
 def play_squash(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    target = _enemy(combat, target_index)
+    target = enemy_at(combat, target_index)
     _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], target)
     _vulnerable(combat, target, 3 if is_upgraded else 2)
 
@@ -1712,7 +1707,7 @@ def play_toric_toughness(card: Card, combat : CombatSimulator, target_index=0, i
 
 def play_thrash(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     # `card` is this play's own copy (see CombatSimulator.private_copy), so it can remember the growth
-    target = _enemy(combat, target_index)
+    target = enemy_at(combat, target_index)
     player = combat.combat_state.player
     _attack(combat, (6 if is_upgraded else 4) + card.bonus_damage, target, 2)
     attacks = [c for c in player.hand if c.type == CardType.Attack]
@@ -1731,7 +1726,7 @@ def play_thunderclap(card: Card, combat : CombatSimulator, target_index=0, is_up
         _vulnerable(combat, target, 1)
 
 def play_tremble(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    target = _enemy(combat, target_index)
+    target = enemy_at(combat, target_index)
     _vulnerable(combat, target, 4 if is_upgraded else 3)
 
 def play_true_grit(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
@@ -1746,19 +1741,19 @@ def play_true_grit(card: Card, combat : CombatSimulator, target_index=0, is_upgr
         combat.fire(EventType.CARD_EXHAUSTED, victim)
 
 def play_twin_strike(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    target = _enemy(combat, target_index)
+    target = enemy_at(combat, target_index)
     _attack(combat, 7 if is_upgraded else 5, target, 2)
 
 def play_unmovable(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     combat.combat_state.player.apply_status(StatusId.UNMOVABLE, 1)
 
 def play_unrelenting(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    target = _enemy(combat, target_index)
+    target = enemy_at(combat, target_index)
     _attack(combat, 20 if is_upgraded else 14, target)
     combat.combat_state.player.apply_status(StatusId.FREE_ATTACK, 1)
 
 def play_uppercut(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    target = _enemy(combat, target_index)
+    target = enemy_at(combat, target_index)
     _attack(combat, 13, target)
     debuff = 2 if is_upgraded else 1
     player = combat.combat_state.player
@@ -1770,7 +1765,7 @@ def play_vicious(card: Card, combat : CombatSimulator, target_index=0, is_upgrad
 
 def play_whirlwind(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False, x=0):
     for _ in range(x):
-        for target in _living(combat):
+        for target in living_enemies(combat):
             _attack(combat, 8 if is_upgraded else 5, target)
         combat.resolve_deaths()
 
@@ -1786,11 +1781,11 @@ def play_finesse(card: Card, combat : CombatSimulator, target_index=0, is_upgrad
     combat.combat_state.player.draw_cards(1)
 
 def play_flash_of_steel(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], _enemy(combat, target_index))
+    _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], enemy_at(combat, target_index))
     combat.combat_state.player.draw_cards(1)
 
 def play_ultimate_strike(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], _enemy(combat, target_index))
+    _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], enemy_at(combat, target_index))
 
 def play_ultimate_defend(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     _gain_block(combat, 15 if is_upgraded else 11)
@@ -1808,7 +1803,7 @@ def play_dramatic_entrance(card: Card, combat : CombatSimulator, target_index=0,
 def play_shockwave(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     player = combat.combat_state.player
     amount = 5 if is_upgraded else 3
-    for target in _living(combat):
+    for target in living_enemies(combat):
         target.apply_status(StatusId.WEAK, amount * debuff_multiplier(player, combat.card_in_play, target) if player.relics else amount)
         _vulnerable(combat, target, amount)
 
@@ -1833,7 +1828,7 @@ def play_scrawl(card: Card, combat : CombatSimulator, target_index=0, is_upgrade
     player.draw_cards(MAX_HAND_SIZE - len(player.hand))
 
 def play_fisticuffs(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    target = _enemy(combat, target_index)
+    target = enemy_at(combat, target_index)
     before = target.damage_taken
     _attack(combat, 9 if is_upgraded else 7, target)
     dealt = target.damage_taken - before
@@ -1841,29 +1836,29 @@ def play_fisticuffs(card: Card, combat : CombatSimulator, target_index=0, is_upg
         _gain_block(combat, dealt)       # powered block: Dexterity and Frail apply
 
 def play_mind_blast(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    _attack(combat, len(combat.combat_state.player.draw_pile), _enemy(combat, target_index))
+    _attack(combat, len(combat.combat_state.player.draw_pile), enemy_at(combat, target_index))
 
 def play_gold_axe(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    _attack(combat, combat.combat_state.player.cards_played_total, _enemy(combat, target_index))
+    _attack(combat, combat.combat_state.player.cards_played_total, enemy_at(combat, target_index))
 
 def play_rend(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    target = _enemy(combat, target_index)
+    target = enemy_at(combat, target_index)
     debuffs = sum(1 for status_id, inst in target.status.items() if is_debuff(status_id, inst.amount) and status_id not in (StatusId.MANGLE, StatusId.DARK_SHACKLES))
     _attack(combat, (18 if is_upgraded else 15) + (8 if is_upgraded else 5) * debuffs, target)    # temporary debuffs do not count
 
 def play_omnislice(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    target = _enemy(combat, target_index)
+    target = enemy_at(combat, target_index)
     before = target.damage_taken
     _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], target)
     dealt = target.damage_taken - before
     if dealt > 0:       # the rest take what the first hit dealt, unpowered (no Strength or Vulnerable)
-        for other in _living(combat):
+        for other in living_enemies(combat):
             if other is not target:
                 other.apply_damage(dealt, combat.combat_state.player)
 
 def play_volley(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False, x=0):
     for _ in range(x):
-        living = _living(combat)
+        living = living_enemies(combat)
         if not living:
             break
         _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], rng.pick_target(living))
@@ -1873,7 +1868,7 @@ def play_eternal_armor(card: Card, combat : CombatSimulator, target_index=0, is_
     combat.combat_state.player.apply_status(StatusId.PLATING, 12 if is_upgraded else 9)
 
 def play_hand_of_greed(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    target = _enemy(combat, target_index)
+    target = enemy_at(combat, target_index)
     _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], target)
     if target.current_hp <= 0 and StatusId.MINION not in target.status:
         combat.combat_state.player.gold += 25 if is_upgraded else 20
@@ -1896,7 +1891,7 @@ def play_secret_weapon(card: Card, combat : CombatSimulator, target_index=0, is_
 SEEKER_STRIKE_OPTIONS = 3
 
 def play_seeker_strike(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], _enemy(combat, target_index))
+    _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], enemy_at(combat, target_index))
     draw = combat.combat_state.player.draw_pile
     if draw:        # three random cards of the draw pile (the game's own three are adopted when its screen appears)
         offered = rng.sample(range(len(draw)), min(SEEKER_STRIKE_OPTIONS, len(draw)))

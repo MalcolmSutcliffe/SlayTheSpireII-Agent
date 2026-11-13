@@ -16,7 +16,7 @@ from sts2_lite.events import EventType
 from sts2_lite.relic import RelicId, dexterity_bonus, PER_TURN_FLAG, ALWAYS_REPORTED, take_extra_turn, after_card_played, release_card, fire_relics, blocks_play, PHILOSOPHERS_STONE_STRENGTH, upgraded_after_play, \
     max_energy_gain, victory_heal
 
-from sts2_lite.status import StatusId, TICKS_DOWN, RESETS_EACH_TURN, STATUS_HANDLERS, AUTOMATION_CARDS, face_target, SLOTH_LIMIT, _nemesis_toggle
+from sts2_lite.status import StatusId, TICKS_DOWN, RESETS_EACH_TURN, STATUS_HANDLERS, AUTOMATION_CARDS, face_target, SLOTH_LIMIT, nemesis_toggle
 from sts2_lite.enemy_moves import SUMMONS, SEGMENTS, ALLY_DEATH_HOOKS
 from sts2_lite.potion import use_potion, usable_potion_actions
 
@@ -1001,7 +1001,7 @@ class CombatSimulator:
             first_round = self.combat_state.turn_number == 1
             self._decrease_statuses(e, skip={StatusId.PLATING} if first_round else frozenset())
             if StatusId.NEMESIS in e.status:
-                _nemesis_toggle(self, e)
+                nemesis_toggle(self, e)
         self.combat_state.turn_number += 1
         self._check_is_over()
         if self.combat_state.pending_choice is not None and not self.is_over:

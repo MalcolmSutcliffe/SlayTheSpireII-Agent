@@ -17,8 +17,9 @@ from sts2_lite.potion import PotionId
 
 from sts2_lite.status import StatusId
 from agents.sts2_MCTS.state_key import state_key
-from agents.sts2_MCTS.stats import Z_SCORE, TIE_MARGIN, PAIRED_Z, spread
+from agents.sts2_MCTS.stats import Z_SCORE, TIE_MARGIN
 from agents.sts2_MCTS.order_check import OrderCheck
+from agents.sts2_MCTS.paired_check import PairedCheck, PAIRED_SCENARIOS
 
 class RolloutPolicy(Enum):
     FirstAction = auto()            # just play first action (works surprisingly well)
@@ -88,10 +89,6 @@ EPSILON = 0.005
 TIE_MIN_VISITS = 30              # the top move needs this many visits before a tie is considered
 TIE_VISIT_FRACTION = 0.5         # a tied move needs this share of the top move's visits: a thin estimate is within the margin by luck
 
-# paired comparison of the root moves (see sts2_MCTS._paired_check)
-PAIRED_SCENARIOS = 300           # scenarios each contender is replayed under (0 = off)
-PAIRED_VISIT_FRACTION = 0.05     # a root move needs this share of the picked move's visits to be a contender
-PAIRED_MAX_CONTENDERS = 4        # contenders besides the picked move
 
 
 # rollout policy constants
@@ -414,15 +411,7 @@ class sts2_MCTS:
                        and c.visits >= max(TIE_MIN_VISITS, TIE_VISIT_FRACTION * top.visits) and self._tied(c, top)]
         return max(informative, key=lambda c: c.visits) if informative else top
 
-    ### Paired comparison of the root moves
-    ### The tree compares moves with independent noise: a move that is only a little better (Defend+ over Defend) is lost in the
-    ### draws and enemy rolls, and the visits settle on whichever got ahead early. Here the picked move and its close rivals are
-    ### replayed under the SAME scenarios (shuffle, random rolls) so that noise cancels in the difference. A rival replaces the
-    ### picked move only when it is ahead by PAIRED_Z standard errors of that paired difference.
-
-    def _paired_rollout(self, state : CombatState, action : dict, seed : int) -> float:
-        """Play `action` from `state`, then the rollout policy to the end, with the random source seeded from `seed`."""
-        return self._paired_line_rollout(state, [action], seed)
+    ### Replaying a line of moves, for the paired comparison (paired_check.py) and the order check (order_check.py)
 
     def _paired_line_rollout(self, state : CombatState, line : list, seed : int) -> float:
         """Play `line` from `state`, then the rollout policy to the end, with the random source seeded from `seed`.
@@ -450,48 +439,9 @@ class sts2_MCTS:
             c.perform_action(rollout_policy(c, actions, self._search_config.rollout))
         return self._rate_outcome(cs)
 
-    def _contender_line(self, node : sts2_Node) -> list:
-        """The root move `node` and the line the tree follows after it (see _principal_line), for the paired replay."""
-        line, tail = self._principal_line(node)
-        if not line:
-            return [node.action]            # a random play: the move itself
-        return line + ([tail] if tail is not None else [])
-
     def _paired_check(self, picked : sts2_Node) -> dict | None:
-        """Compare `picked` with the root moves close to it in visits. Returns the details (and whether a rival `replaced` it),
-        or None when there is nothing to compare."""
-        n = self._search_config.paired_scenarios
-        state = self._root_node.state
-        rivals = sorted((c for c in self._root_node.children
-                         if c is not picked and c.visits >= max(1, PAIRED_VISIT_FRACTION * picked.visits)),
-                        key=lambda c: -c.visits)[:PAIRED_MAX_CONTENDERS]
-        if n < 2 or not rivals:
-            return None
-
-        seeds = [rng.randrange(1 << 30) for _ in range(n)]      # fresh scenarios every time
-        saved = rng.getstate()                                  # the rollouts reseed the shared source: put it back afterwards
-        try:
-            # each move is replayed along the line the tree found after it (the second Strike that is lethal), not as its first play
-            # followed by the rollout policy, which need not find that line and then rates the move below one that is merely safe
-            base = [self._paired_line_rollout(state, self._contender_line(picked), s) for s in seeds]
-            results = []
-            for rival in rivals:
-                line = self._contender_line(rival)
-                diffs = [self._paired_line_rollout(state, line, s) - b for s, b in zip(seeds, base)]
-                mean, se = spread(diffs)
-                results.append((rival, mean, se))
-        finally:
-            rng.setstate(saved)
-
-        # a rival is significantly ahead of the picked move (a zero spread with a positive gap is a sure improvement)
-        ahead = [r for r in results if r[1] > 0 and r[1] > PAIRED_Z * r[2]]
-        best = max(ahead, key=lambda r: r[1] - PAIRED_Z * r[2]) if ahead else None
-        return {
-            "replaced" : best is not None,
-            "child" : best[0] if best else picked,
-            "scenarios" : n,
-            "compared" : [{"action" : r[0].action, "visits" : r[0].visits, "gain" : r[1], "se" : r[2]} for r in results],
-        }
+        """See paired_check.py."""
+        return PairedCheck(self).run(picked)
 
     ### The tree's own line, for the checks that replay it (paired comparison above, order_check.py)
 

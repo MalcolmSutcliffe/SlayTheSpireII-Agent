@@ -16,7 +16,8 @@ if TYPE_CHECKING:
     from sts2_lite.creature import Creature
 
 from sts2_lite import rng
-from sts2_lite.card import Card, CardType, TargetType, GENERATABLE_CARDS, COLORLESS_CARDS, STRIKE_CARDS, _temp_strength
+from sts2_lite.helpers import player_of, living_enemies
+from sts2_lite.card import Card, CardType, TargetType, GENERATABLE_CARDS, COLORLESS_CARDS, STRIKE_CARDS, temp_strength
 from sts2_lite.events import EventType
 from sts2_lite.relic import RelicId, REPTILE_TRINKET_STRENGTH
 from sts2_lite.status import StatusId
@@ -196,11 +197,7 @@ SNECKO_MAX_COST = 3
 # ---
 # Helpers
 # ---
-def _player(combat : CombatSimulator):
-    return combat.combat_state.player
 
-def _living(combat : CombatSimulator) -> list:
-    return [e for e in combat.combat_state.enemies if e.current_hp > 0]
 
 def _target(combat : CombatSimulator, target_index : int):
     return combat.combat_state.enemies[target_index]
@@ -210,7 +207,7 @@ def _heal(creature : Creature, amount : int):
 
 def _hit(combat : CombatSimulator, target : Creature, amount : int):
     """Damage that is not an attack: no Strength, Vulnerable or the like (assumed to be Unpowered, as the first game's potions are)."""
-    target.apply_damage(amount, _player(combat), False)
+    target.apply_damage(amount, player_of(combat), False)
 
 def _type_pool(card_type : CardType) -> list:
     return [cid for cid, (_, kind, _, _) in GENERATABLE_CARDS.items() if kind == card_type]
@@ -220,7 +217,7 @@ def _offer(combat : CombatSimulator, pool : list):
     combat.request_discovery([Card.create_generated(cid) for cid in rng.sample(pool, min(OFFERS, len(pool)))])
 
 def _generate_free(combat : CombatSimulator, pool : list):
-    _player(combat).add_to_hand(Card.create_generated(rng.choice(pool)).free_this_turn())
+    player_of(combat).add_to_hand(Card.create_generated(rng.choice(pool)).free_this_turn())
 
 def _all_cards(player) -> list[tuple[list, int]]:
     return [(pile, i) for pile in (player.hand, player.draw_pile, player.discard_pile, player.exhaust_pile) for i in range(len(pile))]
@@ -238,28 +235,28 @@ def _orobic_acid(combat, t):
     for card_type in (CardType.Attack, CardType.Skill, CardType.Power):
         _generate_free(combat, _type_pool(card_type))
 
-def _block_potion(combat, t): combat.gain_block(_player(combat), BLOCK_POTION_BLOCK)     # assumed not changed by Dexterity or Frail
-def _dexterity_potion(combat, t): _player(combat).apply_status(StatusId.DEXTERITY, DEXTERITY_POTION_DEXTERITY)
-def _strength_potion(combat, t): _player(combat).apply_status(StatusId.STRENGTH, STRENGTH_POTION_STRENGTH)
+def _block_potion(combat, t): combat.gain_block(player_of(combat), BLOCK_POTION_BLOCK)     # assumed not changed by Dexterity or Frail
+def _dexterity_potion(combat, t): player_of(combat).apply_status(StatusId.DEXTERITY, DEXTERITY_POTION_DEXTERITY)
+def _strength_potion(combat, t): player_of(combat).apply_status(StatusId.STRENGTH, STRENGTH_POTION_STRENGTH)
 def _fysh_oil(combat, t):
-    _player(combat).apply_status(StatusId.STRENGTH, 1)
-    _player(combat).apply_status(StatusId.DEXTERITY, 1)
+    player_of(combat).apply_status(StatusId.STRENGTH, 1)
+    player_of(combat).apply_status(StatusId.DEXTERITY, 1)
 
-def _flex_potion(combat, t): _temp_strength(_player(combat), StatusId.FLEX_POTION, FLEX_STRENGTH, 1)
+def _flex_potion(combat, t): temp_strength(player_of(combat), StatusId.FLEX_POTION, FLEX_STRENGTH, 1)
 
 def _speed_potion(combat, t):
-    player = _player(combat)
+    player = player_of(combat)
     player.apply_status(StatusId.SPEED_POTION, SPEED_DEXTERITY)
     player.apply_status(StatusId.DEXTERITY, SPEED_DEXTERITY)
 
 def _energy_potion(combat, t): combat.gain_energy(ENERGY_POTION_ENERGY)
-def _swift_potion(combat, t): _player(combat).draw_cards(SWIFT_CARDS)
+def _swift_potion(combat, t): player_of(combat).draw_cards(SWIFT_CARDS)
 def _cure_all(combat, t):
     combat.gain_energy(1)
-    _player(combat).draw_cards(CURE_ALL_CARDS)
+    player_of(combat).draw_cards(CURE_ALL_CARDS)
 
 def _explosive_ampoule(combat, t):
-    for enemy in _living(combat):
+    for enemy in living_enemies(combat):
         _hit(combat, enemy, EXPLOSIVE_AMPOULE_DAMAGE)
 
 def _fire_potion(combat, t): _hit(combat, _target(combat, t), FIRE_POTION_DAMAGE)
@@ -267,92 +264,92 @@ def _potion_shaped_rock(combat, t): _hit(combat, _target(combat, t), POTION_SHAP
 
 def _foul_potion(combat, t):
     """12 damage to everyone: every enemy and the player."""
-    for enemy in _living(combat):
+    for enemy in living_enemies(combat):
         _hit(combat, enemy, FOUL_POTION_DAMAGE)
-    _player(combat).apply_damage(FOUL_POTION_DAMAGE, None, False)
+    player_of(combat).apply_damage(FOUL_POTION_DAMAGE, None, False)
 
 def _vulnerable_potion(combat, t): _target(combat, t).apply_status(StatusId.VULNERABLE, VULNERABLE_POTION)
 def _weak_potion(combat, t): _target(combat, t).apply_status(StatusId.WEAK, WEAK_POTION)
 def _beetle_juice(combat, t): _target(combat, t).apply_status(StatusId.SHRINK, BEETLE_JUICE_TURNS)      # assumed: the Shrink the Shrinker Beetle uses
 
 def _potion_of_binding(combat, t):
-    for enemy in _living(combat):
+    for enemy in living_enemies(combat):
         enemy.apply_status(StatusId.WEAK, 1)
         enemy.apply_status(StatusId.VULNERABLE, 1)
 
 def _shackling_potion(combat, t):
     """All enemies lose 7 Strength this turn: it comes back when the enemy turn is over."""
-    for enemy in _living(combat):
-        _temp_strength(enemy, StatusId.DARK_SHACKLES, SHACKLING_STRENGTH, -1, combat)
+    for enemy in living_enemies(combat):
+        temp_strength(enemy, StatusId.DARK_SHACKLES, SHACKLING_STRENGTH, -1, combat)
 
 def _powdered_demise(combat, t): _target(combat, t).apply_status(StatusId.DEMISE, POWDERED_DEMISE_LOSS)
-def _regen_potion(combat, t): _player(combat).apply_status(StatusId.REGEN, REGEN_AMOUNT)
-def _heart_of_iron(combat, t): _player(combat).apply_status(StatusId.PLATING, HEART_OF_IRON_PLATING)
-def _liquid_bronze(combat, t): _player(combat).apply_status(StatusId.THORNS, LIQUID_BRONZE_THORNS)
-def _lucky_tonic(combat, t): _player(combat).apply_status(StatusId.BUFFER, 1)
-def _mazaleths_gift(combat, t): _player(combat).apply_status(StatusId.RITUAL, 1)
+def _regen_potion(combat, t): player_of(combat).apply_status(StatusId.REGEN, REGEN_AMOUNT)
+def _heart_of_iron(combat, t): player_of(combat).apply_status(StatusId.PLATING, HEART_OF_IRON_PLATING)
+def _liquid_bronze(combat, t): player_of(combat).apply_status(StatusId.THORNS, LIQUID_BRONZE_THORNS)
+def _lucky_tonic(combat, t): player_of(combat).apply_status(StatusId.BUFFER, 1)
+def _mazaleths_gift(combat, t): player_of(combat).apply_status(StatusId.RITUAL, 1)
 
 def _fortifier(combat, t):
-    player = _player(combat)
+    player = player_of(combat)
     combat.gain_block(player, player.block * 2)         # triple
 
 def _ship_in_a_bottle(combat, t):
-    combat.gain_block(_player(combat), SHIP_IN_A_BOTTLE_BLOCK)
-    _player(combat).apply_status(StatusId.BLOCK_NEXT_TURN, SHIP_IN_A_BOTTLE_BLOCK)
+    combat.gain_block(player_of(combat), SHIP_IN_A_BOTTLE_BLOCK)
+    player_of(combat).apply_status(StatusId.BLOCK_NEXT_TURN, SHIP_IN_A_BOTTLE_BLOCK)
 
 def _blood_potion(combat, t):
-    player = _player(combat)
+    player = player_of(combat)
     _heal(player, int(player.max_hp * BLOOD_POTION_HEAL))
 
 def _fruit_juice(combat, t):
-    player = _player(combat)
+    player = player_of(combat)
     player.max_hp += FRUIT_JUICE_MAX_HP
     player.current_hp += FRUIT_JUICE_MAX_HP
 
 def _ambergris(combat, t):
     """Heals half; in a fight it also gives an extra turn (taken when this one ends)."""
-    player = _player(combat)
+    player = player_of(combat)
     _heal(player, int(player.max_hp * AMBERGRIS_HEAL))
     player.extra_turn_pending = True
 
 def _blessing_of_the_forge(combat, t):
-    player = _player(combat)
+    player = player_of(combat)
     for card in list(player.hand):
         player.upgrade_card(card)
 
 def _clarity_extract(combat, t):
-    _player(combat).draw_cards(1)
-    _player(combat).apply_status(StatusId.CLARITY_EXTRACT, CLARITY_TURNS)
+    player_of(combat).draw_cards(1)
+    player_of(combat).apply_status(StatusId.CLARITY_EXTRACT, CLARITY_TURNS)
 
 def _radiant_tincture(combat, t):
     combat.gain_energy(1)
-    _player(combat).apply_status(StatusId.RADIANT_TINCTURE, RADIANT_TURNS)
+    player_of(combat).apply_status(StatusId.RADIANT_TINCTURE, RADIANT_TURNS)
 
-def _duplicator(combat, t): _player(combat).apply_status(StatusId.DUPLICATION, 1)
-def _gigantification(combat, t): _player(combat).apply_status(StatusId.GIGANTIFICATION, 1)
-def _stable_serum(combat, t): _player(combat).apply_status(StatusId.RETAIN_HAND, STABLE_SERUM_TURNS)
+def _duplicator(combat, t): player_of(combat).apply_status(StatusId.DUPLICATION, 1)
+def _gigantification(combat, t): player_of(combat).apply_status(StatusId.GIGANTIFICATION, 1)
+def _stable_serum(combat, t): player_of(combat).apply_status(StatusId.RETAIN_HAND, STABLE_SERUM_TURNS)
 
 def _gamblers_brew(combat, t):
     """Discard any number of cards, then draw that many (the count is `amount` of the pending choice)."""
-    combat.request_choice("discard_any", list(range(len(_player(combat).hand))), "hand", 0)
+    combat.request_choice("discard_any", list(range(len(player_of(combat).hand))), "hand", 0)
 
 def _touch_of_insanity(combat, t):
-    combat.request_choice("free_card", list(range(len(_player(combat).hand))), "hand")
+    combat.request_choice("free_card", list(range(len(player_of(combat).hand))), "hand")
 
 def _ashwater(combat, t):
-    hand = _player(combat).hand
+    hand = player_of(combat).hand
     combat.request_choice("exhaust_any", list(range(len(hand))), "hand", len(hand))
 
 def _droplet_of_precognition(combat, t):
-    combat.request_choice("draw_to_hand", list(range(len(_player(combat).draw_pile))), pile="draw")
+    combat.request_choice("draw_to_hand", list(range(len(player_of(combat).draw_pile))), pile="draw")
 
 def _liquid_memories(combat, t):
-    combat.request_choice("to_hand_free", list(range(len(_player(combat).discard_pile))), pile="discard")
+    combat.request_choice("to_hand_free", list(range(len(player_of(combat).discard_pile))), pile="discard")
 
 def _distilled_chaos(combat, t): combat.auto_play_from_top(3)
 
 def _bottled_potential(combat, t):
-    player = _player(combat)
+    player = player_of(combat)
     player.draw_pile.extend(player.hand)
     player.draw_pile.extend(player.discard_pile)
     player.hand, player.discard_pile = [], []
@@ -361,7 +358,7 @@ def _bottled_potential(combat, t):
     player.draw_cards(BOTTLED_POTENTIAL_CARDS)
 
 def _glowwater_potion(combat, t):
-    player = _player(combat)
+    player = player_of(combat)
     for card in list(player.hand):
         player.exhaust_card(card)
         combat.fire(EventType.CARD_EXHAUSTED, card)
@@ -369,7 +366,7 @@ def _glowwater_potion(combat, t):
 
 def _snecko_oil(combat, t):
     """Draw 7, then every card in the hand costs a random 0-3 this turn."""
-    player = _player(combat)
+    player = player_of(combat)
     player.draw_cards(SNECKO_CARDS)
     for i, card in enumerate(player.hand):
         if card.energy_cost == "X" or card.unplayable or card.is_unplayable:
@@ -382,7 +379,7 @@ def _snecko_oil(combat, t):
 
 def _soldiers_stew(combat, t):
     """Every card with the Strike tag, wherever it is, gets 1 Replay for the rest of the combat."""
-    player = _player(combat)
+    player = player_of(combat)
     for pile, i in _all_cards(player):
         if pile[i].card_id in STRIKE_CARDS:
             copy = Card.create_copy(pile[i])        # cards are shared between simulated states
@@ -402,7 +399,7 @@ def procure_random_potion(player, exclude=()) -> Potion | None:
     return potion
 
 def _entropic_brew(combat, t):
-    player = _player(combat)
+    player = player_of(combat)
     while procure_random_potion(player, exclude=(PotionId.FRUIT_JUICE, PotionId.ENTROPIC_BREW)) is not None:
         pass
 
@@ -436,7 +433,7 @@ assert set(EFFECTS) == set(PotionId) == set(POTION_INFO)
 def usable_potion_actions(combat : CombatSimulator) -> list[dict]:
     """The use_potion actions open now: one per potion, and per living enemy for the ones that need a target."""
     actions = []
-    for potion in _player(combat).potions:
+    for potion in player_of(combat).potions:
         info = potion.info
         if not info.combat_usable:
             continue
@@ -466,5 +463,5 @@ def use_potion(combat : CombatSimulator, slot : int, target_index : int = 0):
     player.potions.remove(potion)
     EFFECTS[potion.potion_id](combat, target_index)
     if RelicId.REPTILE_TRINKET in player.relics:
-        _temp_strength(player, StatusId.REPTILE_TRINKET, REPTILE_TRINKET_STRENGTH, 1)
+        temp_strength(player, StatusId.REPTILE_TRINKET, REPTILE_TRINKET_STRENGTH, 1)
     combat.after_potion(hp_loss_mark)
