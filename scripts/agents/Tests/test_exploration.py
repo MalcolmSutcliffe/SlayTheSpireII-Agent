@@ -7,7 +7,8 @@ import math
 import pytest
 
 import agents.sts2_MCTS.MCTS as mcts_module
-from agents.sts2_MCTS.MCTS import SearchConfig, sts2_DeterministicNode, sts2_MCTS
+from agents.sts2_MCTS.MCTS import sts2_DeterministicNode, sts2_MCTS
+from agents.sts2_MCTS.params import SearchConfig
 from test_mcts import defend, make_state, new_mcts, stalled_fight, strike
 from agents.sts2_MCTS.params import DEFAULT_CONFIG
 

@@ -18,7 +18,7 @@ SCRIPTS_DIR = Path(__file__).resolve().parents[1]
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
-from agents.sts2_MCTS.MCTS import rollout_policy
+from agents.sts2_MCTS.rollout_policy import rollout_policy
 from agents.sts2_MCTS.params import DEFAULT_HEURISTIC, HeuristicParams, RolloutPolicy
 from benchmarks.bench import (DEATH_PENALTY, FIGHT_TURN_CAP, RESULTS_DIR, default_workers, fmt, is_won, load_index, load_state,
                               map_jobs, paired_diff)

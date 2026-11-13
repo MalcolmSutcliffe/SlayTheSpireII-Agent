@@ -7,7 +7,8 @@ from sts2_lite.potion import Potion, PotionId
 import agents.sts2_MCTS.MCTS as mcts_module
 import agents.sts2_MCTS.order_check as order_module
 from sts2_lite.combat import CombatSimulator
-from agents.sts2_MCTS.MCTS import SearchConfig, RolloutPolicy, sts2_MCTS, sts2_DeterministicNode, expand_node
+from agents.sts2_MCTS.MCTS import sts2_MCTS, sts2_DeterministicNode, expand_node
+from agents.sts2_MCTS.params import SearchConfig, RolloutPolicy
 from test_mcts import make_state, make_card, strike, defend, bash, new_mcts, primed
 
 SCENARIOS = 60

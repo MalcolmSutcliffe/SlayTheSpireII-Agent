@@ -6,7 +6,8 @@ import json, os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from sts2_lite import rng
 from sts2_lite.combat import CombatState
-from agents.sts2_MCTS.MCTS import sts2_MCTS, SearchConfig
+from agents.sts2_MCTS.MCTS import sts2_MCTS
+from agents.sts2_MCTS.params import SearchConfig
 from data_paths import SEARCH
 
 STATE = str(SEARCH / "ovicopter_lethal.json")

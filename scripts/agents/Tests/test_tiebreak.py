@@ -6,7 +6,8 @@ import math
 import pytest
 
 from sts2_lite import rng
-from agents.sts2_MCTS.MCTS import SearchConfig, sts2_MCTS, sts2_DeterministicNode, sts2_ChanceNode, TIE_MARGIN, Z_SCORE
+from agents.sts2_MCTS.MCTS import sts2_MCTS, sts2_DeterministicNode, sts2_ChanceNode, TIE_MARGIN, Z_SCORE
+from agents.sts2_MCTS.params import SearchConfig
 from test_mcts import make_state, new_mcts, strike, defend, pommel, pile
 from agents.sts2_MCTS.params import DEFAULT_CONFIG
 

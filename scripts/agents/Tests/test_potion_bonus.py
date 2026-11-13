@@ -4,7 +4,8 @@ import pytest
 
 from sts2_lite import rng
 from sts2_lite.potion import Potion, PotionId
-from agents.sts2_MCTS.MCTS import SearchConfig, sts2_MCTS
+from agents.sts2_MCTS.MCTS import sts2_MCTS
+from agents.sts2_MCTS.params import SearchConfig
 from test_mcts import make_state, strike, defend
 from agents.sts2_MCTS.params import DEFAULT_CONFIG
 
@@ -96,7 +97,8 @@ def test_the_specific_bonus_beats_the_default_for_a_valued_potion():
 
 
 # rollouts never drink potions
-from agents.sts2_MCTS.MCTS import RolloutPolicy, ROLLOUT_POLICY_DICT, rollout_policy
+from agents.sts2_MCTS.rollout_policy import ROLLOUT_POLICY_DICT, rollout_policy
+from agents.sts2_MCTS.params import RolloutPolicy
 from sts2_lite.combat import CombatSimulator
 
 @pytest.mark.parametrize("policy", list(RolloutPolicy))

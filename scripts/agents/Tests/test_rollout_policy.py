@@ -9,11 +9,12 @@ import pytest
 
 from sts2_lite import rng
 from sts2_lite.combat import CombatSimulator
-from agents.sts2_MCTS import MCTS as mcts_module
+from agents.sts2_MCTS import rollout_policy as policy_module
 from agents.sts2_MCTS import params as params_module
 from agents.sts2_MCTS.params import DEFAULT_CONFIG
-from agents.sts2_MCTS.MCTS import (RolloutPolicy, ROLLOUT_POLICY_DICT, rollout_policy, first_action, random_playable,
-                         random_playable_p_end_turn, sts2_DeterministicNode, SearchConfig)
+from agents.sts2_MCTS.MCTS import sts2_DeterministicNode
+from agents.sts2_MCTS.rollout_policy import ROLLOUT_POLICY_DICT, rollout_policy, first_action, random_playable, random_playable_p_end_turn
+from agents.sts2_MCTS.params import RolloutPolicy, SearchConfig
 from agents.Tests.test_mcts import new_mcts, make_state, strike, defend, bash, draw_fight
 
 
@@ -120,8 +121,8 @@ from agents.Tests.test_mcts import pommel, make_card
 from sts2_lite.card import CardId, CardType, TargetType
 from sts2_lite.status import StatusId
 
-WEIGHTED = [mcts_module.rarity_preference, mcts_module.claude_heuristic]
-GREEDY = mcts_module.claude_heuristic_greedy
+WEIGHTED = [policy_module.rarity_preference, policy_module.claude_heuristic]
+GREEDY = policy_module.claude_heuristic_greedy
 WEIGHTED_ALL = WEIGHTED + [GREEDY]          # for the tests that hold however the policy picks among its weights
 
 def frequency(policy, sim, actions, card_id, n=3000, seed=1):
@@ -151,13 +152,13 @@ def test_weighted_policies_reach_every_option_of_a_pending_choice(policy):
 def test_rarity_preference_orders_by_rarity_and_treats_bash_as_a_common():
     with tuned(p_random_action=0.0), tuned(block_mult=0.0):
         sim, actions = playing_sim(make_state([strike(), rare(), bash()]))
-        assert frequency(mcts_module.rarity_preference, sim, actions, CardId.BARRICADE) > \
-            frequency(mcts_module.rarity_preference, sim, actions, CardId.BASH)
+        assert frequency(policy_module.rarity_preference, sim, actions, CardId.BARRICADE) > \
+            frequency(policy_module.rarity_preference, sim, actions, CardId.BASH)
     # weights: rare 8, bash (common) 2, strike 1 -> with Bash unable to be a vulnerable-first pick (all enemies vulnerable)
     sim.combat_state.enemies[0].apply_status(StatusId.VULNERABLE, 2)
     with tuned(p_random_action=0.0), tuned(block_mult=0.0):
-        f_bash = frequency(mcts_module.rarity_preference, sim, actions, CardId.BASH)
-        f_strike = frequency(mcts_module.rarity_preference, sim, actions, CardId.STRIKE_IRONCLAD)
+        f_bash = frequency(policy_module.rarity_preference, sim, actions, CardId.BASH)
+        f_strike = frequency(policy_module.rarity_preference, sim, actions, CardId.STRIKE_IRONCLAD)
     assert f_bash == pytest.approx(2/11, abs=0.03) and f_strike == pytest.approx(1/11, abs=0.03)
 
 @pytest.mark.parametrize("policy", WEIGHTED_ALL)
@@ -205,7 +206,7 @@ def test_heuristic_plays_powers_first():
     power = make_card(CardId.INFLAME, "Inflame", CardType.Power, 1, TargetType.Self)
     sim, actions = playing_sim(make_state([strike(), strike(), power]))
     with tuned(p_random_action=0.0):
-        assert frequency(mcts_module.claude_heuristic, sim, actions, CardId.INFLAME) > 0.55
+        assert frequency(policy_module.claude_heuristic, sim, actions, CardId.INFLAME) > 0.55
 
 
 # --- focus fire ---
@@ -294,9 +295,9 @@ def test_greedy_picks_the_heuristics_most_likely_play():
     cs = make_state([strike(), defend(), bash(), pommel()])
     cs.enemies[0].attack_damage = 12
     sim, actions = playing_sim(cs)
-    counts, by_id = pick_many(mcts_module.claude_heuristic, actions, n=4000, sim=sim)
+    counts, by_id = pick_many(policy_module.claude_heuristic, actions, n=4000, sim=sim)
     with tuned(p_random_action=0.0):
-        counts, by_id = pick_many(mcts_module.claude_heuristic, actions, n=4000, sim=sim)
+        counts, by_id = pick_many(policy_module.claude_heuristic, actions, n=4000, sim=sim)
     modal = max(counts, key=counts.get)
     assert GREEDY(sim, actions) is by_id[modal]
 
@@ -330,7 +331,7 @@ def test_greedy_leaves_untargeted_cards_alone_and_aims_attacks_by_focus():
 # --- the heuristic: upgraded cards, and the pick of a pending card choice ---
 from sts2_lite.potion import Potion, PotionId
 
-HEURISTIC = [mcts_module.claude_heuristic, mcts_module.claude_heuristic_greedy]
+HEURISTIC = [policy_module.claude_heuristic, policy_module.claude_heuristic_greedy]
 
 def card_of_id(card_id, name, card_type=CardType.Skill, cost=1, target=TargetType.Self, upgraded=False, unplayable=False):
     card = make_card(card_id, name, card_type, cost, target)
@@ -373,7 +374,7 @@ def share_of_upgraded(base, upgraded, n=3000):
     sim, actions = playing_sim(make_state([base, upgraded]))
     with tuned(p_random_action=0.0):
         rng.seed(3)
-        picks = [mcts_module.claude_heuristic(sim, actions) for _ in range(n)]
+        picks = [policy_module.claude_heuristic(sim, actions) for _ in range(n)]
     hand = sim.combat_state.player.hand
     return sum(hand[a["card_index"]].is_upgraded for a in picks) / n
 
@@ -382,17 +383,17 @@ def test_an_upgraded_card_is_played_one_and_a_half_times_as_often():
 
 def test_a_cost_reducing_upgrade_does_not_weigh_more():
     base = card_of_id(CardId.HAVOC, "Havoc")
-    assert CardId.HAVOC in mcts_module.UPGRADE_UNSCALED
+    assert CardId.HAVOC in policy_module.UPGRADE_UNSCALED
     assert share_of_upgraded(base, base.upgraded_copy()) == pytest.approx(0.5, abs=0.03)
 
 def test_a_keyword_upgrade_does_not_weigh_more():
     base = card_of_id(CardId.SCRAWL, "Scrawl")                                     # the upgrade adds Retain
-    assert CardId.SCRAWL in mcts_module.UPGRADE_UNSCALED
+    assert CardId.SCRAWL in policy_module.UPGRADE_UNSCALED
     assert share_of_upgraded(base, base.upgraded_copy()) == pytest.approx(0.5, abs=0.03)
 
 def test_the_greedy_heuristic_plays_the_upgraded_card():
     sim, actions = playing_sim(make_state([strike(), strike().upgraded_copy()]))
-    assert all(sim.combat_state.player.hand[mcts_module.claude_heuristic_greedy(sim, actions)["card_index"]].is_upgraded for _ in range(20))
+    assert all(sim.combat_state.player.hand[policy_module.claude_heuristic_greedy(sim, actions)["card_index"]].is_upgraded for _ in range(20))
 
 def test_the_default_policy_is_the_sampled_heuristic():
     assert SearchConfig().rollout == RolloutPolicy.ClaudeHeuristic
@@ -409,10 +410,10 @@ def test_unplayable_cards_are_exhausted_first_and_the_ones_that_stay_before_the_
 
 def test_the_card_played_most_is_exhausted_least():
     under_attack = reaching_choice([strike(), defend()], true_grit_plus(), damage=20)
-    picks = picks_of(mcts_module.claude_heuristic, under_attack)
+    picks = picks_of(policy_module.claude_heuristic, under_attack)
     assert picks[CardId.STRIKE_IRONCLAD] / sum(picks.values()) > 0.9              # a Defend is worth playing while damage is coming
     covered = reaching_choice([strike(), defend()], true_grit_plus(), damage=20, block=99)
-    picks = picks_of(mcts_module.claude_heuristic, covered)
+    picks = picks_of(policy_module.claude_heuristic, covered)
     assert picks[CardId.DEFEND_IRONCLAD] / sum(picks.values()) > 0.7              # and not when it is covered
 
 def test_an_upgraded_card_is_exhausted_less_often_than_its_plain_copy():
@@ -421,12 +422,12 @@ def test_an_upgraded_card_is_exhausted_less_often_than_its_plain_copy():
     actions = sim.get_available_actions()
     rng.seed(2)
     with tuned(p_random_action=0.0):
-        picks = [hand[mcts_module.claude_heuristic(sim, actions)["card_index"]].is_upgraded for _ in range(3000)]
+        picks = [hand[policy_module.claude_heuristic(sim, actions)["card_index"]].is_upgraded for _ in range(3000)]
     assert sum(picks) / len(picks) == pytest.approx(1 / 2.5, abs=0.03)              # 1 : 1.5 against
 
 def test_the_greedy_heuristic_exhausts_the_least_wanted_card():
     sim = reaching_choice([strike(), defend()], true_grit_plus(), damage=20)
-    assert picks_of(mcts_module.claude_heuristic_greedy, sim, n=50) == Counter({CardId.STRIKE_IRONCLAD: 50})
+    assert picks_of(policy_module.claude_heuristic_greedy, sim, n=50) == Counter({CardId.STRIKE_IRONCLAD: 50})
 
 @pytest.mark.parametrize("policy", HEURISTIC)
 def test_a_choice_of_any_number_exhausts_the_unplayable_cards_and_stops(policy):
@@ -456,13 +457,13 @@ def test_a_choice_of_any_number_with_nothing_unplayable_exhausts_nothing(policy)
 # Armaments: the card it upgrades is picked with the weights cards are played by
 def test_armaments_picks_the_card_by_the_weights_cards_are_played_by():
     sim = reaching_choice([strike(), defend()], armaments(), damage=20)
-    picks = picks_of(mcts_module.claude_heuristic, sim)
+    picks = picks_of(policy_module.claude_heuristic, sim)
     upgrade_share = picks[CardId.DEFEND_IRONCLAD] / sum(picks.values())
     play_sim, actions = playing_sim(make_state([strike(), defend()]))
     play_sim.combat_state.enemies[0].attack_damage = 20
     with tuned(p_random_action=0.0):
         rng.seed(1)
-        played = [mcts_module.claude_heuristic(play_sim, actions) for _ in range(1500)]
+        played = [policy_module.claude_heuristic(play_sim, actions) for _ in range(1500)]
     play_share = sum(play_sim.combat_state.player.hand[a["card_index"]].card_id == CardId.DEFEND_IRONCLAD for a in played) / 1500
     assert upgrade_share == pytest.approx(play_share, abs=0.04) and upgrade_share > 0.8
 
@@ -470,4 +471,4 @@ def test_armaments_does_not_upgrade_an_unplayable_card_while_another_can_be():
     """(A Wound cannot be upgraded at all; this is a card that can be, and cannot be played just now.)"""
     stuck = card_of_id(CardId.STRIKE_IRONCLAD, "Strike", CardType.Attack, target=TargetType.AnyEnemy, unplayable=True)
     sim = reaching_choice([stuck, defend()], armaments())
-    assert picks_of(mcts_module.claude_heuristic, sim, n=300) == Counter({CardId.DEFEND_IRONCLAD: 300})
+    assert picks_of(policy_module.claude_heuristic, sim, n=300) == Counter({CardId.DEFEND_IRONCLAD: 300})

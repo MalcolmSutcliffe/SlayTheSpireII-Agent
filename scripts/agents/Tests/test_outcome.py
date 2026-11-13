@@ -9,7 +9,7 @@ from sts2_lite.combat import CombatSimulator
 from sts2_lite.enemy import Enemy
 from sts2_lite.potion import Potion, PotionId
 from sts2_lite.status import StatusId, StatusInstance
-from agents.sts2_MCTS.MCTS import _dormant_hp
+from agents.sts2_MCTS.outcome_score import dormant_hp as _dormant_hp
 from test_mcts import make_state, primed, strike
 from agents.sts2_MCTS.params import DEFAULT_CONFIG
 

@@ -7,7 +7,8 @@ import pytest
 
 from sts2_lite import rng
 from agents.sts2_MCTS import MCTS as mcts_module
-from agents.sts2_MCTS.MCTS import SearchConfig, sts2_MCTS, sts2_ChanceNode, sts2_DeterministicNode, backpropagate
+from agents.sts2_MCTS.MCTS import sts2_MCTS, sts2_ChanceNode, sts2_DeterministicNode, backpropagate
+from agents.sts2_MCTS.params import SearchConfig
 from test_mcts import make_state, strike, defend, pommel, new_mcts
 from agents.sts2_MCTS.params import DEFAULT_CONFIG
 

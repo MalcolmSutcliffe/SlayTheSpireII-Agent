@@ -4,7 +4,8 @@ import math
 import pytest
 
 from agents.sts2_MCTS import MCTS as mcts_module
-from agents.sts2_MCTS.MCTS import SearchConfig, Z_SCORE, sts2_MCTS, sts2_DeterministicNode, backpropagate
+from agents.sts2_MCTS.MCTS import Z_SCORE, sts2_MCTS, sts2_DeterministicNode, backpropagate
+from agents.sts2_MCTS.params import SearchConfig
 from agents.Tests.test_mcts import make_state, strike
 from agents.sts2_MCTS.params import DEFAULT_CONFIG
 

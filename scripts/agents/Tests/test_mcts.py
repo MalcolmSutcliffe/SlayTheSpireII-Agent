@@ -15,7 +15,9 @@ from sts2_lite.enemy import Enemy
 from sts2_lite.enemy_moves import nibbit
 from sts2_lite.player import Player
 import agents.sts2_MCTS.MCTS as mcts_module
-from agents.sts2_MCTS.MCTS import SearchConfig, sts2_MCTS, sts2_DeterministicNode, sts2_ChanceNode, expand_node, backpropagate, outcome_key, RolloutPolicy, ROLLOUT_POLICY_DICT
+from agents.sts2_MCTS.MCTS import sts2_MCTS, sts2_DeterministicNode, sts2_ChanceNode, expand_node, backpropagate, outcome_key
+from agents.sts2_MCTS.rollout_policy import ROLLOUT_POLICY_DICT
+from agents.sts2_MCTS.params import SearchConfig, RolloutPolicy
 from agents.sts2_MCTS.params import DEFAULT_CONFIG
 
 
@@ -907,7 +909,7 @@ def test_sampled_outcomes_never_reshuffle_the_known_top_card():
 
 
 # ---------------------------------------------------------------- effective HP (enemies that spawn others)
-from agents.sts2_MCTS.MCTS import _effective_hp
+from agents.sts2_MCTS.outcome_score import effective_hp as _effective_hp
 
 def phrog_fight(count=1):
     cs = make_state([])

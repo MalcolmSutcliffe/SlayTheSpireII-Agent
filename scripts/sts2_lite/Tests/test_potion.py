@@ -592,7 +592,8 @@ def test_entropic_brew_only_fills_the_slot_it_frees_when_the_belt_is_full():
 
 # ---------------------------------------------------------------- search support
 def test_the_search_can_use_potions():
-    from agents.sts2_MCTS.MCTS import SearchConfig, sts2_MCTS
+    from agents.sts2_MCTS.MCTS import sts2_MCTS
+    from agents.sts2_MCTS.params import SearchConfig
     cs = holding(one_enemy([], hp=15), PotionId.FIRE_POTION)
     rng.seed(0)
     action, _ = sts2_MCTS().monte_carlo_tree_search(cs, SearchConfig(max_sims=150, early_exit=False, paired_scenarios=0))
