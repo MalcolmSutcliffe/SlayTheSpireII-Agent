@@ -62,12 +62,25 @@ class BaseAgent:
     def _get_event_decision(self, decision : Decision) -> Option:
         return decision.options[0]
 
+    RARITY_FOR_UPGRADE = {"Rare": 3, "Uncommon": 2, "Common": 1, "Basic": 0}       # anything else (a curse, a status) ranks below Basic
+
     def _get_card_select_decision(self, decision : Decision) -> Option:
         confirm = decision.options_named("confirm_selection")
         if confirm:
             return confirm[0]
         picks = decision.options_named("select_card")
-        return picks[0] if picks else decision.options[0]
+        if not picks:
+            return decision.options[0]
+        if decision.state.get("screen_type") == "upgrade":
+            return self._card_to_upgrade(picks)
+        return picks[0]
+
+    def _card_to_upgrade(self, picks : list[Option]) -> Option:
+        """A card not upgraded yet, rarest first (Rare, Uncommon, Common, Basic); of equal rarity the last one on the screen."""
+        def rank(item):
+            position, option = item
+            return (not option.data.get("is_upgraded", False), self.RARITY_FOR_UPGRADE.get(option.data.get("rarity"), -1), position)
+        return max(enumerate(picks), key=rank)[1]
 
     def _get_relic_decision(self, decision : Decision) -> Option:
         picks = decision.options_named("select_relic")

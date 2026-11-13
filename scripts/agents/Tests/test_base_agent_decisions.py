@@ -33,9 +33,33 @@ def test_shop_leaves_without_buying():
     d = decision("shop", [act("shop_purchase", index=0), act("proceed")])
     assert BaseAgent().get_decision(d).name == "proceed"
 
-def test_card_select_confirms_once_it_can():
-    assert BaseAgent().get_decision(decision("card_select", [act("select_card", index=0), act("confirm_selection")])).name == "confirm_selection"
-    assert BaseAgent().get_decision(decision("card_select", [act("select_card", index=0)])).name == "select_card"
+def card(index, rarity, upgraded=False):
+    return act("select_card", index=index, rarity=rarity, is_upgraded=upgraded)
+
+def select(screen_type, cards, extra=()):
+    d = decision("card_select", list(cards) + list(extra))
+    d.state["screen_type"] = screen_type
+    return d
+
+def test_card_select_confirms_once_it_can_and_otherwise_picks_the_first_card():
+    cards = [card(0, "Basic"), card(1, "Rare")]
+    assert BaseAgent().get_decision(select("select", cards, [act("confirm_selection")])).name == "confirm_selection"
+    assert BaseAgent().get_decision(select("select", cards)).action["index"] == 0            # a removal or transform: no preference yet
+
+def test_upgrade_prefers_rarity_then_the_last_card():
+    agent = BaseAgent()
+    pick = lambda cards: agent.get_decision(select("upgrade", cards)).action["index"]
+    assert pick([card(0, "Basic"), card(1, "Common"), card(2, "Uncommon"), card(3, "Rare"), card(4, "Basic")]) == 3
+    assert pick([card(0, "Rare"), card(1, "Common"), card(2, "Uncommon")]) == 0
+    assert pick([card(0, "Common"), card(1, "Uncommon"), card(2, "Common"), card(3, "Uncommon")]) == 3        # ties: the last
+    assert pick([card(0, "Basic"), card(1, "Basic"), card(2, "Basic")]) == 2
+    assert pick([card(0, "Curse"), card(1, "Basic")]) == 1                                                    # anything else ranks below Basic
+
+def test_upgrade_skips_cards_that_are_already_upgraded_when_it_can():
+    agent = BaseAgent()
+    cards = [card(0, "Common"), card(1, "Rare", upgraded=True)]
+    assert agent.get_decision(select("upgrade", cards)).action["index"] == 0
+    assert agent.get_decision(select("upgrade", [card(0, "Rare", upgraded=True)])).action["index"] == 0
 
 def test_works_in_a_subclass_that_skips_the_base_init():
     class Child(BaseAgent):

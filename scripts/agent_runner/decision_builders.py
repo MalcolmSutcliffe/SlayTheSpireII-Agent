@@ -1,5 +1,7 @@
 """Turns a normalized out-of-combat state into a Decision: the legal options of that screen, each with the action that carries it out.
 A screen with nothing to click yet (loading, animating) gives no options, and the runner waits."""
+from collections import Counter
+
 from agents.decision import (Decision, Option, MAP, CARD_REWARD, REWARDS, REST, SHOP, EVENT, CARD_SELECT, RELIC, TREASURE)
 
 PROCEED = {"action": "proceed"}
@@ -21,11 +23,20 @@ def card_reward_options(state : dict) -> list[Option]:
         options.append(Option("skip", {"action": "skip_card_reward"}))
     return options
 
-def rewards_options(state : dict) -> list[Option]:
+def reward_key(item : dict) -> tuple:
+    """What makes two reward items the same thing: the game lists a skipped card reward again, and indices move as other rewards are claimed."""
+    return (item.get("type"), item.get("description"))
+
+def rewards_options(state : dict, declined : Counter | None = None) -> list[Option]:
+    """`declined`: reward keys the agent chose to skip (a card reward it declined stays in the list); that many of each are left out."""
     options = []
+    left = Counter(declined or {})
     for item in state.get("items") or []:
         if item.get("type") == "potion" and _open_potion_slots(state) == 0:
             continue            # no room: the click would do nothing
+        if left[reward_key(item)] > 0:
+            left[reward_key(item)] -= 1
+            continue
         options.append(Option(item.get("description") or item.get("type") or "reward", {"action": "claim_reward", "index": item["index"]}, item))
     return options + _proceed(state)
 
@@ -81,10 +92,10 @@ BUILDERS = {
     "treasure": (TREASURE, treasure_options),
 }
 
-def build_decision(state : dict) -> Decision | None:
+def build_decision(state : dict, declined : Counter | None = None) -> Decision | None:
     """None for a state that is not a screen the agent decides on (the main menu, game over, an overlay, combat); a Decision
     with no options for a screen that has nothing to click yet."""
     if state.get("type") != "decision" or state.get("decision") not in BUILDERS:
         return None
     kind, build = BUILDERS[state["decision"]]
-    return Decision(kind, state, build(state))
+    return Decision(kind, state, rewards_options(state, declined) if kind == REWARDS else build(state))

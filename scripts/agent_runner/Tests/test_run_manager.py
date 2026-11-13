@@ -222,3 +222,86 @@ def test_the_agent_decides_what_is_sent():
     m, client = manager([state("map_select", choices=[{"index": 0}, {"index": 1}, {"index": 2}])] * 2, AlwaysLast())
     m.tick()
     assert client.commands == [["choose-map", "2"]]
+
+
+###
+### Skipped card rewards
+###
+
+class Skipper(BaseAgent):
+    """Skips every card reward, otherwise the defaults."""
+    def _get_card_reward_decision(self, decision):
+        return decision.options_named("skip_card_reward")[0]
+
+CARD = {"index": 0, "type": "card", "description": "Add a card to your deck"}
+GOLD = {"index": 1, "type": "gold", "description": "10 gold"}
+
+def test_a_skipped_card_reward_is_not_claimed_again():
+    offer = state("card_reward", cards=[{"index": 0, "name": "Bash"}], can_skip=True)
+    screens = [state("combat_rewards", items=[CARD], can_proceed=True), offer,
+               state("combat_rewards", items=[CARD], can_proceed=True),        # the game keeps listing it
+               state("map_select", choices=[{"index": 0}]), state("map_select", choices=[{"index": 0}])]
+    m, client = manager(screens, Skipper())
+    for _ in range(4):
+        m.tick()
+    assert client.commands == [["claim-reward", "0"], ["skip-card-reward"], ["proceed"], ["choose-map", "0"]]
+
+def test_other_rewards_are_still_claimed_after_a_skip():
+    offer = state("card_reward", cards=[{"index": 0, "name": "Bash"}], can_skip=True)
+    screens = [state("combat_rewards", items=[CARD, GOLD], can_proceed=True), offer,
+               state("combat_rewards", items=[CARD, GOLD], can_proceed=True), state("combat_rewards", items=[CARD], can_proceed=True),
+               state("combat_rewards", items=[CARD], can_proceed=True)]
+    m, client = manager(screens, Skipper())
+    for _ in range(4):
+        m.tick()
+    assert client.commands == [["claim-reward", "0"], ["skip-card-reward"], ["claim-reward", "1"], ["proceed"]]
+
+def test_only_the_skipped_one_of_two_card_rewards_is_left_out():
+    offer = state("card_reward", cards=[{"index": 0, "name": "Bash"}], can_skip=True)
+    two = [{**CARD, "index": 0}, {**CARD, "index": 1}]
+    screens = [state("combat_rewards", items=two, can_proceed=True), offer, state("combat_rewards", items=two, can_proceed=True),
+               state("combat_rewards", items=two, can_proceed=True)]
+    m, client = manager(screens, Skipper())
+    for _ in range(3):
+        m.tick()
+    assert client.commands == [["claim-reward", "0"], ["skip-card-reward"], ["claim-reward", "1"]]       # the other card reward is still new
+
+def test_a_picked_card_declines_nothing():
+    offer = state("card_reward", cards=[{"index": 0, "name": "Bash"}], can_skip=False)
+    screens = [state("combat_rewards", items=[CARD], can_proceed=True), offer, state("combat_rewards", items=[CARD], can_proceed=True), offer]
+    m, client = manager(screens, BaseAgent())
+    for _ in range(3):
+        m.tick()
+    assert [c[0] for c in client.commands] == ["claim-reward", "pick-card-reward", "claim-reward"]       # a new reward screen, nothing declined
+
+def test_declined_rewards_are_forgotten_on_the_next_screen():
+    m, client = manager([state("map_select", choices=[{"index": 0}])] * 2)
+    m.declined[("card", "Add a card to your deck")] += 1
+    m.opened = CARD
+    m.tick()
+    assert not m.declined and m.opened is None
+
+def test_declined_rewards_are_forgotten_when_a_fight_starts():
+    import json as _json
+    from agent_runner import combat_session
+    m, client = manager([state("map_select", choices=[])])
+    m.declined[("card", "x")] += 1
+    m.opened = CARD
+    m.combat.handle = lambda kind, game_state: None
+    m.client.get_state = lambda: {"type": "decision", "decision": "hand_select", "cards": []}
+    m.tick()
+    assert not m.declined and m.opened is None
+
+def test_the_builder_leaves_out_declined_items_only():
+    from collections import Counter
+    s = state("combat_rewards", items=[CARD, GOLD], can_proceed=True)
+    assert names(decision_builders.build_decision(s, Counter({("card", "Add a card to your deck"): 1})).options) == ["claim_reward", "proceed"]
+    assert names(decision_builders.build_decision(s).options) == ["claim_reward", "claim_reward", "proceed"]
+
+
+def test_an_upgrade_screen_picks_the_rarest_card_through_the_manager():
+    cards = [{"index": 0, "rarity": "Basic"}, {"index": 1, "rarity": "Rare"}, {"index": 2, "rarity": "Common"}, {"index": 3, "rarity": "Rare"}]
+    screen = state("card_select", screen_type="upgrade", cards=cards, can_confirm=False)
+    m, client = manager([screen] * 2)
+    m.tick()
+    assert client.commands == [["select-card", "3"]]

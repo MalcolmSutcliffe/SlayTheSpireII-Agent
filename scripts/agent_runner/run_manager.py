@@ -3,11 +3,13 @@ RunManager polls the game and routes each state: a fight goes to the CombatSessi
 shop, event, card or relic pick, treasure) becomes a Decision with its legal options, the agent picks one, and the executor sends it.
 Anything else (loading, the main menu, game over) is only waited out."""
 import time
+from collections import Counter
 from dataclasses import dataclass, field
 
 from .combat_session import CombatSession
-from .decision_builders import build_decision
+from .decision_builders import build_decision, reward_key
 from .executors import execute
+from agents.decision import CARD_REWARD, REWARDS
 from .game_client import POLL_SECONDS, GameClient, dump
 
 DEFAULT_LOG = "engine_mismatches.jsonl"     # where differences go when no run is named
@@ -40,6 +42,8 @@ class RunManager:
         self.run_state = RunState()
         self.waiting_for = None     # what the loop last said it was waiting on, so it says so once
         self.tried : dict[str, set[str]] = {}       # screen (as the game showed it) -> actions sent on it that changed nothing
+        self.declined = Counter()       # reward items the agent skipped: the game keeps listing them, so they are not claimed again
+        self.opened = None              # the reward item whose card screen is open, to know what a Skip declines
 
     def run(self):
         try:
@@ -57,23 +61,41 @@ class RunManager:
             self.away(game_state)
             return
         self.waiting_for = None
+        self.forget_rewards()           # a fight is on: the rewards of the last one are gone
         self.combat.handle(kind, game_state)
 
     def away(self, game_state : dict):
         """The game is not in a fight: close the one that was, then decide on the screen if it is one the agent decides on."""
         self.combat.leave(game_state)
         self.run_state.update(game_state)
-        decision = build_decision(game_state)
+        decision = build_decision(game_state, self.declined)
+        if decision is not None and decision.kind not in (REWARDS, CARD_REWARD):
+            self.forget_rewards()       # on to the next screen: the skipped rewards are left behind
         if decision is None or not decision.options:
             self.wait(game_state)
             return
         if SETTLE_BEFORE_DECIDING:
             game_state = self.client.settled(game_state)
             self.run_state.update(game_state)
-            decision = build_decision(game_state)
+            decision = build_decision(game_state, self.declined)
             if decision is None or not decision.options:
                 return              # the screen moved on while it settled: read it again
         self.decide(game_state, decision)
+
+    def forget_rewards(self):
+        self.declined.clear()
+        self.opened = None
+
+    def track_rewards(self, decision, option):
+        """Remember which reward a card screen belongs to, so that skipping its cards declines that reward and picking one uses it up."""
+        action = option.action["action"]
+        if decision.kind == REWARDS and action == "claim_reward":
+            self.opened = option.data
+        elif decision.kind == CARD_REWARD and action == "skip_card_reward" and self.opened is not None:
+            self.declined[reward_key(self.opened)] += 1
+            self.opened = None
+        elif decision.kind == CARD_REWARD and action == "select_card_reward":
+            self.opened = None
 
     def wait(self, game_state : dict):
         message = f"not in combat ({game_state.get('decision', game_state.get('type'))}) - waiting for the next fight"
@@ -102,6 +124,7 @@ class RunManager:
         print(f"floor {self.run_state.floor} {decision.kind}: {option.label}")
         self.run_state.history.append({"floor": self.run_state.floor, "act": self.run_state.act, "kind": decision.kind,
                                        "label": option.label, "action": option.action})
+        self.track_rewards(decision, option)
         execute(self.client, option.action)
         if not self.client.wait_for_change(screen):
             tried.add(dump(option.action))
