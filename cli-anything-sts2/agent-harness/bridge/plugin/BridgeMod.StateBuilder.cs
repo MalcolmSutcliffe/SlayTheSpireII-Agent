@@ -205,6 +205,19 @@ public static partial class BridgeMod
             result["room_type"] = currentRoom?.GetType().Name;
         }
 
+        // The local player on every in-run state: hp, gold, relics, potions and the full deck.
+        // Combat-only fields (energy, hand, piles...) appear only while a combat is running.
+        try
+        {
+            var me = LocalContext.GetMe(runState);
+            if (me != null)
+                result["player"] = BuildPlayerState(me);
+        }
+        catch (System.Exception ex)
+        {
+            result["player_error"] = ex.Message;
+        }
+
         // Common run info
         result["run"] = new Dictionary<string, object?>
         {
@@ -505,8 +518,66 @@ public static partial class BridgeMod
             slotIndex++;
         }
         state["potions"] = potions;
+        state["potion_slots"] = player.PotionSlots.Count;
+        state["open_potion_slots"] = player.PotionSlots.Count(s => s == null);
+
+        // The whole run deck (not the combat piles): safe to read on every screen.
+        state["deck"] = BuildDeckList(player);
 
         return state;
+    }
+
+    private static List<Dictionary<string, object?>> BuildDeckList(Player player)
+    {
+        var deck = new List<Dictionary<string, object?>>();
+        int index = 0;
+        foreach (var card in player.Deck.Cards)
+        {
+            try
+            {
+                deck.Add(BuildDeckCardState(card, index));
+            }
+            catch
+            {
+                deck.Add(new Dictionary<string, object?>
+                {
+                    ["index"] = index,
+                    ["id"] = card.Id.Entry,
+                    ["name"] = SafeGetText(() => card.Title)
+                });
+            }
+            index++;
+        }
+        return deck;
+    }
+
+    // Lean on purpose: no CanPlay, description or hover tips, so polling a big deck stays cheap.
+    private static Dictionary<string, object?> BuildDeckCardState(CardModel card, int index)
+    {
+        string costDisplay = card.EnergyCost.CostsX ? "X" : card.EnergyCost.GetAmountToSpend().ToString();
+
+        string? starCostDisplay = null;
+        if (card.HasStarCostX)
+            starCostDisplay = "X";
+        else if (card.CurrentStarCost >= 0)
+            starCostDisplay = card.GetStarCostWithModifiers().ToString();
+
+        return new Dictionary<string, object?>
+        {
+            ["index"] = index,
+            ["id"] = card.Id.Entry,
+            ["name"] = card.Title,
+            ["type"] = card.Type.ToString(),
+            ["rarity"] = card.Rarity.ToString(),
+            ["cost"] = costDisplay,
+            ["star_cost"] = starCostDisplay,
+            ["is_upgraded"] = card.IsUpgraded,
+            ["upgrade_level"] = card.CurrentUpgradeLevel,
+            ["can_upgrade"] = card.IsUpgradable,
+            ["removable"] = card.IsRemovable,
+            ["floor_added"] = card.FloorAddedToDeck,
+            ["enchantment"] = BuildEnchantment(card)
+        };
     }
 
     private static Dictionary<string, object?> BuildCardState(CardModel card, int index)

@@ -16,14 +16,15 @@ PHASE_EVENT = "EVENT"
 PHASE_TREASURE = "TREASURE"
 PHASE_RUN_OVER = "RUN_OVER"
 
-## Base class for an agent. Recieves a game state as an input and returns an action.
+## MCTS for combat. Every screen outside of combat falls back to BaseAgent's get_decision handlers (override a _get_<screen>_decision to take one over).
 class MyAgent(BaseAgent):
 
     def __init__(self):
+        super().__init__()
         self.name = "MCTS combat agent"
         self._mcts = sts2_MCTS()        # kept between calls: the next search reuses the part of this tree the game went into
 
-    def get_action(self, combat_state : CombatState, time_budget):
+    def get_combat_action(self, combat_state : CombatState, time_budget):
         mcts = self._mcts
         search_config = SearchConfig(time_budget=time_budget)
         c = CombatSimulator(combat_state)

@@ -34,6 +34,16 @@ Returns the current game state. The `state_type` field indicates the screen:
 - `overlay` — Catch-all for unhandled overlay screens (prevents soft-locks)
 - `menu` — No run in progress
 
+### Top-level `player` (every in-run state)
+
+Every state with a run in progress carries a top-level `player` object, built once by the bridge:
+
+- Always: `character`, `hp`, `max_hp`, `block`, `gold`, `status` (powers), `relics[]`, `potions[]`, `potion_slots`, `open_potion_slots`, `deck[]`
+- Combat only: `energy`, `max_energy`, `stars`, `hand[]`, draw/discard/exhaust pile counts and contents, `orbs`, `orb_slots`, `orb_empty_slots`
+- `deck[]` is the whole run deck (not the combat piles). Each card: `index`, `id`, `name`, `type`, `rarity`, `cost`, `star_cost`, `is_upgraded`, `upgrade_level`, `can_upgrade`, `removable`, `floor_added`, `enchantment`. It is lean (no description or keywords) so polling stays cheap.
+- The player is not repeated anywhere else: `battle` has no `player`, and the per-screen blocks (`shop`, `map`, `event`, ...) no longer carry a `player` summary. Read the top-level object.
+- If building it throws, `player` is absent and `player_error` holds the message.
+
 ### State details
 
 **Battle state includes:**
