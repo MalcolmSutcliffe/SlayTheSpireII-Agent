@@ -12,7 +12,6 @@ from sts2_lite import rng
 
 from agents.sts2_MCTS.stats import PAIRED_Z, spread
 
-PAIRED_SCENARIOS = 300           # scenarios each contender is replayed under (0 = off)
 PAIRED_VISIT_FRACTION = 0.05     # a root move needs this share of the picked move's visits to be a contender
 PAIRED_MAX_CONTENDERS = 4        # contenders besides the picked move
 

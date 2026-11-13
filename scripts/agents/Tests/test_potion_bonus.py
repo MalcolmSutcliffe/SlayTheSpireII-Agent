@@ -4,8 +4,9 @@ import pytest
 
 from sts2_lite import rng
 from sts2_lite.potion import Potion, PotionId
-from agents.sts2_MCTS.MCTS import SearchConfig, sts2_MCTS, DEFAULT_POTION_BONUS
+from agents.sts2_MCTS.MCTS import SearchConfig, sts2_MCTS
 from test_mcts import make_state, strike, defend
+from agents.sts2_MCTS.params import DEFAULT_CONFIG
 
 
 def scenario(hand, draw=(), hp=50, enemy_hp=60, damage=8, potions=(PotionId.FIRE_POTION,)):
@@ -91,7 +92,7 @@ def test_every_potion_gets_a_bonus_without_an_error():
 
 def test_the_specific_bonus_beats_the_default_for_a_valued_potion():
     assert rated(scenario([strike()], hp=30), [PotionId.AMBERGRIS]) > rated(scenario([strike()], hp=30), [PotionId.FIRE_POTION])
-    assert DEFAULT_POTION_BONUS == 16
+    assert DEFAULT_CONFIG.reward.default_potion_bonus == 16
 
 
 # rollouts never drink potions
@@ -124,7 +125,6 @@ def test_a_whole_rollout_keeps_the_potions():
 
 
 # max HP gained in the fight (Feed, Fruit Juice) counts MAX_HP_SCALING HP per point on a win
-from agents.sts2_MCTS.MCTS import MAX_HP_SCALING
 
 def rated_with_max_hp(gain, hp=30):
     cs = scenario([strike()], hp=hp)
@@ -139,7 +139,7 @@ def test_a_win_that_raised_max_hp_scores_higher():
 
 def test_each_max_hp_point_is_worth_as_much_as_that_many_hp_points():
     """+3 max HP (times MAX_HP_SCALING) matches ending with that much more HP."""
-    assert rated_with_max_hp(3, hp=30) == pytest.approx(rated_with_max_hp(0, hp=30 + MAX_HP_SCALING * 3))
+    assert rated_with_max_hp(3, hp=30) == pytest.approx(rated_with_max_hp(0, hp=30 + DEFAULT_CONFIG.reward.max_hp_scaling * 3))
 
 def test_max_hp_does_not_matter_in_a_loss():
     cs = scenario([strike()], hp=0)

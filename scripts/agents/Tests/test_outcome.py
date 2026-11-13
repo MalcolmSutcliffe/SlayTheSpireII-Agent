@@ -9,11 +9,9 @@ from sts2_lite.combat import CombatSimulator
 from sts2_lite.enemy import Enemy
 from sts2_lite.potion import Potion, PotionId
 from sts2_lite.status import StatusId, StatusInstance
-from agents.sts2_MCTS.MCTS import (
-    DEFAULT_POTION_BONUS, LOSS_TURN_BONUS, MAX_HP_SCALING, MAX_ROLLOUT_TURNS, POTION_BONUS, TURN_COST, WIN_BASE,
-    _dormant_hp,
-)
+from agents.sts2_MCTS.MCTS import _dormant_hp
 from test_mcts import make_state, primed, strike
+from agents.sts2_MCTS.params import DEFAULT_CONFIG
 
 
 # ---------------------------------------------------------------- builders
@@ -176,17 +174,17 @@ def test_the_plain_loss_is_below_any_loss_that_hurt_the_enemy():
 def test_lasting_longer_scores_a_little_better_in_a_loss():
     root = fight(enemy(60))
     early, late = rate(fight(enemy(30), turn=2), root), rate(fight(enemy(30), turn=7), root)
-    assert late - early == pytest.approx(5 * LOSS_TURN_BONUS)
+    assert late - early == pytest.approx(5 * DEFAULT_CONFIG.reward.loss_turn_bonus)
 
 def test_an_unfinished_fight_is_rated_like_a_loss():
-    cs = fight(enemy(40), player_hp=30, turn=MAX_ROLLOUT_TURNS)
+    cs = fight(enemy(40), player_hp=30, turn=DEFAULT_CONFIG.max_rollout_turns)
     root = fight(enemy(60))
-    assert rate(cs, root) == pytest.approx(-40 / 60 + LOSS_TURN_BONUS * MAX_ROLLOUT_TURNS)
+    assert rate(cs, root) == pytest.approx(-40 / 60 + DEFAULT_CONFIG.reward.loss_turn_bonus * DEFAULT_CONFIG.max_rollout_turns)
 
 
 # ---------------------------------------------------------------- wins
 def test_a_win_scores_the_hp_it_ended_with_over_the_starting_hp():
-    assert won(hp=40, turns=0, start=50) == pytest.approx(WIN_BASE + 40 / 50)
+    assert won(hp=40, turns=0, start=50) == pytest.approx(DEFAULT_CONFIG.reward.win_base + 40 / 50)
 
 def test_less_hp_lost_is_a_better_win():
     assert won(hp=50) > won(hp=35) > won(hp=1)
@@ -195,30 +193,30 @@ def test_each_hp_is_worth_the_same():
     assert won(hp=50) - won(hp=40) == pytest.approx(won(hp=20) - won(hp=10))
 
 def test_each_turn_costs_turn_cost_hp():
-    assert won(turns=2) - won(turns=3) == pytest.approx(TURN_COST / 50)
+    assert won(turns=2) - won(turns=3) == pytest.approx(DEFAULT_CONFIG.reward.turn_cost / 50)
 
 def test_a_kept_potion_is_worth_its_hp():
     kept = won(hp=30, potions=[PotionId.FIRE_POTION]) - won(hp=30)
-    assert kept == pytest.approx(DEFAULT_POTION_BONUS / 50)
-    assert DEFAULT_POTION_BONUS == 16
+    assert kept == pytest.approx(DEFAULT_CONFIG.reward.default_potion_bonus / 50)
+    assert DEFAULT_CONFIG.reward.default_potion_bonus == 16
 
 def test_a_potion_with_its_own_value_is_worth_that_value():
-    potion = next(iter(POTION_BONUS))
-    assert won(hp=30, potions=[potion]) - won(hp=30) == pytest.approx(POTION_BONUS[potion] / 50)
+    potion = next(iter(DEFAULT_CONFIG.reward.potion_bonus))
+    assert won(hp=30, potions=[potion]) - won(hp=30) == pytest.approx(DEFAULT_CONFIG.reward.potion_bonus[potion] / 50)
 
 def test_potions_add_up():
     two = won(hp=30, potions=[PotionId.FIRE_POTION, PotionId.FIRE_POTION]) - won(hp=30)
-    assert two == pytest.approx(2 * DEFAULT_POTION_BONUS / 50)
+    assert two == pytest.approx(2 * DEFAULT_CONFIG.reward.default_potion_bonus / 50)
 
 def test_a_max_hp_gained_is_worth_two_hp():
-    assert won(hp=30, max_hp=51) - won(hp=30, max_hp=50) == pytest.approx(MAX_HP_SCALING / 50)
-    assert MAX_HP_SCALING == 2.0
+    assert won(hp=30, max_hp=51) - won(hp=30, max_hp=50) == pytest.approx(DEFAULT_CONFIG.reward.max_hp_scaling / 50)
+    assert DEFAULT_CONFIG.reward.max_hp_scaling == 2.0
 
 def test_a_max_hp_lost_costs_two_hp():
-    assert won(hp=30, max_hp=48) - won(hp=30, max_hp=50) == pytest.approx(-2 * MAX_HP_SCALING / 50)
+    assert won(hp=30, max_hp=48) - won(hp=30, max_hp=50) == pytest.approx(-2 * DEFAULT_CONFIG.reward.max_hp_scaling / 50)
 
 def test_a_kept_potion_is_the_same_as_its_value_in_hp():
-    assert won(hp=30, potions=[PotionId.FIRE_POTION], turns=3) == pytest.approx(won(hp=30 + DEFAULT_POTION_BONUS, turns=3))
+    assert won(hp=30, potions=[PotionId.FIRE_POTION], turns=3) == pytest.approx(won(hp=30 + DEFAULT_CONFIG.reward.default_potion_bonus, turns=3))
 
 def test_dead_segments_left_do_not_change_a_win():
     """A win is rated on HP only: enemies that were never beaten cannot appear in it."""
@@ -236,13 +234,13 @@ def test_dead_segments_left_do_not_change_a_win():
 
 # ---------------------------------------------------------------- wins against losses
 @pytest.mark.parametrize("enemy_left", [1, 5, 30, 60])
-@pytest.mark.parametrize("turns", [0, 10, MAX_ROLLOUT_TURNS, 10 * MAX_ROLLOUT_TURNS])
+@pytest.mark.parametrize("turns", [0, 10, DEFAULT_CONFIG.max_rollout_turns, 10 * DEFAULT_CONFIG.max_rollout_turns])
 def test_every_loss_scores_below_every_win(enemy_left, turns):
     root = fight(enemy(60))
-    worst_win = won(hp=1, turns=MAX_ROLLOUT_TURNS, start=50)
+    worst_win = won(hp=1, turns=DEFAULT_CONFIG.max_rollout_turns, start=50)
     assert rate(fight(enemy(enemy_left), turn=turns), root) < worst_win
 
 def test_the_worst_win_still_beats_the_best_unfinished_fight():
     root = fight(enemy(60))
-    best_loss = rate(fight(enemy(1), player_hp=50, turn=MAX_ROLLOUT_TURNS), root)
-    assert won(hp=1, turns=MAX_ROLLOUT_TURNS, start=50) > best_loss
+    best_loss = rate(fight(enemy(1), player_hp=50, turn=DEFAULT_CONFIG.max_rollout_turns), root)
+    assert won(hp=1, turns=DEFAULT_CONFIG.max_rollout_turns, start=50) > best_loss

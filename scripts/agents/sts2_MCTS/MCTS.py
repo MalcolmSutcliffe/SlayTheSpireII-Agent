@@ -3,8 +3,6 @@ import json
 import math
 import time
 
-from enum import Enum, auto
-from dataclasses import dataclass
 
 from sts2_lite import rng
 from sts2_lite.combat import CombatState, CombatSimulator
@@ -13,117 +11,17 @@ from sts2_lite.card import (CARD_RARITY, CardId, CardRarity, CardType, MAX_HAND_
                             UPGRADE_REMOVED_KEYWORD)
 
 from sts2_lite.enemy import Enemy
-from sts2_lite.potion import PotionId
 
 from sts2_lite.status import StatusId
 from agents.sts2_MCTS.state_key import state_key
 from agents.sts2_MCTS.stats import Z_SCORE, TIE_MARGIN
 from agents.sts2_MCTS.order_check import OrderCheck
-from agents.sts2_MCTS.paired_check import PairedCheck, PAIRED_SCENARIOS
+from agents.sts2_MCTS.paired_check import PairedCheck
+from agents.sts2_MCTS import params as P
+from agents.sts2_MCTS.params import SearchConfig, RolloutPolicy, HeuristicParams
 
-class RolloutPolicy(Enum):
-    FirstAction = auto()            # just play first action (works surprisingly well)
-    RandomAction = auto()           # random choice from all abailable actions
-    RandomPlayble = auto()          # random choice that prefers playable cards first, then end turn
-    RandomPlayblePEndTurn = auto()  # random playable, with P_END_TURN
-    
-    # Bias towards playing higher rarity cards first. 
-    # Prefer block when being attacked. 
-    # Exceptions for certain cards that perform better when played later (i.e. body slam)
-    RarityPreference = auto()
-    
-    # Situation-aware weighted choice (Powers and draw first, Vulnerable before attacks, block only while damage is unblocked)
-    ClaudeHeuristic = auto()
-
-    # ClaudeHeuristic with the dice taken out: always plays the highest-weighted card (ties go to the first in hand), never rolls the random
-    # action. The same position plays out the same way every rollout, so moves are compared on the draws and not on the policy's luck.
-    ClaudeHeuristicGreedy = auto()
-
-## constants
-MAX_ROLLOUT_TURNS = 50
-MIN_SIMS = 100                  # always searches at least 100 simulations
-DEFAULT_TIME_BUDGET = 5.0
-DEFAULT_MAX_SIMS = 20000
-
-# random sampling constants
-DEFAULT_OUTCOME_C = 2.0
-OUTCOME_ALPHA = 0.5
-
-# outcome rating constants
-WIN_BASE = 20.0
-TURN_COST = 0.1                 # a win loses this much HP of score per turn it took
-LOSS_TURN_BONUS = 0.02          # a loss gains this much (a share of the enemies' HP) per turn lasted: dying later leaves more chances to find a win
-MAX_HP_SCALING = 2.0
-DEFAULT_POTION_BONUS = 16
-POTION_BONUS : dict[PotionId, int] = {
-    PotionId.BLOOD_POTION : 18,
-    PotionId.FORTIFIER : 15,
-    PotionId.HEART_OF_IRON : 15,
-    PotionId.FRUIT_JUICE : 16,
-    PotionId.LUCKY_TONIC : 18,
-    PotionId.OROBIC_ACID : 20,
-    PotionId.SHACKLING_POTION : 18,
-    PotionId.SHIP_IN_A_BOTTLE : 20,
-    PotionId.GIGANTIFICATION_POTION : 20,
-    PotionId.SOLDIERS_STEW : 15,
-    PotionId.AMBERGRIS : 45,
-    PotionId.POTION_SHAPED_ROCK : 2
-    }
-
-# uct constants
-# The exploration term is sized by the spread of the rewards the search has seen (the lowest to the highest rollout): half that spread,
-# to the EXPLORATION_POWER. Before any win it is a fraction of a point (losses are -1..0), so the search can tell moves apart by their
-# enemy HP; once a win has been found it is ~21 points wide and the scale is what a fixed one of that size gave. Fully scaling made the
-# search over-explore on short budgets, none made it miss rare wins (tested on whole fights).
-EXPLORATION_POWER = 0.75
-MIN_REWARD_SPAN = 0.2           # the span is never taken smaller than this (the first rollouts have seen almost nothing)
-EXPLORATION_SCALE = None        # a number fixes the scale (the benchmark's reference searches set one); None sizes it from the rewards seen
-EXPLORATION_CONSTANT = 1.0
-
-# information bonus: see sts2_MCTS._information_value
-INFO_SIGMA = 0.05               # spread of the outcomes' values (reward units) at which a chance node earns 76% of the largest bonus (tanh(1))
-INFO_MIN_VISITS = 2             # a sampled outcome's value counts once it has been visited this often
-
-# move confidence constants
-EPSILON = 0.005
-TIE_MIN_VISITS = 30              # the top move needs this many visits before a tie is considered
-TIE_VISIT_FRACTION = 0.5         # a tied move needs this share of the top move's visits: a thin estimate is within the margin by luck
-
-
-
-# rollout policy constants
-ROLLOUT_POLICY = RolloutPolicy.ClaudeHeuristic
-P_END_TURN = 0.02
-
-# rarity preference
-RARITY_WEIGHTS = {
-    CardRarity.Ancient : 4,        # Note: usually ancient cards are very good. Right now we only have neow's fury, which is about an uncommn.
-    CardRarity.Rare : 8,
-    CardRarity.Uncommon : 4,
-    CardRarity.Token : 4,           # Note : Token and event cards seem to be about the same as uncommon, in terms of strength.
-    CardRarity.Event : 4,
-    CardRarity.Common : 2,
-    CardRarity.Basic : 1,           # baseline: a basic card is value 1. Model other weights around that value
-    CardRarity.Status : 0.1,        # only playable status is slimed
-    CardRarity.Curse : 0.01,
-}
-
-P_RANDOM_ACTION = 0.05          # chance a heuristic rollout plays a uniformly random action (end_turn included)
-BLOCK_MULT = 24.0                # a block card's weight grows to (1 + BLOCK_MULT)x as the unblocked incoming damage reaches BLOCK_CAP
-BLOCK_CAP = 15
-DRAW_FIRST = 4.0                # draw / energy cards
-NO_ROOM = 0.1                   # ... when the hand has no room for what they draw
-DRAW_ROOM = 3                   # needs len(hand) <= MAX_HAND_SIZE - DRAW_ROOM
-VULN_FIRST = 4.0                # a card that applies Vulnerable, while some enemy lacks it
-ATTACK_BEFORE_VULN = 0.1        # an attack on a non-vulnerable target while a Vulnerable card can be played
-POWER_FIRST = 3.0               # Heuristic policy only
-UPGRADE_WEIGHT = 1.5             # Heuristic policy only: an upgraded card is worth about half as much again (Strike 6 -> 9), and was likely upgraded because the deck wants it played
 # ... except when the upgrade only lowers the cost (the energy saved already lets the policy play more) or only adds / removes a keyword (no number goes up)
 UPGRADE_UNSCALED = frozenset(UPGRADE_COST_CHANGE) | frozenset(UPGRADE_KEYWORD) | frozenset(UPGRADE_REMOVED_KEYWORD)
-
-# Which enemy the targeted cards of the weighted policies go at, so damage is not spread over several:
-#   "none" any enemy | "first" the first living one | "lowest_hp" the lowest HP | "lowest_hp_block" the lowest HP + block (minions last)
-FOCUS = "lowest_hp"
 
 
 DRAW_ENERGY_CARDS = frozenset(CardId[n] for n in (
@@ -135,20 +33,6 @@ BLOCK_CARDS = frozenset(CardId[n] for n in (
     "ARMAMENTS EVIL_EYE PANIC_BUTTON TAUNT FINESSE TORIC_TOUGHNESS").split())
 
 CULLABLE_PILES = ("hand", "discard") # draw pile is not neccessarily cullable because of known_top cards
-
-@dataclass(frozen=True)
-class SearchConfig:
-    max_sims: int = DEFAULT_MAX_SIMS
-    time_budget: float | None = None     # None = sim-count mode
-    exploration: float = EXPLORATION_CONSTANT
-    outcome_c: float = 2.0
-    early_exit : bool = True             # allows the sim to exit early
-    prefer_info : bool = True            # among tied root moves, play the one whose outcome is not yet known (a draw) first
-    rollout: RolloutPolicy = ROLLOUT_POLICY
-    info_bonus : float = 0.0             # largest bonus for resolving a draw / random effect early, in HP of the final score (0 = off; the idea is <= 0.5)
-    reuse_tree : bool = True             # keep the part of the previous search the game actually went into (needs the same sts2_MCTS object)
-    paired_scenarios : int = PAIRED_SCENARIOS   # after the search, replay the picked move and its close rivals under the same random scenarios and keep the picked move unless a rival is significantly ahead (0 = off)
-    order_check : bool = True            # after the search, try the turn's plain plays (no random outcome) in every order under the same scenarios and play first what the best order starts with (needs paired_scenarios > 0)
 
 class sts2_Node:
     parent : sts2_Node
@@ -202,7 +86,7 @@ class sts2_MCTS:
     _expected_total_hp : int
     _starting_hp : int
     _starting_max_hp : int
-    _search_config : SearchConfig
+    _search_config : SearchConfig = P.DEFAULT_CONFIG      # the config of the search in progress (the defaults before the first)
     _num_sims: int = 0
     _info_cap : float = 0.0      # largest information bonus, in reward units
     _start_time : float
@@ -366,11 +250,11 @@ class sts2_MCTS:
     ### the outcomes' own values, which the bonus is measured from, stay clean.
 
     def _information_value(self, node : sts2_ChanceNode) -> float:
-        """cap * tanh(spread / INFO_SIGMA) * the share of sampled outcomes with something left to play.
+        """cap * tanh(spread / info_sigma) * the share of sampled outcomes with something left to play.
         spread is the standard deviation, between the outcomes, of their values (weighted by how often each was sampled), with the
         noise of each outcome's own estimate taken off, so outcomes that only look different by chance earn nothing."""
         sampled = [(node.outcomes[k], node.outcome_counts[k]) for k in node.outcomes]
-        seen = [(o, c) for o, c in sampled if o.visits >= INFO_MIN_VISITS]
+        seen = [(o, c) for o, c in sampled if o.visits >= self._search_config.uct.info_min_visits]
         if len(seen) < 2:
             return 0.0
         total = sum(c for _, c in seen)
@@ -383,7 +267,7 @@ class sts2_MCTS:
         if spread == 0.0:
             return 0.0
         actionable = sum(c for o, c in sampled if o.actionable) / sum(c for _, c in sampled)
-        return self._info_cap * math.tanh(spread / INFO_SIGMA) * actionable
+        return self._info_cap * math.tanh(spread / self._search_config.uct.info_sigma) * actionable
 
     def _information_bonuses(self, path : list[sts2_Node]) -> list[float] | None:
         """The bonus each node of `path` receives on top of the simulation result, or None when there is none. A node gets the bonuses
@@ -405,10 +289,11 @@ class sts2_MCTS:
         The agent searches again after every action, so seeing the result early is free, and a tied move gives up nothing."""
         children = self._root_node.children
         top = max(children, key=lambda c: c.visits)
-        if not self._search_config.prefer_info or top.visits < TIE_MIN_VISITS:
+        tie = self._search_config.confidence
+        if not self._search_config.prefer_info or top.visits < tie.tie_min_visits:
             return top
         informative = [c for c in children if c.is_chance_node and c.action["action"] != "end_turn"
-                       and c.visits >= max(TIE_MIN_VISITS, TIE_VISIT_FRACTION * top.visits) and self._tied(c, top)]
+                       and c.visits >= max(tie.tie_min_visits, tie.tie_visit_fraction * top.visits) and self._tied(c, top)]
         return max(informative, key=lambda c: c.visits) if informative else top
 
     ### Replaying a line of moves, for the paired comparison (paired_check.py) and the order check (order_check.py)
@@ -428,7 +313,7 @@ class sts2_MCTS:
             if action is not None and not c.is_over:
                 c.perform_action(action)
         turn = cs.turn_number
-        end_turn = turn + MAX_ROLLOUT_TURNS
+        end_turn = turn + self._search_config.max_rollout_turns
         while not c.is_over and cs.turn_number < end_turn:
             if cs.turn_number != turn:
                 turn = cs.turn_number
@@ -436,7 +321,7 @@ class sts2_MCTS:
             actions = c.get_available_actions()
             if len(actions) == 0:
                 break
-            c.perform_action(rollout_policy(c, actions, self._search_config.rollout))
+            c.perform_action(rollout_policy(c, actions, self._search_config.rollout, self._search_config.heuristic))
         return self._rate_outcome(cs)
 
     def _paired_check(self, picked : sts2_Node) -> dict | None:
@@ -526,7 +411,7 @@ class sts2_MCTS:
 
     # resolve a chance node
     def _sample_outcome(self, node: sts2_Node) -> tuple[sts2_Node, bool]:
-        cap = max(1, math.ceil(self._search_config.outcome_c * node.visits ** OUTCOME_ALPHA))
+        cap = max(1, math.ceil(self._search_config.outcome_c * node.visits ** self._search_config.outcome_alpha))
 
         # sample from the true distribution: randomize the draw pile, then act
         state = CombatState.deepcopy(node.pre_state)
@@ -560,7 +445,7 @@ class sts2_MCTS:
         c = CombatSimulator(CombatState.deepcopy(node.state))
         # shuffle draw pile to inject randomness into rollout
         c.combat_state.player.shuffle_draw_pile()
-        end_turn = c.combat_state.turn_number + MAX_ROLLOUT_TURNS
+        end_turn = c.combat_state.turn_number + self._search_config.max_rollout_turns
         
         while not c.is_over and c.combat_state.turn_number < end_turn:
             actions = c.get_available_actions()
@@ -568,7 +453,7 @@ class sts2_MCTS:
             if len(actions) == 0:
                 break
 
-            action = rollout_policy(c, actions, self._search_config.rollout)
+            action = rollout_policy(c, actions, self._search_config.rollout, self._search_config.heuristic)
             
             c.perform_action(action)
 
@@ -580,23 +465,24 @@ class sts2_MCTS:
         current_hp = combat_state.player.current_hp
         max_hp = combat_state.player.max_hp
         num_turns = combat_state.turn_number
+        reward = self._search_config.reward
         won = current_hp > 0 and all(e.is_minion or e.current_hp <= 0 for e in combat_state.enemies)
         max_hp_delta = combat_state.player.max_hp - self._starting_max_hp
         # if won fight: outcome is best max hp with slight bias towards less turns
         if won:
             hp_score = current_hp
             if not combat_state.final_fight:        # in the last fight a kept potion is of no use later: drinking one costs nothing
-                hp_score += sum(POTION_BONUS.get(p.potion_id, DEFAULT_POTION_BONUS) for p in combat_state.player.potions)
-                hp_score += MAX_HP_SCALING * max_hp_delta
-            hp_score += -TURN_COST * num_turns                     
-            return WIN_BASE + hp_score / self._starting_hp         # linear in HP
+                hp_score += sum(reward.potion_bonus.get(p.potion_id, reward.default_potion_bonus) for p in combat_state.player.potions)
+                hp_score += reward.max_hp_scaling * max_hp_delta
+            hp_score += -reward.turn_cost * num_turns                     
+            return reward.win_base + hp_score / self._starting_hp         # linear in HP
         
         # lost or unfinished: minimize the enemy HP that is left, with a small preference for lasting longer
         else:
             progress_left = self._enemy_progress_left(combat_state)
             if progress_left == 0:     # every enemy died and so did the player: no better than a plain loss
                 return -1.0
-            return -progress_left + LOSS_TURN_BONUS * num_turns
+            return -progress_left + reward.loss_turn_bonus * num_turns
 
     def _enemy_progress_left(self, combat_state : CombatState) -> float:
         """The share of the fight's enemy HP that is still to be removed: 1.0 at the start of the fight, 0.0 when nothing is left.
@@ -616,12 +502,13 @@ class sts2_MCTS:
         return node.total_reward/node.visits + self._search_config.exploration*self._exploration_scale()*math.sqrt(math.log(max(1, parent.visits))/node.visits)
 
     def _exploration_scale(self) -> float:
-        """How wide the rewards are, as UCT's exploration term needs it: a fixed EXPLORATION_SCALE if one is set, else sized from the
+        """How wide the rewards are, as UCT's exploration term needs it: a fixed exploration_scale if one is set, else sized from the
         lowest and highest rollout reward seen in this fight's tree."""
-        if EXPLORATION_SCALE is not None:
-            return EXPLORATION_SCALE
-        span = max(self._reward_hi - self._reward_lo, MIN_REWARD_SPAN)
-        return (span / 2.0) ** EXPLORATION_POWER
+        uct = self._search_config.uct
+        if uct.exploration_scale is not None:
+            return uct.exploration_scale
+        span = max(self._reward_hi - self._reward_lo, uct.min_reward_span)
+        return (span / 2.0) ** uct.exploration_power
 
     def _best_uct(self, node : sts2_Node) -> sts2_Node:
         if len(node.children) == 0:
@@ -641,7 +528,7 @@ class sts2_MCTS:
 
     def _check_statistical_exit(self)-> str | None:
         # ensure minimum sims has been reached
-        if self._num_sims < max(MIN_SIMS, 40* len(self._root_node.children)):
+        if self._num_sims < max(self._search_config.min_sims, 40* len(self._root_node.children)):
             return None
 
         # if only one child (can also exit)
@@ -678,7 +565,7 @@ class sts2_MCTS:
             return "BEST"
 
         # if difference is small enough
-        if Z_SCORE*SE_diff < EPSILON:
+        if Z_SCORE*SE_diff < self._search_config.confidence.epsilon:
             best_mean = max(node_a.total_reward/node_a.visits, node_b.total_reward/node_b.visits)
             return "TIE" if best_mean > 0.0 else None # only return TIE if winning line
         
@@ -686,17 +573,18 @@ class sts2_MCTS:
 
     def _check_exit(self) -> tuple[bool, str]:
         # check min sims
-        if self._num_sims < MIN_SIMS:
+        min_sims = self._search_config.min_sims
+        if self._num_sims < min_sims:
             return False, None
         # check max sims reached
         if self._num_sims >= self._search_config.max_sims:
             return True, "MAX_SIMS"
         # check time limit
-        if self._num_sims >= MIN_SIMS and self._search_config.time_budget is not None and time.perf_counter() >= (self._start_time + self._search_config.time_budget):
+        if self._num_sims >= min_sims and self._search_config.time_budget is not None and time.perf_counter() >= (self._start_time + self._search_config.time_budget):
             return True, "TIME_BUDGET"
         # check for statistical confidence (every 50)
         statistical_exit_reason = self._check_statistical_exit()
-        if self._search_config.early_exit and self._num_sims >= MIN_SIMS and self._num_sims%50 == 0 and statistical_exit_reason is not None:
+        if self._search_config.early_exit and self._num_sims >= min_sims and self._num_sims%50 == 0 and statistical_exit_reason is not None:
             return True, "STATISTICAL_CONFIDENCE" + ": " + statistical_exit_reason
         
         return False, None
@@ -743,14 +631,14 @@ def backpropagate(path : list[sts2_Node], result : float, bonuses : list[float] 
         node.total_reward_squared += r*r
         node.visits += 1
 
-def rollout_policy(c : CombatSimulator, actions, policy : RolloutPolicy):
+def rollout_policy(c : CombatSimulator, actions, policy : RolloutPolicy, params : HeuristicParams | None = None):
     # rollouts never drink potions (every policy): a potion is only used by a move the tree chose, so a kept one keeps its bonus
     actions = [a for a in actions if a["action"] != "use_potion"] or actions
     if len(actions) == 0:
         return None
     if len(actions) == 1:   
         return actions[0]
-    return ROLLOUT_POLICY_DICT[policy](c, actions)
+    return ROLLOUT_POLICY_DICT[policy](c, actions, params)
 
 def _effective_hp(enemy : Enemy):
     if enemy.is_minion:
@@ -804,17 +692,21 @@ def cull_identical_actions(c : CombatSimulator, actions : list[dict]) -> list[di
 ### Rollout Poliocy helpers
 ###
 
+def _params(p : HeuristicParams | None) -> HeuristicParams:
+    """The parameters a rollout policy was given, or the defaults (read here, not at import, so a test can swap them)."""
+    return P.DEFAULT_HEURISTIC if p is None else p
+
 def _incoming_damage(cs : CombatState) -> int:
     """Damage the enemies' next moves deal before block (no Strength, Weak or Vulnerable applied)."""
     return sum(e.attack_damage * e.num_attacks for e in cs.enemies if e.current_hp > 0 and not e.is_minion)
 
-def _rarity_weight(card) -> float:
+def _rarity_weight(card, p : HeuristicParams) -> float:
     rarity = CardRarity.Common if card.card_id == CardId.BASH else CARD_RARITY[card.card_id]     # Bash plays like a Common
-    return RARITY_WEIGHTS[rarity]
+    return p.rarity_weights[rarity]
 
-def _focus_fire(c : CombatSimulator, plays : list[dict]) -> list[dict]:
+def _focus_fire(c : CombatSimulator, plays : list[dict], p : HeuristicParams) -> list[dict]:
     """Restricts the targeted plays to the focus enemy; plays that take no target are untouched."""
-    if FOCUS == "none":
+    if p.focus == "none":
         return plays
     enemies = c.combat_state.enemies
     targeted = [a for a in plays if "target_name" in a]
@@ -822,49 +714,49 @@ def _focus_fire(c : CombatSimulator, plays : list[dict]) -> list[dict]:
     if len(candidates) < 2:
         return plays
     pool = [i for i in candidates if not enemies[i].is_minion] or candidates
-    if FOCUS == "first":
+    if p.focus == "first":
         focus = pool[0]
-    elif FOCUS == "lowest_hp":
+    elif p.focus == "lowest_hp":
         focus = min(pool, key=lambda i: enemies[i].current_hp)
     else:
         focus = min(pool, key=lambda i: enemies[i].current_hp + enemies[i].block)
     return [a for a in plays if "target_name" not in a or a["target"] == focus]
 
-def _weighted_play(c : CombatSimulator, actions : list[dict], weight, greedy : bool = False) -> dict:
-    """P_RANDOM_ACTION: any action. Otherwise a card play drawn with weight(card, action); end_turn only when nothing else can be done.
+def _weighted_play(c : CombatSimulator, actions : list[dict], weight, p : HeuristicParams, greedy : bool = False) -> dict:
+    """p_random_action: any action. Otherwise a card play drawn with weight(card, action); end_turn only when nothing else can be done.
     greedy: no random action, and the heaviest play every time (the first of equals). Pending choices (choose_card etc.) are uniform."""
     plays = [a for a in actions if a["action"] == "play_card"]
-    if not plays or (not greedy and rng.random_float() < P_RANDOM_ACTION):
+    if not plays or (not greedy and rng.random_float() < p.p_random_action):
         return rng.choice(actions)
-    plays = _focus_fire(c, plays)
+    plays = _focus_fire(c, plays, p)
     hand = c.combat_state.player.hand
     weights = [weight(hand[a["card_index"]], a) for a in plays]
     if greedy:
         return plays[max(range(len(plays)), key=weights.__getitem__)]
     return rng.choices(plays, weights=weights)[0]
 
-def _situation(c : CombatSimulator, actions : list[dict]):
+def _situation(c : CombatSimulator, actions : list[dict], p : HeuristicParams):
     """(unblocked incoming damage, can a Vulnerable card be played, hand has room to draw)"""
     cs = c.combat_state
     hand = cs.player.hand
     can_vuln = any(a["action"] == "play_card" and hand[a["card_index"]].card_id in VULNERABLE_CARDS for a in actions) \
         and any(e.current_hp > 0 and not e.is_minion and e.status_amount(StatusId.VULNERABLE) == 0 for e in cs.enemies)
-    return max(0, _incoming_damage(cs) - cs.player.block), can_vuln, len(hand) <= MAX_HAND_SIZE - DRAW_ROOM
+    return max(0, _incoming_damage(cs) - cs.player.block), can_vuln, len(hand) <= MAX_HAND_SIZE - p.draw_room
 
-def _common_factors(c : CombatSimulator, card, action : dict, unblocked : int, can_vuln : bool, room : bool) -> float:
+def _common_factors(c : CombatSimulator, card, action : dict, unblocked : int, can_vuln : bool, room : bool, p : HeuristicParams) -> float:
     """Draw / Vulnerable / block factors shared by both weighted policies."""
     w = 1.0
     if card.card_id in DRAW_ENERGY_CARDS:
-        w *= DRAW_FIRST if room else NO_ROOM
+        w *= p.draw_first if room else p.no_room
     if card.card_id in VULNERABLE_CARDS and can_vuln:
-        w *= VULN_FIRST
+        w *= p.vuln_first
     if card.type == CardType.Attack and can_vuln and card.card_id not in VULNERABLE_CARDS:
         enemies = c.combat_state.enemies
         target = enemies[action["target"]] if action["target"] < len(enemies) else None
         if target is None or target.status_amount(StatusId.VULNERABLE) == 0:       # (an attack on all enemies counts as unvulnerable too)
-            w *= ATTACK_BEFORE_VULN
+            w *= p.attack_before_vuln
     if card.card_id in BLOCK_CARDS and unblocked > 0:
-        w *= 1.0 + BLOCK_MULT * min(1.0, unblocked / BLOCK_CAP)
+        w *= 1.0 + p.block_mult * min(1.0, unblocked / p.block_cap)
     return w
 
 
@@ -872,44 +764,46 @@ def _common_factors(c : CombatSimulator, card, action : dict, unblocked : int, c
 ### Rollout Policy functions
 ###
 
-def first_action(c : CombatSimulator, actions : list[dict]) -> dict:
+def first_action(c : CombatSimulator, actions : list[dict], p : HeuristicParams | None = None) -> dict:
     return actions[0]
 
-def random_action(c : CombatSimulator, actions : list[dict]) -> dict:
+def random_action(c : CombatSimulator, actions : list[dict], p : HeuristicParams | None = None) -> dict:
     return rng.choice(actions)
 
-def random_playable(c : CombatSimulator, actions : list[dict]) -> dict:
+def random_playable(c : CombatSimulator, actions : list[dict], p : HeuristicParams | None = None) -> dict:
     playable_actions = [a for a in actions if a["action"] != "end_turn"] or actions
     return rng.choice(playable_actions)
 
-def random_playable_p_end_turn(c : CombatSimulator, actions : list[dict]) -> dict:
+def random_playable_p_end_turn(c : CombatSimulator, actions : list[dict], p : HeuristicParams | None = None) -> dict:
+    p = _params(p)
     end_turn = next((a for a in actions if a["action"] == "end_turn"), None)
-    if end_turn is not None and rng.random_float() < P_END_TURN:
+    if end_turn is not None and rng.random_float() < p.p_end_turn:
         return end_turn
-    return random_playable(c, actions)
+    return random_playable(c, actions, p)
 
-def rarity_preference(c : CombatSimulator, actions : list[dict]) -> dict:
+def rarity_preference(c : CombatSimulator, actions : list[dict], p : HeuristicParams | None = None) -> dict:
     """Weighted by rarity of card"""
-    unblocked, can_vuln, room = _situation(c, actions)
-    return _weighted_play(c, actions, lambda card, a: _rarity_weight(card) * _common_factors(c, card, a, unblocked, can_vuln, room))
+    p = _params(p)
+    unblocked, can_vuln, room = _situation(c, actions, p)
+    return _weighted_play(c, actions, lambda card, a: _rarity_weight(card, p) * _common_factors(c, card, a, unblocked, can_vuln, room, p), p)
 
-def _claude_weight(c : CombatSimulator, actions : list[dict]):
-    unblocked, can_vuln, room = _situation(c, actions)
+def _claude_weight(c : CombatSimulator, actions : list[dict], p : HeuristicParams):
+    unblocked, can_vuln, room = _situation(c, actions, p)
     def weight(card, a):
-        w = _common_factors(c, card, a, unblocked, can_vuln, room)
+        w = _common_factors(c, card, a, unblocked, can_vuln, room, p)
         if card.type == CardType.Power:
-            w *= POWER_FIRST
+            w *= p.power_first
         elif card.card_id in BLOCK_CARDS and unblocked == 0:
             w *= 0.25                                                                # already safe: spend the energy on offence
         if card.is_upgraded and card.card_id not in UPGRADE_UNSCALED:
-            w *= UPGRADE_WEIGHT
+            w *= p.upgrade_weight
         return w
     return weight
 
 ### The pick of a pending card choice (True Grit's card, Armaments' card, Ashwater's cards)
 REMOVING_CHOICES = ("exhaust", "exhaust_any", "discard_any")      # a card leaves the hand: the least wanted one goes
 
-def _pick_for_choice(c : CombatSimulator, actions : list[dict], greedy : bool) -> dict:
+def _pick_for_choice(c : CombatSimulator, actions : list[dict], greedy : bool, p : HeuristicParams) -> dict:
     """The heuristic's answer to a pending card choice, with the weights it plays cards by (as if each card of the hand were playable now):
       - a card leaves the hand (exhaust, discard): unplayable cards first (those that stay in the deck, then ethereal ones), then the rest with
         probability proportional to 1 / weight, so the card the policy would play most is the one least likely to go.
@@ -925,7 +819,7 @@ def _pick_for_choice(c : CombatSimulator, actions : list[dict], greedy : bool) -
     hand = cs.player.hand
     focus = next((i for i, e in enumerate(cs.enemies) if e.current_hp > 0 and not e.is_minion), 0)
     as_plays = [{"action" : "play_card", "card_index" : i, "target" : focus} for i, card in enumerate(hand) if not card.is_unplayable]
-    weight = _claude_weight(c, as_plays)
+    weight = _claude_weight(c, as_plays, p)
     cards = [c._pile(a["pile"])[a["card_index"]] for a in picks]
     w = [max(1e-9, weight(card, {"action" : "play_card", "target" : focus})) for card in cards]
     def choose(indices, wanted):
@@ -949,20 +843,21 @@ def _pick_for_choice(c : CombatSimulator, actions : list[dict], greedy : bool) -
             return choose(group, inverse)
     return rng.choice(actions)
 
-def _claude_pick(c : CombatSimulator, actions : list[dict], greedy : bool) -> dict:
+def _claude_pick(c : CombatSimulator, actions : list[dict], greedy : bool, p : HeuristicParams | None) -> dict:
+    p = _params(p)
     if c.combat_state.pending_choice is not None:
-        return _pick_for_choice(c, actions, greedy)
-    return _weighted_play(c, actions, _claude_weight(c, actions), greedy=greedy)
+        return _pick_for_choice(c, actions, greedy, p)
+    return _weighted_play(c, actions, _claude_weight(c, actions, p), p, greedy=greedy)
 
-def claude_heuristic(c : CombatSimulator, actions : list[dict]) -> dict:
+def claude_heuristic(c : CombatSimulator, actions : list[dict], p : HeuristicParams | None = None) -> dict:
     """Same shape as rarity_preference, but rarity is replaced by what the card does: Powers first (they pay off for the rest of
     the fight, which the rollout plays out), then draw/energy, Vulnerable, other Skills and Attacks equal, block only while damage
     is unblocked."""
-    return _claude_pick(c, actions, greedy=False)
+    return _claude_pick(c, actions, False, p)
 
-def claude_heuristic_greedy(c : CombatSimulator, actions : list[dict]) -> dict:
+def claude_heuristic_greedy(c : CombatSimulator, actions : list[dict], p : HeuristicParams | None = None) -> dict:
     """claude_heuristic, taking the heaviest play instead of drawing one, and without the random action."""
-    return _claude_pick(c, actions, greedy=True)
+    return _claude_pick(c, actions, True, p)
 
 ROLLOUT_POLICY_DICT = {
     RolloutPolicy.FirstAction : first_action,

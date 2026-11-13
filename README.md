@@ -1,5 +1,3 @@
-
-
 # Agent for Slay the Spire 2.
 
 ### DISCLAIMER : Claude Sonnet 5.5 and Opus 5.5 were used for writing sts2_lite (from decompiled sts2 code), Test suites, bug-fixing, and code refactoring.

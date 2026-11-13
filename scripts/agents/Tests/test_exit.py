@@ -4,8 +4,9 @@ import math
 import pytest
 
 from agents.sts2_MCTS import MCTS as mcts_module
-from agents.sts2_MCTS.MCTS import SearchConfig, MIN_SIMS, Z_SCORE, EPSILON, sts2_MCTS, sts2_DeterministicNode, backpropagate
+from agents.sts2_MCTS.MCTS import SearchConfig, Z_SCORE, sts2_MCTS, sts2_DeterministicNode, backpropagate
 from agents.Tests.test_mcts import make_state, strike
+from agents.sts2_MCTS.params import DEFAULT_CONFIG
 
 exit_check = getattr(sts2_MCTS, "_check_statistical_exit", None) or sts2_MCTS._check_statistacl_exit
 
@@ -40,7 +41,7 @@ def test_backpropagate_adds_the_squared_reward_up_the_tree():
         assert node.visits == 2
 
 def test_no_exit_before_the_minimum_sims():
-    assert not exit_check(searcher((200, 0.9, 0.1), (100, 0.1, 0.1), sims=MIN_SIMS - 1))
+    assert not exit_check(searcher((200, 0.9, 0.1), (100, 0.1, 0.1), sims=DEFAULT_CONFIG.min_sims - 1))
 
 def test_no_exit_while_a_compared_child_has_few_visits():
     assert not exit_check(searcher((200, 0.9, 0.1), (30, 0.1, 0.1)))
@@ -78,7 +79,7 @@ def test_identical_rewards_do_not_break_the_variance():
     assert exit_check(mcts) in (None, "BEST", "TIE")
 
 def test_exit_thresholds_are_sane():
-    assert Z_SCORE > 1.5 and 0 < EPSILON < 0.1
+    assert Z_SCORE > 1.5 and 0 < DEFAULT_CONFIG.confidence.epsilon < 0.1
 
 
 # ---------------------------------------------------------------- why the search stopped
@@ -110,4 +111,4 @@ def test_more_moves_need_more_sims_before_the_search_may_exit():
     assert exit_check(children_visits(20, sims=800)) == "BEST"
 
 def test_few_moves_still_only_need_the_minimum_sims():
-    assert exit_check(children_visits(2, sims=MIN_SIMS)) == "BEST"
+    assert exit_check(children_visits(2, sims=DEFAULT_CONFIG.min_sims)) == "BEST"

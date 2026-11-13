@@ -6,11 +6,9 @@ import math
 import pytest
 
 from sts2_lite import rng
-from agents.sts2_MCTS.MCTS import (
-    SearchConfig, sts2_MCTS, sts2_DeterministicNode, sts2_ChanceNode,
-    TIE_MARGIN, TIE_MIN_VISITS, TIE_VISIT_FRACTION, Z_SCORE,
-)
+from agents.sts2_MCTS.MCTS import SearchConfig, sts2_MCTS, sts2_DeterministicNode, sts2_ChanceNode, TIE_MARGIN, Z_SCORE
 from test_mcts import make_state, new_mcts, strike, defend, pommel, pile
+from agents.sts2_MCTS.params import DEFAULT_CONFIG
 
 
 PLAY = lambda i: {"action": "play_card", "card_index": i, "target": 0}
@@ -85,18 +83,18 @@ def test_a_tied_deterministic_move_does_not_beat_the_top():
     assert mcts._pick_root_child() is top
 
 def test_a_thinly_visited_draw_is_not_trusted():
-    thin = int(TIE_VISIT_FRACTION * 1000) - 50
-    assert thin >= TIE_MIN_VISITS
+    thin = int(DEFAULT_CONFIG.confidence.tie_visit_fraction * 1000) - 50
+    assert thin >= DEFAULT_CONFIG.confidence.tie_min_visits
     mcts, (top, _) = root_with(lambda r: det(r, PLAY(0), 1000, 0.80), lambda r: chance(r, PLAY(1), thin, 0.80))
     assert mcts._pick_root_child() is top
 
 def test_a_draw_with_enough_share_of_the_visits_counts():
-    share = int(TIE_VISIT_FRACTION * 1000) + 1
+    share = int(DEFAULT_CONFIG.confidence.tie_visit_fraction * 1000) + 1
     mcts, (_, draw) = root_with(lambda r: det(r, PLAY(0), 1000, 0.80), lambda r: chance(r, PLAY(1), share, 0.80))
     assert mcts._pick_root_child() is draw
 
 def test_too_few_visits_overall_keeps_the_top_move():
-    few = TIE_MIN_VISITS - 1
+    few = DEFAULT_CONFIG.confidence.tie_min_visits - 1
     mcts, (top, _) = root_with(lambda r: det(r, PLAY(0), few, 0.80), lambda r: chance(r, PLAY(1), few - 1, 0.80))
     assert mcts._pick_root_child() is top
 

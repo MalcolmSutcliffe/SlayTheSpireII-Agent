@@ -281,7 +281,8 @@ def log_decision(path : str | None, game_state : dict, combat_state : CombatStat
                            for c in searcher._root_node.children]
         module = holder.get("module")
         if module is not None:          # older search without stats: infer why it ended
-            if searcher._num_sims >= getattr(module, "DEFAULT_MAX_SIMS", float("inf")):
+            config_class = getattr(module, "SearchConfig", None)
+            if config_class is not None and searcher._num_sims >= config_class().max_sims:
                 record["stopped_by"] = "sim cap"
             elif seconds >= TIME_BUDGET_SECONDS - 0.05:
                 record["stopped_by"] = "time"

@@ -5,7 +5,8 @@ import math
 import pytest
 
 from sts2_lite import rng
-from agents.sts2_MCTS.MCTS import SearchConfig, RolloutPolicy, sts2_MCTS
+from agents.sts2_MCTS.MCTS import sts2_MCTS
+from agents.sts2_MCTS.params import SearchConfig, RolloutPolicy
 from benchmarks import bench
 
 SMALL = "f2_r1_Nibbit_163629310124.json"
@@ -21,6 +22,14 @@ def test_overrides_are_typed_like_the_config_fields():
 def test_unknown_override_is_rejected():
     with pytest.raises(SystemExit):
         bench.parse_overrides(["explortion=1.0"])
+
+def test_overrides_reach_the_parameters_inside_the_groups():
+    c = bench.make_config("baseline", ["p_random_action=0", "win_base=10", "exploration_scale=60", "epsilon=0.01", "focus=first"])
+    assert (c.heuristic.p_random_action, c.reward.win_base, c.uct.exploration_scale, c.confidence.epsilon, c.heuristic.focus) == (0.0, 10.0, 60.0, 0.01, "first")
+
+def test_a_table_cannot_be_set_from_the_command_line():
+    with pytest.raises(SystemExit):
+        bench.parse_overrides(["rarity_weights=1"])
 
 def test_config_survives_a_json_round_trip():
     c = SearchConfig(max_sims=123, exploration=0.7, rollout=RolloutPolicy.RandomAction)
@@ -180,7 +189,7 @@ def test_unknown_subset_is_rejected():
         bench.load_index(subset="nope", suite="act1")
 
 def test_subsets_get_their_own_reference_file():
-    assert bench.reference_path(suite="act1") == bench.BENCH_DIR / "reference_act1.jsonl"
+    assert bench.reference_path(suite="act1") == bench.BENCHMARKS / "reference_act1.jsonl"
     assert bench.reference_path("draw", "act1").name == "reference_act1_draw.jsonl"
 
 
