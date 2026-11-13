@@ -175,9 +175,11 @@ KEYED_OR_IGNORED = {
                "inferno_plays", "cards_played_total", "crimson_mantle_plays", "attacks_played_this_turn", "plays_started_this_turn",
                "returning", "card_blocks_this_turn", "cards_exhausted_this_turn", "gold", "has_been_attacked_this_turn",
                "lost_hp_this_turn", "hp_loss_events", "hp_lost_log", "is_minion", "binding", "bound_cards", "bound_played", "smogged",
+               "potions", "extra_turn_pending",
                # ignored: accounting that nothing reads between actions, and hooks wired by the simulator
                "cards_drawn", "unknown_draws", "damage_taken", "block_play", "block_play_gains",
-               "shuffle_hook", "draw_hook", "block_cleared_hook"},
+               "shuffle_hook", "draw_hook", "block_cleared_hook",
+               "potion_slots"},           # ignored: fixed for the run; it only matters to Entropic Brew
     "Enemy": {"block", "current_hp", "max_hp", "status", "is_minion", "enemy_id", "slot", "attack_damage", "num_attacks", "damage_candidates",
               "moves", "move_id", "move_streak", "used_moves", "has_been_attacked_this_turn", "lost_hp_this_turn", "hp_loss_events",
               "hp_lost_log", "damage_taken", "after_stun", "off_balance", "counter"},

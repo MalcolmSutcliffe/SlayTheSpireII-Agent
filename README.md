@@ -30,7 +30,7 @@ https://simthespire.wordpress.com/ -> Massive dataset of fights (expected damage
 - Runs a monte-carlo-tree-search on card actions determining the best current action, using a sts2_lite simulator. 
 - Uses deterministic and sampled non-deterministic nodes. 
 - Various rollout policies
-- Outcome score based on current HP for a win, prefering less turns.
+- Outcome score based on current HP for a win, prefering less turns. + large bonus for win (agent should always prefer win over loss)
 - On a loss, the outcoume is scored based on how close the enemy was to dying.
 - All enemy attack patterns modeled in engine.
 
@@ -40,8 +40,7 @@ No functionality
 
 ## known issues:
 
-- Enthralled, Splash, Strategem, and Alchemize not implemented.
-- Ovicopter crash (unreproducable)
+- Enthralled, Splash, and Strategem not implemented.
 
 # TODO :
 
@@ -52,7 +51,6 @@ Card pools (multiplayer ignored)
     Not implemented:
     - [ ] Strategem (Sim doesnt have events in between turns)
     - [ ] Splash (need other character card pools)
-    - [ ] Alchemize (potions not modeled yet)
  - [x] Curse
     Not implemented:
     - [ ] Enthralled (Enforcing play order not implemented in engine)
@@ -68,14 +66,12 @@ Card pools (multiplayer ignored)
 
 Add In-combat relics
  - [x]
-    - Missing:
-    - Potion relics
 
 Add potions
- - [ ]
+ - [x]
 
 Add enchantments
- - [ ]
+ - [x]
 
  ## MCTS :
 
@@ -90,13 +86,16 @@ Add enchantments
  - [X] Concurrent search caching
  - [x] Identical move culling
  - [x] Benchmark harness. Create a fixed set of fights to play, use this to fine tune constants.
+ - [x] Tied move paired RNG rollout decision (if two moves are tied at the end of search, use seeded rng to minimize noise between them)
+ - [x] Check card order permuatations under stricter bounds to differentiate small differences in turn order
  - [ ] Improve sim speed
  - [ ] Root parallelization
  - [ ] Neural network rollout policy
+ - [x] Seeded rollouts to reduce noise -> greedy heuristic rollout that is deterministic
 
  
  Waiting on engine:
- - [ ] Potion use
+ - [x] Potion use
  - [ ] end of act healing
 
  ## Out of combat actions

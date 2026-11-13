@@ -13,16 +13,17 @@ from sts2_lite.card import TargetType, CardType, Card, CardId, STRIKE_CARDS, NOR
 from sts2_lite.damage import modify_damage, base_from_displayed, bases_from_displayed, EPSILON
 from sts2_lite import rng
 from sts2_lite.events import EventType
-from sts2_lite.relic import RelicId, PER_TURN_FLAG, ALWAYS_REPORTED, take_extra_turn, after_card_played, release_card, fire_relics, blocks_play, PHILOSOPHERS_STONE_STRENGTH, upgraded_after_play, \
+from sts2_lite.relic import RelicId, dexterity_bonus, PER_TURN_FLAG, ALWAYS_REPORTED, take_extra_turn, after_card_played, release_card, fire_relics, blocks_play, PHILOSOPHERS_STONE_STRENGTH, upgraded_after_play, \
     max_energy_gain, victory_heal
 
 from sts2_lite.status import StatusId, StatusBehaviour, STATUS_HANDLERS, AUTOMATION_CARDS, face_target, SLOTH_LIMIT, _nemesis_toggle
 from sts2_lite.enemy_moves import SUMMONS, SEGMENTS, ALLY_DEATH_HOOKS
+from sts2_lite.potion import use_potion, usable_potion_actions
 
 # what the bridge calls each kind of hand selection
 HAND_SELECT_MODES = {"upgrade_select" : "upgrade"}
 
-OPTIONAL_PICKS = frozenset({"to_hand", "exhaust_any", "discover"})       # Neow's Fury, Purity, Discovery (skippable)
+OPTIONAL_PICKS = frozenset({"to_hand", "exhaust_any", "discover", "discard_any"})       # Neow's Fury, Purity, Discovery (skippable), Gambler's Brew
 
 KNOWLEDGE_CURSES = {CardId.DISINTEGRATION : StatusId.DISINTEGRATION, CardId.MIND_ROT : StatusId.MIND_ROT,
                     CardId.SLOTH : StatusId.SLOTH, CardId.WASTE_AWAY : StatusId.WASTE_AWAY}
@@ -54,6 +55,7 @@ class CombatState:
     turn_number : int       # CombatState.RoundNumber: enemies' move patterns
     extra_turns : int = 0   # extra player turns taken (Pael's Eye); the round does not advance for them
     ascension : int = 0
+    final_fight : bool = False      # the last fight of the run: nothing after it, so a potion left over is worth nothing
 
     @property
     def player_turn(self) -> int:
@@ -131,9 +133,25 @@ class CombatState:
                 kind = "exhaust"
             elif "to Transform" in prompt:      # Entropy: as many cards as it has stacks
                 kind, amount = "transform", max(1, self.player.status_amount(StatusId.ENTROPY) - len(state.get("selected_cards") or []))
+        prompt = state.get("prompt") or ""
+        if kind is None and re.search(r"discard", prompt, re.I):      # Gambling Chip (turn 1): discard any number of cards, then draw that many (the prompt is a guess: no capture yet)
+            kind = "discard_any"
         if kind is None:
             raise ValueError(f"unknown card selection mode {state['mode']}")
         hand = self.player.hand
+        if kind == "discard_any":
+            # cards already ticked count as discarded (the game moves them on confirm; the sim moves each pick at once)
+            ticked, kept = list(state.get("selected_cards") or []), []
+            for card in list(hand):
+                match = next((t for t in ticked if t["name"] == card.name), None)
+                if match is not None:
+                    ticked.remove(match)
+                    self.player.discard_pile.append(card)
+                else:
+                    kept.append(card)
+            amount = len(hand) - len(kept)
+            hand[:] = kept
+            state = {**state, "selected_cards" : []}
         indices, seen, used = [], set(), set()
         for ticked in state.get("selected_cards") or []:      # cards already ticked: still in the hand, no longer listed as picks
             i = next((i for i, card in enumerate(hand) if i not in used and card.name == ticked["name"]), None)
@@ -207,6 +225,25 @@ class CombatState:
                 if relic_id in PER_TURN_FLAG and kept.used:
                     relic.used = True
         self.cards_played = max(self.cards_played, previous.cards_played)
+
+    def carry_card_costs(self, previous : CombatState | None):
+        """While Brilliant Scarf's free card is due the game shows the whole hand at 0, so the costs were put back from the card
+        tables; a card that really cost less (Juggernaut at 0) is told apart by the hand the sim had before the Scarf covered it."""
+        if previous is None or previous.player_turn != self.player_turn:
+            return
+        known = list(previous.player.hand)
+        for i, card in enumerate(self.player.hand):
+            if not card.guessed_cost:
+                continue
+            for j, old in enumerate(known):
+                if old.card_id == card.card_id and old.is_upgraded == card.is_upgraded and old.enchantment == card.enchantment:
+                    if not old.guessed_cost:
+                        own = Card.create_copy(card)
+                        own.energy_cost, own.restore_cost = old.energy_cost, old.restore_cost
+                        own.guessed_cost = False
+                        self.player.hand[i] = own
+                    del known[j]
+                    break
 
     def _read_hp_loss_count(self, combat_state : dict):
         """Tear Asunder's text counts the times HP was lost this fight ("Hits 12 times"): the game's own number, which the bridge does not give otherwise."""
@@ -368,6 +405,7 @@ class CombatState:
         new_cs.turn_number = combat_state.turn_number
         new_cs.extra_turns = combat_state.extra_turns
         new_cs.ascension = combat_state.ascension
+        new_cs.final_fight = combat_state.final_fight
         new_cs.revivals = list(combat_state.revivals)
         new_cs.dormant = [Enemy.deepcopy(e) for e in combat_state.dormant]
         new_cs.continuations = list(combat_state.continuations)
@@ -471,6 +509,15 @@ class CombatSimulator:
         if action["action"] == "confirm_choice":
             self.confirm_choice()
             return
+        if action["action"] == "use_potion":
+            use_potion(self, action["slot"], action.get("target", 0))
+            return
+
+    def after_potion(self, hp_loss_mark : int):
+        """What follows a potion: deaths, and everything that reacts to the player losing HP (Foul Potion)."""
+        self._after_hp_loss(hp_loss_mark)
+        self.resolve_deaths()
+        self._check_is_over()
 
     def _pile(self, name : str) -> list[Card]:
         player = self.combat_state.player
@@ -528,6 +575,8 @@ class CombatSimulator:
         if pending is None or not pending.optional:
             raise IllegalActionError("there is no optional card choice to confirm")
         self.combat_state.pending_choice = None
+        if pending.kind == "discard_any":
+            self.combat_state.player.draw_cards(pending.amount)       # Gambler's Brew: as many cards as were discarded
         self._resume_autoplay()
         self._check_hand_emptied()
 
@@ -571,6 +620,19 @@ class CombatSimulator:
             self.fire(EventType.CARD_EXHAUSTED, card)
             if choice.amount > 1 and player.hand:
                 self.request_choice("exhaust_any", list(range(len(player.hand))), "hand", choice.amount - 1)
+        elif choice.kind == "discard_any":          # Gambler's Brew: `amount` counts the cards discarded so far, this one included
+            player.hand.remove(card)
+            player.discard_pile.append(card)
+            if player.hand:
+                self.request_choice("discard_any", list(range(len(player.hand))), "hand", choice.amount + 1)
+            else:
+                player.draw_cards(choice.amount + 1)
+        elif choice.kind == "free_card":            # Touch of Insanity: free for the rest of the combat
+            player.hand[index] = card.reduced_to(0, True)
+        elif choice.kind == "to_hand_free":         # Liquid Memories: from the discard pile, free this turn
+            if len(player.hand) < MAX_HAND_SIZE:
+                player.discard_pile.remove(card)
+                player.hand.append(card.free_this_turn())
         elif choice.kind == "to_draw_pile":
             self._pile(choice.pile).remove(card)
             player.put_on_top(card)                 # the end of the list is the top
@@ -703,6 +765,7 @@ class CombatSimulator:
         player = self.combat_state.player
         player.cards_played_total += 1
         if card.type == CardType.Attack:
+            player.status.pop(StatusId.GIGANTIFICATION, None)         # Gigantification Potion: spent by the Attack
             player.attacks_played_this_turn += 1
             player.reduce_stomp_costs()
         if player.relics:
@@ -776,6 +839,26 @@ class CombatSimulator:
             taken.append(top)
         self._run_autoplay(taken)
 
+    def play_random_from_draw_pile(self, count : int):
+        """Catastrophe: `count` times, a random playable card of the draw pile (any card if none is) is played. Each is picked when its turn
+        comes; a card that asks for a card choice holds the rest back until it is answered."""
+        cs = self.combat_state
+        player = cs.player
+        for done in range(count):
+            if self.is_over or not player.draw_pile:
+                return
+            playable = [c for c in player.draw_pile if not c.unplayable]
+            pick = rng.choice(playable or player.draw_pile)
+            if pick.unplayable:
+                player.remove_from_draw_pile(pick)
+                player.discard_pile.append(pick)
+            else:
+                self.auto_play(pick)
+            if cs.pending_choice is not None:
+                if done + 1 < count:
+                    cs.continuations = cs.continuations + [("random", count - done - 1)]
+                return
+
     def _run_autoplay(self, queue : list[Card]):
         """Plays the cards in order. One that asks for a card choice holds the rest back until it is answered (the game waits for it too)."""
         cs = self.combat_state
@@ -810,6 +893,11 @@ class CombatSimulator:
             cs.continuations = []           # what the step adds (a choice of its own) goes before the rest
             if kind == "finish":
                 self._finish_card_play(*args)
+            elif kind == "random":
+                self.play_random_from_draw_pile(args[0])
+            elif kind == "replay":
+                card, *rest_args = args
+                card.run_extra_plays(self, *rest_args)
             else:
                 self._run_autoplay(list(args[0]))
             cs.continuations = cs.continuations + rest
@@ -909,7 +997,8 @@ class CombatSimulator:
         player.status.pop(StatusId.NO_ENERGY_GAIN, None)    # until the end of the player's turn
         player.restore_free_cards()
         self._return_temporary_strength(player)
-        if player.relics and take_extra_turn(self):
+        if player.extra_turn_pending or (player.relics and take_extra_turn(self)):
+            player.extra_turn_pending = False         # Ambergris
             self._take_extra_turn()
             return
         before = set(self.combat_state.player.status)
@@ -936,10 +1025,13 @@ class CombatSimulator:
     @staticmethod
     def _return_temporary_strength(creature : Creature):
         """Setup Strike, Mangle and Dark Shackles: the Strength they gave or took is returned when the creature's turn ends."""
-        for marker, sign in ((StatusId.SETUP_STRIKE, 1), (StatusId.MANGLE, -1), (StatusId.DARK_SHACKLES, -1)):
+        for marker, sign in ((StatusId.SETUP_STRIKE, 1), (StatusId.MANGLE, -1), (StatusId.DARK_SHACKLES, -1), (StatusId.FLEX_POTION, 1), (StatusId.REPTILE_TRINKET, 1)):
             amount = creature.status.pop(marker, None)
             if amount is not None:
                 creature.apply_status(StatusId.STRENGTH, -sign * amount.amount, bypass_artifact=True)
+        speed = creature.status.pop(StatusId.SPEED_POTION, None)       # Speed Potion: its Dexterity
+        if speed is not None:
+            creature.apply_status(StatusId.DEXTERITY, -speed.amount, bypass_artifact=True)
 
     def _take_extra_turn(self):
         """CombatManager.SwitchSides (extra turn): no enemy turn, RoundNumber kept, TurnNumber + 1."""
@@ -983,6 +1075,12 @@ class CombatSimulator:
         pending_energy = player.status.pop(StatusId.ENERGY_NEXT_TURN, None)
         if pending_energy is not None:
             self.gain_energy(pending_energy.amount)        # Relax: after the energy reset
+        radiant = player.status.get(StatusId.RADIANT_TINCTURE)
+        if radiant is not None:                            # Radiant Tincture: 1 Energy a turn for a few turns
+            self.gain_energy(1)
+            radiant.amount -= 1
+            if radiant.amount <= 0:
+                del player.status[StatusId.RADIANT_TINCTURE]
         self.combat_state.cards_played = 0
         block_before = player.block
         self.fire(EventType.BEFORE_PLAYER_TURN)
@@ -1045,6 +1143,7 @@ class CombatSimulator:
                 self.resolve_deaths()        # an attacker can die to Flame Barrier
                 self._sync_hp()
             self.fire(EventType.ENEMY_TURN_END)
+            self.resolve_deaths()                   # Powdered Demise
             self._reattach_segments(waiting)
         finally:
             self.in_enemy_turn = False
@@ -1175,6 +1274,7 @@ class CombatSimulator:
                     if c.can_play_card(self, e_i):
                         output.append({"action" : "play_card", "card_index" : c_i, "target" : e_i, "target_name" : e.enemy_id})
 
+        output.extend(usable_potion_actions(self))
         output.append({"action" : "end_turn"})
         return output
 
@@ -1183,7 +1283,7 @@ class CombatSimulator:
 
     def calculate_block(self, initial_block : int, owner : Creature, multiplier : int = 1) -> int:
         # Dexterity, then Frail and any other multiplier (Unmovable)
-        block = initial_block + owner.status_amount(StatusId.DEXTERITY)
+        block = initial_block + owner.status_amount(StatusId.DEXTERITY) + (dexterity_bonus(owner) if owner.relics else 0)
         if StatusId.FRAIL in owner.status:
             block *= 0.75
         return max(0, int(block * multiplier + EPSILON))

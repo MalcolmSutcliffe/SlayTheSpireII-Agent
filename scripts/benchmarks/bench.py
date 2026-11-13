@@ -39,11 +39,21 @@ from sts2_lite.combat import CombatState, CombatSimulator
 from agents.sts2_MCTS.MCTS import sts2_MCTS, SearchConfig, RolloutPolicy
 
 BENCH_DIR = Path(__file__).resolve().parent
-STATES_DIR = BENCH_DIR / "act1"
-REFERENCE_PATH = BENCH_DIR / "reference_act1.jsonl"
 RESULTS_DIR = BENCH_DIR / "results"
+SUITES = ("run4", "act1")        # a suite is a folder of state files + index.jsonl; run4 = real states from runs/run4-a9 (current reward)
+DEFAULT_SUITE = "run4"
 
-TIE_EPS = 0.01              # regret at or below this counts as agreeing with the reference
+def states_dir(suite: str = DEFAULT_SUITE) -> Path:
+    if suite not in SUITES:
+        raise SystemExit(f"unknown suite {suite!r}; choose from {SUITES}")
+    return BENCH_DIR / suite
+
+def puzzles_path(suite: str = DEFAULT_SUITE) -> Path:
+    return BENCH_DIR / f"puzzles_{suite}.json"
+
+TIE_EPS = 0.05              # regret (reward units) at or below this counts as agreeing with the reference: about one HP near full health
+REF_EXPLORATION_SCALE = 60.0   # the reference searches explore widely (the live scale lets an early lucky winner starve the other moves); this is set for them only
+REF_MIN_VISIT_SHARE = 0.02  # a root move is only a candidate for the reference's best when it kept this share of the reference visits
 DEATH_PENALTY = 20          # fight score of a loss = start_hp + DEATH_PENALTY (always worse than any win)
 FIGHT_TURN_CAP = 50
 SEARCH_SEED_OFFSET = 1_000_000   # keeps search and world rng streams distinct
@@ -62,30 +72,30 @@ DRAW_CARDS = frozenset({"BATTLE_TRANCE", "BURNING_PACT", "DRUM_OF_BATTLE", "FINE
                         "BLOODLETTING", "EXPECT_A_FIGHT", "FORGOTTEN_RITUAL", "PRODUCTION"})                                     # energy
 SUBSETS = ("draw",)
 
-def load_index(smoke: bool = False, subset: str | None = None) -> list[dict]:
+def load_index(smoke: bool = False, subset: str | None = None, suite: str = DEFAULT_SUITE) -> list[dict]:
     """Benchmark entries; smoke keeps round-1 states only (one full fight per encounter).
     subset "draw": states with a draw or energy card in hand (does the search value information?)."""
-    with open(STATES_DIR / "index.jsonl") as f:
+    with open(states_dir(suite) / "index.jsonl") as f:
         entries = [json.loads(line) for line in f if line.strip()]
     if smoke:
         entries = [e for e in entries if e["round"] == 1]
     if subset == "draw":
-        entries = [e for e in entries if any(c.card_id.name in DRAW_CARDS for c in load_state(e["file"]).player.hand)]
+        entries = [e for e in entries if any(c.card_id.name in DRAW_CARDS for c in load_state(e["file"], suite).player.hand)]
     elif subset is not None:
         raise SystemExit(f"unknown subset {subset!r}; choose from {SUBSETS}")
     return entries
 
-def reference_path(subset: str | None = None) -> Path:
-    return REFERENCE_PATH if subset is None else REFERENCE_PATH.with_name(f"reference_act1_{subset}.jsonl")
+def reference_path(subset: str | None = None, suite: str = DEFAULT_SUITE) -> Path:
+    return BENCH_DIR / (f"reference_{suite}.jsonl" if subset is None else f"reference_{suite}_{subset}.jsonl")
 
 @lru_cache(maxsize=None)
-def _raw_state(file: str) -> str:
-    return (STATES_DIR / file).read_text()
+def _raw_state(file: str, suite: str = DEFAULT_SUITE) -> str:
+    return (states_dir(suite) / file).read_text()
 
-def load_state(file: str) -> CombatState:
+def load_state(file: str, suite: str = DEFAULT_SUITE) -> CombatState:
     """Fresh CombatState per call; file read is cached per process."""
     with contextlib.redirect_stdout(io.StringIO()):         # sim warnings (unimplemented cards) once per load
-        return CombatState.from_dict(json.loads(_raw_state(file)))
+        return CombatState.from_dict(json.loads(_raw_state(file, suite)))
 
 def parse_overrides(pairs: list[str]) -> dict:
     """['exploration=1.0', 'rollout=FirstAction'] -> typed field values for SearchConfig."""
@@ -135,8 +145,13 @@ def run_search(state: CombatState, config: SearchConfig, seed: int) -> tuple[dic
 
 # ---------------------------------------------------------------- reference
 def _reference_job(job: tuple) -> dict:
-    file, seed, config_d = job
-    action, stats = run_search(load_state(file), config_from_dict(config_d), seed)
+    file, seed, config_d, suite = job
+    from agents.sts2_MCTS import MCTS as mcts_module
+    live_scale, mcts_module.EXPLORATION_SCALE = mcts_module.EXPLORATION_SCALE, REF_EXPLORATION_SCALE
+    try:
+        action, stats = run_search(load_state(file, suite), config_from_dict(config_d), seed)
+    finally:
+        mcts_module.EXPLORATION_SCALE = live_scale
     return {"file": file, "seed": seed, "pick": action_key(action),
             "children": [{"key": action_key(c["action"]), "visits": c["visits"], "q": c["q"]} for c in stats["children"]]}
 
@@ -148,28 +163,31 @@ def merge_reference(file: str, runs: list[dict]) -> dict:
             q_sum[c["key"]] += c["q"] * c["visits"]
             n_sum[c["key"]] += c["visits"]
     q = {k: q_sum[k] / n_sum[k] for k in n_sum if n_sum[k] > 0}
-    best = max(n_sum, key=n_sum.get)
+    total = sum(n_sum.values())
+    contenders = [k for k in q if n_sum[k] >= REF_MIN_VISIT_SHARE * total] or list(q)
+    best = max(contenders, key=q.get)         # highest mean among moves the reference really explored (the most visited can be a lucky early winner)
     picks = {run["pick"] for run in runs}
     return {"file": file, "q": q, "visits": dict(n_sum), "best": best,
             "stable": len(picks) == 1, "seeds": len(runs)}
 
-def build_reference(sims: int, seeds: int, workers: int, smoke: bool = False, out: Path | None = None, subset: str | None = None) -> list[dict]:
-    out = out or reference_path(subset)
+def build_reference(sims: int, seeds: int, workers: int, smoke: bool = False, out: Path | None = None, subset: str | None = None, suite: str = DEFAULT_SUITE) -> list[dict]:
+    out = out or reference_path(subset, suite)
     config = dataclasses.replace(CONFIGS["reference"], max_sims=sims)
-    entries = load_index(smoke, subset)
-    jobs = [(e["file"], s, config_dict(config)) for e in entries for s in range(seeds)]
+    entries = load_index(smoke, subset, suite)
+    jobs = [(e["file"], s, config_dict(config), suite) for e in entries for s in range(seeds)]
     runs = map_jobs(_reference_job, jobs, workers, "reference")
     by_file = defaultdict(list)
     for r in runs:
         by_file[r["file"]].append(r)
     refs = [merge_reference(e["file"], by_file[e["file"]]) for e in entries]
     with open(out, "w") as f:
-        f.write(json.dumps({"type": "header", "suite": "reference", **run_meta(config)}) + "\n")
+        f.write(json.dumps({"type": "header", "suite": "reference", "states": suite, **run_meta(config)}) + "\n")
         for ref in refs:
             f.write(json.dumps(ref) + "\n")
     return refs
 
-def load_reference(path: Path = REFERENCE_PATH) -> dict[str, dict]:
+def load_reference(path: Path | None = None) -> dict[str, dict]:
+    path = path or reference_path()
     if not path.exists():
         raise SystemExit(f"no reference at {path}; run `build-ref` first")
     with open(path) as f:
@@ -185,15 +203,15 @@ def score_decision(ref: dict, action: dict) -> dict:
     return {"regret": regret, "agree": regret <= TIE_EPS, "exact": k == ref["best"], "stable": ref["stable"]}
 
 def _decision_job(job: tuple) -> dict:
-    file, seed, config_d, ref = job
-    action, stats = run_search(load_state(file), config_from_dict(config_d), DECISION_SEED_OFFSET + seed)
+    file, seed, config_d, ref, suite = job
+    action, stats = run_search(load_state(file, suite), config_from_dict(config_d), DECISION_SEED_OFFSET + seed)
     return {"file": file, "seed": seed, **score_decision(ref, action),
             "sims": stats["num_sims"], "seconds": stats["time_taken"], "exit_reason": stats["exit_reason"]}
 
-def eval_decisions(config: SearchConfig, seeds: int, workers: int, smoke: bool = False, subset: str | None = None) -> list[dict]:
-    refs = load_reference(reference_path(subset))
-    entries = [e for e in load_index(smoke, subset) if e["file"] in refs]
-    jobs = [(e["file"], s, config_dict(config), refs[e["file"]]) for e in entries for s in range(seeds)]
+def eval_decisions(config: SearchConfig, seeds: int, workers: int, smoke: bool = False, subset: str | None = None, suite: str = DEFAULT_SUITE) -> list[dict]:
+    refs = load_reference(reference_path(subset, suite))
+    entries = [e for e in load_index(smoke, subset, suite) if e["file"] in refs]
+    jobs = [(e["file"], s, config_dict(config), refs[e["file"]], suite) for e in entries for s in range(seeds)]
     return map_jobs(_decision_job, jobs, workers, "decisions")
 
 def summarize_decisions(rows: list[dict]) -> dict:
@@ -207,6 +225,58 @@ def summarize_decisions(rows: list[dict]) -> dict:
         "mean_seconds": statistics.fmean(r["seconds"] for r in rows),
     }
 
+
+# ---------------------------------------------------------------- puzzles
+# Known-answer positions (puzzles_<suite>.json): "accept" lists the labels that pass (any other fails), "reject" lists the labels that
+# fail. A label is the card's name (BRAND, STRIKE...), "potion" or "end_turn". They need no reference search, so they stay valid when
+# the reward changes. "opinion": true marks a judgment call rather than a provable error.
+def load_puzzles(suite: str = DEFAULT_SUITE) -> list[dict]:
+    return json.loads(puzzles_path(suite).read_text())
+
+def action_label(state: CombatState, action: dict) -> str:
+    if action["action"] == "use_potion":
+        return "potion"
+    if action["action"] == "play_card":
+        name = state.player.hand[action["card_index"]].card_id.name
+        return name[:-len("_IRONCLAD")] if name.endswith("_IRONCLAD") else name
+    return action["action"]
+
+def puzzle_passes(puzzle: dict, label: str) -> bool:
+    if "accept" in puzzle:
+        return label in puzzle["accept"]
+    return label not in puzzle["reject"]
+
+def _puzzle_job(job: tuple) -> dict:
+    puzzle, seed, config_d, suite = job
+    state = load_state(puzzle["file"], suite)
+    action, stats = run_search(state, config_from_dict(config_d), DECISION_SEED_OFFSET + seed)
+    label = action_label(load_state(puzzle["file"], suite), action)
+    return {"file": puzzle["file"], "seed": seed, "label": label, "fail": int(not puzzle_passes(puzzle, label)),
+            "opinion": bool(puzzle.get("opinion")), "sims": stats["num_sims"], "seconds": stats["time_taken"]}
+
+def eval_puzzles(config: SearchConfig, seeds: int, workers: int, smoke: bool = False, subset: str | None = None, suite: str = DEFAULT_SUITE) -> list[dict]:
+    jobs = [(p, s, config_dict(config), suite) for p in load_puzzles(suite) for s in range(seeds)]
+    return map_jobs(_puzzle_job, jobs, workers, "puzzles")
+
+def summarize_puzzles(rows: list[dict]) -> dict:
+    proven = [r for r in rows if not r["opinion"]]
+    return {"n": len(rows),
+            "fail_rate_proven": statistics.fmean(r["fail"] for r in proven) if proven else float("nan"),
+            "fail_rate_opinion": statistics.fmean([r["fail"] for r in rows if r["opinion"]] or [float("nan")]),
+            "mean_sims": statistics.fmean(r["sims"] for r in rows),
+            "mean_seconds": statistics.fmean(r["seconds"] for r in rows)}
+
+def puzzle_table(rows: list[dict]) -> str:
+    by = defaultdict(list)
+    for r in rows:
+        by[r["file"]].append(r)
+    out = []
+    for file, rs in sorted(by.items()):
+        picks = defaultdict(int)
+        for r in rs:
+            picks[r["label"]] += 1
+        out.append(f"  {file}  fail {sum(r['fail'] for r in rs)}/{len(rs)}  picks " + ", ".join(f"{k}:{v}" for k, v in sorted(picks.items())))
+    return "\n".join(out)
 
 # ---------------------------------------------------------------- fight suite
 def is_won(state: CombatState) -> bool:
@@ -254,12 +324,12 @@ def play_fight(start: CombatState, config: SearchConfig, world_seed: int, search
             "decisions": decisions, "sims": sims, "seconds": seconds}
 
 def _fight_job(job: tuple) -> dict:
-    file, seed, config_d = job
-    result = play_fight(load_state(file), config_from_dict(config_d), seed, SEARCH_SEED_OFFSET + seed)
+    file, seed, config_d, suite = job
+    result = play_fight(load_state(file, suite), config_from_dict(config_d), seed, SEARCH_SEED_OFFSET + seed)
     return {"file": file, "seed": seed, **result}
 
-def eval_fights(config: SearchConfig, seeds: int, workers: int, smoke: bool = False, subset: str | None = None) -> list[dict]:
-    jobs = [(e["file"], s, config_dict(config)) for e in load_index(smoke, subset) for s in range(seeds)]
+def eval_fights(config: SearchConfig, seeds: int, workers: int, smoke: bool = False, subset: str | None = None, suite: str = DEFAULT_SUITE) -> list[dict]:
+    jobs = [(e["file"], s, config_dict(config), suite) for e in load_index(smoke, subset, suite) for s in range(seeds)]
     return map_jobs(_fight_job, jobs, workers, "fights")
 
 def summarize_fights(rows: list[dict]) -> dict:
@@ -275,7 +345,7 @@ def summarize_fights(rows: list[dict]) -> dict:
 
 
 # ---------------------------------------------------------------- comparison
-METRICS = {"decisions": "regret", "fights": "score"}   # lower is better for both
+METRICS = {"decisions": "regret", "fights": "score", "puzzles": "fail"}   # lower is better for both
 
 def paired_diff(a_rows: list[dict], b_rows: list[dict], metric: str) -> dict:
     """Mean of (b - a) over (file, seed) pairs present in both, with a 95% interval."""
@@ -294,11 +364,11 @@ def compare_files(path_a: Path, path_b: Path) -> str:
         raise SystemExit(f"cannot compare a '{ha['suite']}' run with a '{hb['suite']}' run")
     suite = ha["suite"]
     lines = [f"A: {ha['label']} ({ha['commit']})", f"B: {hb['label']} ({hb['commit']})"]
-    summarize = summarize_decisions if suite == "decisions" else summarize_fights
+    summarize = {"decisions": summarize_decisions, "fights": summarize_fights, "puzzles": summarize_puzzles}[suite]
     sa, sb = summarize(ra), summarize(rb)
     for k in sa:
         lines.append(f"  {k:22s} {fmt(sa[k]):>10s} -> {fmt(sb[k]):>10s}")
-    extra = ["won"] if suite == "fights" else ["agree"]
+    extra = {"fights": ["won"], "decisions": ["agree"], "puzzles": []}[suite]
     for metric in [METRICS[suite]] + extra:
         d = paired_diff(ra, rb, metric)
         verdict = "SIGNIFICANT" if d["significant"] else "within noise"
@@ -376,6 +446,7 @@ def main(argv: list[str] | None = None):
     def common(s, seeds):
         s.add_argument("--seeds", type=int, default=seeds)
         s.add_argument("--smoke", action="store_true", help="round-1 states only")
+        s.add_argument("--suite", choices=SUITES, default=DEFAULT_SUITE, help="which folder of states (and its reference)")
         s.add_argument("--subset", choices=SUBSETS, default=None, help="draw: states with a draw or energy card in hand (own reference file)")
         s.add_argument("--workers", type=int, default=default_workers(), help="parallel searches; each holds its tree in RAM (~1 GB at 100k sims)")
 
@@ -383,7 +454,7 @@ def main(argv: list[str] | None = None):
     common(r, 3)
     r.add_argument("--sims", type=int, default=CONFIGS["reference"].max_sims)
 
-    for name in ("decisions", "fights"):
+    for name in ("decisions", "fights", "puzzles"):
         s = sub.add_parser(name)
         common(s, 10)
         s.add_argument("--config", default="baseline", choices=CONFIGS)
@@ -397,16 +468,18 @@ def main(argv: list[str] | None = None):
     args = p.parse_args(argv)
 
     if args.cmd == "build-ref":
-        refs = build_reference(args.sims, args.seeds, args.workers, args.smoke, subset=args.subset)
-        print(f"wrote {reference_path(args.subset)}: {len(refs)} states, {sum(r['stable'] for r in refs)} stable")
-    elif args.cmd in ("decisions", "fights"):
+        refs = build_reference(args.sims, args.seeds, args.workers, args.smoke, subset=args.subset, suite=args.suite)
+        print(f"wrote {reference_path(args.subset, args.suite)}: {len(refs)} states, {sum(r['stable'] for r in refs)} stable")
+    elif args.cmd in ("decisions", "fights", "puzzles"):
         config = make_config(args.config, args.set)
         label = args.label or "_".join([args.config] + [s.replace("=", "-") for s in args.set])
-        run = eval_decisions if args.cmd == "decisions" else eval_fights
-        rows = run(config, args.seeds, args.workers, args.smoke, args.subset)
-        summary = (summarize_decisions if args.cmd == "decisions" else summarize_fights)(rows)
-        path = write_results(args.cmd, label, config, rows, {"seeds": args.seeds, "smoke": args.smoke, "subset": args.subset})
+        run = {"decisions": eval_decisions, "fights": eval_fights, "puzzles": eval_puzzles}[args.cmd]
+        rows = run(config, args.seeds, args.workers, args.smoke, args.subset, args.suite)
+        summary = {"decisions": summarize_decisions, "fights": summarize_fights, "puzzles": summarize_puzzles}[args.cmd](rows)
+        path = write_results(args.cmd, label, config, rows, {"seeds": args.seeds, "smoke": args.smoke, "subset": args.subset, "states": args.suite})
         print(f"{label}: " + "  ".join(f"{k}={fmt(v)}" for k, v in summary.items()))
+        if args.cmd == "puzzles":
+            print(puzzle_table(rows))
         print(f"wrote {path}")
     elif args.cmd == "compare":
         print(compare_files(args.a, args.b))

@@ -28,12 +28,20 @@ def test_rare_cards_derive_from_the_table():
     assert {CardId.ENTROPY, CardId.HIDDEN_GEM, CardId.BARRICADE} <= RARE_CARDS
     assert not {CardId.BASH, CardId.NEOWS_FURY, CardId.CORRUPTION, CardId.BREAK} & RARE_CARDS
 
+# cards that are in the game but have no class in the decompiled sources (like some potions), so their rarity cannot be checked against it
+NOT_IN_DECOMPILED = {CardId.NOT_IMPLEMENTED, CardId.ABUNDANCE}
+
 @pytest.mark.skipif(not DECOMPILED.is_dir(), reason="decompiled sources not present")
 def test_matches_decompiled_source():
+    missing, wrong = [], []
     for cid, rarity in CARD_RARITY.items():
         path = DECOMPILED / f"{_pascal(cid)}.cs"
         if not path.exists():
-            assert cid == CardId.NOT_IMPLEMENTED
+            if cid not in NOT_IN_DECOMPILED:
+                missing.append(cid.name)
             continue
         found = re.search(r"CardRarity\.(\w+)", path.read_text())
-        assert found and found.group(1) == rarity.name, cid
+        if not (found and found.group(1) == rarity.name):
+            wrong.append((cid.name, rarity.name, found and found.group(1)))
+    assert not missing, f"no class in the decompiled sources: {missing}"       # all reported at once, not just the first
+    assert not wrong, f"rarity differs from the decompiled source (card, ours, game): {wrong}"

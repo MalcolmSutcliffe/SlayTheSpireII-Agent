@@ -1,0 +1,6 @@
+[
+  {"file": "decision_00001.json", "accept": ["BRAND"], "note": "Brand first: Strength for both Strikes, and it exhausts the Shame in hand (run4 f2: played after the Strikes)"},
+  {"file": "decision_00013.json", "reject": ["BRAND"], "note": "three Strikes are lethal (21 vs 17 HP); Brand only costs 1 HP (run4 f2 r4)"},
+  {"file": "decision_00112.json", "accept": ["STRIKE", "BASH"], "note": "Strike + Bash kill Byrdonis (18 vs 14 HP) with no HP loss; Breakthrough costs 1 HP (run4 f11)"},
+  {"file": "decision_00034.json", "reject": ["potion"], "opinion": true, "note": "Malcolm: the Gigantification Potion is better used next turn (run4 f6)"}
+]

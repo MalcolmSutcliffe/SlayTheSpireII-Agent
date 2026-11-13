@@ -35,6 +35,7 @@ def primed(state, mcts=None, starting_hp=None):
     mcts = mcts or new_mcts()
     mcts._expected_total_hp = mcts._calculate_expected_total_hp(state)
     mcts._starting_hp = starting_hp or state.player.current_hp
+    mcts._starting_max_hp = state.player.max_hp
     return mcts
 
 @pytest.fixture(autouse=True)
@@ -508,7 +509,7 @@ def test_rollout_from_a_terminal_node_returns_its_rating_immediately():
     root = expanded(winning_fight())
     kill = child_for(root, "play_card", 0)
     mcts = primed(kill.state)
-    assert mcts._simulate_random_combat(kill) == mcts._rate_outcome(kill.state)
+    assert mcts._simulate_combat_rollout(kill) == mcts._rate_outcome(kill.state)
 
 
 # ---------------------------------------------------------------- backpropagation
@@ -607,14 +608,14 @@ def random_fight():
 def test_rollouts_from_one_node_vary():
     node = sts2_DeterministicNode(None, random_fight(), None)
     mcts = primed(node.state)
-    results = {round(mcts._simulate_random_combat(node), 6) for _ in range(40)}
+    results = {round(mcts._simulate_combat_rollout(node), 6) for _ in range(40)}
     assert len(results) > 1
 
 def test_rollout_does_not_modify_the_node_state():
     node = sts2_DeterministicNode(None, random_fight(), None)
     before = (outcome_key(node.state), node.state.player.current_hp,
               node.state.turn_number, [id(c) for c in node.state.player.draw_pile])
-    primed(node.state)._simulate_random_combat(node)
+    primed(node.state)._simulate_combat_rollout(node)
     assert before == (outcome_key(node.state), node.state.player.current_hp,
                       node.state.turn_number, [id(c) for c in node.state.player.draw_pile])
 
@@ -622,14 +623,14 @@ def test_rollouts_are_reproducible_from_a_seed():
     node = sts2_DeterministicNode(None, random_fight(), None)
     mcts = primed(node.state)
     rng.seed(9)
-    a = [mcts._simulate_random_combat(node) for _ in range(10)]
+    a = [mcts._simulate_combat_rollout(node) for _ in range(10)]
     rng.seed(9)
-    b = [mcts._simulate_random_combat(node) for _ in range(10)]
+    b = [mcts._simulate_combat_rollout(node) for _ in range(10)]
     assert a == b
 
 
 # ---------------------------------------------------------------- reward
-from agents.sts2_MCTS.MCTS import GAMMA, WIN_BONUS
+from agents.sts2_MCTS.MCTS import WIN_BASE, TURN_COST
 
 def win_score(hp, max_hp=80, turns=3, start=None):
     """Score of a win ending at `hp`, for a fight that began at `start` HP (default: full HP)."""
@@ -639,8 +640,10 @@ def win_score(hp, max_hp=80, turns=3, start=None):
     return primed(cs, starting_hp=start or max_hp)._rate_outcome(cs)
 
 def loss_score(enemy_hps, enemy_maxes=None):
+    """Score of a loss that ends on turn 0, so the bonus for lasting longer is zero (test_outcome.py covers that bonus)."""
     cs = make_state([])
     cs.player.current_hp = 0
+    cs.turn_number = 0
     cs.enemies = []
     for i, hp in enumerate(enemy_hps):
         e = Enemy()
@@ -676,8 +679,8 @@ def test_more_hp_left_scores_higher():
 def test_fewer_turns_scores_higher():
     assert win_score(40, turns=3) > win_score(40, turns=8)
 
-def test_each_turn_discounts_a_win_by_gamma():
-    assert win_score(40, turns=5) == pytest.approx(win_score(40, turns=4) * GAMMA)
+def test_each_turn_costs_a_win_turn_cost_hp():
+    assert win_score(40, turns=4) - win_score(40, turns=5) == pytest.approx(TURN_COST / 80)
 
 def test_turn_discount_is_small_next_to_hp():
     one_turn = win_score(40, turns=4) - win_score(40, turns=5)
@@ -694,13 +697,13 @@ def test_healing_during_the_fight_is_rewarded():
     assert win_score(60, max_hp=80, start=40) > win_score(40, max_hp=80, start=40) > win_score(30, max_hp=80, start=40)
 
 def test_ending_above_the_starting_hp_does_not_fail():
-    assert win_score(70, max_hp=80, start=10) > WIN_BONUS - 0.01 * 3
+    assert win_score(70, max_hp=80, start=10) > WIN_BASE
 
-def test_hp_matters_more_when_low():
-    """Concave in remaining HP: the same 10 HP is worth more near death than at high HP."""
+def test_hp_is_worth_the_same_wherever_it_is_lost():
+    """Linear in remaining HP: 10 HP costs the same near death as at full health."""
     near_death = win_score(20, start=80) - win_score(10, start=80)
     healthy = win_score(80, start=80) - win_score(70, start=80)
-    assert near_death > healthy
+    assert near_death == pytest.approx(healthy)
 
 def test_the_same_hp_lost_costs_more_from_a_lower_start():
     assert win_score(20, start=30) < win_score(70, start=80)
@@ -758,17 +761,17 @@ def stalled_fight():
 
 def test_rollout_stops_at_the_turn_cap():
     node = sts2_DeterministicNode(None, stalled_fight(), None)
-    primed(node.state)._simulate_random_combat(node)  # would hang without the cap
+    primed(node.state)._simulate_combat_rollout(node)  # would hang without the cap
 
 def test_rollout_cap_counts_from_the_starting_turn():
     cs = stalled_fight()
     cs.turn_number = 30
-    primed(cs)._simulate_random_combat(sts2_DeterministicNode(None, cs, None))
+    primed(cs)._simulate_combat_rollout(sts2_DeterministicNode(None, cs, None))
 
 def test_unfinished_rollout_is_not_rated_as_a_win():
     cs = stalled_fight()
     cs.turn_number += MAX_ROLLOUT_TURNS
-    assert primed(cs)._rate_outcome(cs) <= 0
+    assert primed(cs)._rate_outcome(cs) < win_score(1, 80, MAX_ROLLOUT_TURNS)
 
 def test_unfinished_rollout_rates_below_any_win():
     mcts = primed(stalled_fight())
@@ -951,6 +954,7 @@ def test_every_phrog_adds_its_own_wrigglers_to_both_sides():
     root = phrog_fight(2)
     mcts = primed(root)
     root.player.current_hp = 0
+    root.turn_number = 0        # no bonus for lasting longer
     assert mcts._expected_total_hp == 2 * (61 + 76) and mcts._rate_outcome(root) == -1.0
 
 def test_minions_do_not_count():
@@ -996,19 +1000,19 @@ def test_rollouts_use_the_configured_policy(policy):
     spies = {p: (lambda c, actions, p=p, f=f: (calls.update([p]), f(c, actions))[1]) for p, f in ROLLOUT_POLICY_DICT.items()}
     with mock.patch.dict(ROLLOUT_POLICY_DICT, spies):
         mcts = primed(draw_fight(), new_mcts(SearchConfig(rollout=policy)))
-        mcts._simulate_random_combat(sts2_DeterministicNode(None, draw_fight(), None))
+        mcts._simulate_combat_rollout(sts2_DeterministicNode(None, draw_fight(), None))
     assert set(calls) == {policy}
 
 def _search_with_exit_forced(early_exit):
     import contextlib, io
-    with mock.patch.object(sts2_MCTS, "_check_statistical_exit", lambda self: True), contextlib.redirect_stdout(io.StringIO()):
+    with mock.patch.object(sts2_MCTS, "_check_statistical_exit", lambda self: "BEST"), contextlib.redirect_stdout(io.StringIO()):
         mcts = sts2_MCTS()
         _, stats = mcts.monte_carlo_tree_search(draw_fight(), SearchConfig(max_sims=300, early_exit=early_exit))
     return mcts, stats["exit_reason"]
 
 def test_statistical_exit_stops_the_search_when_enabled():
     mcts, reason = _search_with_exit_forced(early_exit=True)
-    assert reason == "STATISTICAL_CONFIDENCE"
+    assert reason == "STATISTICAL_CONFIDENCE: BEST"
     assert mcts._root_node.visits == MIN_SIMS
 
 def test_disabling_early_exit_runs_to_the_sim_cap():

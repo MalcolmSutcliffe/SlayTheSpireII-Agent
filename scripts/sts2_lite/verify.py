@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 import re
 
-from sts2_lite.card import CardId, CardType, COLORLESS_CARDS, ZERO_COST_POOL
+from sts2_lite.card import CardId, CardType, COLORLESS_CARDS, ZERO_COST_POOL, STOKE_POOL
 from sts2_lite.enemy_moves import HATCHLING_HP, SPAWN_HP, TOUGH_ASCENSION
 from sts2_lite.status import StatusId
 
@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 # cards whose result depends on something the bridge hides (the draw order) or on the RNG: what they
 # generate or play cannot be predicted, so their mismatches are tagged rather than trusted
 RANDOM_CARDS = frozenset({CardId.INFERNAL_BLADE, CardId.STOKE, CardId.HAVOC, CardId.SEEKER_STRIKE, CardId.JACKPOT, CardId.JACK_OF_ALL_TRADES,
-                          CardId.CATASTROPHE, CardId.BEAT_DOWN, CardId.ANOINTED, CardId.DISCOVERY, CardId.HIDDEN_GEM,
+                          CardId.CATASTROPHE, CardId.BEAT_DOWN, CardId.ANOINTED, CardId.DISCOVERY, CardId.HIDDEN_GEM, CardId.ALCHEMIZE,
                           CardId.CINDER, CardId.THRASH, CardId.METAMORPHOSIS})       # Cinder / Thrash exhaust a random card
 # random only when not upgraded: the upgrade lets the player choose the card to exhaust
 RANDOM_UNLESS_UPGRADED = frozenset({CardId.TRUE_GRIT})
@@ -169,10 +169,10 @@ def compare(predicted : CombatState, actual : CombatState, random_step : bool = 
         # a random exhaust (Cinder, Havoc, True Grit) took a different card: the same deck, split differently between the piles
         diffs = [d for d in diffs if not d.startswith(("cards owned", "exhaust pile"))]
     if random_step and any(d.startswith("cards owned") for d in diffs):
-        # Jack of All Trades / Jackpot generate random colorless cards: the same number of cards, but a different pick
+        # Jack of All Trades / Jackpot generate random colorless cards, Stoke random Ironclad ones: the same number of cards, but a different pick
         sim_owned, game_owned = everything(pp), everything(ap)
         extra_cards = (sim_owned - game_owned) + (game_owned - sim_owned)
-        pool = set(COLORLESS_CARDS) | set(ZERO_COST_POOL)
+        pool = set(COLORLESS_CARDS) | set(ZERO_COST_POOL) | set(STOKE_POOL)
         if sum(sim_owned.values()) == sum(game_owned.values()) and all(CardId[name.split("[")[0]] in pool for name, _ in extra_cards):
             diffs = [d for d in diffs if not d.startswith("cards owned")]
     if random_step and predicted.energy != actual.energy:
@@ -181,6 +181,10 @@ def compare(predicted : CombatState, actual : CombatState, random_step : bool = 
         drum = lambda p: sum((3 if c.is_upgraded else 2) for c in p.exhaust_pile if c.card_id == CardId.DRUM_OF_BATTLE)
         if predicted.energy - actual.energy == drum(pp) - drum(ap) != 0:
             diffs = [d for d in diffs if not d.startswith("player energy")]
+    if random_step and StatusId.HELLRAISER in {**pp.status, **ap.status} and _cards(pp.hand) != _cards(ap.hand):
+        # Hellraiser plays every Strike the moment it is drawn: a different random draw means different Strikes were played,
+        # so the damage dealt, what the enemies then did and the counters of the relics that count plays all diverge
+        diffs = [d for d in diffs if not d.startswith(("player hp", "player block", "player energy", "enemy", "relic"))]
     if len(pp.hand) != len(ap.hand) and not random_step:
         diffs.append(f"hand size: sim {len(pp.hand)}, game {len(ap.hand)}")
     if not random_step:

@@ -16,6 +16,7 @@ DIAMOND_DIADEM_MULTIPLIER = 0.5
 FLUTTER_MULTIPLIER = 0.5
 SOAR_MULTIPLIER = 0.5
 SURROUND_MULTIPLIER = 1.5
+GIGANTIFICATION_MULTIPLIER = 3      # Gigantification Potion: the next Attack
 
 # game uses decimal; guards float truncation (62.999... -> 63)
 EPSILON = 1e-9
@@ -61,6 +62,8 @@ def modify_damage(base : int, attacker : Creature, target : Creature, card : Car
         damage *= SOAR_MULTIPLIER
     if StatusId.SURROUNDED in target.status and attacks_from_behind(attacker, target):
         damage *= SURROUND_MULTIPLIER
+    if StatusId.GIGANTIFICATION in attacker.status and card is not None and card.type.name == "Attack":
+        damage *= GIGANTIFICATION_MULTIPLIER
     if StatusId.SHRINK in attacker.status:
         damage *= SHRINK_MULTIPLIER
     if StatusId.SLOW in target.status:

@@ -150,6 +150,8 @@ class CardId(Enum):
     DISCOVERY = auto()
     ENTROPY = auto()
     HIDDEN_GEM = auto()
+    ALCHEMIZE = auto()
+    LUMINESCE = auto()
     TRUE_GRIT = auto()
     BURNING_PACT = auto()
     HAVOC = auto()
@@ -225,7 +227,7 @@ UPGRADE_COST_CHANGE = {
     CardId.UNMOVABLE : -1, CardId.HAVOC : -1, CardId.EXPECT_A_FIGHT : -1, CardId.INFERNAL_BLADE : -1,
     CardId.BODY_SLAM : -1, CardId.HELLRAISER : -1, CardId.MIND_BLAST : -1,
     CardId.AUTOMATION : -1, CardId.MAYHEM : -1, CardId.NOSTALGIA : -1, CardId.CALAMITY : -1,
-    CardId.APOTHEOSIS : -1, CardId.ABUNDANCE : -1,
+    CardId.APOTHEOSIS : -1, CardId.ABUNDANCE : -1, CardId.ALCHEMIZE : -1,
 }
 # CardModel base cost of the cards above (an upgrade caps a rolled Confused cost at base + change)
 UPGRADE_BASE_COST = {
@@ -233,7 +235,7 @@ UPGRADE_BASE_COST = {
     CardId.UNMOVABLE : 2, CardId.HAVOC : 1, CardId.EXPECT_A_FIGHT : 2, CardId.INFERNAL_BLADE : 1,
     CardId.BODY_SLAM : 1, CardId.HELLRAISER : 2, CardId.MIND_BLAST : 1,
     CardId.AUTOMATION : 1, CardId.MAYHEM : 2, CardId.NOSTALGIA : 1, CardId.CALAMITY : 3,
-    CardId.APOTHEOSIS : 2, CardId.ABUNDANCE : 1,
+    CardId.APOTHEOSIS : 2, CardId.ABUNDANCE : 1, CardId.ALCHEMIZE : 1,
 }
 # keyword an upgrade removes (Exhaust)
 UPGRADE_REMOVED_KEYWORD = {CardId.SECRET_TECHNIQUE : 1, CardId.SECRET_WEAPON : 1, CardId.THINKING_AHEAD : 1, CardId.PROLONG : 1, CardId.DISCOVERY : 1, CardId.APPARITION : 2}      # Exhaust x5, Ethereal for Apparition
@@ -260,7 +262,7 @@ EXHAUSTING_CARDS = frozenset({CardId.SLIMED, CardId.TREMBLE, CardId.IMPERVIOUS, 
                               CardId.INFERNAL_BLADE, CardId.NOT_YET, CardId.OFFERING, CardId.SPORE_MIND,
                               CardId.PRODUCTION, CardId.MASTER_OF_STRATEGY, CardId.DRAMATIC_ENTRANCE, CardId.SHOCKWAVE,
                               CardId.SCRAWL, CardId.PURITY, CardId.SECRET_TECHNIQUE, CardId.SECRET_WEAPON, CardId.THINKING_AHEAD,
-                              CardId.PANIC_BUTTON, CardId.PROLONG, CardId.DARK_SHACKLES, CardId.JACK_OF_ALL_TRADES, CardId.ANOINTED, CardId.DISCOVERY,
+                              CardId.PANIC_BUTTON, CardId.PROLONG, CardId.DARK_SHACKLES, CardId.JACK_OF_ALL_TRADES, CardId.ANOINTED, CardId.DISCOVERY, CardId.ALCHEMIZE, CardId.LUMINESCE,
                               CardId.ENLIGHTENMENT, CardId.METAMORPHOSIS, CardId.NEOWS_FURY,
                               CardId.ABUNDANCE, CardId.APOTHEOSIS, CardId.APPARITION, CardId.RELAX, CardId.WHISTLE, CardId.WISH})
 
@@ -278,7 +280,7 @@ UNPLAYABLE_CARDS = frozenset({CardId.DAZED, CardId.WOUND, CardId.NOT_IMPLEMENTED
 ETHEREAL_CARDS = frozenset({CardId.APPARITION, CardId.DAZED, CardId.CLUMSY, CardId.FOLLY, CardId.ASCENDERS_BANE})
 
 # Retain / Innate / Eternal: only Retain acts in combat (Innate and Eternal are deck-level)
-RETAINING_CARDS = frozenset({CardId.POOR_SLEEP, CardId.RESTLESSNESS, CardId.PURITY})
+RETAINING_CARDS = frozenset({CardId.POOR_SLEEP, CardId.RESTLESSNESS, CardId.PURITY, CardId.LUMINESCE})
 INNATE_CARDS = frozenset({CardId.APOTHEOSIS, CardId.WRITHE, CardId.FOLLY, CardId.DRAMATIC_ENTRANCE, CardId.MIND_BLAST})
 ETERNAL_CARDS = frozenset({CardId.BAD_LUCK, CardId.ASCENDERS_BANE, CardId.CURSE_OF_THE_BELL, CardId.GREED, CardId.FOLLY})
 
@@ -359,6 +361,7 @@ class Card:
     target_type : TargetType
     is_upgraded : bool
     is_unplayable : bool
+    guessed_cost : bool = False                # the cost was put back from the card tables while the Scarf showed 0: a previous state may know better
     restore_cost : int | str | None = None     # set while the cost is changed for this turn: the cost it gets back
     until_played : bool = False                # the temporary cost also ends when the card is played (SetThisTurnOrUntilPlayed)
     replay : int = 0                           # extra plays the card has for good (Hidden Gem); Glam's is the REPLAY keyword
@@ -479,6 +482,8 @@ class Card:
             self._keywords = self._mask | _REPLAY
         elif enchantment == EnchantmentId.GOOPY:
             self._keywords = self._mask | CardKeyword.EXHAUST.value
+        elif enchantment == EnchantmentId.SOULS_POWER:      # "This card loses Exhaust" (the bridge still lists the card's own keywords)
+            self._keywords = self._mask & ~CardKeyword.EXHAUST.value
 
     @classmethod
     def create_slimed(cls) -> Card:
@@ -759,6 +764,7 @@ class Card:
         new_card.is_upgraded = card.is_upgraded
         new_card.is_unplayable = card.is_unplayable
         new_card.restore_cost = card.restore_cost
+        new_card.guessed_cost = card.guessed_cost
         new_card.until_played = card.until_played
         new_card.bonus_damage = card.bonus_damage
         new_card.replay = card.replay
@@ -849,9 +855,17 @@ class Card:
             raise
         combat.finish_vigor()
 
-        for _ in range(extra):
+        self.run_extra_plays(combat, target_index, x, extra, saved, spent)
+
+    def run_extra_plays(self, combat : CombatSimulator, target_index : int, x, extra : int, saved, spent):
+        """The further plays of one card. A play that asks for a card choice holds the rest back until it is answered (the game plays them in turn)."""
+        cs = combat.combat_state
+        for done in range(extra):
+            if cs.pending_choice is not None:
+                cs.continuations = cs.continuations + [("replay", self, target_index, x, extra - done, saved, spent)]
+                return
             combat.card_played_hooks(self)          # AfterCardPlayed of the previous play
-            if not any(e.current_hp > 0 for e in combat.combat_state.enemies):
+            if not any(e.current_hp > 0 for e in cs.enemies):
                 break
             if saved:
                 before_card_played(combat, self, spent)
@@ -891,6 +905,9 @@ class Card:
             if punch.amount <= 0:
                 del player.status[StatusId.ONE_TWO_PUNCH]
         extra += self.replay
+        if StatusId.DUPLICATION in player.status:        # Duplicator Potion: the next card this turn, once
+            extra += 1
+            del player.status[StatusId.DUPLICATION]
         if self._mask & _REPLAY:        # Replay 1 (Glam); it is spent after this play, but this count is fixed before it
             extra += 1
         if player.relics and _AXE in player.relics:
@@ -1282,25 +1299,12 @@ def play_jack_of_all_trades(card: Card, combat : CombatSimulator, target_index=0
         combat.combat_state.player.add_to_hand(Card.create_generated(card_id))
 
 def play_catastrophe(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    player = combat.combat_state.player
-    for _ in range(3 if is_upgraded else 2):
-        if combat.is_over or not player.draw_pile:
-            break
-        playable = [c for c in player.draw_pile if not c.unplayable]
-        pick = rng.choice(playable or player.draw_pile)             # a random playable card, any card if none is
-        if pick.unplayable:
-            player.remove_from_draw_pile(pick)
-            player.discard_pile.append(pick)
-        else:
-            combat.auto_play(pick)
+    combat.play_random_from_draw_pile(3 if is_upgraded else 2)
 
 def play_beat_down(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     player = combat.combat_state.player
     attacks = [c for c in player.discard_pile if c.type == CardType.Attack and not c.unplayable]
-    for pick in rng.sample(attacks, min(len(attacks), 4 if is_upgraded else 3)):       # all chosen before the first is played
-        if combat.is_over:
-            break
-        combat.auto_play(pick)
+    combat._run_autoplay(rng.sample(attacks, min(len(attacks), 4 if is_upgraded else 3)))       # all chosen before the first is played; a card that asks for a pick holds the rest back
 
 def play_anointed(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     player = combat.combat_state.player
@@ -1315,6 +1319,11 @@ def play_discovery(card: Card, combat : CombatSimulator, target_index=0, is_upgr
 
 def play_entropy(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     combat.combat_state.player.apply_status(StatusId.ENTROPY, 1)
+
+def play_alchemize(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    """Procure a random potion (never Fruit Juice); nothing happens when every potion slot is full."""
+    from sts2_lite.potion import procure_random_potion, PotionId
+    procure_random_potion(combat.combat_state.player, exclude=(PotionId.FRUIT_JUICE,))
 
 def play_hidden_gem(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     player = combat.combat_state.player
@@ -1495,6 +1504,9 @@ def play_juggernaut(card: Card, combat : CombatSimulator, target_index=0, is_upg
 
 def play_juggling(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     combat.combat_state.player.apply_status(StatusId.JUGGLING, 1)
+
+def play_luminesce(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    combat.gain_energy(3 if is_upgraded else 2)
 
 def play_mangle(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     target = _enemy(combat, target_index)
@@ -1898,6 +1910,7 @@ def play_thinking_ahead(card: Card, combat : CombatSimulator, target_index=0, is
 GET_CARD_FUNCTION : dict[CardId, function] = {
     CardId.ABUNDANCE : play_abundance,
     CardId.AGGRESSION : play_aggression,
+    CardId.ALCHEMIZE : play_alchemize,
     CardId.ANGER : play_anger,
     CardId.ANOINTED : play_anointed,
     CardId.APOTHEOSIS : play_apotheosis,
@@ -1978,6 +1991,7 @@ GET_CARD_FUNCTION : dict[CardId, function] = {
     CardId.JACK_OF_ALL_TRADES : play_jack_of_all_trades,
     CardId.JUGGERNAUT : play_juggernaut,
     CardId.JUGGLING : play_juggling,
+    CardId.LUMINESCE : play_luminesce,
     CardId.MANGLE : play_mangle,
     CardId.MASTER_OF_STRATEGY : play_master_of_strategy,
     CardId.MAUL : play_maul,
@@ -2142,7 +2156,8 @@ GENERATABLE_CARDS = {
     CardId.VICIOUS : ("Vicious", CardType.Power, 1, S),
     CardId.WHIRLWIND : ("Whirlwind", CardType.Attack, "X", ALL),
 }
-TOKEN_CARDS = {CardId.GIANT_ROCK : ("Giant Rock", CardType.Attack, 1, A)}      # made by Primal Force
+TOKEN_CARDS = {CardId.GIANT_ROCK : ("Giant Rock", CardType.Attack, 1, A),      # made by Primal Force
+               CardId.LUMINESCE : ("Luminesce", CardType.Skill, 0, S)}          # Radiant Pearl: Retain. Gain 2 Energy (3 upgraded). Exhaust.
 # event cards (CardRarity.Event): never generated in combat; listed so tests and transforms can build them
 EVENT_CARDS = {
     CardId.BYRD_SWOOP : ("Swoop", CardType.Attack, 0, A), CardId.PECK : ("Peck", CardType.Attack, 1, A),
@@ -2151,7 +2166,7 @@ EVENT_CARDS = {
     CardId.TORIC_TOUGHNESS : ("Toric Toughness", CardType.Skill, 2, S),
 }
 # colorless cards that card effects can add (Jack of All Trades, Toolbox): (name, type, cost, target). Multiplayer-only
-# cards are left out; Alchemize and Splash are not modelled; Alchemize, Hand of Greed and Hidden Gem are never generated in combat.
+# cards are left out; Splash is not modelled; Alchemize, Hand of Greed and Hidden Gem are never generated in combat.
 COLORLESS_CARDS = {
     CardId.FINESSE : ("Finesse", CardType.Skill, 0, S), CardId.FLASH_OF_STEEL : ("Flash of Steel", CardType.Attack, 0, A),
     CardId.ULTIMATE_STRIKE : ("Ultimate Strike", CardType.Attack, 1, A), CardId.ULTIMATE_DEFEND : ("Ultimate Defend", CardType.Skill, 1, S),
@@ -2178,7 +2193,7 @@ COLORLESS_CARDS = {
     CardId.JACK_OF_ALL_TRADES : ("Jack of All Trades", CardType.Skill, 0, S), CardId.CATASTROPHE : ("Catastrophe", CardType.Skill, 2, S),
     CardId.BEAT_DOWN : ("Beat Down", CardType.Skill, 3, RAND), CardId.ANOINTED : ("Anointed", CardType.Skill, 1, S),
     CardId.DISCOVERY : ("Discovery", CardType.Skill, 1, S), CardId.ENTROPY : ("Entropy", CardType.Power, 1, S),
-    CardId.HIDDEN_GEM : ("Hidden Gem", CardType.Skill, 1, S),
+    CardId.HIDDEN_GEM : ("Hidden Gem", CardType.Skill, 1, S), CardId.ALCHEMIZE : ("Alchemize", CardType.Skill, 1, S),
 }
 
 # Ancient cards the sim could not read from the decompiled source (name, type, cost, target)
@@ -2190,10 +2205,10 @@ ANCIENT_CARDS = {
 }
 
 # what Jack of All Trades can make: Hand of Greed (and Alchemize and Hidden Gem) cannot be generated in combat, and it makes no Jack of All Trades
-NOT_GENERATED_COLORLESS = frozenset({CardId.HAND_OF_GREED, CardId.HIDDEN_GEM, CardId.JACK_OF_ALL_TRADES})
+NOT_GENERATED_COLORLESS = frozenset({CardId.HAND_OF_GREED, CardId.HIDDEN_GEM, CardId.JACK_OF_ALL_TRADES, CardId.ALCHEMIZE})
 JACK_POOL = [cid for cid in COLORLESS_CARDS if cid not in NOT_GENERATED_COLORLESS]
 # what a card can be transformed into: generatable colorless cards (Jack of All Trades included), or generatable Ironclad cards
-TRANSFORM_COLORLESS = [cid for cid in COLORLESS_CARDS if cid not in (CardId.HAND_OF_GREED, CardId.HIDDEN_GEM)]
+TRANSFORM_COLORLESS = [cid for cid in COLORLESS_CARDS if cid not in (CardId.HAND_OF_GREED, CardId.HIDDEN_GEM, CardId.ALCHEMIZE)]
 
 def transform_options(card : Card) -> list[CardId]:
     """CardFactory.GetFilteredTransformationOptions: Common to Rare cards of the card's own pool (Neow's Fury is colorless), never the same card.
@@ -2234,7 +2249,7 @@ _RARITY_NAMES = {
     ),
     CardRarity.Rare : (
         "CRIMSON_MANTLE IMPERVIOUS FEED AGGRESSION MASTER_OF_STRATEGY SCRAWL GOLD_AXE REND ETERNAL_ARMOR HAND_OF_GREED SECRET_TECHNIQUE "
-        "SECRET_WEAPON SALVO ROLLING_BOULDER THE_GAMBIT MAYHEM NOSTALGIA BOLAS JACKPOT CALAMITY BEAT_DOWN ANOINTED ENTROPY HIDDEN_GEM "
+        "SECRET_WEAPON SALVO ROLLING_BOULDER THE_GAMBIT MAYHEM NOSTALGIA BOLAS JACKPOT CALAMITY BEAT_DOWN ANOINTED ENTROPY HIDDEN_GEM ALCHEMIZE "
         "BARRICADE CRUELTY DARK_EMBRACE DEMON_FORM JUGGERNAUT ONE_TWO_PUNCH PYRE UNMOVABLE CASCADE CONFLAGRATION FIEND_FIRE NOT_YET "
         "OFFERING PACTS_END BRAND HELLRAISER MANGLE PRIMAL_FORCE STOKE TEAR_ASUNDER THRASH"
     ),
@@ -2245,7 +2260,7 @@ _RARITY_NAMES = {
         "BYRD_SWOOP EXTERMINATE PECK SQUASH ENLIGHTENMENT METAMORPHOSIS TORIC_TOUGHNESS"
     ),
     CardRarity.Token : (
-        "GIANT_ROCK"
+        "GIANT_ROCK LUMINESCE"
     ),
     CardRarity.Status : (
         "SLIMED INFECTION BURN BECKON WITHER DAZED WOUND SOOT TOXIC FRANTIC_ESCAPE DISINTEGRATION MIND_ROT SLOTH WASTE_AWAY"
