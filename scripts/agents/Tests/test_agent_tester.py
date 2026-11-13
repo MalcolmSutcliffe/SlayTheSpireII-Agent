@@ -5,8 +5,8 @@ import types
 from pathlib import Path
 
 import pytest
+from data_paths import RELICS, VERIFIER
 
-DATA = Path(__file__).resolve().parents[2] / "sts2_lite" / "Tests" / "data"
 
 @pytest.fixture
 def tester(monkeypatch):
@@ -42,7 +42,7 @@ class FirstActionAgent:
         return CombatSimulator(combat_state).get_available_actions()[0]
 
 def capture():
-    return json.loads((DATA / "relics" / "spiked_gauntlets.json").read_text())
+    return json.loads((RELICS / "spiked_gauntlets.json").read_text())
 
 def run(tester, monkeypatch, states, tmp_path):
     game = FakeGame(states)
@@ -225,9 +225,9 @@ def test_the_hand_screen_renumbers_after_a_pick_so_identical_cards_reuse_the_ind
 
 def test_a_pick_the_sim_already_made_is_clicked_for_it(tester, monkeypatch):
     """Two identical Defends: the sim upgrades one without asking, the game still shows the screen."""
-    case = json.loads((DATA / "log_cases" / "armaments_identical_defends.json").read_text())
-    screen = json.loads((DATA / "log_cases" / "armaments_select_screen.json").read_text())
-    done = json.loads((DATA / "log_cases" / "armaments_choose_defend.json").read_text())["after"]
+    case = json.loads((VERIFIER / "log_cases" / "armaments_identical_defends.json").read_text())
+    screen = json.loads((VERIFIER / "log_cases" / "armaments_select_screen.json").read_text())
+    done = json.loads((VERIFIER / "log_cases" / "armaments_choose_defend.json").read_text())["after"]
     commands = Commands()
     states = [case["before"], screen, screen, done]
     reads = []
@@ -275,7 +275,7 @@ def test_a_choose_screen_is_a_pick_and_is_skipped_with_cancel(tester, monkeypatc
 def test_toolbox_screen_is_a_pick_without_skip_and_the_sim_has_no_state_for_it(tester):
     """Toolbox offers 3 colorless cards before the first hand is drawn (no skip): there is no combat state yet, so the
     tester can only recognise the screen and leave the pick to the player."""
-    screen = json.loads((DATA / "relics" / "toolbox_select.json").read_text())
+    screen = json.loads((RELICS / "toolbox_select.json").read_text())
     assert tester.kind_of(screen, expecting_choice=True) == "pick" and not screen["can_skip"] and not screen["can_cancel"]
     assert [c["id"] for c in screen["cards"]] == ["BEAT_DOWN", "IMPATIENCE", "OMNISLICE"]
 

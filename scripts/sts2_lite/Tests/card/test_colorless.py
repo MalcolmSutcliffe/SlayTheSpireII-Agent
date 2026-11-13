@@ -8,6 +8,7 @@ from pathlib import Path
 from agents.verify import compare, is_random_step
 from sts2_lite.selection import game_index
 from sts2_lite import rng
+from data_paths import CARDS
 
 
 S, A, ALL, RAND = TargetType.NONE, TargetType.AnyEnemy, TargetType.AllEnemies, TargetType.RandomEnemy
@@ -334,9 +335,9 @@ def test_card_ids_load_from_the_bridge():
     for name in ("FINESSE", "FLASH_OF_STEEL", "ULTIMATE_STRIKE", "MASTER_OF_STRATEGY", "HAND_OF_GREED", "GOLD_AXE"):
         assert CardId[name]
 
-# ------------------------------------------------------------ captures: Tests/data/cards/colorless
+# ------------------------------------------------------------ captures: data/cards/colorless
 
-CAPTURES = Path(__file__).parents[1] / "data" / "cards" / "colorless"
+CAPTURES = CARDS / "colorless"
 
 def capture(name):
     return json.loads((CAPTURES / f"{name}.json").read_text())
@@ -555,9 +556,9 @@ def test_secret_and_seeker_cards_exist():
     for name in ("SECRET_TECHNIQUE", "SECRET_WEAPON", "SEEKER_STRIKE", "THINKING_AHEAD"):
         assert CardId[name]
 
-# ------------------------------------------------------------ captures: Tests/data/cards/colorless
+# ------------------------------------------------------------ captures: data/cards/colorless
 
-CAPTURES = Path(__file__).parents[1] / "data" / "cards" / "colorless"
+CAPTURES = CARDS / "colorless"
 
 def capture(name):
     return json.loads((CAPTURES / f"{name}.json").read_text())
@@ -1083,7 +1084,7 @@ def test_instanced_powers_read_their_damage_from_the_text_and_merge_copies():
     assert player.status[StatusId.THE_BOMB].records == [[2, 50], [3, 40]] and player.status[StatusId.THE_BOMB].amount == 5
     assert player.status[StatusId.PANACHE].records == [[3, 14, 1]]
 
-# ------------------------------------------------------------ captures: Tests/data/cards/colorless
+# ------------------------------------------------------------ captures: data/cards/colorless
 
 def test_capture_two_automations_load_as_two_copies():
     player = CombatState.from_dict(capture("automation_two_stacks")).player

@@ -338,7 +338,7 @@ def test_negative_dexterity_is_a_debuff_for_artifact():
     assert cs.player.status_amount(StatusId.DEXTERITY) == 0 and cs.enemies[0].status_amount(StatusId.DEXTERITY) == 2
 
 
-# ---------------------------------------------------------------- captured from the game (Tests/data/act3_glory)
+# ---------------------------------------------------------------- captured from the game (data/enemies/act3_glory)
 def test_globe_head_galvanic_matches_the_game_capture():
     """Inflame with 10 block and Galvanic 6: the block takes the damage (10 -> 4), hit points stay."""
     from agents import verify

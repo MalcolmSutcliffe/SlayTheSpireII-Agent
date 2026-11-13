@@ -4,12 +4,12 @@ from sts2_lite.card import Card, CardId, CardType, TargetType
 from sts2_lite.combat import CombatSimulator, CombatState
 from sts2_lite.status import StatusId
 from agents.verify import compare, snapshot, is_random_step
+from data_paths import ENEMIES, RELICS, VERIFIER
 
 
-DATA = Path(__file__).resolve().parents[2] / "sts2_lite" / "Tests" / "data"
 
-def load(name="relics/spiked_gauntlets.json"):
-    return CombatState.from_dict(json.loads((DATA / name).read_text()))
+def load(path=RELICS / "spiked_gauntlets.json"):
+    return CombatState.from_dict(json.loads(path.read_text()))
 
 def played(cs, action):
     after = CombatState.deepcopy(cs)
@@ -165,15 +165,15 @@ def test_random_targets_that_differ_in_vulnerability_are_matched_by_replaying():
     from sts2_lite import enemy as enemy_module
     from agents.verify import some_target_roll_matches
     enemy_module.STRICT_BRIDGE_CHECKS = True
-    before = CombatState.from_dict(json.loads((DATA / "act2_hive/kaiser_crab/boomerang_before.json").read_text()))
-    after = CombatState.from_dict(json.loads((DATA / "act2_hive/kaiser_crab/boomerang_after.json").read_text()))
+    before = CombatState.from_dict(json.loads((ENEMIES / "act2_hive" / "kaiser_crab" / "boomerang_before.json").read_text()))
+    after = CombatState.from_dict(json.loads((ENEMIES / "act2_hive" / "kaiser_crab" / "boomerang_after.json").read_text()))
     action = {"action": "play_card", "card_index": 0, "target": 0}
     assert some_target_roll_matches(before, [action], after, random_step=False)
     after.enemies[0].current_hp -= 1                    # a wrong amount is still caught
     assert not some_target_roll_matches(before, [action], after, random_step=False, tries=60)
 
 
-MISMATCHES = DATA / "mismatches"
+MISMATCHES = VERIFIER / "mismatches"
 
 def load_mismatch(name):
     d = json.loads((MISMATCHES / f"{name}.json").read_text())
@@ -229,7 +229,7 @@ def test_stampede_picking_between_attacks_is_not_compared():
     assert not is_unpredictable_step(before, actions)        # one kind of Attack left: only that one can be played
 
 
-CASES = DATA / "log_cases"
+CASES = VERIFIER / "log_cases"
 
 def case(name):
     return json.loads((CASES / f"{name}.json").read_text())

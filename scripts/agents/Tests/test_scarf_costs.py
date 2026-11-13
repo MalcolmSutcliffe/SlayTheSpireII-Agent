@@ -6,8 +6,9 @@ from sts2_lite import rng
 from sts2_lite.card import CardId
 from sts2_lite.combat import CombatState, CombatSimulator
 from agents.verify import compare
+from data_paths import SEARCH
 
-CASE = json.load(open(os.path.join(os.path.dirname(__file__), "fixtures", "juggernaut_scarf.json")))
+CASE = json.load(open(SEARCH / "juggernaut_scarf.json"))
 
 
 def _previous():
@@ -41,7 +42,7 @@ def test_without_history_the_table_cost_is_assumed():
 
 
 def test_slimed_costs_one_after_the_scarfs_free_card():
-    case = json.load(open(os.path.join(os.path.dirname(__file__), "fixtures", "slimed_scarf.json")))
+    case = json.load(open(SEARCH / "slimed_scarf.json"))
     rng.seed(0)
     state = CombatState.from_dict(case["before"])
     simulator = CombatSimulator(state)

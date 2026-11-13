@@ -7,8 +7,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from sts2_lite import rng
 from sts2_lite.combat import CombatState
 from agents.sts2_MCTS.MCTS import sts2_MCTS, SearchConfig
+from data_paths import SEARCH
 
-STATE = os.path.join(os.path.dirname(__file__), "fixtures", "effigy_turn1.json")
+STATE = str(SEARCH / "effigy_turn1.json")
 BREAKTHROUGH, BASH, BLUDGEON = 4, 0, 3        # hand indices
 
 

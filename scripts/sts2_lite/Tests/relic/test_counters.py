@@ -5,6 +5,7 @@ from sts2_lite.relic import RelicId, RelicInstance, SEEN_ATTACK, SEEN_SKILL
 from sts2_lite.status import StatusId
 from sts2_lite.Tests.relic.test_always_on import card, strike, twin_strike, defend, bash, inflame, whirlwind, held, relic, state, enemy_attack, plays
 from sts2_lite.Tests.card.test_card import hps
+from data_paths import RELICS
 
 
 def impervious():
@@ -578,7 +579,7 @@ def _capture(name, energy=None):
     """A saved state; `energy` is for captures taken with nothing left to spend."""
     import json
     from pathlib import Path
-    cs = CombatState.from_dict(json.loads((Path(__file__).parents[1] / "data" / "relics" / f"{name}.json").read_text()))
+    cs = CombatState.from_dict(json.loads((RELICS / f"{name}.json").read_text()))
     if energy is not None:
         cs.energy = energy
         for c in cs.player.hand:

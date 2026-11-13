@@ -392,7 +392,7 @@ def test_shriek_goes_off_once_and_a_tough_eel_screams_at_seventy_five():
     assert e.move_id == STUNNED
 
 
-# ---------------------------------------------------------------- captured from the game (Tests/data/act1_underdocks)
+# ---------------------------------------------------------------- captured from the game (data/enemies/act1_underdocks)
 from agents import verify
 from sts2_lite.Tests import captures
 

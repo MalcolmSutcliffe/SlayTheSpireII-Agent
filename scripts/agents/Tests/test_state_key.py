@@ -13,8 +13,9 @@ from sts2_lite.relic import RelicId, RelicInstance
 from agents.sts2_MCTS.state_key import state_key
 from sts2_lite.status import StatusId
 from sts2_lite.Tests.card.test_card import make_card, make_state
+from data_paths import BENCHMARKS
 
-BENCH_STATES = Path(__file__).resolve().parents[2] / "benchmarks" / "act1"
+BENCH_STATES = BENCHMARKS / "act1"
 
 
 def strike():

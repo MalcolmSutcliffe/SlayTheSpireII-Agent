@@ -11,6 +11,7 @@ from sts2_lite.Tests.card.test_card import make_card, make_state, make_enemy
 from sts2_lite.Tests.card.test_powers import strike, defend, skill, power, one_enemy
 from sts2_lite.relic import RelicId, RelicInstance
 from pathlib import Path
+from data_paths import CARDS, RELICS
 
 
 def holding(cs, *potions):
@@ -651,7 +652,7 @@ def test_the_potion_relics_are_loaded_from_a_state():
 
 
 # ---------------------------------------------------------------- Gambling Chip: a hand-select screen on turn 1
-PURITY = Path(__file__).parent / "data" / "cards" / "colorless"
+PURITY = CARDS / "colorless"
 
 def gambling_chip_screen(ticked=()):
     """The Purity capture with the prompt of a discard screen (the real prompt is not captured yet)."""
@@ -808,7 +809,7 @@ def test_beat_down_waits_for_a_pick_too(seed):
 
 
 # ---------------------------------------------------------------- Luminesce (Radiant Pearl's token: 0-cost Skill, Retain, Gain 2 Energy (3 upgraded), Exhaust)
-LUMINESCE_CAPTURE = Path(__file__).parent / "data" / "relics" / "radiant_pearl_luminesce.json"
+LUMINESCE_CAPTURE = RELICS / "radiant_pearl_luminesce.json"
 
 def test_luminesce_is_a_free_retaining_exhausting_skill():
     card = Card.create_generated(CardId.LUMINESCE)

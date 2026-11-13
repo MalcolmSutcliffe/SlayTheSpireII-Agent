@@ -13,9 +13,10 @@ from sts2_lite import rng
 from sts2_lite.Tests.card.test_draw_energy import infernal_blade
 from sts2_lite.Tests.card.test_ironclad import stomp, hellraiser
 from sts2_lite.enemy import Enemy
+from data_paths import ENEMIES, RELICS
 
 
-RELICS = Path(__file__).parents[1] / "data" / "relics"
+RELICS = RELICS
 
 BRIDGE_IDS = ["SAI", "MR_STRUGGLES", "PAELS_TEARS", "PAELS_FLESH", "LOST_WISP", "FORGOTTEN_SOUL", "IRON_CLUB",
               "HAND_DRILL", "THE_BOOT", "FAKE_ORICHALCUM", "FAKE_STRIKE_DUMMY", "FAKE_HAPPY_FLOWER",
@@ -341,7 +342,7 @@ def test_happy_flower_flash_reading_loads_as_zero():
 
 # ---------------------------------------------------------------- Letter Opener counter (live captures)
 
-_RELICS = _Path(__file__).parents[1] / "data" / "relics"
+_RELICS = RELICS
 
 def _letter_opener(state):
     return state.player.relics[_RelicId.LETTER_OPENER]
@@ -378,7 +379,7 @@ def test_letter_opener_fires_and_matches_after_battle_trance():
     assert _letter_opener(before).counter == _letter_opener(after).counter == 0
 
 
-RELICS = Path(__file__).parents[1] / "data" / "relics"
+RELICS = RELICS
 
 
 
@@ -801,7 +802,7 @@ def test_bridge_stomp_under_confused_is_the_roll():
     assert (cs.player.hand[1].energy_cost, cs.player.hand[1].restore_cost) == (1, None)
 
 
-RELICS = Path(__file__).parents[1] / "data" / "relics"
+RELICS = RELICS
 
 def draw_pile(cs, n=30):
     cs.player.draw_pile = [defend() for _ in range(n)]
@@ -979,7 +980,7 @@ def test_summoned_enemies_have_no_strength_without_the_relic():
 
 # ---------------------------------------------------------------- Tangled shown by the bridge (capture)
 def test_tangled_capture_attack_costs_are_not_counted_twice():
-    path = Path(__file__).parents[1] / "data" / "act1_overgrowth" / "vine_shambler" / "tangled.json"
+    path = ENEMIES / "act1_overgrowth" / "vine_shambler" / "tangled.json"
     cs = CombatState.from_dict(json.loads(path.read_text()))
     strike_card = next(c for c in cs.player.hand if c.card_id is CardId.STRIKE_IRONCLAD)
     defend_card = next(c for c in cs.player.hand if c.card_id is CardId.DEFEND_IRONCLAD)

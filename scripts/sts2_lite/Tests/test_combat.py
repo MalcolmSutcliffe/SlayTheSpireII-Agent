@@ -13,6 +13,7 @@ from sts2_lite.relic import RelicId
 from sts2_lite.Tests.card import test_card as card_tests
 from sts2_lite.Tests.relic import test_always_on as relic_tests
 from sts2_lite.Tests.relic.test_always_on import held, relic
+from data_paths import RELICS
 
 
 # ---------------------------------------------------------------- helpers
@@ -548,7 +549,7 @@ def test_lamp_from_capture_is_unspent_after_bash_killed_its_target():
     from sts2_lite.combat import CombatState
     import json
     from pathlib import Path
-    raw = json.loads((Path(__file__).parent / "data" / "relics" / "unsettling_lamp_after_kill.json").read_text())
+    raw = json.loads((RELICS / "unsettling_lamp_after_kill.json").read_text())
     cs = CombatState.from_dict(raw)
     assert not relic_of(cs, RelicId.UNSETTLING_LAMP).used
 

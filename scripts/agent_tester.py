@@ -6,6 +6,7 @@ from sts2_lite.card import CardId, CardType
 from sts2_lite.combat import CombatState, CombatSimulator
 from sts2_lite.selection import game_index
 from agents.verify import compare, snapshot, is_random_step, is_unpredictable_step, some_target_roll_matches
+from data_paths import RUNS
 
 import argparse
 import functools
@@ -23,7 +24,7 @@ SETTLE_INTERVAL = 0.25          # seconds between those reads
 LOCKED_READS = 8                # reads of locked-looking cards (about 3 s) before the agent acts anyway
 ACTION_TIMEOUT = 8.0            # seconds to wait for the game to react to a play_card / end_turn
 DEFAULT_LOG = "engine_mismatches.jsonl"     # where differences go when no run is named
-RUNS_DIR = Path(__file__).resolve().parent / "runs"
+RUNS_DIR = RUNS
 
 TIME_BUDGET_SECONDS = 10.0       # Max time allocated for agent to think
 
@@ -356,7 +357,7 @@ def write_fight(path : str, summary : dict):
         f.write(json.dumps(summary) + "\n")
 
 def capture_turn_start(game_state : dict, directory : str) -> str:
-    """Saves the state the agent is about to act on at the start of a turn (raw bridge output, as in Tests/data) so the
+    """Saves the state the agent is about to act on at the start of a turn (raw bridge output, as in data/enemies) so the
     benchmark can replay it, and adds one line to index.jsonl. Returns the file name."""
     floor = (game_state.get("context") or {}).get("floor")
     names = [e.get("name", "?") for e in game_state.get("enemies", [])]
@@ -488,7 +489,7 @@ def save_decision_state(state_dir : str, number : int, game_state : dict):
 
 def run_paths(run : str, decisions : bool = False, fights : bool = False, states : bool = False, captures : bool = False,
               append : bool = False, runs_dir : Path | None = None) -> dict:
-    """Where one run keeps its data: runs/<run>/ holds mismatches.jsonl always, and decisions.jsonl, fights.jsonl, states/ and
+    """Where one run keeps its data: data/runs/<run>/ holds mismatches.jsonl always, and decisions.jsonl, fights.jsonl, states/ and
     captures/ for the aspects asked for. A directory that already has files in it is refused unless `append` (a stopped run
     that carries on): the numbers of the saved states would otherwise start again at 1 and overwrite the old ones.
     Returns the keyword arguments of run_agent."""
@@ -729,8 +730,8 @@ def run_agent(agent : BaseAgent, step : bool = False, verify : bool = True, log_
 
 def main(argv : list[str] | None = None):
     parser = argparse.ArgumentParser(description="Let the agent play every combat; compare the sim with the game after each action. "
-                                     "Name a run to keep its data in runs/<run>/ (mismatches.jsonl is always written there).")
-    parser.add_argument("run", nargs="?", default=None, help="folder name for this run's data inside runs/, e.g. run3-a9")
+                                     "Name a run to keep its data in data/runs/<run>/ (mismatches.jsonl is always written there).")
+    parser.add_argument("run", nargs="?", default=None, help="folder name for this run's data inside data/runs/, e.g. run3-a9")
     parser.add_argument("--decisions", action="store_true", help="save decisions.jsonl: every move with its sims, time, and each move's visits and mean reward")
     parser.add_argument("--fights", action="store_true", help="save fights.jsonl: one line per fight with enemies, HP at the start and end, rounds, outcome, search totals and the deepest tree")
     parser.add_argument("--states", action="store_true", help="save states/decision_NNNNN.json: the game state behind every decision (numbers match --decisions)")

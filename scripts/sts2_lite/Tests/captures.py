@@ -1,10 +1,10 @@
-"""Loads saved bridge states: data/<act>/<enemy>/<name>.json"""
+"""Loads saved bridge states: data/enemies/<act>/<enemy>/<name>.json"""
 import json
-from pathlib import Path
 
+from data_paths import ENEMIES
 from sts2_lite.combat import CombatState
 
-DATA = Path(__file__).parent / "data"
+DATA = ENEMIES
 ACT1 = "act1_overgrowth"
 HIVE = "act2_hive"
 GLORY = "act3_glory"

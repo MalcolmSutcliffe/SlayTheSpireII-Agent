@@ -7,6 +7,7 @@ from sts2_lite.Tests.card.test_card import make_card, make_state, play, hps
 from sts2_lite.status import StatusId
 from pathlib import Path
 from sts2_lite.selection import game_index
+from data_paths import CARDS
 
 
 def strike(upgraded=False):
@@ -279,7 +280,7 @@ def test_same_card_at_different_costs_are_different_options():
 def selection_state():
     import json
     from pathlib import Path
-    raw = json.loads((Path(__file__).parents[1] / "data" / "card_selection.json").read_text())
+    raw = json.loads((CARDS / "card_selection.json").read_text())
     return raw, CombatState.from_dict(raw)
 
 def test_selection_screen_loads_the_fight_behind_it():
@@ -310,7 +311,7 @@ def test_exhaust_one_card_prompt_loads_as_an_exhaust_pick():
     """A pick the sim did not expect (Cascade played an unforeseen Brand): the screen's prompt says what it is for."""
     import json
     from pathlib import Path
-    cs = CombatState.from_dict(json.loads((Path(__file__).parents[1] / "data" / "card_selection_exhaust.json").read_text()))
+    cs = CombatState.from_dict(json.loads((CARDS / "card_selection_exhaust.json").read_text()))
     pending = cs.pending_choice
     assert pending.kind == "exhaust" and pending.amount == 0 and pending.pile == "hand"
     assert len(pending.indices) == 6 and pending.indices == sorted(pending.indices)      # the three Defends and two Strikes count once each
@@ -453,7 +454,7 @@ def test_headbutt_deals_its_damage_before_the_choice():
     assert hps(cs) == [91]
 
 def test_game_index_matches_by_card_identity():
-    raw = json.loads((Path(__file__).parents[1] / "data" / "cards" / "ironclad" / "headbutt_example.json").read_text())
+    raw = json.loads((CARDS / "ironclad" / "headbutt_example.json").read_text())
     cards = raw["cards"]
     assert game_index({"card_id": "STRIKE_IRONCLAD", "is_upgraded": False}, cards) == 4
     assert game_index({"card_id": "STRIKE_IRONCLAD", "is_upgraded": True}, cards) == 3
@@ -462,7 +463,7 @@ def test_game_index_matches_by_card_identity():
     assert game_index({"card_id": "BASH", "is_upgraded": False}, cards) is None
 
 def test_actions_from_a_pile_choice_can_be_matched_to_the_game_list():
-    raw = json.loads((Path(__file__).parents[1] / "data" / "cards" / "ironclad" / "headbutt_example.json").read_text())
+    raw = json.loads((CARDS / "ironclad" / "headbutt_example.json").read_text())
     cs = state([headbutt()])
     cs.player.discard_pile = [defend(), make_card(CardId.ARMAMENTS, "Armaments", CardType.Skill, 1, TargetType.Self),
                               strike(upgraded=True), strike()]
@@ -816,7 +817,7 @@ def test_neows_fury_with_a_full_hand_leaves_the_cards():
 
 def test_neows_fury_capture_matches_the_sim_choice():
     """Captured screen: "Choose up to 2 cards", two identical Strikes, confirm allowed with nothing picked."""
-    raw = json.loads((Path(__file__).parents[1] / "data" / "neows_fury_example.json").read_text())
+    raw = json.loads((CARDS / "neows_fury_example.json").read_text())
     assert raw["prompt"] == "Choose up to 2 cards to put into your Hand." and raw["can_confirm"] and not raw["can_skip"]
     cs = with_discard([neows_fury()], [Card.from_dict({**c, "can_play": True, "target_type": "AnyEnemy"}) for c in raw["cards"]])
     sim = play(cs)
@@ -825,7 +826,7 @@ def test_neows_fury_capture_matches_the_sim_choice():
     assert game_index(options[0], raw["cards"]) == 0
 
 def test_game_index_skips_indices_already_picked():
-    raw = json.loads((Path(__file__).parents[1] / "data" / "neows_fury_example.json").read_text())
+    raw = json.loads((CARDS / "neows_fury_example.json").read_text())
     action = {"card_id": "STRIKE_IRONCLAD", "is_upgraded": False}
     assert game_index(action, raw["cards"]) == 0
     assert game_index(action, raw["cards"], skip=[0]) == 1

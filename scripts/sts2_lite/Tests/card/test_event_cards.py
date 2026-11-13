@@ -7,6 +7,7 @@ from sts2_lite.status import StatusId, StatusInstance
 from sts2_lite.Tests.card.test_card import make_card, make_state, hps
 from sts2_lite.Tests.card.test_colorless import strike, defend
 from pathlib import Path
+from data_paths import CARDS
 
 
 def card(card_id, upgraded=False):
@@ -241,7 +242,7 @@ def test_toric_toughness_power_loads_from_the_bridge():
     assert inst.records == [[1, 5]]
 
 
-CAPTURES = Path(__file__).parents[1] / "data" / "cards" / "colorless"
+CAPTURES = CARDS / "colorless"
 
 def tough_enemy(hand, hp=200):
     return make_state(hand, enemy_count=1, enemy_hp=hp)

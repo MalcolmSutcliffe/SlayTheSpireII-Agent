@@ -7,8 +7,9 @@ from sts2_lite import rng
 from sts2_lite.combat import CombatState, CombatSimulator
 from sts2_lite.relic import RelicInstance, RelicId
 from agents.verify import compare
+from data_paths import SEARCH
 
-CASES = json.load(open(os.path.join(os.path.dirname(__file__), "fixtures", "engine_run7.json")))
+CASES = json.load(open(SEARCH / "engine_run7.json"))
 
 
 @pytest.mark.parametrize("case", CASES, ids=[c["name"] for c in CASES])

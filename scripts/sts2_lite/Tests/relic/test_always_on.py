@@ -6,6 +6,7 @@ from sts2_lite.player import Player
 from sts2_lite.relic import RelicId, RelicInstance
 from sts2_lite.status import StatusId
 from sts2_lite.Tests.card.test_card import make_card, make_state, play, hps
+from data_paths import RELICS
 
 
 def card(card_id, cost, kind, target=TargetType.AnyEnemy, upgraded=False):
@@ -704,7 +705,7 @@ def test_a_card_that_fails_after_giving_block_does_not_leave_vambrace_waiting(mo
 def _saved(name):
     import json
     from pathlib import Path
-    raw = json.loads((Path(__file__).parents[1] / "data" / "relics" / f"{name}.json").read_text())
+    raw = json.loads((RELICS / f"{name}.json").read_text())
     return CombatState.from_dict(raw)
 
 def _play_from_hand(cs, card_name):

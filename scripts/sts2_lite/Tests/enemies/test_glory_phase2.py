@@ -222,7 +222,7 @@ def test_guardbot_blocks_the_fabricator_for_fifteen_and_noisebot_adds_two_dazed(
     assert [c.card_id for c in cs.player.draw_pile] == [CardId.DAZED]
 
 
-# ---------------------------------------------------------------- captured from the game (Tests/data/act3_glory)
+# ---------------------------------------------------------------- captured from the game (data/enemies/act3_glory)
 from agents import verify
 from sts2_lite.Tests import captures
 

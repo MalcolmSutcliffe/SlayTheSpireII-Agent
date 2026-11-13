@@ -8,6 +8,7 @@ from sts2_lite.status import StatusId
 from sts2_lite.Tests.card.test_card import make_card, make_state, play, hps
 from pathlib import Path
 from sts2_lite.Tests.relic.test_always_on import held, strike as strike_energy_victory, card as card_hand_draw, defend as defend_hand_draw, state, relic, plays
+from data_paths import RELICS
 
 
 def card(card_id, cost, kind, target=TargetType.AnyEnemy, upgraded=False):
@@ -189,7 +190,7 @@ def test_damage_bonus_without_relics_or_card_is_zero():
     assert damage_bonus(cs.player, strike()) == STRIKE_DUMMY_BONUS
 
 
-RELICS = Path(__file__).parents[1] / "data" / "relics"
+RELICS = RELICS
 
 def capture(name):
     return json.loads((RELICS / f"{name}.json").read_text())

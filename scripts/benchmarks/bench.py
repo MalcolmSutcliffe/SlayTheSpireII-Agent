@@ -34,22 +34,23 @@ SCRIPTS_DIR = Path(__file__).resolve().parents[1]
 if str(SCRIPTS_DIR) not in sys.path:                       # allow `python benchmarks/bench.py`
     sys.path.insert(0, str(SCRIPTS_DIR))
 
+from data_paths import BENCHMARKS
 from sts2_lite import rng
 from sts2_lite.combat import CombatState, CombatSimulator
 from agents.sts2_MCTS.MCTS import sts2_MCTS, SearchConfig, RolloutPolicy
 
-BENCH_DIR = Path(__file__).resolve().parent
+BENCH_DIR = Path(__file__).resolve().parent            # results/ lives here; the suites and reference files are in data/benchmarks/
 RESULTS_DIR = BENCH_DIR / "results"
-SUITES = ("run4", "act1")        # a suite is a folder of state files + index.jsonl; run4 = real states from runs/run4-a9 (current reward)
+SUITES = ("run4", "act1")        # a suite is a folder of state files + index.jsonl; run4 = real states from data/runs/run4-a9 (current reward)
 DEFAULT_SUITE = "run4"
 
 def states_dir(suite: str = DEFAULT_SUITE) -> Path:
     if suite not in SUITES:
         raise SystemExit(f"unknown suite {suite!r}; choose from {SUITES}")
-    return BENCH_DIR / suite
+    return BENCHMARKS / suite
 
 def puzzles_path(suite: str = DEFAULT_SUITE) -> Path:
-    return BENCH_DIR / f"puzzles_{suite}.json"
+    return BENCHMARKS / f"puzzles_{suite}.json"
 
 TIE_EPS = 0.05              # regret (reward units) at or below this counts as agreeing with the reference: about one HP near full health
 REF_EXPLORATION_SCALE = 60.0   # the reference searches explore widely (the live scale lets an early lucky winner starve the other moves); this is set for them only
@@ -86,7 +87,7 @@ def load_index(smoke: bool = False, subset: str | None = None, suite: str = DEFA
     return entries
 
 def reference_path(subset: str | None = None, suite: str = DEFAULT_SUITE) -> Path:
-    return BENCH_DIR / (f"reference_{suite}.jsonl" if subset is None else f"reference_{suite}_{subset}.jsonl")
+    return BENCHMARKS / (f"reference_{suite}.jsonl" if subset is None else f"reference_{suite}_{subset}.jsonl")
 
 @lru_cache(maxsize=None)
 def _raw_state(file: str, suite: str = DEFAULT_SUITE) -> str:

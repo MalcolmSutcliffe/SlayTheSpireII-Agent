@@ -6,9 +6,10 @@ from sts2_lite.combat import CombatSimulator, CombatState
 from sts2_lite.status import StatusId
 from agents.verify import compare
 from sts2_lite.Tests.card.test_card import make_card, make_state, hps
+from data_paths import ENCHANTMENTS
 
 
-DATA = Path(__file__).parents[1] / "data" / "enchantments"
+DATA = ENCHANTMENTS
 E = EnchantmentId
 
 def capture(name):

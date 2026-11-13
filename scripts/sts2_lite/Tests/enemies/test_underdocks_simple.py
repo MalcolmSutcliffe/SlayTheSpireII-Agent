@@ -311,7 +311,7 @@ def test_hardened_shell_does_not_stop_losing_hit_points_directly():
     assert e.current_hp == 60 and e.current_hp > 0
 
 
-# ---------------------------------------------------------------- captured from the game (Tests/data/act1_underdocks)
+# ---------------------------------------------------------------- captured from the game (data/enemies/act1_underdocks)
 from agents import verify
 from sts2_lite.Tests import captures
 

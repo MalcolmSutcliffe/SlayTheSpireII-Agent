@@ -7,6 +7,7 @@ from sts2_lite.Tests.card.test_card import make_card, make_state, play, hps
 from sts2_lite.status import StatusId
 from pathlib import Path
 from agents.verify import compare
+from data_paths import CARDS, ENEMIES
 
 
 def card(card_id, cost=1, kind=CardType.Attack, target=TargetType.AnyEnemy, upgraded=False):
@@ -1144,7 +1145,7 @@ def test_unmovable_does_not_double_again_after_a_reload():
     assert reloaded.player.block == 5
 
 
-DATA = Path(__file__).parents[1] / "data" / "cards"
+DATA = CARDS
 
 def load(name):
     return CombatState.from_dict(json.loads((DATA / f"{name}.json").read_text()))
@@ -1177,7 +1178,7 @@ def test_only_one_attack_is_free_and_the_costs_come_back():
 
 # ---------------------------------------------------------------- intents shown through Weak and Strength
 def beast(name):
-    return CombatState.from_dict(json.loads((DATA.parent / "act1_overgrowth" / "ceremonial_beast" / f"{name}.json").read_text()))
+    return CombatState.from_dict(json.loads((ENEMIES / "act1_overgrowth" / "ceremonial_beast" / f"{name}.json").read_text()))
 
 def test_weakened_beast_still_identifies_plow():
     """Plow (18 + 2 Strength, Weak) shows 15; truncation also maps base 19 to 15, which matched no move."""

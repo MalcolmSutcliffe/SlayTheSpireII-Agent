@@ -311,7 +311,7 @@ def test_with_the_subject_dead_the_player_can_only_end_the_turn_and_a_copy_keeps
     assert copy.enemies[0].max_hp == 200 and len(cs.dormant) == 1
 
 
-# ---------------------------------------------------------------- captured from the game (Tests/data/act3_glory)
+# ---------------------------------------------------------------- captured from the game (data/enemies/act3_glory)
 from agents import verify
 from sts2_lite.Tests import captures
 
