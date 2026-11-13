@@ -328,7 +328,7 @@ def _radiant_tincture(combat, t):
     combat.gain_energy(1)
     _player(combat).apply_status(StatusId.RADIANT_TINCTURE, RADIANT_TURNS)
 
-def _duplicator(combat, t): _player(combat).apply_status(StatusId.DUPLICATOR, 1)
+def _duplicator(combat, t): _player(combat).apply_status(StatusId.DUPLICATION, 1)
 def _gigantification(combat, t): _player(combat).apply_status(StatusId.GIGANTIFICATION, 1)
 def _stable_serum(combat, t): _player(combat).apply_status(StatusId.RETAIN_HAND, STABLE_SERUM_TURNS)
 

@@ -461,6 +461,15 @@ def verify_step(batch : dict, game_state : dict, actual : CombatState, log_path 
         log_mismatch(log_path, batch, game_state, diffs, batch["predicted"], actual)
     return not diffs
 
+def chained_into_new_fight(batch : dict | None, game_state : dict) -> bool:
+    """The sim ended the combat with the last action and the game is in a play state with other enemies: the first boss of a double-boss
+    act fell and the next one follows at once (no screen in between), so there is nothing to compare."""
+    if batch is None or not batch.get("predicted_over"):
+        return False
+    before = {e.get("entity_id") for e in (batch["before"].get("enemies") or [])}
+    now = {e.get("entity_id") for e in (game_state.get("enemies") or [])}
+    return bool(now) and not (before & now)
+
 def verify_combat_end(batch : dict, game_state : dict, log_path : str):
     """The game left combat after the batch: the sim must have ended it too."""
     if not batch["predicted_over"]:
@@ -580,10 +589,17 @@ def run_agent(agent : BaseAgent, step : bool = False, verify : bool = True, log_
                 time.sleep(1.0)
                 continue
             else:
+                if kind == "play" and chained_into_new_fight(batch, game_state):
+                    if fight is not None and fight_log:
+                        write_fight(fight_log, fight_end(fight, game_state))
+                    fight = previous = batch = None         # nothing carries from one fight to the next
+                    captured_round = None
+                    picked_on_screen.clear()
                 combat_state = CombatState.from_dict(game_state)
                 combat_state.final_fight = is_final_fight(game_state, act3_boss_floors)
                 report_unimplemented(game_state, log_path, reported_cards)
                 combat_state.carry_turn_counters(previous)
+                combat_state.carry_card_costs(previous)    # true costs under Brilliant Scarf's all-zero display
                 combat_state.carry_known_top(previous)    # cards the agent put on top (Headbutt)
                 combat_state.carry_boss_state(previous)         # the form of a dead Test Subject
                 combat_state.carry_combat_counters(previous)    # HP-loss events (Tear Asunder), Inferno plays

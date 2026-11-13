@@ -181,6 +181,10 @@ def compare(predicted : CombatState, actual : CombatState, random_step : bool = 
         drum = lambda p: sum((3 if c.is_upgraded else 2) for c in p.exhaust_pile if c.card_id == CardId.DRUM_OF_BATTLE)
         if predicted.energy - actual.energy == drum(pp) - drum(ap) != 0:
             diffs = [d for d in diffs if not d.startswith("player energy")]
+    if random_step and StatusId.HELLRAISER in {**pp.status, **ap.status} and _cards(pp.hand) != _cards(ap.hand):
+        # Hellraiser plays every Strike the moment it is drawn: a different random draw means different Strikes were played,
+        # so the damage dealt, what the enemies then did and the counters of the relics that count plays all diverge
+        diffs = [d for d in diffs if not d.startswith(("player hp", "player block", "player energy", "enemy", "relic"))]
     if len(pp.hand) != len(ap.hand) and not random_step:
         diffs.append(f"hand size: sim {len(pp.hand)}, game {len(ap.hand)}")
     if not random_step:

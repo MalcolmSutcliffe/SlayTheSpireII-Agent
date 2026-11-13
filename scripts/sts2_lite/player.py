@@ -10,7 +10,7 @@ from sts2_lite.card import Card, CardId, CardType, CardKeyword, CONFUSED_MAX_COS
 
 BASIC_ATTACK_COSTS = {CardId.STRIKE_IRONCLAD: 1, CardId.BASH: 2}      # the starter Attacks are not in the generated-card table
 from sts2_lite.status import StatusInstance, StatusId, INSTANCED
-from sts2_lite.relic import RelicId, RelicInstance, strength_received, lizard_tail_revive, hand_draw_bonus, blocks_draw
+from sts2_lite.relic import RelicId, RelicInstance, strength_received, lizard_tail_revive, hand_draw_bonus, blocks_draw, free_by_relic
 from sts2_lite.potion import Potion, PotionId, DEFAULT_POTION_SLOTS, FAIRY_HEAL
 
 GHOST_SEED_CARDS = frozenset({CardId.STRIKE_IRONCLAD, CardId.DEFEND_IRONCLAD})     # Basic rarity, Strike or Defend tag
@@ -116,6 +116,8 @@ class Player(Creature):
                 c.is_unplayable = False         # only the Smog: the simulator knows that itself
         if StatusId.FREE_ATTACK in pl.status:
             pl._read_free_attack_costs()
+        if RelicId.BRILLIANT_SCARF in pl.relics and free_by_relic(pl):
+            pl._read_scarf_costs()
         return pl
 
     def _read_confused_stomps(self):
@@ -143,6 +145,23 @@ class Player(Creature):
             if base is not None and base != 0:
                 own = Card.create_copy(card)
                 own.energy_cost = base
+                self.hand[i] = own
+
+    def _read_scarf_costs(self):
+        """With one more card to play before Brilliant Scarf's free one the game shows every card in the hand at 0, not only the free one:
+        the costs the cards have after that are taken from the card tables (current_cost applies the 0 while the Scarf is due)."""
+        for i, card in enumerate(self.hand):
+            if card.energy_cost != 0:
+                continue
+            base = BASIC_ATTACK_COSTS.get(card.card_id) if card.type == CardType.Attack else None
+            if base is None and card.card_id in GENERATABLE_CARDS:
+                base = Card.create_generated(card.card_id, card.is_upgraded).energy_cost
+            if base is None and card.card_id in (CardId.DEFEND_IRONCLAD, CardId.SLIMED):
+                base = 1
+            if base not in (None, 0) and base != "X":
+                own = Card.create_copy(card)
+                own.energy_cost = base
+                own.guessed_cost = True
                 self.hand[i] = own
 
     def _read_growing_cards(self):

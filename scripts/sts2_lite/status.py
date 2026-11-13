@@ -136,7 +136,7 @@ class StatusId(Enum):
     REGEN = auto()                  # Regen Potion: heals `amount` at the end of the player's turn, then drops by 1
     DEMISE = auto()                 # Powdered Demise: the enemy loses `amount` HP at the end of each of its turns
     BUFFER = auto()                 # Lucky Tonic: the next time HP would be lost it is not
-    DUPLICATOR = auto()             # Duplicator: the next card this turn is played an extra time
+    DUPLICATION = auto()            # Duplicator potion (the game calls the status DUPLICATION): the next card this turn is played an extra time
     GIGANTIFICATION = auto()        # Gigantification Potion: the next Attack deals triple damage
     CLARITY_EXTRACT = auto()        # Clarity Extract: 1 extra card drawn at the start of each of the next `amount` turns
     RADIANT_TINCTURE = auto()       # Radiant Tincture: 1 extra Energy at the start of each of the next `amount` turns
@@ -278,7 +278,7 @@ STATUS_BEAVIOURS : dict[StatusId, StatusBehaviour] = {
     StatusId.REGEN : StatusBehaviour.STATIC,            # lowered by 1 each time it heals (_regen_on_end_turn)
     StatusId.DEMISE : StatusBehaviour.STATIC,
     StatusId.BUFFER : StatusBehaviour.STATIC,           # spent by the next HP loss (Creature.lose_hp, _lose_hp_from_damage)
-    StatusId.DUPLICATOR : StatusBehaviour.STATIC,       # spent by the next card (Card._extra_plays), or when the turn ends
+    StatusId.DUPLICATION : StatusBehaviour.STATIC,       # spent by the next card (Card._extra_plays), or when the turn ends
     StatusId.GIGANTIFICATION : StatusBehaviour.STATIC,  # spent when the next Attack has been played
     StatusId.CLARITY_EXTRACT : StatusBehaviour.STATIC,  # turns left; Player.turn_start
     StatusId.RADIANT_TINCTURE : StatusBehaviour.STATIC, # turns left; CombatSimulator._start_player_turn
@@ -392,7 +392,7 @@ def _demise_on_enemy_turn_end(combat : CombatSimulator, owner : Creature, amount
         owner.lose_hp(amount)           # HP loss, not damage: block does not stop it
 
 def _duplicator_on_player_turn_ended(combat : CombatSimulator, owner : Creature, amount : int):
-    del owner.status[StatusId.DUPLICATOR]
+    del owner.status[StatusId.DUPLICATION]
 
 def _rampart_on_before_player_turn(combat : CombatSimulator, owner : Creature, amount : int):
     # RampartPower.AfterSideTurnStart: the Turret Operators behind the shield gain unpowered block
@@ -839,7 +839,7 @@ STATUS_HANDLERS : dict[tuple[StatusId, EventType], Callable] = HandlerTable({
     (StatusId.RITUAL, EventType.END_TURN) : _ritual_on_end_turn,
     (StatusId.REGEN, EventType.END_TURN) : _regen_on_end_turn,
     (StatusId.DEMISE, EventType.ENEMY_TURN_END) : _demise_on_enemy_turn_end,
-    (StatusId.DUPLICATOR, EventType.PLAYER_TURN_ENDED) : _duplicator_on_player_turn_ended,
+    (StatusId.DUPLICATION, EventType.PLAYER_TURN_ENDED) : _duplicator_on_player_turn_ended,
     (StatusId.TERRITORIAL, EventType.ENEMY_TURN_END) : _territorial_on_enemy_turn_end,
     (StatusId.SHRINK, EventType.CREATURE_KILLED) : _shrink_on_creature_killed,
     (StatusId.SLOW, EventType.CARD_PLAYED) : _slow_on_card_played,

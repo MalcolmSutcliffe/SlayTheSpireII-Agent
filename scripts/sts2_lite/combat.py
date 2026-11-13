@@ -226,6 +226,25 @@ class CombatState:
                     relic.used = True
         self.cards_played = max(self.cards_played, previous.cards_played)
 
+    def carry_card_costs(self, previous : CombatState | None):
+        """While Brilliant Scarf's free card is due the game shows the whole hand at 0, so the costs were put back from the card
+        tables; a card that really cost less (Juggernaut at 0) is told apart by the hand the sim had before the Scarf covered it."""
+        if previous is None or previous.player_turn != self.player_turn:
+            return
+        known = list(previous.player.hand)
+        for i, card in enumerate(self.player.hand):
+            if not card.guessed_cost:
+                continue
+            for j, old in enumerate(known):
+                if old.card_id == card.card_id and old.is_upgraded == card.is_upgraded and old.enchantment == card.enchantment:
+                    if not old.guessed_cost:
+                        own = Card.create_copy(card)
+                        own.energy_cost, own.restore_cost = old.energy_cost, old.restore_cost
+                        own.guessed_cost = False
+                        self.player.hand[i] = own
+                    del known[j]
+                    break
+
     def _read_hp_loss_count(self, combat_state : dict):
         """Tear Asunder's text counts the times HP was lost this fight ("Hits 12 times"): the game's own number, which the bridge does not give otherwise."""
         hand = combat_state.get("hand") or combat_state["player"].get("hand") or []
@@ -876,6 +895,9 @@ class CombatSimulator:
                 self._finish_card_play(*args)
             elif kind == "random":
                 self.play_random_from_draw_pile(args[0])
+            elif kind == "replay":
+                card, *rest_args = args
+                card.run_extra_plays(self, *rest_args)
             else:
                 self._run_autoplay(list(args[0]))
             cs.continuations = cs.continuations + rest

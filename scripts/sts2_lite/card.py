@@ -361,6 +361,7 @@ class Card:
     target_type : TargetType
     is_upgraded : bool
     is_unplayable : bool
+    guessed_cost : bool = False                # the cost was put back from the card tables while the Scarf showed 0: a previous state may know better
     restore_cost : int | str | None = None     # set while the cost is changed for this turn: the cost it gets back
     until_played : bool = False                # the temporary cost also ends when the card is played (SetThisTurnOrUntilPlayed)
     replay : int = 0                           # extra plays the card has for good (Hidden Gem); Glam's is the REPLAY keyword
@@ -481,6 +482,8 @@ class Card:
             self._keywords = self._mask | _REPLAY
         elif enchantment == EnchantmentId.GOOPY:
             self._keywords = self._mask | CardKeyword.EXHAUST.value
+        elif enchantment == EnchantmentId.SOULS_POWER:      # "This card loses Exhaust" (the bridge still lists the card's own keywords)
+            self._keywords = self._mask & ~CardKeyword.EXHAUST.value
 
     @classmethod
     def create_slimed(cls) -> Card:
@@ -761,6 +764,7 @@ class Card:
         new_card.is_upgraded = card.is_upgraded
         new_card.is_unplayable = card.is_unplayable
         new_card.restore_cost = card.restore_cost
+        new_card.guessed_cost = card.guessed_cost
         new_card.until_played = card.until_played
         new_card.bonus_damage = card.bonus_damage
         new_card.replay = card.replay
@@ -851,9 +855,17 @@ class Card:
             raise
         combat.finish_vigor()
 
-        for _ in range(extra):
+        self.run_extra_plays(combat, target_index, x, extra, saved, spent)
+
+    def run_extra_plays(self, combat : CombatSimulator, target_index : int, x, extra : int, saved, spent):
+        """The further plays of one card. A play that asks for a card choice holds the rest back until it is answered (the game plays them in turn)."""
+        cs = combat.combat_state
+        for done in range(extra):
+            if cs.pending_choice is not None:
+                cs.continuations = cs.continuations + [("replay", self, target_index, x, extra - done, saved, spent)]
+                return
             combat.card_played_hooks(self)          # AfterCardPlayed of the previous play
-            if not any(e.current_hp > 0 for e in combat.combat_state.enemies):
+            if not any(e.current_hp > 0 for e in cs.enemies):
                 break
             if saved:
                 before_card_played(combat, self, spent)
@@ -893,9 +905,9 @@ class Card:
             if punch.amount <= 0:
                 del player.status[StatusId.ONE_TWO_PUNCH]
         extra += self.replay
-        if StatusId.DUPLICATOR in player.status:        # Duplicator Potion: the next card this turn, once
+        if StatusId.DUPLICATION in player.status:        # Duplicator Potion: the next card this turn, once
             extra += 1
-            del player.status[StatusId.DUPLICATOR]
+            del player.status[StatusId.DUPLICATION]
         if self._mask & _REPLAY:        # Replay 1 (Glam); it is spent after this play, but this count is fixed before it
             extra += 1
         if player.relics and _AXE in player.relics:

@@ -759,6 +759,10 @@ def _count_manual_card(combat, relic, card):
     if not combat.auto_playing:
         relic.counter = _count(relic) + 1
 
+def _count_scarf(combat, relic, card):
+    if not combat.auto_playing:
+        relic.counter = min(_count(relic) + 1, BRILLIANT_SCARF_CARDS)      # the game stops counting at 5: the counter is hidden from then on
+
 def _diamond_diadem(combat, relic):
     if _count(relic) <= DIAMOND_DIADEM_CARDS and StatusId.DIAMOND_DIADEM not in _player(combat).status:
         _player(combat).apply_status(StatusId.DIAMOND_DIADEM, 1)
@@ -785,7 +789,7 @@ def _turn(combat) -> int:
 CANDELABRA_TURN, CANDELABRA_ENERGY = 2, 2
 CHANDELIER_TURN, CHANDELIER_ENERGY = 3, 3
 HAPPY_FLOWER_TURNS = {RelicId.HAPPY_FLOWER : 3, RelicId.FAKE_HAPPY_FLOWER : 5}
-FLASHES_AT_FULL_COUNT = {**HAPPY_FLOWER_TURNS, RelicId.LETTER_OPENER : LETTER_OPENER_EVERY, RelicId.PENDULUM : 3}    # Pendulum: DisplayAmount is Turns while it activates
+FLASHES_AT_FULL_COUNT = {**HAPPY_FLOWER_TURNS, RelicId.LETTER_OPENER : LETTER_OPENER_EVERY, RelicId.PENDULUM : 3, RelicId.NUNCHAKU : NUNCHAKU_EVERY}    # Pendulum: DisplayAmount is Turns while it activates; Nunchaku shows 10 after the tenth Attack, which has already paid out
 HORN_CLEAT_TURN, HORN_CLEAT_BLOCK = 2, 14
 CAPTAINS_WHEEL_TURN, CAPTAINS_WHEEL_BLOCK = 3, 18
 SPARKLING_ROUGE_TURN = 3
@@ -970,7 +974,7 @@ EVENT_HANDLERS : dict[tuple[RelicId, EventType], Callable] = HandlerTable({
     (RelicId.LOST_WISP, EventType.CARD_PLAYED) : _on_power(_lost_wisp),
     (RelicId.IRON_CLUB, EventType.CARD_PLAYED) : _iron_club,
     (RelicId.MUSIC_BOX, EventType.CARD_PLAYED) : _music_box,
-    (RelicId.BRILLIANT_SCARF, EventType.CARD_PLAYED) : _count_manual_card,
+    (RelicId.BRILLIANT_SCARF, EventType.CARD_PLAYED) : _count_scarf,
     (RelicId.VELVET_CHOKER, EventType.CARD_PLAYED) : _count_card,
     (RelicId.DIAMOND_DIADEM, EventType.CARD_PLAYED) : _count_card,
     (RelicId.DIAMOND_DIADEM, EventType.END_TURN) : _diamond_diadem,
