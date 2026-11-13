@@ -17,6 +17,8 @@ from sts2_lite.potion import PotionId
 
 from sts2_lite.status import StatusId
 from agents.sts2_MCTS.state_key import state_key
+from agents.sts2_MCTS.stats import Z_SCORE, TIE_MARGIN, PAIRED_Z, spread
+from agents.sts2_MCTS.order_check import OrderCheck
 
 class RolloutPolicy(Enum):
     FirstAction = auto()            # just play first action (works surprisingly well)
@@ -83,8 +85,6 @@ INFO_MIN_VISITS = 2             # a sampled outcome's value counts once it has b
 
 # move confidence constants
 EPSILON = 0.005
-Z_SCORE = 2.33
-TIE_MARGIN = 0.01                # root moves this close to the best (and not significantly worse) are tied
 TIE_MIN_VISITS = 30              # the top move needs this many visits before a tie is considered
 TIE_VISIT_FRACTION = 0.5         # a tied move needs this share of the top move's visits: a thin estimate is within the margin by luck
 
@@ -92,14 +92,7 @@ TIE_VISIT_FRACTION = 0.5         # a tied move needs this share of the top move'
 PAIRED_SCENARIOS = 300           # scenarios each contender is replayed under (0 = off)
 PAIRED_VISIT_FRACTION = 0.05     # a root move needs this share of the picked move's visits to be a contender
 PAIRED_MAX_CONTENDERS = 4        # contenders besides the picked move
-PAIRED_Z = Z_SCORE               # a contender replaces the picked move only when it is ahead by this many standard errors
 
-# the order of the turn's plain plays (see sts2_MCTS._order_check)
-ORDER_MAX_UNITS = 7              # a line with more plays than this keeps the tree's order (the orderings multiply)
-ORDER_MAX_STATES = 6             # distinct end states compared with the tree's own
-ORDER_MAX_STEPS = 3000           # sim steps spent listing the orderings; past it the tree's order is kept
-ORDER_EXTEND_Z = 1.0             # an order ahead by this many standard errors, but not yet by PAIRED_Z, is replayed under more scenarios
-ORDER_MAX_ROUNDS = 4             # the scenarios of the order check are repeated at most this many times
 
 # rollout policy constants
 ROLLOUT_POLICY = RolloutPolicy.ClaudeHeuristic
@@ -485,9 +478,8 @@ class sts2_MCTS:
             for rival in rivals:
                 line = self._contender_line(rival)
                 diffs = [self._paired_line_rollout(state, line, s) - b for s, b in zip(seeds, base)]
-                mean = sum(diffs) / n
-                var = sum((d - mean) ** 2 for d in diffs) / (n - 1)
-                results.append((rival, mean, math.sqrt(var / n)))
+                mean, se = spread(diffs)
+                results.append((rival, mean, se))
         finally:
             rng.setstate(saved)
 
@@ -501,17 +493,7 @@ class sts2_MCTS:
             "compared" : [{"action" : r[0].action, "visits" : r[0].visits, "gain" : r[1], "se" : r[2]} for r in results],
         }
 
-    ### The order of the turn's plain plays
-    ### Plays that leave nothing to chance (a potion, a block card, an attack with no draw) can be made in any order, and the order can
-    ### matter: Dexterity before the block, Vulnerable before the attack, a relic that wants less block. The tree cannot see it when
-    ### the difference is a point or two of HP, since its rollouts are independent. So the tree's line for this turn, up to its first
-    ### random play, is listed in every legal order; orders that end in the same state count once; and the distinct ones are replayed
-    ### under the same scenarios as the paired check. An order replaces the tree's only when it is ahead by PAIRED_Z standard errors.
-    ###
-    ### The random play itself (a draw) is also tried first, the rest of the line after it and, when that is not as good, with the rest
-    ### left to the rollout policy: seeing the draw first costs nothing unless an order matters (Strength before the card that draws), and
-    ### the next search plans with what was drawn. Among the orders tied with the best, the one that draws first is played, as with
-    ### prefer_info for the root moves. The replay does not plan for the draw, so its verdict on drawing first is a lower bound.
+    ### The tree's own line, for the checks that replay it (paired comparison above, order_check.py)
 
     def _principal_line(self, first : sts2_Node) -> tuple[list[tuple], tuple | None]:
         """The tree's line from the picked root move, as move ids (see _move_id): the plain plays up to the first play with a random
@@ -547,159 +529,8 @@ class sts2_MCTS:
         return next((a for a in c.get_available_actions() if _move_id(c, a) == move_id), None)
 
     def _order_check(self, picked : sts2_Node) -> dict | None:
-        """Returns the details (and whether another order replaced the tree's, with its first play in "action"), or None when there
-        is nothing to compare: the picked move is itself the random play, the line is too long to list, or no other order exists."""
-        n = self._search_config.paired_scenarios
-        root = self._root_node.state
-        if n < 2 or root.pending_choice is not None:
-            return None
-        line, tail = self._principal_line(picked)
-        if not line:
-            return None                                     # the picked move is the random play: it is already played first
-        can_draw_first = tail is not None and not _is_end_turn(tail)
-
-        # a play and the choices it asks for (True Grit's card) move together
-        units : list[tuple] = []
-        for move in line:
-            if _is_choice(move) and units:
-                units[-1] = units[-1] + (move,)
-            else:
-                units.append((move,))
-        if len(units) > ORDER_MAX_UNITS or (len(units) < 2 and not can_draw_first):
-            return None
-        ids = {}
-        unit_ids = [ids.setdefault(u, len(ids)) for u in units]
-        by_id = {i: u for u, i in ids.items()}
-
-        steps = 0
-        found : dict[tuple, list[tuple]] = {}           # end state -> the move ids that lead there (the tree's order first)
-        memo = set()
-
-        def play(state, unit):
-            nonlocal steps
-            c = CombatSimulator(CombatState.deepcopy(state))
-            for move in unit:
-                a = self._find_move(c, move)
-                if a is None:
-                    return None
-                c.perform_action(a)
-                steps += 1
-            return c.combat_state
-
-        def finish(state, moves):
-            if tail is not None and self._find_move(CombatSimulator(state), tail) is None:
-                return
-            found.setdefault(state_key(state), moves)
-
-        def go(state, remaining, moves):
-            if steps > ORDER_MAX_STEPS or len(found) > ORDER_MAX_STATES:
-                return
-            if not remaining:
-                finish(state, moves)
-                return
-            key = (state_key(state), remaining)
-            if key in memo:
-                return
-            memo.add(key)
-            for uid in dict.fromkeys(remaining):
-                rest = list(remaining)
-                rest.remove(uid)
-                done = play(state, by_id[uid])
-                if done is not None:
-                    go(done, tuple(rest), moves + list(by_id[uid]))
-
-        # the tree's own order first: it is what the others are compared with
-        state, moves = root, []
-        for uid in unit_ids:
-            state = play(state, by_id[uid])
-            if state is None:
-                return None
-            moves = moves + list(by_id[uid])
-        finish(state, moves)
-        if not found:
-            return None
-        go(root, tuple(sorted(unit_ids)), [])
-        if steps > ORDER_MAX_STEPS:
-            return None
-        orders = list(found.values())
-
-        # the lines to replay: each order, then each order with the draw first, then the draw alone and the rest left to the policy
-        tail_move = [tail] if tail is not None else []
-        lines = [{"moves" : o + tail_move, "draws_first" : False} for o in orders]
-        if can_draw_first and self._find_move(CombatSimulator(root), tail) is not None:
-            lines += [{"moves" : tail_move + o, "draws_first" : True} for o in orders]
-            lines.append({"moves" : tail_move, "draws_first" : True})
-        if len(lines) < 2:
-            return None
-        for ln in lines:
-            ln["first"] = self._find_move(CombatSimulator(root), ln["moves"][0])
-
-        for ln in lines:
-            ln["diffs"] = []
-        lines[0]["diffs"] = None
-
-        def spread(diffs):
-            count = len(diffs)
-            mean = sum(diffs) / count
-            var = sum((d - mean) ** 2 for d in diffs) / (count - 1)
-            return mean, math.sqrt(var / count)
-
-        def add_scenarios(count):
-            seeds = [rng.randrange(1 << 30) for _ in range(count)]      # fresh scenarios every time
-            saved = rng.getstate()                                      # the rollouts reseed the shared source: put it back afterwards
-            try:
-                base = [self._paired_line_rollout(root, lines[0]["moves"], s) for s in seeds]
-                for ln in lines[1:]:
-                    ln["diffs"] += [self._paired_line_rollout(root, ln["moves"], s) - b for s, b in zip(seeds, base)]
-            finally:
-                rng.setstate(saved)
-
-        # an order that is promising but not yet significant gets more scenarios (up to ORDER_MAX_ROUNDS times as many in all):
-        # the noise of the later turns is large, and a real gain of an HP or two needs more than the usual count to show
-        # (the extra rounds are held to the search's own time budget, so a decision takes at most about twice as long as asked)
-        budget = self._search_config.time_budget
-        started = time.perf_counter()
-        total = 0
-        for done in range(ORDER_MAX_ROUNDS):
-            if done > 0 and budget is not None:
-                spent = time.perf_counter() - started
-                if spent + spent / done > budget:
-                    break
-            add_scenarios(n)
-            total += n
-            for ln in lines[1:]:
-                ln["gain"], ln["se"] = spread(ln["diffs"])
-            if any(ln["gain"] > PAIRED_Z * ln["se"] for ln in lines[1:]):
-                break
-            if not any(ln["gain"] > ORDER_EXTEND_Z * ln["se"] for ln in lines[1:]):
-                break
-        n = total
-        lines[0]["diffs"] = [0.0] * n
-        lines[0]["gain"], lines[0]["se"] = 0.0, 0.0
-
-        # the best order, when it is ahead of the tree's by PAIRED_Z standard errors
-        ahead = [ln for ln in lines[1:] if ln["gain"] > 0 and ln["gain"] > PAIRED_Z * ln["se"]]
-        best = max(ahead, key=lambda ln: ln["gain"] - PAIRED_Z * ln["se"]) if ahead else lines[0]
-        chosen = best
-        # ... and among the orders tied with it (not worse by more than TIE_MARGIN, nor significantly), the one that draws first
-        tied = []
-        for ln in lines:
-            if not ln["draws_first"]:
-                continue
-            gap, se = spread([a - b for a, b in zip(ln["diffs"], best["diffs"])])
-            if gap >= -min(TIE_MARGIN, PAIRED_Z * se):
-                tied.append(ln)
-        if tied:
-            chosen = max(tied, key=lambda ln: ln["gain"])
-        return {
-            "replaced" : chosen is not lines[0],
-            "action" : chosen["first"],
-            "draws_first" : chosen["draws_first"],
-            "scenarios" : n,
-            "plays" : len(units),
-            "distinct" : len(orders),
-            "compared" : [{"first" : ln["first"], "draws_first" : ln["draws_first"], "gain" : ln["gain"], "se" : ln["se"]} for ln in lines[1:]],
-        }
+        """See order_check.py."""
+        return OrderCheck(self).run(picked)
 
     def _tied(self, node : sts2_Node, top : sts2_Node) -> bool:
         """`node` is within TIE_MARGIN of `top` and not significantly worse at Z_SCORE (the test the early exit uses)."""
@@ -1008,15 +839,6 @@ def _move_id(c : CombatSimulator, action : dict) -> tuple:
     """Identifies a move across two states that differ only in card order (the indices in `action` do not carry over)."""
     key = _action_key(c, action)
     return key if key != (id(action),) else ("action", json.dumps(action, sort_keys=True))
-
-def _is_end_turn(move_id : tuple) -> bool:
-    return move_id[0] == "action" and json.loads(move_id[1]).get("action") == "end_turn"
-
-def _is_choice(move_id : tuple) -> bool:
-    """A move id of the answer to a pending card choice."""
-    if move_id[0] == "choose_card":
-        return True
-    return move_id[0] == "action" and json.loads(move_id[1]).get("action") in ("choose_card", "confirm_choice")
 
 def cull_identical_actions(c : CombatSimulator, actions : list[dict]) -> list[dict]:
     seen = set()

@@ -6,11 +6,11 @@ from pathlib import Path
 
 import pytest
 
-DATA = Path(__file__).parent / "data"
+DATA = Path(__file__).resolve().parents[2] / "sts2_lite" / "Tests" / "data"
 
 @pytest.fixture
 def tester(monkeypatch):
-    for name in ("agents", "agents.base_agent", "agents.my_agent"):       # the real agents are not under test
+    for name in ("agents.base_agent", "agents.my_agent"):       # the real agents are not under test (agents.verify is real)
         monkeypatch.setitem(sys.modules, name, types.ModuleType(name))
     sys.modules["agents.base_agent"].BaseAgent = object
     sys.modules["agents.my_agent"].MyAgent = object
@@ -612,3 +612,31 @@ def test_potion_actions_are_described_and_sent(tester, monkeypatch):
     tester.act(action)
     tester.act({"action": "use_potion", "slot": 0, "potion_id": "BLOCK_POTION"})
     assert sent == [["cli-anything-sts2", "use-potion", "1", "--target", "LEAF_SLIME_M_0"], ["cli-anything-sts2", "use-potion", "0"]]
+
+
+# ---------------------------------------------------------------- the loop's less common branches
+def test_a_card_already_picked_on_the_screen_is_confirmed_without_deciding(tester, monkeypatch, tmp_path):
+    pick = {"type": "decision", "decision": "hand_select", "can_confirm": True, "cards": [{"index": 0, "id": "DEFEND_IRONCLAD", "is_upgraded": False}], "player": {}}
+    confirmed = []
+    monkeypatch.setattr(tester, "confirm_if_ready", lambda: confirmed.append(1))
+    game, _ = run(tester, monkeypatch, [pick], tmp_path)
+    assert confirmed and game.acted == []
+
+def test_a_card_screen_that_cannot_be_read_is_left_to_the_player(tester, monkeypatch, tmp_path, capsys):
+    screen = {"type": "decision", "decision": "card_select", "screen_type": "NCombatPileCardSelectScreen", "cards": [{"index": 0}]}
+    game, _ = run(tester, monkeypatch, [screen], tmp_path)
+    assert game.acted == [] and "cannot read this card selection" in capsys.readouterr().out
+
+def test_an_action_the_game_ignores_is_logged_and_the_loop_goes_on(tester, monkeypatch, tmp_path, capsys):
+    prompts = []
+    monkeypatch.setattr(tester, "wait_for_change", lambda before: False)
+    monkeypatch.setattr(tester, "input", lambda *a: prompts.append(a[0]) or "", raising=False)
+    game, log = run(tester, monkeypatch, [capture(), capture()], tmp_path)
+    assert prompts and "the game did not react" in capsys.readouterr().out
+    entry = json.loads(log.read_text().splitlines()[0])
+    assert "the game ignored" in entry["differences"][0]
+
+def test_the_next_fight_starts_clean(tester, monkeypatch, tmp_path, capsys):
+    away = {"type": "decision", "decision": "map_select"}
+    game, _ = run(tester, monkeypatch, [capture(), away, capture()], tmp_path)
+    assert len(game.acted) == 1 and "waiting for the next fight" in capsys.readouterr().out

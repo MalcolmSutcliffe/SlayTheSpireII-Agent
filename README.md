@@ -44,16 +44,16 @@ No functionality
 
 # TODO :
 
-## STS2_Lite
+## sts_lite (slay the spire II headless imitator)
 
 Card pools (multiplayer ignored)
  - [x] Colourless
     Not implemented:
-    - [ ] Strategem (Sim doesnt have events in between turns)
-    - [ ] Splash (need other character card pools)
+    - Strategem (Sim doesnt have events in between turns)
+    - Splash (need other character card pools)
  - [x] Curse
     Not implemented:
-    - [ ] Enthralled (Enforcing play order not implemented in engine)
+    - Enthralled (Enforcing play order not implemented in engine)
  
  - [X] Status
  - [X] Ancient
@@ -63,15 +63,11 @@ Card pools (multiplayer ignored)
  - [ ] Regent
  - [ ] Defect
 
-
-Add In-combat relics
- - [x]
-
-Add potions
- - [x]
-
-Add enchantments
- - [x]
+Other features:
+ - [x] In-combat relics
+ - [x] Potions
+ - [x] Enchantments
+ 
 
  ## MCTS :
 
