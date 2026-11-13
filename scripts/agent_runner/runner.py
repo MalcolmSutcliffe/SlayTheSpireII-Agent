@@ -1,16 +1,14 @@
 from agents.base_agent import BaseAgent
 from agents.my_agent import MyAgent
 
-from .combat_session import CombatSession
 from data_paths import RUNS
 from .game_client import GameClient
+from .run_manager import DEFAULT_LOG, RunManager
 
 import argparse
 import re
-import time
 from pathlib import Path
 
-DEFAULT_LOG = "engine_mismatches.jsonl"     # where differences go when no run is named
 RUNS_DIR = RUNS
 
 def run_paths(run : str, decisions : bool = False, fights : bool = False, states : bool = False, captures : bool = False,
@@ -41,48 +39,10 @@ def run_paths(run : str, decisions : bool = False, fights : bool = False, states
     }
 
 
-class AgentRun:
-    """One run of the agent against the live game: poll the game and hand every state to the combat session. `tick` is one pass of the loop.
-    What is not combat (the map, shops, events ...) is only waited out for now."""
-
-    def __init__(self, agent : BaseAgent, step : bool = False, verify : bool = True, log_path : str = DEFAULT_LOG, capture_dir : str | None = None,
-                 decision_log : str | None = None, state_dir : str | None = None, fight_log : str | None = None, first_decision : int = 0,
-                 client : GameClient | None = None):
-        self.client = client or GameClient()
-        self.combat = CombatSession(agent, self.client, step, verify, log_path, capture_dir, decision_log, state_dir, fight_log, first_decision)
-        self.waiting_for = None     # what the loop last said it was waiting on, so it says so once
-
-    def run(self):
-        try:
-            while True:
-                self.tick()
-        except KeyboardInterrupt:
-            combat = self.combat
-            print(f"\nstopped. {combat.checked} step(s) checked, {combat.mismatched} with differences" + (f" (see {combat.log_path})" if combat.mismatched else ""))
-
-    def tick(self):
-        """One pass: read the game and, when it is the agent's turn to act, decide and act. Returns early to read the game again."""
-        game_state = self.client.get_state()
-        kind = self.combat.kind_of(game_state)
-        if kind == "away":
-            self.away(game_state)
-            return
-        self.waiting_for = None
-        self.combat.handle(kind, game_state)
-
-    def away(self, game_state : dict):
-        self.combat.leave(game_state)
-        message = f"not in combat ({game_state.get('decision', game_state.get('type'))}) - waiting for the next fight"
-        if message != self.waiting_for:
-            print(message)
-            self.waiting_for = message
-        time.sleep(1.0)
-
-
 def run_agent(agent : BaseAgent, step : bool = False, verify : bool = True, log_path : str = DEFAULT_LOG, capture_dir : str | None = None,
               decision_log : str | None = None, state_dir : str | None = None, fight_log : str | None = None, first_decision : int = 0,
               client : GameClient | None = None):
-    AgentRun(agent, step, verify, log_path, capture_dir, decision_log, state_dir, fight_log, first_decision, client).run()
+    RunManager(agent, step, verify, log_path, capture_dir, decision_log, state_dir, fight_log, first_decision, client).run()
 
 def main(argv : list[str] | None = None):
     parser = argparse.ArgumentParser(prog="python -m agent_runner", description="Let the agent play every combat; compare the sim with the game after each action. "

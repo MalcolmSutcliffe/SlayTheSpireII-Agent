@@ -7,7 +7,7 @@ import types
 from pathlib import Path
 
 import pytest
-from agent_runner import combat_logs, combat_session, game_client
+from agent_runner import combat_logs, combat_session, game_client, run_manager
 from data_paths import RELICS, VERIFIER
 
 
@@ -20,7 +20,7 @@ def runner(monkeypatch):
     monkeypatch.syspath_prepend(str(Path(__file__).parents[2]))
     sys.modules.pop("agent_runner.runner", None)        # only the runner takes the stubbed agents; the other modules are shared with this file
     runner = importlib.import_module("agent_runner.runner")
-    monkeypatch.setattr(runner.time, "sleep", lambda s: None)
+    monkeypatch.setattr(run_manager.time, "sleep", lambda s: None)
     yield runner
     sys.modules.pop("agent_runner.runner", None)
 
@@ -41,7 +41,7 @@ class FakeGame(game_client.GameClient):
         self.reads = 0
 
 class FirstActionAgent:
-    def get_action(self, combat_state, budget=0):
+    def get_combat_action(self, combat_state, budget=0):
         from sts2_lite.combat import CombatSimulator
         return CombatSimulator(combat_state).get_available_actions()[0]
 
@@ -113,7 +113,7 @@ def test_the_enemy_turn_is_waited_out(runner, monkeypatch, tmp_path):
 
 def test_right_after_end_turn_the_same_round_is_not_the_players_turn(runner):
     state = capture()
-    ended = {"round": state["round"], "time": runner.time.time()}
+    ended = {"round": state["round"], "time": run_manager.time.time()}
     assert combat_session.turn_is_changing(state, ended)
     assert not combat_session.turn_is_changing({**state, "round": state["round"] + 1}, ended)
     new_round = {**state, "round": state["round"] + 1}
@@ -162,7 +162,7 @@ def test_settled_after_havoc_waits_for_the_card_it_played_to_land(runner, monkey
     owed = game_client.pile_total(whole)
     limbo = {**whole, "player": {**whole["player"], "discard_pile_count": whole["player"]["discard_pile_count"] - 1}}
     assert game_client.pile_total(limbo) == owed - 1
-    monkeypatch.setattr(runner.time, "sleep", lambda s: None)
+    monkeypatch.setattr(run_manager.time, "sleep", lambda s: None)
     reads = iter([limbo] * 6 + [whole] * 6)
     client = fake_client(get_state=lambda: next(reads))
     assert game_client.pile_total(client.settled(limbo, owed)) == owed
@@ -252,7 +252,7 @@ def test_a_pick_the_sim_already_made_is_clicked_for_it(runner, monkeypatch):
     monkeypatch.setattr(combat_session, "input", lambda *a: "", raising=False)
     class Armaments:
         calls = 0
-        def get_action(self, cs, budget=0):
+        def get_combat_action(self, cs, budget=0):
             Armaments.calls += 1
             if Armaments.calls > 1:
                 raise KeyboardInterrupt         # the fight is over for this test
@@ -380,7 +380,7 @@ def test_the_search_behind_a_decision_is_logged(runner, monkeypatch, tmp_path):
     module.sts2_MCTS, module.SearchConfig = FakeMCTS, lambda: types.SimpleNamespace(max_sims=3000)
     monkeypatch.setitem(sys.modules, "agents.sts2_MCTS.MCTS", module)
     class SearchAgent:
-        def get_action(self, combat_state, budget=0):
+        def get_combat_action(self, combat_state, budget=0):
             return FakeMCTS().monte_carlo_tree_search(combat_state, budget)
     game = FakeGame([capture(), capture()])
     path = tmp_path / "decisions.jsonl"
@@ -405,7 +405,7 @@ def test_the_search_reported_stats_are_logged(runner, monkeypatch, tmp_path):
     module.sts2_MCTS, module.SearchConfig = FakeMCTS, lambda: types.SimpleNamespace(max_sims=3000)
     monkeypatch.setitem(sys.modules, "agents.sts2_MCTS.MCTS", module)
     class SearchAgent:
-        def get_action(self, combat_state, budget=0):
+        def get_combat_action(self, combat_state, budget=0):
             action, _ = FakeMCTS().monte_carlo_tree_search(combat_state)
             return action
     game = FakeGame([capture(), capture()])

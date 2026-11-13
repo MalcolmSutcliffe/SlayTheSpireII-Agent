@@ -264,7 +264,7 @@ class CombatSession:
 
     def decide_and_act(self, game_state : dict, combat_state : CombatState):
         started = time.perf_counter()
-        action = self.agent.get_action(combat_state, TIME_BUDGET_SECONDS)
+        action = self.agent.get_combat_action(combat_state, TIME_BUDGET_SECONDS)
         self.decisions += 1
         if self.state_dir:
             save_decision_state(self.state_dir, self.decisions, game_state)
