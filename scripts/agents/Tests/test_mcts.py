@@ -746,6 +746,7 @@ def hard_fight(seed):
         n += 1
     return sim
 
+@pytest.mark.slow
 @pytest.mark.parametrize("seed", [0, 1, 2])
 def test_agent_wins_the_narrow_race(seed):
     sim = hard_fight(seed)

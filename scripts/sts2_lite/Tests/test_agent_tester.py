@@ -199,7 +199,19 @@ def test_a_hand_pick_is_sent_as_the_index_on_the_select_screen(tester, monkeypat
     tester.act(action, screen)
     assert ["combat-select-card", "1"] in commands.run
 
-def test_two_picks_of_identical_cards_use_different_screen_indices(tester, monkeypatch):
+def test_two_picks_of_identical_cards_on_a_pile_screen_use_different_indices(tester, monkeypatch):
+    commands = Commands()
+    monkeypatch.setattr(tester.subprocess, "run", commands)
+    monkeypatch.setattr(tester, "get_state", lambda: {"can_confirm": False})
+    screen = select_screen([("DEFEND_IRONCLAD", False), ("DEFEND_IRONCLAD", False)])
+    action = {"action": "choose_card", "card_index": 0, "pile": "discard", "card_id": "DEFEND_IRONCLAD", "is_upgraded": False}
+    tester.picked_on_screen.clear()
+    tester.act(action, screen, picking_more=True)
+    tester.act(action, screen, picking_more=True)
+    assert [c for c in commands.run if c[0] == "select-card"] == [["select-card", "0"], ["select-card", "1"]]
+    tester.picked_on_screen.clear()
+
+def test_the_hand_screen_renumbers_after_a_pick_so_identical_cards_reuse_the_index(tester, monkeypatch):
     commands = Commands()
     monkeypatch.setattr(tester.subprocess, "run", commands)
     monkeypatch.setattr(tester, "get_state", lambda: {"can_confirm": False})
@@ -208,7 +220,7 @@ def test_two_picks_of_identical_cards_use_different_screen_indices(tester, monke
     tester.picked_on_screen.clear()
     tester.act(action, screen, picking_more=True)
     tester.act(action, screen, picking_more=True)
-    assert [c for c in commands.run if c[0] == "combat-select-card"] == [["combat-select-card", "0"], ["combat-select-card", "1"]]
+    assert [c for c in commands.run if c[0] == "combat-select-card"] == [["combat-select-card", "0"], ["combat-select-card", "0"]]
     tester.picked_on_screen.clear()
 
 def test_a_pick_the_sim_already_made_is_clicked_for_it(tester, monkeypatch):
@@ -492,9 +504,9 @@ def test_a_fight_that_ends_on_the_death_screen_is_a_loss(tester):
 
 def test_potions_used_in_a_fight_are_counted(tester):
     state = capture()
-    state["potions"] = [{"id": "A"}, {"id": "B"}]
+    state["player"]["potions"] = [{"id": "A"}, {"id": "B"}]
     fight = tester.fight_start(state)
-    state["potions"] = [{"id": "A"}]
+    state["player"]["potions"] = [{"id": "A"}]
     tester.fight_update(fight, state)
     assert fight["potions_used"] == 1
 

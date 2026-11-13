@@ -551,7 +551,7 @@ def test_upgraded_thinking_ahead_does_not_exhaust():
     play(cs)
     assert cs.player.exhaust_pile == []
 
-def test_group_two_ids_exist():
+def test_secret_and_seeker_cards_exist():
     for name in ("SECRET_TECHNIQUE", "SECRET_WEAPON", "SEEKER_STRIKE", "THINKING_AHEAD"):
         assert CardId[name]
 
@@ -1062,7 +1062,7 @@ def test_returning_attacks_follow_the_turn_counter_of_the_state():
     assert new.player.returning == [(CardId.BOLAS, False)]
 
 # ------------------------------------------------------------ tables and loading
-def test_group3_cards_are_in_the_tables():
+def test_utility_cards_are_in_the_tables():
     for card_id in (CardId.EQUILIBRIUM, CardId.SALVO, CardId.PANIC_BUTTON, CardId.PROLONG, CardId.FASTEN, CardId.PREP_TIME, CardId.DARK_SHACKLES,
                     CardId.AUTOMATION, CardId.PANACHE, CardId.ROLLING_BOULDER, CardId.THE_BOMB, CardId.THE_GAMBIT, CardId.MAYHEM, CardId.NOSTALGIA,
                     CardId.BOLAS, CardId.THRUMMING_HATCHET):

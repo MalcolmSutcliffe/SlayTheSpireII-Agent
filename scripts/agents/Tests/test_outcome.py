@@ -200,7 +200,7 @@ def test_each_turn_costs_turn_cost_hp():
 def test_a_kept_potion_is_worth_its_hp():
     kept = won(hp=30, potions=[PotionId.FIRE_POTION]) - won(hp=30)
     assert kept == pytest.approx(DEFAULT_POTION_BONUS / 50)
-    assert DEFAULT_POTION_BONUS == 12
+    assert DEFAULT_POTION_BONUS == 16
 
 def test_a_potion_with_its_own_value_is_worth_that_value():
     potion = next(iter(POTION_BONUS))
@@ -217,8 +217,8 @@ def test_a_max_hp_gained_is_worth_two_hp():
 def test_a_max_hp_lost_costs_two_hp():
     assert won(hp=30, max_hp=48) - won(hp=30, max_hp=50) == pytest.approx(-2 * MAX_HP_SCALING / 50)
 
-def test_a_kept_potion_is_the_same_as_twelve_more_hp():
-    assert won(hp=30, potions=[PotionId.FIRE_POTION], turns=3) == pytest.approx(won(hp=42, turns=3))
+def test_a_kept_potion_is_the_same_as_its_value_in_hp():
+    assert won(hp=30, potions=[PotionId.FIRE_POTION], turns=3) == pytest.approx(won(hp=30 + DEFAULT_POTION_BONUS, turns=3))
 
 def test_dead_segments_left_do_not_change_a_win():
     """A win is rated on HP only: enemies that were never beaten cannot appear in it."""

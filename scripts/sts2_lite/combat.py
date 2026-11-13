@@ -413,16 +413,6 @@ class CombatState:
         new_cs.pending_choice = combat_state.pending_choice.deepcopy() if combat_state.pending_choice else None
         new_cs.won = combat_state.won
         return new_cs
-        
-    def readable(self) -> str:
-        output = ""
-        output += "Turn : " + str(self.turn_number) + "\n"
-        output += "Energy : " + str(self.energy) + "\n"
-        output += "Player : \n" + self.player.readable()
-        output += "Enemies : \n"
-        for enemy in self.enemies:
-            output += enemy.readable()
-        return output
 
 class IllegalActionError(ValueError):
     """Raised when an action is not legal in the current state."""

@@ -40,7 +40,7 @@ def test_the_potion_is_used_when_it_is_the_only_way_to_win_with_a_full_hand(seed
 
 @pytest.mark.parametrize("seed", range(5))
 def test_the_potion_is_kept_when_blocking_wins_without_it(seed):
-    """The same hand against 8 damage: Defend, Defend, Strike every turn takes 3 turns and loses no HP, so the potion (worth 12 HP) stays.
+    """The same hand against 8 damage: Defend, Defend, Strike every turn takes 3 turns and loses no HP, so the potion (worth 16 HP) stays.
     Taking it would be a sure win, but a win with the potion kept is worth more, even at 1 HP."""
     cs = scenario([strike(), defend(), defend()], hp=1, enemy_hp=15, damage=8)
     assert not drinks(first_move(cs, seed))
@@ -55,12 +55,12 @@ def test_the_potion_is_kept_when_the_fight_is_won_without_it(seed):
 
 @pytest.mark.parametrize("seed", range(4))
 def test_the_potion_is_kept_over_a_long_but_safe_win(seed):
-    """Two turns of Strikes beat a weak enemy, taking 8 once: a 20-damage potion is not worth 12 HP here."""
+    """Two turns of Strikes beat a weak enemy, taking 8 once: a 20-damage potion is not worth 16 HP here."""
     cs = scenario([strike(), strike()], draw=[strike(), strike(), strike()], hp=50, enemy_hp=18, damage=2)
     assert not drinks(first_move(cs, seed))
 
 
-# 3. The potion saves 20 HP (worth more than the 12 it costs) against winning a turn later
+# 3. The potion saves 20 HP (worth more than the 16 it costs) against winning a turn later
 @pytest.mark.parametrize("seed", range(5))
 def test_the_potion_is_used_when_it_saves_more_hp_than_it_is_worth(seed):
     cs = scenario([strike()], draw=[strike() for _ in range(6)], hp=50, enemy_hp=12, damage=20)
@@ -68,7 +68,7 @@ def test_the_potion_is_used_when_it_saves_more_hp_than_it_is_worth(seed):
 
 @pytest.mark.parametrize("seed", range(3))
 def test_the_potion_is_kept_when_it_saves_less_than_it_is_worth(seed):
-    """The same fight, but the enemy hits for 8: using the potion saves 8 HP and costs 12."""
+    """The same fight, but the enemy hits for 8: using the potion saves 8 HP and costs 16."""
     cs = scenario([strike()], draw=[strike() for _ in range(6)], hp=50, enemy_hp=12, damage=8)
     assert not drinks(first_move(cs, seed))
 
@@ -91,7 +91,7 @@ def test_every_potion_gets_a_bonus_without_an_error():
 
 def test_the_specific_bonus_beats_the_default_for_a_valued_potion():
     assert rated(scenario([strike()], hp=30), [PotionId.AMBERGRIS]) > rated(scenario([strike()], hp=30), [PotionId.FIRE_POTION])
-    assert DEFAULT_POTION_BONUS == 12
+    assert DEFAULT_POTION_BONUS == 16
 
 
 # rollouts never drink potions
