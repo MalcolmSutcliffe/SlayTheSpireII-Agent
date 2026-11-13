@@ -6,6 +6,20 @@ from .types import JsonDict
 
 
 def normalize_state(raw_state: JsonDict) -> JsonDict:
+    """Normalize a raw bridge state, then fold in the bridge's top-level player.
+
+    The bridge sends the local player (hp, gold, relics, potions, deck, ...) on every
+    in-run state. It wins over the older per-screen summary; keys only the screen
+    summary has are kept.
+    """
+    normalized = _normalize_screen(raw_state)
+    top_player = raw_state.get("player")
+    if isinstance(top_player, dict):
+        normalized["player"] = {**_copy_dict(normalized.get("player")), **top_player}
+    return normalized
+
+
+def _normalize_screen(raw_state: JsonDict) -> JsonDict:
     state_type = str(raw_state.get("state_type") or "unknown")
     run = _copy_dict(raw_state.get("run"))
     context = {
@@ -75,7 +89,10 @@ def normalize_state(raw_state: JsonDict) -> JsonDict:
 
 def _normalize_combat(raw_state: JsonDict, state_type: str, context: JsonDict) -> JsonDict:
     battle = _copy_dict(raw_state.get("battle"))
-    player = _copy_dict(battle.get("player"))
+    player = _battle_player(raw_state, battle)
+    enemies = _copy_list(battle.get("enemies"))
+    # enemies and the player are top-level keys of the result: do not repeat them inside "battle"
+    battle = {k: v for k, v in battle.items() if k not in ("player", "enemies")}
     return {
         "type": "decision",
         "decision": "combat_play",
@@ -88,7 +105,7 @@ def _normalize_combat(raw_state: JsonDict, state_type: str, context: JsonDict) -
         "energy": player.get("energy", 0),
         "max_energy": player.get("max_energy", 0),
         "hand": _copy_list(player.get("hand")),
-        "enemies": _copy_list(battle.get("enemies")),
+        "enemies": enemies,
         "player": player,
         "draw_pile_count": player.get("draw_pile_count", 0),
         "discard_pile_count": player.get("discard_pile_count", 0),
@@ -100,7 +117,8 @@ def _normalize_combat(raw_state: JsonDict, state_type: str, context: JsonDict) -
 def _normalize_hand_select(raw_state: JsonDict, context: JsonDict) -> JsonDict:
     hand_select = _copy_dict(raw_state.get("hand_select"))
     battle = _copy_dict(raw_state.get("battle"))
-    player = _copy_dict(battle.get("player"))
+    player = _battle_player(raw_state, battle)
+    battle = {k: v for k, v in battle.items() if k != "player"}
     return {
         "type": "decision",
         "decision": "hand_select",
@@ -277,6 +295,12 @@ def _normalize_game_over(raw_state: JsonDict, context: JsonDict) -> JsonDict:
         "options": _copy_list(game_over.get("options")),
         "game_over": game_over,
     }
+
+
+def _battle_player(raw_state: JsonDict, battle: JsonDict) -> JsonDict:
+    """The combat player: the bridge's top-level one, or battle.player from an older bridge."""
+    top = raw_state.get("player")
+    return _copy_dict(top if isinstance(top, dict) else battle.get("player"))
 
 
 def _copy_dict(value: Any) -> JsonDict:

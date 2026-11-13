@@ -78,8 +78,9 @@ class CombatState:
         if "enemies" not in combat_state and "battle" in combat_state:
             # a card-selection screen nests the fight under "battle" and has no top-level energy
             battle = combat_state["battle"]
+            owner = combat_state.get("player") if "energy" in (combat_state.get("player") or {}) else battle["player"]
             combat_state = {**combat_state, "enemies": battle["enemies"], "round": battle["round"],
-                            "energy": battle["player"]["energy"], "max_energy": battle["player"]["max_energy"],
+                            "energy": owner["energy"], "max_energy": owner["max_energy"],
                             "reviving": battle.get("reviving", [])}
         cs = cls()
         cs.player = Player.from_dict(combat_state["player"])
