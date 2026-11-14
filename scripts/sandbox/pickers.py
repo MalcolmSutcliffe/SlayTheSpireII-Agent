@@ -39,8 +39,8 @@ class AgentPicker(CardPicker):
     def transform(self, deck, n, allowed):
         return self.select("transform", deck, n, allowed)
 
-    def enchant(self, deck, allowed):
-        return self.select("enchant", deck, 1, allowed)
+    def enchant(self, deck, allowed, n : int = 1):
+        return self.select("enchant", deck, n, allowed)
 
     def take(self, offered, n):
         """The cards of an event's reward: the card reward screen, one pick at a time (a skip ends it)."""

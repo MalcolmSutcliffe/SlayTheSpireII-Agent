@@ -523,6 +523,10 @@ class CombatSimulator:
         """Discovery: pick one of the cards made up for the choice (or none); it joins the hand for free this turn."""
         self.combat_state.pending_choice = PendingChoice("discover", list(range(len(offers))), "offer", hidden=True, offers=offers)
 
+    def request_pick_to_hand(self, offers : list[Card]):
+        """Toolbox, Choices Paradox: pick one of the cards made up for the choice (no skipping); it joins the hand."""
+        self.combat_state.pending_choice = PendingChoice("pick_to_hand", list(range(len(offers))), "offer", offers=offers)
+
     def request_curse(self, offers : list[Card], disintegration : int):
         """Knowledge Demon: choose a curse. It is a pick from the choose-a-card screen, no card is played; `amount` is what Disintegration deals."""
         self.combat_state.pending_choice = PendingChoice("curse", list(range(len(offers))), "offer", amount=disintegration, offers=offers)
@@ -588,6 +592,8 @@ class CombatSimulator:
         card = (choice.offers if choice.pile == "offer" else self._pile(choice.pile))[index]
         if choice.kind == "discover":
             player.add_to_hand(card.free_this_turn())
+        elif choice.kind == "pick_to_hand":
+            player.add_to_hand(card)
         elif choice.kind == "curse":
             player.apply_status(KNOWLEDGE_CURSES[card.card_id], choice.amount if card.card_id == CardId.DISINTEGRATION else KNOWLEDGE_CURSE_AMOUNTS[card.card_id])
             if card.card_id == CardId.WASTE_AWAY:       # the bridge reports max energy with it taken off, so the sim does the same
@@ -885,6 +891,11 @@ class CombatSimulator:
             cs.continuations = []           # what the step adds (a choice of its own) goes before the rest
             if kind == "finish":
                 self._finish_card_play(*args)
+            elif kind == "opening":
+                from sts2_lite.relic.combat_start import request_opening_choice
+                request_opening_choice(self, args[0])
+            elif kind == "enchant":
+                args[0]._enchantment_on_play(self)
             elif kind == "random":
                 self.play_random_from_draw_pile(args[0])
             elif kind == "replay":

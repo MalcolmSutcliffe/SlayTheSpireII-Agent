@@ -42,11 +42,25 @@ def card_dict(card : dict) -> dict:
             "_upgrade": bool(card.get("_upgrade"))}
 
 
+def _combat_start_potions(run : RunState, game):
+    """BeforeCombatStart: Petrified Toad brings a Potion-Shaped Rock, Delicate Frond fills every open slot with a random potion (they stay on the belt after the fight)."""
+    from sandbox.rewards import random_potion
+    def add(potion_id : str):
+        if len(run.potions) < run.potion_slots:
+            run.potions.append({"id": potion_id, "name": potion_id.replace("_", " ").title()})
+    if run.has_relic("PETRIFIED_TOAD"):
+        add("POTION_SHAPED_ROCK")
+    if run.has_relic("DELICATE_FROND"):
+        while len(run.potions) < run.potion_slots:
+            add(random_potion(game.stream("potion_rewards")))
+
+
 def start_fight(run : RunState, encounter_id : str, room_type : str, game, final_fight : bool = False) -> CombatSimulator:
     """Round 1 of `encounter_id` with the run's deck shuffled, the opening hand drawn and the start-of-combat relics applied."""
     cards = [card_dict(c) for c in run.deck]
     relics = copy.deepcopy(run.relics)
-    opening = Opening(relics, room_type, room_type == "boss")
+    _combat_start_potions(run, game)
+    opening = Opening(relics, room_type, room_type == "boss", interactive=True)
     energy = BASE_ENERGY + opening.energy_bonus()
     me = {"hp": run.hp, "max_hp": run.max_hp, "block": 0, "gold": run.gold, "status": [], "hand": [], "draw_pile": cards, "discard_pile": [], "exhaust_pile": [],
           "relics": relics, "potions": [dict(p, slot=i) for i, p in enumerate(run.potions)], "potion_slots": run.potion_slots, "energy": energy, "max_energy": energy}

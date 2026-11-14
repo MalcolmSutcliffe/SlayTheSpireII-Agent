@@ -8,6 +8,8 @@ from sandbox.rewards import generate_rewards, gold_range
 from sts2_lite import rng
 from sts2_lite.combat import CombatSimulator
 from sts2_lite.encounters import ENCOUNTERS
+from sts2_lite.card.ids import CardKeyword
+from sts2_lite.event import card_entry
 from sts2_lite.run import GameRng, SearchRng, new_run
 
 TOUGH = 3000
@@ -142,3 +144,89 @@ def test_illegal_choice_falls_back_and_is_counted():
             return Option("bogus", {})
     r = sim_of(Cheater(), seed=2).run()
     assert r.illegal_choices > 0
+
+
+def test_relics_are_drawn_from_the_bag_and_never_repeat():
+    for seed in range(6):
+        result = sim_of(RandomFighter(), seed=seed).run()
+        assert len(set(result.relics)) == len(result.relics)          # a drawn relic is never offered twice
+        assert result.pending_relics <= 2                              # only boss relics are still counted (act 1 and act 2)
+
+
+def test_a_relic_that_conjures_cards_at_the_start_of_a_fight_does_not_crash():
+    from sts2_lite.run import new_run
+    run = new_run(0)
+    for relic in ("VEXING_PUZZLEBOX", "ORANGE_DOUGH", "BIG_HAT"):
+        run.relics.append({"id": relic, "name": relic})
+    game = GameRng(1)
+    for _ in range(5):
+        start_fight(run, next(e.id for e in ENCOUNTERS.values() if e.room == "Monster"), "monster", game)
+
+
+RUN_MODIFIERS = ("AMETHYST_AUBERGINE", "BLACK_STAR", "PRAYER_WHEEL", "WHITE_STAR", "WHITE_BEAST_STATUE", "WONGOS_MYSTERY_TICKET", "LASTING_CANDY", "DINGY_RUG", "MOLTEN_EGG", "TOXIC_EGG",
+                 "LAVA_LAMP", "WING_CHARM", "BOWLER_HAT", "DRAGON_FRUIT", "SHOVEL", "REGAL_PILLOW", "DREAM_CATCHER", "TINY_MAILBOX", "JUZU_BRACELET", "ETERNAL_FEATHER",
+                 "MEAL_TICKET", "PLANISPHERE", "MAW_BANK", "LAVA_ROCK", "MINIATURE_TENT", "LUCKY_FYSH", "BOOK_OF_FIVE_RINGS", "BING_BONG", "CHOSEN_CHEESE", "STONE_HUMIDIFIER",
+                 "SWORD_OF_STONE", "DARKSTONE_PERIAPT", "TOOLBOX", "CHOICES_PARADOX", "GAMBLING_CHIP", "PETRIFIED_TOAD", "DELICATE_FROND", "MYSTIC_LIGHTER")
+
+
+def test_runs_with_every_run_modifier_relic_stay_legal():
+    for seed in range(4):
+        sim = sim_of(RandomFighter(), seed=seed)
+        for relic in RUN_MODIFIERS:
+            sim.run_state.relics.append({"id": relic, "name": relic})
+            sim.run_state.hidden.relic_bag.remove(relic)
+        result = sim.run()
+        assert result.illegal_choices == 0
+        others = [r for r in result.relics if r != "CIRCLET"]          # the fallback relic of an empty bag may repeat
+        assert len(set(others)) == len(others)
+
+
+def fight_with(*relics, deck=None, seed=0):
+    run = new_run(0)
+    run.relics += [{"id": r, "name": r} for r in relics]
+    if deck is not None:
+        run.deck = deck
+    return run, start_fight(run, next(e.id for e in ENCOUNTERS.values() if e.room == "Monster"), "monster", GameRng(seed))
+
+
+def test_toolbox_opens_the_fight_with_a_pick_of_three_colorless_cards():
+    _, sim = fight_with("TOOLBOX")
+    pending = sim.combat_state.pending_choice
+    assert pending.kind == "pick_to_hand" and len(pending.offers) == 3
+    hand = len(sim.combat_state.player.hand)
+    sim.perform_action(sim.get_available_actions()[0])
+    assert sim.combat_state.pending_choice is None and len(sim.combat_state.player.hand) == hand + 1
+
+
+def test_opening_choices_queue_in_order_and_gambling_chip_redraws():
+    _, sim = fight_with("TOOLBOX", "CHOICES_PARADOX", "GAMBLING_CHIP")
+    seen = []
+    while sim.combat_state.pending_choice is not None:
+        pending = sim.combat_state.pending_choice
+        seen.append(pending.kind)
+        sim.perform_action({"action": "confirm_choice"} if pending.kind == "discard_any" else sim.get_available_actions()[0])
+    assert seen[:2] == ["pick_to_hand", "pick_to_hand"] and seen[2] == "discard_any"
+    paradox = [c for c in sim.combat_state.player.hand if CardKeyword.RETAIN in c.keywords]
+    assert paradox
+
+
+def test_petrified_toad_and_delicate_frond_fill_the_belt():
+    run, sim = fight_with("PETRIFIED_TOAD")
+    assert [p["id"] for p in run.potions] == ["POTION_SHAPED_ROCK"]
+    run, sim = fight_with("DELICATE_FROND")
+    assert len(run.potions) == run.potion_slots
+
+
+def test_mystic_lighter_adds_nine_to_an_enchanted_card_only():
+    from sts2_lite.event.run import enchanted
+    plain = card_entry("STRIKE_IRONCLAD")
+    for entry, bonus in ((plain, 0), (enchanted(plain, "SWIFT", 1), 9)):
+        hits = []
+        for relic in (None, "MYSTIC_LIGHTER"):
+            run, sim = fight_with(*(["MYSTIC_LIGHTER"] if relic else []), deck=[entry] * 10)
+            enemy = sim.combat_state.enemies[0]
+            hp = enemy.current_hp
+            hand = sim.combat_state.player.hand
+            sim.perform_action({"action": "play_card", "card_index": 0, "target": 0})
+            hits.append(hp - enemy.current_hp)
+        assert hits[1] - hits[0] == bonus

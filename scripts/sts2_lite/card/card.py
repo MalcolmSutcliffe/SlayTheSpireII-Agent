@@ -541,7 +541,11 @@ class Card:
         enchantment = self.enchantment
         if enchantment is None:
             return
-        player = combat.combat_state.player
+        cs = combat.combat_state
+        if cs.pending_choice is not None:        # the card's own choice is still open (Secret Weapon): the enchantment comes after the answer, before the after-play step
+            cs.continuations = [("enchant", self)] + cs.continuations
+            return
+        player = cs.player
         amount = self.enchant_amount
         if enchantment == EnchantmentId.ADROIT:
             _gain_block(combat, amount)

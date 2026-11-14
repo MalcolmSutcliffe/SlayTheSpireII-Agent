@@ -40,9 +40,13 @@ def card_reward(run : RunState, offers) -> dict:
     return screen(run, "card_reward", cards=[card_view(o, i) for i, o in enumerate(offers)], can_skip=True)
 
 
-def rest_site(run : RunState, used : bool, can_smith : bool) -> dict:
-    options = [] if used else [{"index": 0, "id": "HEAL", "name": "Rest", "is_enabled": True}, {"index": 1, "id": "SMITH", "name": "Smith", "is_enabled": can_smith}]
-    return screen(run, "rest_site", options=options, can_proceed=used)
+REST_NAMES = {"HEAL": "Rest", "SMITH": "Smith"}
+
+
+def rest_site(run : RunState, names : list[str], can_smith : bool, can_proceed : bool) -> dict:
+    """The options still open at a rest site (HEAL, SMITH, DIG, ...); `can_proceed` once one has been used."""
+    options = [{"index": i, "id": n, "name": REST_NAMES.get(n, n.title()), "is_enabled": can_smith if n == "SMITH" else True} for i, n in enumerate(names)]
+    return screen(run, "rest_site", options=options, can_proceed=can_proceed)
 
 
 def card_select(run : RunState, screen_type : str, cards : list[dict], selected : list[int], can_confirm : bool, can_cancel : bool) -> dict:

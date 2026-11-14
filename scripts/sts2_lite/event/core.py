@@ -27,8 +27,8 @@ class CardPicker:
     def transform(self, deck : list[dict], n : int, allowed : list[int]) -> list[int]:
         return self.rng.sample(allowed, min(n, len(allowed)))
 
-    def enchant(self, deck : list[dict], allowed : list[int]) -> list[int]:
-        return self.rng.sample(allowed, min(1, len(allowed)))
+    def enchant(self, deck : list[dict], allowed : list[int], n : int = 1) -> list[int]:
+        return self.rng.sample(allowed, min(n, len(allowed)))
 
     def take(self, offered : list[dict], n : int) -> list[int]:
         """Cards of a reward screen to add to the deck."""
@@ -75,14 +75,16 @@ class Ctx:
 
     # --- gold
     def gain_gold(self, n : int):
-        self.run.gold += max(0, n)
+        from sts2_lite.relic.run_hooks import gain_gold
+        gain_gold(self.run, n)
 
     def lose_gold(self, n : int):
         self.run.gold = max(0, self.run.gold - n)
 
     # --- cards
     def add_card(self, card_id : str, upgraded : bool = False):
-        self.run.deck.append(card_entry(card_id, upgraded))
+        from sts2_lite.relic.run_hooks import add_to_deck
+        add_to_deck(self.run, card_entry(card_id, upgraded))
 
     def removable(self, pred : Callable[[dict], bool] = lambda c: True) -> list[int]:
         return [i for i, c in enumerate(self.run.deck) if c.get("removable") is not False and pred(c)]
@@ -118,11 +120,10 @@ class Ctx:
     def enchantable(self, enchantment : str, card_type : str | None = None) -> list[int]:
         return [i for i, x in enumerate(self.run.deck) if can_enchant(x, enchantment, card_type)]
 
-    def enchant(self, enchantment : str, amount : int, card_type : str | None = None):
+    def enchant(self, enchantment : str, amount : int, card_type : str | None = None, count : int = 1):
         allowed = self.enchantable(enchantment, card_type)
-        for i in self.picker.enchant(self.run.deck, allowed)[:1]:
-            if i in allowed:
-                self.run.deck[i] = enchanted(self.run.deck[i], enchantment, amount)
+        for i in sorted(set(self.picker.enchant(self.run.deck, allowed, count)) & set(allowed))[:count]:
+            self.run.deck[i] = enchanted(self.run.deck[i], enchantment, amount)
 
     def transform_into(self, card_id : str, pred : Callable[[dict], bool]):
         """Replace one picked card (matching `pred`) by a fixed card."""
@@ -133,7 +134,8 @@ class Ctx:
 
     def pick_from_offer(self, offered : list[dict], n : int):
         for i in sorted(set(self.picker.take(offered, n))):
-            self.run.deck.append(offered[i])
+            from sts2_lite.relic.run_hooks import add_to_deck
+            add_to_deck(self.run, offered[i])
 
     def reward_cards(self, n : int, colorless : bool = False) -> list[dict]:
         from sts2_lite.event.run import COLORLESS_POOL
@@ -144,10 +146,11 @@ class Ctx:
     # --- relics and potions
     def gain_relic(self, relic_id : str | None = None, name : str | None = None):
         """A named relic, or (id None) a relic the game draws from its bag: counted in `pending_relics`."""
-        if relic_id is None:
+        from sts2_lite.relic.pickup import obtain_relic
+        if relic_id is None and getattr(self.run.hidden, "relic_bag", None) is None:
             self.run.pending_relics += 1
         else:
-            self.run.relics.append({"id": relic_id, "name": name or relic_id.replace("_", " ").title()})
+            obtain_relic(self, relic_id, name)
 
     def gain_potion(self, potion_id : str | None = None):
         if len(self.run.potions) < self.run.potion_slots:

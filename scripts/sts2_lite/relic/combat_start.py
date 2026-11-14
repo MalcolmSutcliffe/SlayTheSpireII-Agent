@@ -2,8 +2,9 @@
 
 A live bridge state already contains these effects, so none of this is registered as a RelicId (it would count twice).
 Order follows CombatManager: room entry -> BeforeSideTurnStart -> energy reset -> BeforeHandDraw -> innate cards to the top ->
-hand draw -> AfterPlayerTurnStart -> AfterSideTurnStart. Choice relics (Toolbox, Choices Paradox, Gambling Chip), map relics (Fur Coat,
-Delicate Frond), Venerable Tea Set and the Poison/Soul relics (Twisted Funnel, Funerary Mask) are not modelled.
+hand draw -> AfterPlayerTurnStart -> AfterSideTurnStart. The choice relics (Toolbox, Choices Paradox, Gambling Chip) open a card choice only for an `interactive`
+Opening (a fight played for real); a deck evaluation leaves them out. Map relics (Fur Coat), Venerable Tea Set and the Poison/Soul relics (Twisted Funnel,
+Funerary Mask) are not modelled. Petrified Toad and Delicate Frond put potions on the belt before the fight (sandbox/combat.py).
 """
 from __future__ import annotations
 from typing import TYPE_CHECKING
@@ -39,7 +40,8 @@ STONE_CRACKER_CARDS, POWER_CELL_CARDS, ORANGE_DOUGH_CARDS, BIG_HAT_CARDS = 2, 2,
 
 class Opening:
     """The relics that matter at the start of one fight: `relics` is the raw relic list of the state (id, counter, status)."""
-    def __init__(self, relics : list[dict], room_type : str, is_boss : bool = False):
+    def __init__(self, relics : list[dict], room_type : str, is_boss : bool = False, interactive : bool = False):
+        self.interactive = interactive          # the relics that open with a card choice (a fight played for real, not a deck evaluation)
         self.active : dict[str, dict] = {}
         for r in relics:
             if r.get("status") == "Disabled" or (r["id"] in COUNTER_RELICS and r.get("counter") is not None and r["counter"] <= 0):
@@ -115,6 +117,11 @@ class Opening:
     def after_draw(self, sim : CombatSimulator):
         cs = sim.combat_state
         player = cs.player
+        if self.interactive:
+            queue = [name for name in OPENING_CHOICES if self.has(name)]
+            if queue:
+                cs.continuations = cs.continuations + [("opening", name) for name in queue[1:]]
+                request_opening_choice(sim, queue[0])
         for relic, amount in BLOCK.items():
             if self.has(relic):
                 player.apply_block(amount)
@@ -159,9 +166,35 @@ class Opening:
             _red_skull(sim, red_skull)       # the hp changed above without an event: the heals may have lifted it over half hp (or it opens at half or less)
 
 
+OPENING_CHOICES = ("TOOLBOX", "CHOICES_PARADOX", "GAMBLING_CHIP")        # in the order the game runs them: BeforeHandDraw, then AfterPlayerTurnStart
+TOOLBOX_CARDS, CHOICES_PARADOX_CARDS = 3, 5
+
+
+def request_opening_choice(sim : CombatSimulator, relic : str):
+    """The card choice a relic opens the fight with: Toolbox (one of 3 colorless cards), Choices Paradox (one of 5 class cards, Retained), Gambling Chip (discard
+    any cards from the hand, and draw as many)."""
+    from sts2_lite.event.run import COLORLESS_POOL
+    player = sim.combat_state.player
+    if relic == "TOOLBOX":
+        offers = [Card.create_generated(cid) for cid in rng.sample(list(COLORLESS_POOL), TOOLBOX_CARDS)]
+        sim.request_pick_to_hand(offers)
+    elif relic == "CHOICES_PARADOX":
+        from sts2_lite.event.run import CLASS_POOL
+        offers = [Card.create_generated(cid).with_keyword(CardKeyword.RETAIN) for cid in rng.sample(_creatable(CLASS_POOL), CHOICES_PARADOX_CARDS)]
+        sim.request_pick_to_hand(offers)
+    elif relic == "GAMBLING_CHIP" and player.hand:
+        sim.request_choice("discard_any", list(range(len(player.hand))), "hand", 0)
+
+
+def _creatable(pool) -> list:
+    """The class cards the combat sim can create (Feed and Not Yet are in the event pool but not generatable)."""
+    from sts2_lite.card.tables import GENERATABLE_CARDS
+    return [cid for cids in pool.values() for cid in cids if cid in GENERATABLE_CARDS]
+
+
 def _class_card() -> Card:
     from sts2_lite.event.run import CLASS_POOL
-    return Card.create_generated(rng.choice(CLASS_POOL))
+    return Card.create_generated(rng.choice(_creatable(CLASS_POOL)))
 
 def _colorless_card() -> Card:
     from sts2_lite.event.run import COLORLESS_POOL
@@ -169,7 +202,7 @@ def _colorless_card() -> Card:
 
 def _ethereal_class_card() -> Card | None:
     from sts2_lite.event.run import CLASS_POOL
-    pool = [cid for cid in CLASS_POOL if CardKeyword.ETHEREAL in Card.create_generated(cid).keywords]
+    pool = [cid for cid in _creatable(CLASS_POOL) if CardKeyword.ETHEREAL in Card.create_generated(cid).keywords]
     return Card.create_generated(rng.choice(pool)) if pool else None
 
 

@@ -12,7 +12,7 @@ from sts2_lite.run.state import RunState
 
 REST_HEAL_SHARE = 0.30          # what a rest site heals, as a share of max HP (the Dense Vegetation and Unrest Site heal match it)
 # The cards a transform / reward event draws from: the Ironclad pool only (rarity odds: sts2_lite.rewards)
-EXTRA_TYPES = {CardId.FEED : CardType.Attack, CardId.NOT_YET : CardType.Skill}      # Ironclad cards GENERATABLE_CARDS lacks
+EXTRA_TYPES = {CardId.FEED : CardType.Attack, CardId.NOT_YET : CardType.Skill, CardId.APPARITION : CardType.Skill, CardId.APOTHEOSIS : CardType.Skill, CardId.MAUL : CardType.Attack}      # cards GENERATABLE_CARDS lacks (Feed, Not Yet: Ironclad; the rest: relics, ancients)
 
 
 BASIC_CARDS = {CardId.STRIKE_IRONCLAD : ("Strike", CardType.Attack), CardId.DEFEND_IRONCLAD : ("Defend", CardType.Skill), CardId.BASH : ("Bash", CardType.Attack)}

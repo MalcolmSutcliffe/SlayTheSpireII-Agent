@@ -24,6 +24,11 @@ def _strike_dummy_damage(relic : RelicInstance, card : Card | None) -> int:
 def _fake_strike_dummy_damage(relic : RelicInstance, card : Card | None) -> int:
     return FAKE_STRIKE_DUMMY_BONUS if card is not None and card.is_strike else 0
 
+MYSTIC_LIGHTER_BONUS = 9
+
+def _mystic_lighter_damage(relic : RelicInstance, card : Card | None) -> int:
+    return MYSTIC_LIGHTER_BONUS if card is not None and card.enchantment is not None else 0
+
 def _miniature_cannon_damage(relic : RelicInstance, card : Card | None) -> int:
     return MINIATURE_CANNON_BONUS if card is not None and card.is_upgraded else 0
 
@@ -31,6 +36,7 @@ DAMAGE_ADDITIVE : dict[RelicId, Callable[[RelicInstance, Card | None], int]] = {
     RelicId.STRIKE_DUMMY : _strike_dummy_damage,
     RelicId.FAKE_STRIKE_DUMMY : _fake_strike_dummy_damage,
     RelicId.MINIATURE_CANNON : _miniature_cannon_damage,
+    RelicId.MYSTIC_LIGHTER : _mystic_lighter_damage,
 }
 
 def damage_bonus(attacker : Creature, card : Card | None) -> int:

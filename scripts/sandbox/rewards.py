@@ -5,6 +5,8 @@ from dataclasses import dataclass
 
 from sts2_lite.encounters import Encounter
 from sts2_lite.potion import POTION_INFO, PotionId, PotionRarity
+from sts2_lite.relic.bag import pull_relic, relic_name
+from sts2_lite.relic.run_hooks import candy_adds_power, forces_potion_reward, reward_extras
 from sts2_lite.rewards import CardRarityOdds, create_reward_for_room
 from sts2_lite.run import RunState
 
@@ -22,9 +24,11 @@ class Reward:
     amount : int = 0        # gold
     potion : str | None = None
     cards : list | None = None     # the cards of a card reward (CardOffer)
+    relic : str | None = None      # the relic of a relic reward
+    room : str | None = None       # a card reward: the room type whose odds made it
 
     def description(self) -> str:
-        return {"gold": f"{self.amount} gold", "potion": "Add a potion to your belt", "card": "Add a card to your deck", "relic": "Obtain a relic"}[self.kind]
+        return {"gold": f"{self.amount} gold", "potion": "Add a potion to your belt", "card": "Add a card to your deck", "relic": "Obtain " + (relic_name(self.relic) if self.relic else "a relic")}[self.kind]
 
 
 def gold_range(encounter : Encounter, ascension : int) -> tuple[int, int]:
@@ -64,13 +68,49 @@ def generate_rewards(run : RunState, encounter : Encounter, last_act_boss : bool
     out = []
     low, high = gold_range(encounter, run.ascension)
     out.append(Reward("gold", amount=game.stream("gold").randint(low, high)))
-    if roll_potion_reward(run, room, game.stream("potion_rewards")):
+    rolled = roll_potion_reward(run, room, game.stream("potion_rewards"))
+    if rolled or forces_potion_reward(run, room):
         out.append(Reward("potion", potion=random_potion(game.stream("potion_rewards"))))
     rng = game.stream("card_rewards")
     odds = CardRarityOdds(rng, run.ascension, run.hidden.rarity_offset)
-    cards = create_reward_for_room(rng, odds, room, max(0, run.act - 1))
-    run.hidden.rarity_offset = odds.current_value
-    out.append(Reward("card", cards=cards))
+    act_index = max(0, run.act - 1)
+    cards = create_reward_for_room(rng, odds, room, act_index, **_pool_options(run))
+    if candy_adds_power(run):
+        cards += _candy_power(rng, odds, act_index, cards)
+    out.append(Reward("card", cards=cards, room=room))
     if room == "Elite":
-        out.append(Reward("relic"))
+        out.append(Reward("relic", relic=_pull(run)))
+    for extra in reward_extras(run, room, last_act_boss):
+        if extra[0] == "gold":
+            out.append(Reward("gold", amount=extra[1]))
+        elif extra[0] == "relic":
+            out.append(Reward("relic", relic=_pull(run)))
+        else:
+            out.append(Reward("card", cards=create_reward_for_room(rng, odds, extra[1], act_index, **_pool_options(run)), room=extra[1]))
+    run.hidden.rarity_offset = odds.current_value
     return out
+
+
+def _pull(run) -> str | None:
+    return pull_relic(run) if run.hidden.relic_bag else None
+
+
+def _pool_options(run) -> dict:
+    """Dingy Rug: the colorless cards join the pool a card reward draws from."""
+    if not run.has_relic("DINGY_RUG"):
+        return {}
+    from sts2_lite.card.tables import COLORLESS_CARDS
+    from sts2_lite.rewards.cards import IRONCLAD_POOL
+    pool = [c for cards in IRONCLAD_POOL.values() for c in cards] + list(COLORLESS_CARDS)
+    return {"pool": pool}
+
+
+def _candy_power(rng, odds, act_index : int, cards : list) -> list:
+    """Lasting Candy's extra option: a Power the reward does not hold yet (any Power when it holds them all)."""
+    from sts2_lite.event.run import card_entry
+    from sts2_lite.rewards import create_card_reward
+    from sts2_lite.rewards.cards import IRONCLAD_POOL
+    powers = [c for pool in IRONCLAD_POOL.values() for c in pool if card_entry(c)["type"] == "Power"]
+    held = {o.card_id for o in cards}
+    fresh = [c for c in powers if c not in held] or powers
+    return create_card_reward(rng, odds, act_index, 1, pool=fresh) if fresh else []

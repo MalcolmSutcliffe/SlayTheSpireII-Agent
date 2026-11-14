@@ -29,6 +29,7 @@ class Hidden:
     elite_fought : int = 0
     unknown_odds : UnknownRoomOdds = field(default_factory=UnknownRoomOdds)      # what a "?" will turn into
     potion_odds : float = 0.4                       # PotionRewardOdds.CurrentValue
+    relic_bag : object | None = None                # relic.bag.RelicGrabBag; None outside the sandbox (relics the game would draw are then only counted)
 
 
 @dataclass
@@ -52,6 +53,8 @@ class RunState:
     act : int = 1
     floor : int = 1
     pending_relics : int = 0        # relics an event gave whose kind is chosen by the game's relic bag (not modelled): a count, not an id
+    relic_state : dict = field(default_factory=dict)      # what a relic counts: {relic_id: {...}} (combats seen, triggered, bought, ...)
+    offers : list = field(default_factory=list)     # reward screens a relic or event queued: {'kind': 'cards', 'cards': [...]} | {'kind': 'potion'} | {'kind': 'relic'}; the run's player takes them
     pending_fight : str | None = None   # the fight an event option started (not played by the event)
     dead : bool = False
     # --- the rest of the run
