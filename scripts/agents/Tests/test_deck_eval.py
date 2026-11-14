@@ -26,8 +26,9 @@ def test_mix_follows_the_planned_route():
     route = PlannedRoute(["combat", "combat", "rest", "combat", "elite", "combat", "boss"], 1, 1)
     mix = mix_ahead(1, route)
     assert (mix.weak, mix.normal, mix.elite, mix.act) == (1, 2, 1, 1)
-    near_end = mix_ahead(1, PlannedRoute(["rest", "boss"], 7, 1))
-    assert near_end.boss > mix.boss > new_act_mix(1).boss - 0.01        # the boss counts for more the closer it is
+    share = lambda m: m.boss / (m.weak + m.normal + m.elite + m.boss)
+    near_end = mix_ahead(1, PlannedRoute(["rest", "combat", "boss"], 7, 1))
+    assert mix.boss == 1 and share(near_end) > share(mix)        # one boss among fewer fights ahead: it comes up more as the route runs out
 
 
 def test_boss_reward_looks_at_the_next_act():
@@ -142,3 +143,54 @@ def test_upgrade_marker_upgrades_the_card_in_the_fight():
     sim = build_fight(next(t for t in POOL if t.kind == "weak"), deck, p, target_types(POOL))
     cards = sim.combat_state.player.hand + sim.combat_state.player.draw_pile
     assert [c.is_upgraded for c in cards if c.name.startswith("Bash")] == [True]
+
+
+from agents.deck_eval.fight_mix import fights_until_next_rest
+from agents.deck_eval.upgrade_chooser import full_heal
+import random
+
+
+def test_full_heal_is_not_capped():
+    assert full_heal(None, {"hp": 79, "max_hp": 80}) == 24
+
+
+@needs_pool
+def test_rule_one_upgrades_when_the_rest_would_be_cut_short():
+    chooser = UpgradeChooser(DeckAdvisor(fights=10, pool=POOL, log=lambda *_: None))
+    assert chooser.choose_rest(_rest_decision(70)).data["id"] == "SMITH"        # 10 HP missing, a rest heals 24
+
+
+@needs_pool
+def test_fights_until_next_rest_stop_at_the_rest_site():
+    route = PlannedRoute(["rest", "combat", "elite", "rest", "combat", "boss"], 3, 1)
+    fights = fights_until_next_rest(POOL, route, 1, 0, random.Random(1))
+    assert [f.kind for f in fights][0] in ("normal", "weak") and fights[1].kind in ("elite", "normal", "weak") and len(fights) == 2
+    last = fights_until_next_rest(POOL, PlannedRoute(["rest", "combat", "boss"], 3, 1), 1, 0, random.Random(1))
+    assert last[-1].kind == "boss"
+
+
+@needs_pool
+def test_a_chain_carries_hp_and_a_dead_deck_fails_it():
+    ev, p = DeckEvaluator(POOL, target_types(POOL)), _player()
+    fights = fights_until_next_rest(POOL, PlannedRoute(["rest", "combat", "elite", "boss"], 0, 1), 1, 0, random.Random(2))
+    alive, hp = ev.play_chain(p["deck"], {**p, "hp": 1}, fights, 5)
+    assert alive is False and hp == 0
+
+
+def test_early_floor_is_halved_for_the_first_three_rewards():
+    assert skip_floor(10, early=True) == skip_floor(10) / 2 and skip_floor(10, early=True) == 0.15
+
+
+@needs_pool
+def test_early_floor_applies_to_the_first_three_rewards_of_a_run():
+    p = _player()
+    state = lambda floor: {"type": "decision", "decision": "card_reward", "player": p, "context": {"act": 1, "floor": floor}}
+    options = [Option("Bash", {"action": "select_card_reward", "card_index": 0}, {"index": 0, "id": "BASH", "name": "Bash", "type": "Attack", "cost": 2}),
+               Option("skip", {"action": "skip_card_reward"})]
+    logs = []
+    chooser = CardRewardChooser(fights=5, pool=POOL, log=logs.append)
+    for floor in (2, 3, 4, 6):
+        chooser.choose(Decision(CARD_REWARD, state(floor), options))
+    assert chooser._rewards == 4
+    chooser.choose(Decision(CARD_REWARD, state(1), options))        # the floor number went down: a new run
+    assert chooser._rewards == 1

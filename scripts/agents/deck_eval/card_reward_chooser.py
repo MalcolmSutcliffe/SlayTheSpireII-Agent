@@ -11,11 +11,14 @@ from agents.deck_eval.advisor import DeckAdvisor, DEFAULT_FIGHTS
 
 Z = 2.0                     # standard errors the gain has to clear
 FLOOR_AT_10_CARDS = 0.3     # reward points (a win is ~20, so 0.3 is ~1.5% of one): the smallest gain worth a card in a 10 card deck
+EARLY_FLOOR_AT_10_CARDS = 0.15      # the same for the first EARLY_REWARDS card rewards of a run: a starter deck nearly always takes a card
+EARLY_REWARDS = 3
 MIN_FLOOR_DECK = 10
 
 
-def skip_floor(deck_size : int) -> float:
-    return FLOOR_AT_10_CARDS * MIN_FLOOR_DECK / max(MIN_FLOOR_DECK, deck_size)
+def skip_floor(deck_size : int, early : bool = False) -> float:
+    base = EARLY_FLOOR_AT_10_CARDS if early else FLOOR_AT_10_CARDS
+    return base * MIN_FLOOR_DECK / max(MIN_FLOOR_DECK, deck_size)
 
 
 def paired_gain(with_card : list[float], without : list[float]) -> tuple[float, float]:
@@ -31,10 +34,18 @@ class CardRewardChooser:
     def __init__(self, fights : int = DEFAULT_FIGHTS, pool=None, route_provider=lambda: None, log=print, advisor : DeckAdvisor | None = None):
         self.advisor = advisor or DeckAdvisor(fights, pool, route_provider, log)
         self.evaluator, self.log = self.advisor.evaluator, self.advisor.log
+        self._rewards = 0           # card rewards decided in this run
+        self._floor = 0
 
     def choose(self, decision : Decision) -> Option:
         player = decision.player
         deck = player.get("deck") or []
+        floor = (decision.state.get("context") or decision.state.get("run") or {}).get("floor", 0)
+        if floor < self._floor:         # a new run
+            self._rewards = 0
+        self._floor = floor
+        early = self._rewards < EARLY_REWARDS
+        self._rewards += 1
         mix, fights, seed, _ = self.advisor.sample(decision)
         start = time.perf_counter()
         skip = next((o for o in decision.options if o.action.get("action") == "skip_card_reward"), None)
@@ -50,7 +61,7 @@ class CardRewardChooser:
         best = max(rows, key=lambda r: r[0], default=None)
         if best is None:
             return skip or decision.options[0]
-        needed = Z * best[1] + skip_floor(len(deck)) if best else 0.0
+        needed = Z * best[1] + skip_floor(len(deck), early) if best else 0.0
         take = best is not None and best[0] > needed
         chosen = best[2] if take else (skip or best[2])
         self.log("card reward act %d (weak %.0f normal %.0f elite %.0f boss %.1f, %d fights, %.1fs, base win %.0f%%): " %

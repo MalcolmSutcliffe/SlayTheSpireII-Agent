@@ -49,6 +49,8 @@ class PlannedRoute:
     kinds : list[str]
     combats_before : int
     act : int
+    boss : str | None = None        # the act's boss encounter id, once the map shows it (the bridge's map `boss.encounter`)
+    act_model : str | None = None   # "OVERGROWTH" | "UNDERDOCKS" | "HIVE" | "GLORY"
 
 
 class PathPlanner:
@@ -76,7 +78,7 @@ class PathPlanner:
             if best is None or key > best[0]:
                 best = (key, opt, kinds)
         ctx = state.get("context") or state.get("run") or {}
-        self.route = PlannedRoute(best[2], combats_done, ctx.get("act", 1))
+        self.route = PlannedRoute(best[2], combats_done, ctx.get("act", 1), (state.get("boss") or {}).get("encounter"), state.get("act_model"))
         return best[1]
 
     def best_route(self, nodes : dict, coord : tuple, point_type : str | None, combats : int, treasure : bool, hurt : bool, gold : float = 0, here : int = 0, shop_seen : bool = False) -> tuple[float, int, list[str]]:

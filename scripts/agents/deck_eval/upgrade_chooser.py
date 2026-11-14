@@ -14,6 +14,7 @@ from agents.deck_eval.fight_mix import fights_until_next_rest
 
 REST_HEAL_SHARE = 0.30      # a rest site heals this share of max HP when its option does not say how much
 PLAIN_PREFIXES = ("STRIKE", "DEFEND")
+UPGRADE_FIGHTS = 150        # fights each upgrade is tried on (a card reward uses the advisor's 400)
 CHAINS = 150                # simulated walks from this rest site to the next one
 SURVIVE_RATE = 0.8          # the upgrade is taken when the deck gets through the fights up to the next rest site at least this often
 
@@ -46,7 +47,7 @@ class UpgradeChooser:
         """({card id: gain of upgrading one copy}, gain of `healed` more HP), all on the same fights and dice. Only cards that can be upgraded."""
         player = decision.player
         deck = player.get("deck") or []
-        mix, fights, seed, _ = self.advisor.sample(decision)
+        mix, fights, seed, _ = self.advisor.sample(decision, UPGRADE_FIGHTS)
         ev, start = self.advisor.evaluator, time.perf_counter()
         base = ev.score(deck, player, fights, seed)
         candidates = {}

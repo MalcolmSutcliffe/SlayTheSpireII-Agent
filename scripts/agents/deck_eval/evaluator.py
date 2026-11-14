@@ -29,6 +29,28 @@ class DeckEvaluator:
         self.pool, self.target_types = pool, target_types
         self.config = SearchConfig().tuned(rollout=policy)
 
+    def play_chain(self, deck : list[dict], player : dict, fights : list[FightTemplate], seed : int) -> tuple[bool, int]:
+        """The fights one after the other with the HP carried over (the combat's own heal after a win included): (alive at the end, HP left)."""
+        cfg, hp = self.config, player["hp"]
+        for i, template in enumerate(fights):
+            rng.seed((seed << 10) + i)
+            sim = build_fight(template, deck, {**player, "hp": hp}, self.target_types)
+            cs = sim.combat_state
+            end_turn = cs.turn_number + MAX_TURNS
+            turn = cs.turn_number
+            while not sim.is_over and cs.turn_number < end_turn:
+                if cs.turn_number != turn:
+                    turn = cs.turn_number
+                    rng.seed(((seed << 10) + i << 10) + turn)
+                actions = sim.get_available_actions()
+                if not actions:
+                    break
+                sim.perform_action(rollout_policy(sim, actions, cfg.rollout, cfg.heuristic))
+            if not (cs.player.current_hp > 0 and all(e.is_minion or e.current_hp <= 0 for e in cs.enemies)):
+                return False, 0
+            hp = cs.player.current_hp
+        return True, hp
+
     def score(self, deck : list[dict], player : dict, fights : list[FightTemplate], seed : int) -> DeckScore:
         start, rewards, wins, hp_left = time.perf_counter(), [], 0, 0.0
         cfg = self.config

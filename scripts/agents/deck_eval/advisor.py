@@ -18,11 +18,11 @@ class DeckAdvisor:
         self.log = log
         self._calls = 0
 
-    def sample(self, decision):
-        """(mix, fights, seed, ascension): the fights lying ahead of this decision; every option is played on all of them with the same dice."""
+    def sample(self, decision, fights : int | None = None):
+        """(mix, fights, seed, ascension): `fights` (default: the advisor's) fights lying ahead of this decision; every option is played on all of them with the same dice."""
         ctx = decision.state.get("context") or decision.state.get("run") or {}
         mix = mix_ahead(ctx.get("act", 1), self.route_provider())
         self._calls += 1
         seed = 1000 + self._calls
         ascension = ctx.get("ascension", 0)
-        return mix, pick_fights(self.pool, mix, self.fights, seed, ascension), seed, ascension
+        return mix, pick_fights(self.pool, mix, fights or self.fights, seed, ascension), seed, ascension
