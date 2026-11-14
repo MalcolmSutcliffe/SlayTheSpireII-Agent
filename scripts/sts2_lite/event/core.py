@@ -10,7 +10,7 @@ import random
 from dataclasses import dataclass, field
 from typing import Callable
 
-from sts2_lite.event.run import RunSnapshot, can_enchant, can_upgrade, card_entry, enchanted, random_class_cards, is_curse, CLASS_POOL, REWARD_ODDS
+from sts2_lite.event.run import RunSnapshot, can_enchant, can_upgrade, card_entry, enchanted, random_class_cards, is_curse, CLASS_POOL
 
 
 class CardPicker:

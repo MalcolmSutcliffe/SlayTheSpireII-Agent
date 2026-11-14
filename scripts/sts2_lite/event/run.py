@@ -13,8 +13,7 @@ from sts2_lite.card.tables import CARD_RARITY, COLORLESS_CARDS, GENERATABLE_CARD
 from sts2_lite.relic import RelicId
 
 REST_HEAL_SHARE = 0.30          # what a rest site heals, as a share of max HP (the Dense Vegetation and Unrest Site heal match it)
-# Share of each rarity in a card reward, and the cards a transform / reward event draws from: the Ironclad pool only
-REWARD_ODDS = {"Common": 0.60, "Uncommon": 0.25, "Rare": 0.15}
+# The cards a transform / reward event draws from: the Ironclad pool only (rarity odds: sts2_lite.rewards)
 EXTRA_TYPES = {CardId.FEED : CardType.Attack, CardId.NOT_YET : CardType.Skill}      # Ironclad cards GENERATABLE_CARDS lacks
 
 
@@ -56,7 +55,7 @@ def _pool(table : dict, rarities : tuple[str, ...]) -> dict[str, list[CardId]]:
     return pool
 
 
-CLASS_POOL = _pool(GENERATABLE_CARDS, tuple(REWARD_ODDS))
+CLASS_POOL = _pool(GENERATABLE_CARDS, ("Common", "Uncommon", "Rare"))
 COLORLESS_POOL = [cid for cid in COLORLESS_CARDS if CARD_RARITY.get(cid) is not None and CARD_RARITY[cid].name in ("Uncommon", "Rare")]
 
 
@@ -78,17 +77,13 @@ def can_upgrade(card : dict) -> bool:
     return not card.get("is_upgraded") and card.get("can_upgrade", True) and card.get("type") not in ("Curse", "Status")
 
 
-def random_class_cards(n : int, r : random.Random, exclude : set[str] = frozenset()) -> list[dict]:
-    """n distinct Ironclad cards by the odds of a card reward."""
-    out, seen = [], set(exclude)
-    while len(out) < n:
-        x = r.random()
-        rarity = "Common" if x < REWARD_ODDS["Common"] else "Uncommon" if x < REWARD_ODDS["Common"] + REWARD_ODDS["Uncommon"] else "Rare"
-        cid = r.choice(CLASS_POOL[rarity])
-        if cid.name not in seen:
-            seen.add(cid.name)
-            out.append(card_entry(cid))
-    return out
+def random_class_cards(n : int, r : random.Random, exclude : set[str] = frozenset(), ascension : int = 0) -> list[dict]:
+    """n distinct Ironclad cards as an event or relic offers them (CardCreationOptions.ForNonCombatWithDefaultOdds): the regular-encounter rarity odds
+    without the run's rarity offset, and no upgrades."""
+    from sts2_lite.rewards import CardRarityOdds, OddsType, Source, create_card_reward
+    blacklist = [CardId[name] for name in exclude if name in CardId.__members__]
+    offers = create_card_reward(r, CardRarityOdds(r, ascension), 0, n, OddsType.REGULAR_ENCOUNTER, Source.OTHER, no_upgrade_roll=True, blacklist=blacklist)
+    return [card_entry(offer.card_id) for offer in offers]
 
 
 @dataclass
