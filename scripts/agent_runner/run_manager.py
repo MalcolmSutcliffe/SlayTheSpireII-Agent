@@ -3,6 +3,7 @@ RunManager polls the game and routes each state: a fight goes to the CombatSessi
 shop, event, card or relic pick, treasure) becomes a Decision with its legal options, the agent picks one, and the executor sends it.
 Anything else (loading, the main menu, game over) is only waited out."""
 import time
+from pathlib import Path
 from collections import Counter
 from dataclasses import dataclass, field
 
@@ -98,11 +99,27 @@ class RunManager:
             self.opened = None
 
     def wait(self, game_state : dict):
-        message = f"not in combat ({game_state.get('decision', game_state.get('type'))}) - waiting for the next fight"
+        what = game_state.get("decision", game_state.get("type"))
+        raw = game_state.get("raw") or {}
+        if what == "unknown":
+            what = f"unknown: state_type={game_state.get('raw_state_type')!r} room_type={raw.get('room_type')!r}"
+        message = f"not in combat ({what}) - waiting for the next fight"
         if message != self.waiting_for:
             print(message)
+            if game_state.get("decision") == "unknown":
+                self.save_unknown(game_state)
             self.waiting_for = message
         time.sleep(1.0)
+
+    def save_unknown(self, game_state : dict):
+        """A screen the bridge could not name: keep it, so what the game was showing can be read afterwards."""
+        try:
+            path = Path(self.combat.state_dir or ".") / f"unknown_state_{int(time.time())}.json"
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(dump(game_state))
+            print(f"saved the unrecognised state to {path}")
+        except OSError as error:
+            print(f"could not save the unrecognised state: {error}")
 
     def decide(self, game_state : dict, decision):
         screen = dump(game_state)
