@@ -1,16 +1,14 @@
 """The part of a run an event can change: hit points, gold, the deck, relics and potions.
 
-`RunSnapshot` is a plain copy of that state (the same card dicts the deck evaluator scores), so an event is played on a copy and the original is untouched.
+`RunSnapshot` is `sts2_lite.run.RunState` (the same card dicts the deck evaluator scores), so an event is played on a copy and the original is untouched.
 Card entries are made from the sim's own tables, so a card an event adds has the cost, type and target the combat engine expects."""
 from __future__ import annotations
-import copy
 import random
-from dataclasses import dataclass, field
 
 from sts2_lite.card.constants import CARD_ENERGY_COST_AND_TARGET
 from sts2_lite.card.ids import CardId, CardType
 from sts2_lite.card.tables import CARD_RARITY, COLORLESS_CARDS, GENERATABLE_CARDS, STRIKE_CARDS, DEFEND_CARDS
-from sts2_lite.relic import RelicId
+from sts2_lite.run.state import RunState
 
 REST_HEAL_SHARE = 0.30          # what a rest site heals, as a share of max HP (the Dense Vegetation and Unrest Site heal match it)
 # The cards a transform / reward event draws from: the Ironclad pool only (rarity odds: sts2_lite.rewards)
@@ -86,36 +84,7 @@ def random_class_cards(n : int, r : random.Random, exclude : set[str] = frozense
     return [card_entry(offer.card_id) for offer in offers]
 
 
-@dataclass
-class RunSnapshot:
-    hp : int
-    max_hp : int
-    gold : int
-    deck : list[dict]
-    relics : list[dict] = field(default_factory=list)       # {"id": ..., "name": ...}; ids the combat sim does not know are kept too
-    potions : list[dict] = field(default_factory=list)
-    potion_slots : int = 3
-    act : int = 1
-    floor : int = 1
-    pending_relics : int = 0        # relics an event gave whose kind is chosen by the game's relic bag (not modelled): a count, not an id
-    pending_fight : str | None = None   # the fight an event option started (not played by the event)
-    dead : bool = False
-
-    def copy(self) -> "RunSnapshot":
-        return copy.deepcopy(self)
-
-    @classmethod
-    def from_player(cls, player : dict, deck : list[dict], act : int = 1, floor : int = 1) -> "RunSnapshot":
-        """From a bridge `player` dict plus the deck."""
-        return cls(hp=player["hp"], max_hp=player["max_hp"], gold=player.get("gold", 0), deck=copy.deepcopy(deck), relics=copy.deepcopy(player.get("relics", [])),
-                   potions=copy.deepcopy([p for p in player.get("potions", []) if p]), potion_slots=player.get("potion_slots", 3), act=act, floor=floor)
-
-    def sim_relics(self) -> list[dict]:
-        """The relics the combat sim knows (the rest cannot change a fight it plays)."""
-        return [r for r in self.relics if str(r.get("id", "")) in RelicId.__members__]
-
-    def has_relic(self, relic_id : str) -> bool:
-        return any(r.get("id") == relic_id for r in self.relics)
+RunSnapshot = RunState        # the old name: events play on the run's state
 
 
 # --- enchantments -------------------------------------------------------------------------------------------------------------------------------------
