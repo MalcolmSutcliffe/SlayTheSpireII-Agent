@@ -52,9 +52,12 @@ def shop_options(state : dict) -> list[Option]:
             continue
         if item.get("category") == "potion" and _open_potion_slots(state) == 0:
             continue
-        label = f"buy {item.get('name') or item.get('id') or item.get('category')} ({item.get('cost')}g)"
+        what = item.get("name") or item.get("card_name") or item.get("relic_name") or item.get("potion_name") or item.get("category")
+        label = f"buy {what} ({item.get('cost')}g)"
         options.append(Option(label, {"action": "shop_purchase", "index": item["index"]}, item))
-    return options + _proceed(state, "leave shop")
+    # Leaving is always on offer: buying opens the shop's inventory, which covers the Proceed button (can_proceed reads False), and the
+    # proceed action closes the inventory first, so the agent could not leave if it waited for can_proceed.
+    return options + [Option("leave shop", dict(PROCEED))]
 
 def event_options(state : dict) -> list[Option]:
     if state.get("in_dialogue"):

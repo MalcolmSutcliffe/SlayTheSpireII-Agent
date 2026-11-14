@@ -60,7 +60,7 @@ class BaseAgent:
         return leave[0] if leave else decision.options[0]       # buys nothing
 
     def _get_event_decision(self, decision : Decision) -> Option:
-        return decision.options[0]
+        return self._rng_choice(decision.options)       # events and ancients: any option, for variety
 
     RARITY_FOR_UPGRADE = {"Rare": 3, "Uncommon": 2, "Common": 1, "Basic": 0}       # anything else (a curse, a status) ranks below Basic
 

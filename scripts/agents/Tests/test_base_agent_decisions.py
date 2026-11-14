@@ -71,3 +71,11 @@ def test_rewards_claims_before_proceeding():
     d = decision("rewards", [act("claim_reward", index=0), act("proceed")])
     assert BaseAgent().get_decision(d).name == "claim_reward"
     assert BaseAgent().get_decision(decision("rewards", [act("proceed")])).name == "proceed"
+
+
+def test_event_option_is_random_among_all():
+    from agents.decision import Decision, Option, EVENT
+    agent = BaseAgent()
+    options = [Option(str(i), {"action": "choose_event_option", "index": i}) for i in range(4)]
+    seen = {agent.get_decision(Decision(EVENT, {}, options)).label for _ in range(200)}
+    assert seen == {"0", "1", "2", "3"}

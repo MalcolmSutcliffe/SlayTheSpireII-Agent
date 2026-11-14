@@ -14,6 +14,7 @@ from sts2_lite.combat import CombatState, CombatSimulator
 
 TURN_CHANGE_TIMEOUT = 10.0      # seconds to wait for the round number to advance after End Turn
 LOCKED_READS = 8                # reads of locked-looking cards (about 3 s) before the agent acts anyway
+NEW_FIGHT_TIMEOUT = 30.0        # seconds a new fight may show no hand before the agent acts anyway (a fight that starts with no cards drawn)
 TIME_BUDGET_SECONDS = 10.0      # Max time allocated for agent to think
 
 ###
@@ -59,6 +60,15 @@ def kind_of(game_state : dict, expecting_choice : bool = False, subject_fight : 
     if decision == "card_select" and game_state.get("screen_type") == "choose" and expecting_choice:     # Discovery's offer
         return "pick"
     return "away"
+
+def floor_of(game_state : dict) -> int | None:
+    context = game_state.get("context") or game_state.get("run") or {}
+    return context.get("floor")
+
+def first_state_ready(game_state : dict) -> bool:
+    """The first turn of a fight has been set up: the hand is drawn and the energy given (before that the game reports an empty hand,
+    and the only thing to do is End Turn)."""
+    return bool(game_state.get("hand")) and (game_state.get("energy") or 0) > 0
 
 def turn_is_changing(game_state : dict, ended : dict | None) -> bool:
     """The bridge never reports the play phase. After End Turn it still says "player" while the enemies act, then the
@@ -128,6 +138,8 @@ class CombatSession:
         self.search = install_search_hook() if (decision_log or fight_log) else None
         self.previous = None        # state after the last action: the bridge reports no per-turn history
         self.batch = None           # actions since the last point the sim and the game could be compared
+        self.fight_floor = None     # floor of the fight in progress: a play state on another floor is a new fight, whose first state is awaited
+        self.arrived = None         # when the first state of that new fight was first read
         self.ended = None           # {"round", "time"} of the last End Turn, until the next round starts
         self.captured_round = None  # round whose first state was saved to capture_dir
         self.fight = None           # summary of the fight in progress (--fight-log)
@@ -144,7 +156,7 @@ class CombatSession:
 
     def handle(self, kind : str, game_state : dict):
         """One pass over a state that is not "away": wait out a busy game, or read the state into the sim and act on it. Returns early to read the game again."""
-        if kind == "play" and turn_is_changing(game_state, self.ended):
+        if kind == "play" and (self.entering_new_fight(game_state) or turn_is_changing(game_state, self.ended)):
             kind = "busy"
         if kind == "busy":
             time.sleep(POLL_SECONDS)
@@ -165,6 +177,23 @@ class CombatSession:
             input("waiting for input ... \n")
         self.decide_and_act(game_state, combat_state)
 
+    def entering_new_fight(self, game_state : dict) -> bool:
+        """A play state on a floor the agent has not fought on yet: wait until the first turn has been dealt (hand and energy), however long it
+        takes (up to NEW_FIGHT_TIMEOUT), instead of acting on the state of a turn that has not started."""
+        floor = floor_of(game_state)
+        if floor is None or floor == self.fight_floor:
+            return False
+        if self.arrived is None:
+            self.arrived = time.time()
+        if first_state_ready(game_state):
+            pass
+        elif time.time() - self.arrived < NEW_FIGHT_TIMEOUT:
+            return True
+        else:
+            print("the new fight shows no hand - acting anyway")
+        self.fight_floor, self.arrived = floor, None
+        return False
+
     def finish_fight(self, game_state : dict):
         if self.fight is not None and self.fight_log:
             write_fight(self.fight_log, fight_end(self.fight, game_state))
@@ -184,7 +213,8 @@ class CombatSession:
             verify_combat_end(self.batch, game_state, self.log_path)
             self.checked += 1
         self.forget_fight()
-        self.ended = {"round": 0, "time": time.time()}       # the next fight's first turn is set up in stages, like any turn
+        self.fight_floor = self.arrived = None      # the next fight's first turn is set up in stages: its first state is awaited (entering_new_fight)
+        self.ended = None
 
     # ---- reading the game into the sim
 
