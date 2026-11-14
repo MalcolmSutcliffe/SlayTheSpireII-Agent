@@ -176,6 +176,7 @@ def _normalize_map(raw_state: JsonDict, context: JsonDict) -> JsonDict:
         "visited": _copy_list(map_state.get("visited")),
         "nodes": _copy_list(map_state.get("nodes")),
         "boss": _copy_dict(map_state.get("boss")),
+        "act_model": map_state.get("act_model"),
         "map": map_state,
     }
 

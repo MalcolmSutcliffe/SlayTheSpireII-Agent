@@ -1075,11 +1075,16 @@ public static partial class BridgeMod
             nodes.Add(BuildMapNode(map.SecondBossMapPoint));
 
         state["nodes"] = nodes;
+        // The act's boss (and the second one at Ascension 10+) as encounter ids (VANTOM_BOSS, ...) and which act this is (OVERGROWTH, UNDERDOCKS, HIVE, GLORY)
+        var act = runState.Act;
         state["boss"] = new Dictionary<string, object?>
         {
             ["col"] = map.BossMapPoint.coord.col,
-            ["row"] = map.BossMapPoint.coord.row
+            ["row"] = map.BossMapPoint.coord.row,
+            ["encounter"] = act.BossEncounter?.Id.Entry,
+            ["second_encounter"] = act.SecondBossEncounter?.Id.Entry
         };
+        state["act_model"] = act.Id.Entry;
 
         return state;
     }
