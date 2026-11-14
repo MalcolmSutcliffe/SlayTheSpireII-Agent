@@ -253,6 +253,8 @@ class Player(Creature):
                 if c.bound:
                     pile[i] = c.bound_copy(False)
 
+    opening_hook = None
+
     def turn_start(self):
         self.bound_cards, self.bound_played = 0, False
         self.binding = StatusId.CHAINS_OF_BINDING in self.status
@@ -275,7 +277,11 @@ class Player(Creature):
             clarity.amount -= 1
             if clarity.amount <= 0:
                 del self.status[StatusId.CLARITY_EXTRACT]
-        self.draw_cards(max(0, (5 + hand_draw_bonus(self) if self.relics else 5) + (extra_draw.amount if extra_draw else 0) + (1 if clarity else 0) - self.status_amount(StatusId.MIND_ROT)), from_hand_draw=True)
+        count = max(0, (5 + hand_draw_bonus(self) if self.relics else 5) + (extra_draw.amount if extra_draw else 0) + (1 if clarity else 0) - self.status_amount(StatusId.MIND_ROT))
+        if self.opening_hook is not None:       # a fight built from a deck: first-turn relics and Innate cards (relic/combat_start.py)
+            hook, self.opening_hook = self.opening_hook, None
+            count = hook(self, count)
+        self.draw_cards(count, from_hand_draw=True)
 
         if StatusId.CRIMSON_MANTLE in self.status:
             self.lose_hp(max(1, self.crimson_mantle_plays))

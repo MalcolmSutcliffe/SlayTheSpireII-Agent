@@ -238,7 +238,7 @@ POCKETWATCH_LIMIT, POCKETWATCH_DRAW = 3, 3
 
 def _pocketwatch_turn(combat, relic):
     """Few cards last turn: draw more this turn (`value` is what the hand draw gets added)."""
-    relic.value = POCKETWATCH_DRAW if _count(relic) <= POCKETWATCH_LIMIT else 0
+    relic.value = POCKETWATCH_DRAW if _count(relic) <= POCKETWATCH_LIMIT and combat.combat_state.player_turn > 1 else 0     # nothing was played "last turn" on the first
     relic.counter = 0
 
 HAND_DRAW_FIXED : dict[RelicId, int] = {RelicId.PAELS_BLOOD : 1, RelicId.SNECKO_EYE : 2, RelicId.FIDDLE : 2}

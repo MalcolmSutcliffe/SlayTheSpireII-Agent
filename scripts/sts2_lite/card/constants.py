@@ -194,7 +194,7 @@ UPGRADE_BASE_COST = {
 UPGRADE_REMOVED_KEYWORD = {CardId.SECRET_TECHNIQUE : 1, CardId.SECRET_WEAPON : 1, CardId.THINKING_AHEAD : 1, CardId.PROLONG : 1, CardId.DISCOVERY : 1, CardId.APPARITION : 2}      # Exhaust x5, Ethereal for Apparition
 
 # keyword an upgrade adds
-UPGRADE_KEYWORD = {CardId.SCRAWL : 16, CardId.GOLD_AXE : 16, CardId.ANOINTED : 16, CardId.ENTROPY : 4, CardId.WISH : 16}       # Retain, Retain, Retain, Innate
+UPGRADE_KEYWORD = {CardId.SCRAWL : 16, CardId.GOLD_AXE : 16, CardId.ANOINTED : 16, CardId.ENTROPY : 4, CardId.WISH : 16, CardId.AGGRESSION : 4, CardId.JUGGLING : 4}       # Retain, Retain, Retain, Innate (Entropy, Aggression, Juggling), Retain
 
 CONFUSED_MAX_COST = 3
 

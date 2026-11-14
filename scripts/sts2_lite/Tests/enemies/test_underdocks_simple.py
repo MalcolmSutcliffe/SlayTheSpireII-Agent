@@ -141,7 +141,7 @@ def test_sewer_clam_jets_then_pressurizes_and_its_plating_pays_out():
 def test_sewer_clam_gets_block_from_plating_when_its_turn_starts():
     cs = at("SEWER_CLAM", "JET", status=[status("PLATING", 8)])
     e = cs.enemies[0]
-    e.turn_start()
+    CombatSimulator(cs)._start_player_turn()        # the plating block is gained as the player's turn starts (PlatingPower.BeforeSideTurnEndEarly)
     assert e.block == 8
 
 

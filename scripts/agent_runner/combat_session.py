@@ -5,6 +5,7 @@ sim, compares the sim's last prediction with it, lets the agent decide, sends th
 import time
 
 from agents.verify import compare, game_order_matches, is_random_step, is_unpredictable_step, some_target_roll_matches
+from agents.verify_opening import opening_diffs
 from .combat_logs import (capture_turn_start, fight_end, fight_start, fight_update, install_search_hook, log_decision, log_mismatch,
                           potions_of, report_unimplemented, save_decision_state, write_fight)
 from .game_client import POLL_SECONDS, GameClient, dump
@@ -111,6 +112,17 @@ def verify_step(batch : dict, game_state : dict, actual : CombatState, log_path 
         log_mismatch(log_path, batch, game_state, diffs, batch["predicted"], actual)
     return not diffs
 
+def verify_opening(game_state : dict, log_path : str) -> bool:
+    """The first state of a fight against the opening the sim builds for the same fight, deck, hp and relics (start-of-combat relics, Innate cards)."""
+    try:
+        diffs, predicted, actual = opening_diffs(game_state)
+    except Exception as error:      # a check that cannot run must not stop the run
+        print(f"the fight's opening could not be checked: {type(error).__name__}: {error}")
+        return True
+    if diffs:
+        log_mismatch(log_path, {"before": game_state, "actions": [{"action": "combat_start"}], "random_step": True}, game_state, diffs, predicted, actual)
+    return not diffs
+
 def chained_into_new_fight(batch : dict | None, game_state : dict) -> bool:
     """The sim ended the combat with the last action and the game is in a play state with other enemies: the first boss of a double-boss
     act fell and the next one follows at once (no screen in between), so there is nothing to compare."""
@@ -149,6 +161,7 @@ class CombatSession:
         self.just_mismatched = False
         self.locked_reads = 0
         self.checked = self.mismatched = 0
+        self.opening_checked = False    # the fight's first state has been compared with the sim's opening
         self.reported_cards = set()     # NOT_IMPLEMENTED card ids already logged this run
         self.cards_owed = None      # how many cards the hand and piles must hold once the last action has finished
         self.act3_boss_floors : set[int] = set()     # floors of the Act 3 boss fights seen in this run
@@ -204,6 +217,7 @@ class CombatSession:
         """Nothing carries from one fight to the next."""
         self.fight = self.previous = self.batch = None
         self.captured_round = None
+        self.opening_checked = False
         self.client.picked_on_screen.clear()
 
     # ---- the game is not in a fight
@@ -269,6 +283,12 @@ class CombatSession:
                 return None
             print("cards stay locked although they are affordable - acting anyway")
         self.locked_reads = 0
+        if self.verify and kind == "play" and not self.opening_checked and self.previous is None and game_state.get("round") == 1:
+            self.opening_checked = True
+            self.checked += 1
+            if not verify_opening(game_state, self.log_path):
+                self.mismatched += 1
+                self.just_mismatched = True
         if self.batch is not None and self.batch["predicted"] is not None:
             if self.verify:
                 self.checked += 1
