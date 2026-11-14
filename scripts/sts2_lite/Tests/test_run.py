@@ -100,6 +100,7 @@ def test_a_new_run_has_the_starter_deck_and_the_ascension_changes():
     ids = [c["id"] for c in run.deck]
     assert ids.count("STRIKE_IRONCLAD") == 5 and ids.count("DEFEND_IRONCLAD") == 4 and ids.count("BASH") == 1 and len(ids) == 10
     assert run.hp == run.max_hp == 80 and run.gold == 99 and run.potion_slots == 3 and run.has_relic("BURNING_BLOOD")
+    assert new_run(1).hp == 80 and (new_run(2).hp, new_run(2).max_hp) == (64, 80) and new_run(10).hp == 64
     assert new_run(4).potion_slots == 2 and "ASCENDERS_BANE" not in [c["id"] for c in new_run(4).deck]
     assert "ASCENDERS_BANE" in [c["id"] for c in new_run(5).deck] and new_run(10).ascension == 10
 
@@ -141,3 +142,16 @@ def test_from_player_matches_the_bridge():
     run = RunState.from_player({"hp": 50, "max_hp": 80, "gold": 12, "relics": [{"id": "BURNING_BLOOD", "name": "x"}], "potions": [None, {"id": "FIRE_POTION"}], "potion_slots": 2},
                                [card_entry("BASH")], act=2, floor=20, ascension=7)
     assert (run.hp, run.gold, run.act, run.floor, run.ascension, run.potion_slots) == (50, 12, 2, 20, 7, 2) and len(run.potions) == 1 and run.hidden is None
+
+
+def test_the_map_is_public_and_a_copy_keeps_it_apart():
+    import random
+    from sts2_lite.map import generate_map
+    run = new_run()
+    run.map = generate_map("OVERGROWTH", random.Random(1), 15)
+    run.position = run.map.start.coord
+    seen = run.public()
+    assert seen.map is not None and seen.map is not run.map and len(seen.map.points()) == len(run.map.points())
+    assert seen.hidden is None and run.hidden.unknown_odds.current["Monster"] == 0.1
+    seen.map.points()[0].type = seen.map.points()[1].type
+    assert run.map.points()[0].children and run.map.points()[0] is not seen.map.points()[0]

@@ -9,12 +9,15 @@ import copy
 from dataclasses import dataclass, field
 
 from sts2_lite.relic import RelicId
+from sts2_lite.map import ActMap, UnknownRoomOdds
 from sts2_lite.rewards.odds import BASE_RARITY_OFFSET
 
 IRONCLAD_START = {"hp": 80, "gold": 99, "potion_slots": 3, "relic": "BURNING_BLOOD",
                   "deck": ("STRIKE_IRONCLAD",) * 5 + ("DEFEND_IRONCLAD",) * 4 + ("BASH",)}      # assumed: check against a capture of a fresh run
 ASCENDERS_BANE_ASCENSION = 5
 TIGHT_BELT_ASCENSION = 4
+WEARY_TRAVELER_ASCENSION = 2        # start at 80% of max hit points
+WEARY_TRAVELER_SHARE = 0.8
 
 
 @dataclass
@@ -24,6 +27,7 @@ class Hidden:
     rooms : object | None = None                    # encounters.Rooms of the current act: the fights to come, in order
     normal_fought : int = 0                         # how many of rooms.normal have been used
     elite_fought : int = 0
+    unknown_odds : UnknownRoomOdds = field(default_factory=UnknownRoomOdds)      # what a "?" will turn into
 
 
 @dataclass
@@ -56,6 +60,8 @@ class RunState:
     boss : str | None = None            # the act's boss: the map shows it
     history : list[Visit] = field(default_factory=list)
     seen_events : list[str] = field(default_factory=list)
+    map : ActMap | None = None          # the act's map: the player sees all of it
+    position : tuple[int, int] | None = None        # (col, row) of the room the player is in
     hidden : Hidden | None = None
 
     def copy(self) -> "RunState":
@@ -101,5 +107,6 @@ def new_run(ascension : int = 0, character : str = "IRONCLAD") -> RunState:
     if ascension >= ASCENDERS_BANE_ASCENSION:
         deck.append(card_entry("ASCENDERS_BANE"))
     slots = start["potion_slots"] - (1 if ascension >= TIGHT_BELT_ASCENSION else 0)
-    return RunState(hp=start["hp"], max_hp=start["hp"], gold=start["gold"], deck=deck, relics=[{"id": start["relic"], "name": "Burning Blood"}],
+    hp = int(start["hp"] * WEARY_TRAVELER_SHARE) if ascension >= WEARY_TRAVELER_ASCENSION else start["hp"]
+    return RunState(hp=hp, max_hp=start["hp"], gold=start["gold"], deck=deck, relics=[{"id": start["relic"], "name": "Burning Blood"}],
                     potion_slots=slots, act=0, floor=0, ascension=ascension, character=character, hidden=Hidden())
