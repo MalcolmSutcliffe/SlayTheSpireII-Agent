@@ -67,7 +67,7 @@ def test_chooser_returns_one_of_the_options_and_skips_a_useless_card():
     logged = []
     chooser = CardRewardChooser(fights=20, pool=POOL, log=logged.append)
     assert chooser.choose(Decision(CARD_REWARD, state, options)) in options
-    assert len(logged) == 1 and "needs" in logged[0]
+    assert len(logged) == 2 and "needs" in logged[0] and "cards to come" in logged[1]
 
 
 from agents.deck_eval.boss_spawner import BOSS_ACTS, boss_of, bosses_of_act, enemy_dict, normalize_boss_id, spawn_boss
@@ -194,3 +194,73 @@ def test_early_floor_applies_to_the_first_three_rewards_of_a_run():
     assert chooser._rewards == 4
     chooser.choose(Decision(CARD_REWARD, state(1), options))        # the floor number went down: a new run
     assert chooser._rewards == 1
+
+
+def test_skip_floor_shrinks_with_a_weak_deck():
+    assert skip_floor(10, win_rate=0.8) == skip_floor(10) == 0.3
+    assert skip_floor(10, win_rate=0.4) == 0.15
+    assert abs(skip_floor(16, win_rate=0.3) - 0.3 * 10 / 16 * 0.375) < 1e-9
+
+
+def test_fights_fit_the_time_budget():
+    from agents.deck_eval.card_reward_chooser import fights_for, MIN_FIGHTS, MAX_FIGHTS
+    assert fights_for(15.0, 0.002, 4) == 1875
+    assert fights_for(15.0, 0.002, 4) > fights_for(8.0, 0.002, 4)
+    assert fights_for(15.0, 1.0, 4) == MIN_FIGHTS and fights_for(15.0, 1e-9, 4) == MAX_FIGHTS
+
+
+@needs_pool
+def test_pilot_sets_the_fight_count_and_big_decisions_get_the_longer_budget(monkeypatch):
+    from types import SimpleNamespace
+    from agents.deck_eval import card_reward_chooser as crc
+    monkeypatch.setattr(crc, "BUDGET_SECONDS", 0.01)
+    monkeypatch.setattr(crc, "BIG_BUDGET_SECONDS", 0.02)
+    monkeypatch.setattr(crc, "MAX_FIGHTS", 400)
+    p = _player()
+    state = lambda floor: {"type": "decision", "decision": "card_reward", "player": p, "context": {"act": 1, "floor": floor}}
+    options = [Option("Bash", {"action": "select_card_reward", "card_index": 0}, {"index": 0, "id": "BASH", "name": "Bash", "type": "Attack", "cost": 2}),
+               Option("skip", {"action": "skip_card_reward"})]
+    route = SimpleNamespace(kinds=["combat", "combat"], combats_before=0, act=1, boss=None, act_model=None)
+    logs = []
+    chooser = CardRewardChooser(pool=POOL, route_provider=lambda: route, log=logs.append)
+    fights = lambda: int([l for l in logs if l.startswith("card reward")][-1].split(" fights")[0].split()[-1])
+    counts = []
+    for floor in (2, 3, 4, 6):
+        chooser.choose(Decision(CARD_REWARD, state(floor), options))
+        counts.append(fights())
+    assert counts[0] > 0 and counts[3] > 0
+
+
+def test_future_fights_count_fights_only_and_cards_follow_the_position():
+    from types import SimpleNamespace
+    from agents.deck_eval.future_cards import fight_kinds, extra_cards, CARD_POOL, RARE_START, RARE_MAX
+    import random
+    route = SimpleNamespace(kinds=["combat", "combat", "rest", "elite", "shop", "unknown", "combat", "boss"], combats_before=1)
+    assert fight_kinds(route, 1) == ["weak", "elite", "normal", "boss"]       # the rest site, shop and "?" are not fights
+    assert fight_kinds(SimpleNamespace(kinds=["boss"], combats_before=3), 1)[-1] == "boss"
+    assert [len(extra_cards(n, random.Random(1))) for n in (1, 4, 6)] == [1, 4, 6]
+    assert all(c["type"] in ("Attack", "Skill", "Power") for rarity in CARD_POOL.values() for c in rarity)
+
+
+def test_extra_cards_follow_the_reward_rarity_odds():
+    from agents.deck_eval.future_cards import extra_cards, CARD_POOL
+    import random
+    r = random.Random(7)
+    rarity = {c["id"]: name for name, cards in CARD_POOL.items() for c in cards}
+    drawn = [rarity[c["id"]] for _ in range(1500) for c in extra_cards(1, r)]
+    share = lambda name: drawn.count(name) / len(drawn)
+    assert abs(share("Common") - 0.60) < 0.05 and abs(share("Uncommon") - 0.25) < 0.05 and abs(share("Rare") - 0.15) < 0.05
+
+
+@needs_pool
+def test_future_sample_is_repeatable_and_a_deck_with_extras_plays_them():
+    from types import SimpleNamespace
+    from agents.deck_eval.future_cards import sample_future
+    route = SimpleNamespace(kinds=["combat", "combat", "elite", "boss"], combats_before=0, boss=None, act_model=None)
+    a = sample_future(POOL, route, 1, 0, 30, 5)
+    b = sample_future(POOL, route, 1, 0, 30, 5)
+    assert [f.name for f in a[0]] == [f.name for f in b[0]] and a[1] == b[1]
+    assert {len(e) for e in a[1]} <= {1, 2, 3}
+    ev, p = DeckEvaluator(POOL, target_types(POOL)), _player()
+    with_extras = ev.score(p["deck"], p, a[0][:5], 3, a[1][:5])
+    assert len(with_extras.rewards) == 5

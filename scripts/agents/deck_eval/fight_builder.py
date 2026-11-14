@@ -30,7 +30,7 @@ def build_fight(template : FightTemplate, deck : list[dict], player : dict, targ
               draw_pile_count=len(cards), discard_pile_count=0, exhaust_pile_count=0)
     state["energy"], state["max_energy"] = BASE_ENERGY, BASE_ENERGY
     state.pop("battle", None)
-    cs = CombatState.from_dict(state)
+    cs = CombatState.from_dict(state, check_bridge=False)       # the intents shown in the capture were for the captured player, not this one
     for i, raw in enumerate(cards):     # a card marked "_upgrade" is the upgraded one: the sim's own upgrade (cost, keywords, name)
         if raw["_upgrade"] and cs.player.draw_pile[i].is_upgradable:
             cs.player.draw_pile[i] = cs.player.draw_pile[i].upgraded_copy()

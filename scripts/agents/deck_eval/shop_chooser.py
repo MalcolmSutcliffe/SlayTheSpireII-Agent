@@ -18,7 +18,7 @@ from agents.deck_eval.advisor import DeckAdvisor
 from agents.deck_eval.card_reward_chooser import paired_gain
 from agents.sts2_MCTS.params import RewardParams
 
-SHOP_FIGHTS = 250
+SHOP_FIGHTS = 2500
 Z = 2.0
 ELITE_LOOKAHEAD = 3         # rooms on the planned route
 SHOP_RELIC_POSITION = 2     # the 3rd relic listed
@@ -66,7 +66,7 @@ class ShopChooser:
 
     def choose(self, decision : Decision) -> Option:
         buys = [o for o in decision.options if o.name == "shop_purchase"]
-        leave = next((o for o in decision.options if o.name == "proceed"), decision.options[-1])
+        leave = next((o for o in decision.options if o.name == "proceed"), None) or Option("leave shop", {"action": "proceed"})
         items = decision.state.get("items") or []
         relic_items = [i for i in items if i.get("category") == "relic"]
         shop_relic = relic_items[SHOP_RELIC_POSITION]["index"] if len(relic_items) > SHOP_RELIC_POSITION else None

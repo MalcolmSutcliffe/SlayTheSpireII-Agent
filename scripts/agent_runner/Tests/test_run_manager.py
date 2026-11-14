@@ -63,7 +63,7 @@ def test_shop_offers_only_what_can_be_bought():
              {"index": 3, "category": "potion", "cost": 40, "is_stocked": True, "can_afford": True}]
     d = build(state("shop", items=items, can_proceed=True, player={"open_potion_slots": 0}))
     assert [o.action for o in d.options] == [{"action": "shop_purchase", "index": 0}, {"action": "proceed"}]
-    assert build(state("shop", items=items, can_proceed=False)).options[-1].action == {"action": "shop_purchase", "index": 3}
+    assert build(state("shop", items=items, can_proceed=False)).options[-1].action == {"action": "proceed"}      # the inventory covers the button after a purchase
 
 def test_event_options_and_dialogue():
     s = state("event_choice", options=[{"index": 0, "title": "Pray", "is_locked": False}, {"index": 1, "title": "Locked", "is_locked": True}], in_dialogue=False)

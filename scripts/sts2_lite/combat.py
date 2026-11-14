@@ -74,7 +74,7 @@ class CombatState:
         self.won = False         # victory heals applied
 
     @classmethod
-    def from_dict(cls, combat_state : dict):
+    def from_dict(cls, combat_state : dict, check_bridge : bool = True):
         if "enemies" not in combat_state and "battle" in combat_state:
             # a card-selection screen nests the fight under "battle" and has no top-level energy
             battle = combat_state["battle"]
@@ -105,7 +105,8 @@ class CombatState:
                 enemy.attack_damage = base_from_displayed(enemy.attack_damage, enemy, cs.player)
             if enemy.move_id is None:       # not given by the bridge's move_id: infer it from the intents
                 enemy.identify_move(raw["intents"], cs.turn_number)
-            enemy.check_against_bridge(raw, cs.player)
+            if check_bridge:        # off for a fight built from a capture with another player (deck_eval): the shown damage was for the old one
+                enemy.check_against_bridge(raw, cs.player)
         cs._infer_revivals()
         reviving = combat_state.get("reviving")
         if reviving is None:        # the bridge lists them in the "battle" copy of the fight
