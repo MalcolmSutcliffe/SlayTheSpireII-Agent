@@ -1,0 +1,468 @@
+{
+  "type": "decision",
+  "decision": "event_choice",
+  "context": {
+    "act": 1,
+    "floor": 5,
+    "ascension": 2
+  },
+  "run": {
+    "act": 1,
+    "floor": 5,
+    "ascension": 2
+  },
+  "event_name": "Potion Courier",
+  "event_id": "POTION_COURIER",
+  "description": null,
+  "options": [
+    {
+      "index": 0,
+      "title": "Grab Potions",
+      "description": "Procure 3 Foul Potions.",
+      "is_locked": false,
+      "is_proceed": false,
+      "was_chosen": false,
+      "keywords": [
+        {
+          "name": "Foul Potion",
+          "description": "Deal 12 damage to ALL players and enemies.\nCan be thrown at the Merchant for 100 Gold instead."
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "title": "Ransack",
+      "description": "Procure 1 random Uncommon Potion.",
+      "is_locked": false,
+      "is_proceed": false,
+      "was_chosen": false,
+      "keywords": []
+    }
+  ],
+  "player": {
+    "character": "The Ironclad",
+    "hp": 64,
+    "max_hp": 80,
+    "gold": 0,
+    "block": 0,
+    "energy": 3,
+    "max_energy": 3,
+    "hand": [
+      {
+        "index": 0,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": []
+      },
+      {
+        "index": 2,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": []
+      },
+      {
+        "index": 3,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": []
+      },
+      {
+        "index": 4,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": []
+      }
+    ],
+    "draw_pile_count": 5,
+    "discard_pile_count": 0,
+    "exhaust_pile_count": 0,
+    "draw_pile": [
+      {
+        "index": 0,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": []
+      },
+      {
+        "index": 1,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 2,
+        "id": "BASH",
+        "name": "Bash",
+        "type": "Attack",
+        "cost": "2",
+        "star_cost": null,
+        "description": "Deal 8 damage. Apply 2 Vulnerable.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Vulnerable",
+            "description": "Vulnerable creatures take 50% more damage from Attacks."
+          }
+        ]
+      },
+      {
+        "index": 3,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 4,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      }
+    ],
+    "discard_pile": [],
+    "exhaust_pile": [],
+    "status": [],
+    "relics": [
+      {
+        "id": "BURNING_BLOOD",
+        "name": "Burning Blood",
+        "description": "At the end of combat, heal 6 HP.",
+        "counter": null,
+        "status": "Normal",
+        "keywords": []
+      },
+      {
+        "id": "SILKEN_TRESS",
+        "name": "Silken Tress",
+        "description": "Upon pickup, lose all Gold. Enchant all cards in the first card reward with Glam.",
+        "counter": null,
+        "status": "Normal",
+        "keywords": [
+          {
+            "name": "Glam",
+            "description": "This card has Replay once per combat."
+          },
+          {
+            "name": "Replay",
+            "description": "Plays this card an additional time."
+          }
+        ]
+      }
+    ],
+    "potions": [],
+    "potion_slots": 3,
+    "open_potion_slots": 3,
+    "deck": [
+      {
+        "index": 0,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "rarity": "Basic",
+        "cost": "1",
+        "star_cost": null,
+        "is_upgraded": false,
+        "upgrade_level": 0,
+        "can_upgrade": true,
+        "removable": true,
+        "floor_added": 1,
+        "enchantment": null
+      },
+      {
+        "index": 1,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "rarity": "Basic",
+        "cost": "1",
+        "star_cost": null,
+        "is_upgraded": false,
+        "upgrade_level": 0,
+        "can_upgrade": true,
+        "removable": true,
+        "floor_added": 1,
+        "enchantment": null
+      },
+      {
+        "index": 2,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "rarity": "Basic",
+        "cost": "1",
+        "star_cost": null,
+        "is_upgraded": false,
+        "upgrade_level": 0,
+        "can_upgrade": true,
+        "removable": true,
+        "floor_added": 1,
+        "enchantment": null
+      },
+      {
+        "index": 3,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "rarity": "Basic",
+        "cost": "1",
+        "star_cost": null,
+        "is_upgraded": false,
+        "upgrade_level": 0,
+        "can_upgrade": true,
+        "removable": true,
+        "floor_added": 1,
+        "enchantment": null
+      },
+      {
+        "index": 4,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "rarity": "Basic",
+        "cost": "1",
+        "star_cost": null,
+        "is_upgraded": false,
+        "upgrade_level": 0,
+        "can_upgrade": true,
+        "removable": true,
+        "floor_added": 1,
+        "enchantment": null
+      },
+      {
+        "index": 5,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "rarity": "Basic",
+        "cost": "1",
+        "star_cost": null,
+        "is_upgraded": false,
+        "upgrade_level": 0,
+        "can_upgrade": true,
+        "removable": true,
+        "floor_added": 1,
+        "enchantment": null
+      },
+      {
+        "index": 6,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "rarity": "Basic",
+        "cost": "1",
+        "star_cost": null,
+        "is_upgraded": false,
+        "upgrade_level": 0,
+        "can_upgrade": true,
+        "removable": true,
+        "floor_added": 1,
+        "enchantment": null
+      },
+      {
+        "index": 7,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "rarity": "Basic",
+        "cost": "1",
+        "star_cost": null,
+        "is_upgraded": false,
+        "upgrade_level": 0,
+        "can_upgrade": true,
+        "removable": true,
+        "floor_added": 1,
+        "enchantment": null
+      },
+      {
+        "index": 8,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "rarity": "Basic",
+        "cost": "1",
+        "star_cost": null,
+        "is_upgraded": false,
+        "upgrade_level": 0,
+        "can_upgrade": true,
+        "removable": true,
+        "floor_added": 1,
+        "enchantment": null
+      },
+      {
+        "index": 9,
+        "id": "BASH",
+        "name": "Bash",
+        "type": "Attack",
+        "rarity": "Basic",
+        "cost": "2",
+        "star_cost": null,
+        "is_upgraded": false,
+        "upgrade_level": 0,
+        "can_upgrade": true,
+        "removable": true,
+        "floor_added": 1,
+        "enchantment": null
+      }
+    ]
+  },
+  "in_dialogue": false,
+  "is_ancient": false,
+  "event": {
+    "player": {
+      "character": "The Ironclad",
+      "hp": 64,
+      "max_hp": 80,
+      "gold": 0
+    },
+    "event_id": "POTION_COURIER",
+    "event_name": "Potion Courier",
+    "is_ancient": false,
+    "in_dialogue": false,
+    "body": null,
+    "options": [
+      {
+        "index": 0,
+        "title": "Grab Potions",
+        "description": "Procure 3 Foul Potions.",
+        "is_locked": false,
+        "is_proceed": false,
+        "was_chosen": false,
+        "keywords": [
+          {
+            "name": "Foul Potion",
+            "description": "Deal 12 damage to ALL players and enemies.\nCan be thrown at the Merchant for 100 Gold instead."
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "title": "Ransack",
+        "description": "Procure 1 random Uncommon Potion.",
+        "is_locked": false,
+        "is_proceed": false,
+        "was_chosen": false,
+        "keywords": []
+      }
+    ]
+  }
+}

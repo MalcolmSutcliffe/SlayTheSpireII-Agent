@@ -133,6 +133,12 @@ def _printed_damage(card : Card, combat : CombatSimulator) -> int:
         return (6 if up else 5) + card.bonus_damage
     if card.card_id == CardId.THRASH:
         return (6 if up else 4) + card.bonus_damage
+    if card.card_id == CardId.MIND_BLAST:
+        return len(player.draw_pile)
+    if card.card_id == CardId.GOLD_AXE:
+        return player.cards_played_total
+    if card.card_id == CardId.REND:      # no target in the hand: the printed damage, without the bonus for the debuffs on a target
+        return 18 if up else 15
     return PLAIN_DAMAGE[card.card_id][up]
 
 ###

@@ -84,6 +84,31 @@ def some_target_roll_matches(before : CombatState, actions : list[dict], actual 
             return True
     return False
 
+def game_order_matches(before : CombatState, actions : list[dict], before_game : dict, actual : CombatState, tries : int = 20) -> bool:
+    """A step that draws, shuffles or plays from the draw pile depends on the draw order the sim does not know. The game's draw_pile list is in
+    draw order (first card = top), so replay the actions with the sim's pile in that order: when the outcome then matches the game exactly,
+    the engine was right and the difference was only the order."""
+    from sts2_lite.combat import CombatState, CombatSimulator
+    listed = (before_game.get("player") or {}).get("draw_pile") or []
+    if not listed:
+        return False
+    for _ in range(tries):             # a reshuffle during the step is random again: a few tries
+        replay = CombatState.deepcopy(before)
+        pile = replay.player.draw_pile
+        ordered = []
+        for entry in listed:
+            match = next((c for c in pile if c.card_id.name == entry["id"] and c.is_upgraded == entry.get("is_upgraded", False)), None)
+            if match is not None:
+                pile.remove(match)
+                ordered.append(match)
+        pile[:] = pile + ordered[::-1]          # the top of the pile is the end of the list
+        simulator = CombatSimulator(replay)
+        for action in actions:
+            simulator.perform_action(action)
+        if not compare(replay, actual, random_step=False):
+            return True
+    return False
+
 def _summed_enemy_diffs(predicted : CombatState, actual : CombatState) -> list[str]:
     out = []
     for field, get in (("hp", lambda e: e.current_hp), ("block", lambda e: e.block)):

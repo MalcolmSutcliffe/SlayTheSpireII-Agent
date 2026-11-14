@@ -64,9 +64,18 @@ def _player(p) -> tuple:
             p.has_been_attacked_this_turn, p.lost_hp_this_turn, p.hp_loss_events, tuple(p.hp_lost_log), p.is_minion, p.binding, p.bound_cards, p.bound_played, p.smogged,
             tuple(sorted((x.slot, x.potion_id.value) for x in p.potions)), p.extra_turn_pending)
 
+def _continuation(kind : str, args : list) -> tuple:
+    if kind == "finish":                # (card, hp_loss_mark, force_exhaust, dupe, to_top)
+        return (kind, args[0].signature(), *args[1:])
+    if kind == "play":                  # (queue of cards)
+        return (kind, tuple(c.signature() for c in args[0]))
+    if kind == "replay":                # (card, target_index, x, plays left, saved, spent): the last two are what the first play took
+        return (kind, args[0].signature(), *args[1:4], repr(args[4]), repr(args[5]))
+    return (kind, *args)                # "random": (count,)
+
 def _continuations(cs) -> tuple:
     """What the cards waiting for a pick still have to do."""
-    return tuple((k, a[0].signature(), *a[1:]) if k == "finish" else (k, tuple(c.signature() for c in a[0])) for k, *a in cs.continuations)
+    return tuple(_continuation(k, a) for k, *a in cs.continuations)
 
 def state_key(cs : CombatState) -> tuple:
     """Hashable fingerprint of `cs`; equal for states reached by playing the same cards in a different order."""

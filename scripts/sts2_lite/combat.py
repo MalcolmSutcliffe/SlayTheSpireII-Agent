@@ -1074,6 +1074,11 @@ class CombatSimulator:
             if radiant.amount <= 0:
                 del player.status[StatusId.RADIANT_TINCTURE]
         self.combat_state.cards_played = 0
+        if enemies_start:
+            for enemy in self.combat_state.enemies:
+                plating = enemy.status.get(StatusId.PLATING)
+                if plating is not None:
+                    enemy.apply_block(plating.amount)       # PlatingPower.BeforeSideTurnEndEarly: the enemy's block is there before the player's turn start effects (Inferno)
         block_before = player.block
         self.fire(EventType.BEFORE_PLAYER_TURN)
         # block gained here (Toasty Mittens exhausting a card with Feel No Pain in play) comes after the turn's block is cleared (captured)

@@ -222,11 +222,13 @@ def play_havoc(card: Card, combat : CombatSimulator, target_index=0, is_upgraded
 def play_headbutt(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     target = enemy_at(combat, target_index)
     _attack(combat, 12 if is_upgraded else 9, target)
+    combat.resolve_deaths()     # a kill's effects (Gremlin Horn's draw) come before the pick, which may then see another discard pile
     combat.request_choice("to_draw_pile", list(range(len(combat.combat_state.player.discard_pile))), pile="discard")
 
 def play_neows_fury(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     target = enemy_at(combat, target_index)
     _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], target)
+    combat.resolve_deaths()
     player = combat.combat_state.player
     discard = player.discard_pile
     combat.request_choice("to_hand", list(range(len(discard))), pile="discard", amount=NEOWS_FURY_CARDS[is_upgraded], source=card)

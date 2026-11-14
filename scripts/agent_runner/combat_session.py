@@ -4,7 +4,7 @@ sim, compares the sim's last prediction with it, lets the agent decide, sends th
 `CombatSimulator` (sts2_lite) is the rules; this is the code that keeps the rules lined up with the real game."""
 import time
 
-from agents.verify import compare, is_random_step, is_unpredictable_step, some_target_roll_matches
+from agents.verify import compare, game_order_matches, is_random_step, is_unpredictable_step, some_target_roll_matches
 from .combat_logs import (capture_turn_start, fight_end, fight_start, fight_update, install_search_hook, log_decision, log_mismatch,
                           potions_of, report_unimplemented, save_decision_state, write_fight)
 from .game_client import POLL_SECONDS, GameClient, dump
@@ -105,6 +105,8 @@ def verify_step(batch : dict, game_state : dict, actual : CombatState, log_path 
     diffs = compare(batch["predicted"], actual, random_step=batch["random_step"], random_target=batch.get("random_target", False))
     if diffs and batch.get("random_target") and some_target_roll_matches(batch["before_sim"], batch["actions"], actual, batch["random_step"]):
         diffs = []          # the game hit other enemies than the sim did, and the damage differs because the enemies do
+    if diffs and game_order_matches(batch["before_sim"], batch["actions"], batch["before"], actual):
+        diffs = []          # the sim does not know the draw order; with the game's order the outcome is exactly the game's
     if diffs:
         log_mismatch(log_path, batch, game_state, diffs, batch["predicted"], actual)
     return not diffs

@@ -147,6 +147,18 @@ public static partial class BridgeMod
                 result["state_type"] = "map";
                 result["map"] = BuildMapState(runState);
             }
+            else if (topOverlay is NCardRewardSelectionScreen eventCardScreen)
+            {
+                // an event that offers cards (RewardsCmd.OfferCustom) shows the card choice over the event
+                result["state_type"] = "card_reward";
+                result["card_reward"] = BuildCardRewardState(eventCardScreen);
+            }
+            else if (topOverlay is NRewardsScreen eventRewardsScreen)
+            {
+                // Potion Courier, and every event that offers rewards: they are claimed like a combat's, over the event screen
+                result["state_type"] = "combat_rewards";
+                result["rewards"] = BuildRewardsState(eventRewardsScreen, runState);
+            }
             else
             {
                 result["state_type"] = "event";
