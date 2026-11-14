@@ -28,6 +28,7 @@ class Hidden:
     normal_fought : int = 0                         # how many of rooms.normal have been used
     elite_fought : int = 0
     unknown_odds : UnknownRoomOdds = field(default_factory=UnknownRoomOdds)      # what a "?" will turn into
+    potion_odds : float = 0.4                       # PotionRewardOdds.CurrentValue
 
 
 @dataclass

@@ -24,6 +24,7 @@ from sts2_lite import rng as sim_rng
 STREAMS = (
     "up_front",                 # what is generated when an act starts: monsters, bosses, ancients
     "shuffle",                  # draw pile shuffles
+    "combat",                   # everything the engine rolls inside a fight (shuffles, enemy moves, random targets)
     "unknown_room",             # the kind of room behind a "?" on the map
     "map",                      # map layout
     "combat_cards",             # cards made in combat (Attack Potion, Discovery)
