@@ -722,19 +722,19 @@ def test_a_state_read_after_an_attack_still_remembers_it():
     assert cs.energy == cs.max_energy
 
 def test_saved_state_ripple_basin_gives_block_only_without_attacks():
-    from sts2_lite.events import EventType
+    from sts2_lite.hooks import HookType
     quiet, busy = _capture("ripple_basin_before"), _capture("ripple_basin_before")
     _play(busy, "STRIKE_IRONCLAD")
     for cs in (quiet, busy):
         cs.player.block = 0
-        CombatSimulator(cs).fire(EventType.END_TURN)
+        CombatSimulator(cs).fire(HookType.END_TURN)
     assert quiet.player.block == 4 and busy.player.block == 0
 
 def test_a_ripple_basin_read_after_an_attack_gives_no_block():
-    from sts2_lite.events import EventType
+    from sts2_lite.hooks import HookType
     cs = _capture("ripple_basin_after")
     cs.player.block = 0
-    CombatSimulator(cs).fire(EventType.END_TURN)
+    CombatSimulator(cs).fire(HookType.END_TURN)
     assert cs.player.block == 0
 
 

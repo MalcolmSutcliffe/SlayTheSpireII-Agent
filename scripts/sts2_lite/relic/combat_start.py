@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 
 from sts2_lite import rng
 from sts2_lite.card import Card
-from sts2_lite.card.ids import CardKeyword, CardType
+from sts2_lite.card.ids import CardId, CardKeyword, CardType
 from sts2_lite.helpers import living_enemies
 from sts2_lite.relic.card_hooks import _hurt_all
 from sts2_lite.relic.ids import RelicId
@@ -118,18 +118,20 @@ class Opening:
         for relic, amount in BLOCK.items():
             if self.has(relic):
                 player.apply_block(amount)
+        if self.has("ROYAL_POISON"):       # the game loses the hp before it heals (a full-hp player ends 2 under with Blood Vial, not 4)
+            mark = player.hp_loss_events
+            player.lose_hp(ROYAL_POISON_DAMAGE)
+            sim._after_hp_loss(mark)
         for relic, amount in HEAL.items():
             if self.has(relic):
                 player.current_hp = min(player.max_hp, player.current_hp + amount)
         if self.has("FESTIVE_POPPER"):
             _hurt_all(sim, POPPER_DAMAGE)
-        if self.has("ROYAL_POISON"):
-            mark = player.hp_loss_events
-            player.lose_hp(ROYAL_POISON_DAMAGE)
-            sim._after_hp_loss(mark)
         upgrades = self.has("BELLOWS") or self.has("BONE_TEA")
         if upgrades:
             player.hand[:] = [c.upgraded_copy() if c.is_upgradable else c for c in player.hand]
+        if self.has("RADIANT_PEARL"):
+            player.add_to_hand(Card.create_generated(CardId.LUMINESCE))
         if self.has("VEXING_PUZZLEBOX"):
             player.add_to_hand(_class_card().free_this_turn())
         if self.has("ORANGE_DOUGH"):
@@ -154,8 +156,7 @@ class Opening:
             cs.energy = max(0, cs.energy - BREAD_ENERGY_LOSS)
         red_skull = player.relics.get(RelicId.RED_SKULL)
         if red_skull is not None:
-            red_skull.used = False       # it reacts to hp changes, and the fight may open at half hp or less (or a heal just lifted it above)
-            _red_skull(sim, red_skull)
+            _red_skull(sim, red_skull)       # the hp changed above without an event: the heals may have lifted it over half hp (or it opens at half or less)
 
 
 def _class_card() -> Card:
@@ -174,6 +175,13 @@ def _ethereal_class_card() -> Card | None:
 
 ENEMY_STATUS_IDS = {StatusId.VULNERABLE: "VULNERABLE_POWER", StatusId.WEAK: "WEAK_POWER", StatusId.STRENGTH: "STRENGTH_POWER"}
 
+def _give_artifact(enemy : dict):
+    for entry in enemy.setdefault("status", []):
+        if entry.get("id") == "ARTIFACT_POWER":
+            entry["amount"] += 1
+            return
+    enemy["status"].append({"id": "ARTIFACT_POWER", "name": "Artifact", "amount": 1, "type": "Buff", "keywords": []})
+
 def undo_enemy_effects(enemies : list[dict], relics : list[dict]):
     """Takes what a captured player's relics did to the enemies of a bridge state (Bag of Marbles, Red Mask, Philosopher's Stone, Festive Popper) back
     out of the enemy dicts, so the fight can be opened again with another player's relics. Edits `enemies` in place."""
@@ -190,6 +198,10 @@ def undo_enemy_effects(enemies : list[dict], relics : list[dict]):
                     entry["amount"] -= amount
                     if entry["amount"] <= 0:
                         enemy["status"].remove(entry)
+                    break
+            else:
+                if status is not StatusId.STRENGTH:       # the debuff was not there: Artifact took it, and a charge with it
+                    _give_artifact(enemy)
         healed = (POPPER_DAMAGE if opening.has("FESTIVE_POPPER") else 0) + (MERCURY_HOURGLASS_DAMAGE if opening.has("MERCURY_HOURGLASS") else 0)
         if healed:
             enemy["hp"] = min(enemy.get("max_hp", enemy["hp"]), enemy["hp"] + healed)

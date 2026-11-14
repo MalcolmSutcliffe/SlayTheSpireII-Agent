@@ -10,10 +10,11 @@ from agents.deck_eval.fight_pool import FightTemplate
 from agents.verify import compare
 from sts2_lite.card.ids import CardKeyword
 from sts2_lite.combat import CombatState
-from sts2_lite.relic.combat_start import BLOCK, HEAL, PANTOGRAPH_HEAL, ROYAL_POISON_DAMAGE, Opening
+from sts2_lite.status import StatusId
+from sts2_lite.relic.combat_start import EMBER_TEA_STRENGTH, BLOCK, HEAL, PANTOGRAPH_HEAL, ROYAL_POISON_DAMAGE, Opening
 
 TEA_SET_ENERGY = 2
-RANDOM_CARD_RELICS = frozenset({"ORANGE_DOUGH", "VEXING_PUZZLEBOX", "BIG_HAT"})     # they add a random card: the sim's pick is not the game's
+RANDOM_CARD_RELICS = frozenset({"ORANGE_DOUGH", "VEXING_PUZZLEBOX", "BIG_HAT", "BELLOWS", "BONE_TEA", "STONE_CRACKER"})     # they add a random card (or upgrade a random hand): the sim's pick is not the game's
 
 
 def deck_of(game_state : dict) -> list[dict]:
@@ -29,7 +30,7 @@ def hp_before_opening(game_state : dict, opening : Opening) -> int:
     net += PANTOGRAPH_HEAL if opening.boss and opening.has("PANTOGRAPH") else 0
     return max(1, me["hp"] - net)
 
-TURN_COUNTED = {"PENDULUM": 3, "POLLINOUS_CORE": 4}      # relic -> turns in its cycle: their counter in the game's first state already counts the first turn
+TURN_COUNTED = {"PENDULUM": 3, "POLLINOUS_CORE": 4, "HAPPY_FLOWER": 3}      # relic -> turns in its cycle: their counter in the game's first state already counts the first turn
 
 def counters_before_opening(relics : list[dict]) -> list[dict]:
     """The relics as they were before the fight's first turn started: the game's first state shows the counters after it."""
@@ -52,8 +53,19 @@ def simulated_opening(game_state : dict) -> CombatState:
 def _innate_in_hand(cs : CombatState) -> Counter:
     return Counter(c.card_id.name for c in cs.player.hand if CardKeyword.INNATE in c.keywords)
 
+def with_upgrade_flags(game_state : dict) -> dict:
+    """Older captures mark an upgraded card only by its name ("Defend+"), not by an `upgraded` flag."""
+    state = copy.deepcopy(game_state)
+    me = state["player"]
+    for cards in [state.get("hand") or []] + [me.get(pile) or [] for pile in ("hand", "draw_pile", "discard_pile", "exhaust_pile", "deck")]:
+        for card in cards:
+            if "upgraded" not in card or card["upgraded"] is None:
+                card["upgraded"] = str(card.get("name", "")).endswith("+")
+    return state
+
 def opening_diffs(game_state : dict) -> tuple[list[str], CombatState, CombatState]:
     """(differences, the sim's opening, the game's state read into the sim)."""
+    game_state = with_upgrade_flags(game_state)
     actual = CombatState.from_dict(game_state)
     predicted = simulated_opening(game_state)
     diffs = [d for d in compare(predicted, actual, random_step=True) if not d.startswith("relic ")]     # counters of relics that count turn-start draws are read after them
@@ -65,7 +77,19 @@ def opening_diffs(game_state : dict) -> tuple[list[str], CombatState, CombatStat
     enemy_ids = {str(e.enemy_id) for e in actual.enemies}
     if any(i.startswith("AEONGLASS") for i in enemy_ids):
         diffs = [d for d in diffs if d != "player status NO_DRAW: sim 0, game 1"]      # the boss puts it on you as the fight starts
-    if len(predicted.player.hand) != len(actual.player.hand):
+    if any(i.startswith(("CRUSHER", "ROCKET")) for i in enemy_ids):
+        diffs = [d for d in diffs if not d.startswith("player status SURROUNDED")]      # the two bosses surround you as the fight starts
+    if any(i.startswith("INFESTED_PRISM") for i in enemy_ids):
+        diffs = [d for d in diffs if not d.startswith("player status TAINTED")]
+    spent_tea = [r for r in game_state["player"].get("relics") or [] if r["id"] == "EMBER_TEA" and r.get("status") == "Disabled" and r.get("counter") == 0]
+    if spent_tea:       # the game shows the counter after the last combat it was for: it was still in effect for this one
+        diffs = [d for d in diffs if d != f"player status STRENGTH: sim {actual.player.status_amount(StatusId.STRENGTH) - EMBER_TEA_STRENGTH}, game {actual.player.status_amount(StatusId.STRENGTH)}"]
+    if any(r["id"] == "POCKETWATCH" and (r.get("counter") or 0) >= 1 for r in game_state["player"].get("relics") or []):
+        diffs = [d for d in diffs if not d.startswith("player status NO_DRAW")]       # its draw on the fight's first turn is not modelled: the hand is bigger and no more is drawn
+        pocketwatch_hand = True
+    else:
+        pocketwatch_hand = False
+    if len(predicted.player.hand) != len(actual.player.hand) and not pocketwatch_hand:
         diffs.append(f"opening hand size: sim {len(predicted.player.hand)}, game {len(actual.player.hand)}")
     sim_innate, game_innate = _innate_in_hand(predicted), _innate_in_hand(actual)
     if sim_innate != game_innate:

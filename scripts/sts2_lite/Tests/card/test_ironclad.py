@@ -1,7 +1,7 @@
 import pytest
 from sts2_lite.card import Card, CardId, CardType, TargetType, GENERATABLE_CARDS, INFERNAL_BLADE_POOL, STOKE_POOL, GET_CARD_FUNCTION, STRIKE_CARDS
 from sts2_lite.combat import CombatSimulator, CombatState, IllegalActionError
-from sts2_lite.events import EventType
+from sts2_lite.hooks import HookType
 from sts2_lite.Tests.card.test_card import make_card, make_state, play, hps
 from sts2_lite.status import StatusId, StatusInstance
 from sts2_lite import rng
@@ -261,7 +261,7 @@ def test_cinder_fires_the_exhaust_event():
     original = sim.fire
     sim.fire = lambda event, *a: (seen.append(event), original(event, *a))[1]
     sim.play_card(0, 0)
-    assert EventType.CARD_EXHAUSTED in seen
+    assert HookType.CARD_EXHAUSTED in seen
 
 # ---------------------------------------------------------------- Feed
 def test_feed_kill_raises_max_hp():
@@ -469,7 +469,7 @@ def test_second_wind_fires_an_exhaust_event_per_card():
     sim = CombatSimulator(cs)
     seen = spy(sim)
     sim.play_card(0, 0)
-    assert seen.count(EventType.CARD_EXHAUSTED) == 2
+    assert seen.count(HookType.CARD_EXHAUSTED) == 2
 
 def test_turn_trackers_survive_a_state_copy():
     from sts2_lite.combat import CombatState

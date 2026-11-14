@@ -427,18 +427,18 @@ def test_shrink_stays_when_another_enemy_dies():
 
 def test_killing_a_creature_fires_the_event_once_per_kill():
     from sts2_lite import status as status_module
-    from sts2_lite.events import EventType
+    from sts2_lite.hooks import HookType
     cs = beetle()
     seen = []
-    status_module.STATUS_HANDLERS[(StatusId.SHRINK, EventType.CREATURE_KILLED)], saved = (
+    status_module.STATUS_HANDLERS[(StatusId.SHRINK, HookType.CREATURE_KILLED)], saved = (
         lambda combat, owner, amount, killed: seen.append(killed.enemy_id),
-        status_module.STATUS_HANDLERS[(StatusId.SHRINK, EventType.CREATURE_KILLED)])
+        status_module.STATUS_HANDLERS[(StatusId.SHRINK, HookType.CREATURE_KILLED)])
     try:
         sim = CombatSimulator(cs)
         cs.enemies[0].current_hp = 1
         sim.play_card(next(i for i, c in enumerate(cs.player.hand) if c.name == "Bash"), 0)
     finally:
-        status_module.STATUS_HANDLERS[(StatusId.SHRINK, EventType.CREATURE_KILLED)] = saved
+        status_module.STATUS_HANDLERS[(StatusId.SHRINK, HookType.CREATURE_KILLED)] = saved
     assert seen == ["SHRINKER_BEETLE_0"]
 
 def test_beetle_moves_use_no_randomness():

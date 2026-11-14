@@ -1,6 +1,6 @@
 import pytest
 from sts2_lite.combat import CombatSimulator
-from sts2_lite.events import EventType
+from sts2_lite.hooks import HookType
 from sts2_lite.relic import RelicId, RelicInstance
 from sts2_lite.status import StatusId
 from sts2_lite.Tests.relic.test_always_on import defend, strike, inflame, relic, state
@@ -124,8 +124,8 @@ def test_brimstone_skips_dead_enemies():
 # ---------------------------------------------------------------- the end of the turn
 def end_phase(cs):
     sim = CombatSimulator(cs)
-    sim.fire(EventType.PLAY_PHASE_END)
-    sim.fire(EventType.END_TURN)
+    sim.fire(HookType.PLAY_PHASE_END)
+    sim.fire(HookType.END_TURN)
     return cs
 
 def test_stone_calendar_hurts_everyone_at_the_end_of_turn_seven():

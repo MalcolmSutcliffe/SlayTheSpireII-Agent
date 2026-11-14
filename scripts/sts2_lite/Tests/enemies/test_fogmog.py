@@ -154,17 +154,17 @@ def test_other_cards_are_still_discarded():
     assert cs.player.hand == []
 
 def test_exhausting_dazed_fires_the_exhaust_event():
-    from sts2_lite.events import EventType
+    from sts2_lite.hooks import HookType
     cs = fog("headbutt")
     sim = CombatSimulator(cs)
     seen = []
     import sts2_lite.status as status
-    status.STATUS_HANDLERS[(StatusId.STRENGTH, EventType.CARD_EXHAUSTED)] = lambda c, o, a, card: seen.append(card.card_id)
+    status.STATUS_HANDLERS[(StatusId.STRENGTH, HookType.CARD_EXHAUSTED)] = lambda c, o, a, card: seen.append(card.card_id)
     try:
         cs.enemies[1].apply_status(StatusId.STRENGTH, 1)
         sim._discard_hand()
     finally:
-        del status.STATUS_HANDLERS[(StatusId.STRENGTH, EventType.CARD_EXHAUSTED)]
+        del status.STATUS_HANDLERS[(StatusId.STRENGTH, HookType.CARD_EXHAUSTED)]
     assert seen == [CardId.DAZED]
 
 # ---------------------------------------------------------------- Illusion power

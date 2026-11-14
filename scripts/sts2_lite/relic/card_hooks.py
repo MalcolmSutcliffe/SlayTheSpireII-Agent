@@ -153,7 +153,7 @@ def damage_multiplier(attacker : Creature, card : Card | None, in_play : bool = 
             factor *= DAMAGE_MULTIPLIER[relic_id](relic, card, in_play)
     return factor
 
-# --- events: function(combat, relic, *args), the same arguments as the EventType they are registered for
+# --- events: function(combat, relic, *args), the same arguments as the HookType they are registered for
 def _every(relic : RelicInstance, limit : int) -> bool:
     """Count one more; true (and the count starts again) when `limit` is reached."""
     relic.counter = _count(relic) + 1

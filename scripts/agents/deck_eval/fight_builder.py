@@ -28,6 +28,9 @@ def build_fight(template : FightTemplate, deck : list[dict], player : dict, targ
     undo_enemy_effects(state["enemies"], me.get("relics", []))       # the captured player's relics are on its enemies: the deck's own are applied below
     cards = [card_dict(c, target_types) for c in deck]
     relics = copy.deepcopy(player.get("relics", []))
+    for relic in relics:
+        if relic.get("id") == "RED_SKULL":
+            relic["status"] = "Normal"       # the captured player's strength from it is not this player's
     opening = Opening(relics, template.room_type, template.kind == "boss")
     energy = BASE_ENERGY + opening.energy_bonus()
     me.update(hp=player["hp"], max_hp=player["max_hp"], block=0, status=[], hand=[], draw_pile=cards, discard_pile=[], exhaust_pile=[],

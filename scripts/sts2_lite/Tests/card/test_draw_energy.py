@@ -2,7 +2,7 @@ import pytest
 from sts2_lite import rng
 from sts2_lite.card import Card, CardId, CardType, TargetType, GENERATABLE_CARDS, INFERNAL_BLADE_POOL
 from sts2_lite.combat import CombatSimulator, CombatState
-from sts2_lite.events import EventType
+from sts2_lite.hooks import HookType
 from sts2_lite.status import StatusId, StatusInstance
 from sts2_lite.Tests.card.test_card import make_card, make_state, play, hps
 
@@ -115,7 +115,7 @@ def test_battle_trance_draw_blocks_dark_embrace_draws():
     sim = play(cs)
     before = len(cs.player.hand)
     victim = cs.player.hand[0]
-    cs.player.exhaust_card(victim); sim.fire(EventType.CARD_EXHAUSTED, victim)
+    cs.player.exhaust_card(victim); sim.fire(HookType.CARD_EXHAUSTED, victim)
     assert len(cs.player.hand) == before - 1
 
 def test_artifact_stops_the_no_draw_debuff():
@@ -475,13 +475,13 @@ def test_drum_of_battle_draws_two_and_does_not_exhaust_itself():
 def test_drum_of_battle_gives_energy_when_exhausted():
     cs = state([]); sim = CombatSimulator(cs)
     d = drum(); cs.player.hand = [d]
-    cs.player.exhaust_card(d); sim.fire(EventType.CARD_EXHAUSTED, d)
+    cs.player.exhaust_card(d); sim.fire(HookType.CARD_EXHAUSTED, d)
     assert cs.energy == 5
 
 def test_drum_of_battle_upgraded_gives_three():
     cs = state([]); sim = CombatSimulator(cs)
     d = drum(True); cs.player.hand = [d]
-    cs.player.exhaust_card(d); sim.fire(EventType.CARD_EXHAUSTED, d)
+    cs.player.exhaust_card(d); sim.fire(HookType.CARD_EXHAUSTED, d)
     assert cs.energy == 6
 
 def test_drum_of_battle_exhausted_by_fiend_fire():
@@ -499,13 +499,13 @@ def test_drum_of_battle_energy_is_blocked_by_no_energy_gain():
     cs = state([]); sim = CombatSimulator(cs)
     cs.player.apply_status(StatusId.NO_ENERGY_GAIN, 1)
     d = drum(); cs.player.hand = [d]
-    cs.player.exhaust_card(d); sim.fire(EventType.CARD_EXHAUSTED, d)
+    cs.player.exhaust_card(d); sim.fire(HookType.CARD_EXHAUSTED, d)
     assert cs.energy == 3
 
 def test_other_exhausts_give_no_drum_energy():
     cs = state([]); sim = CombatSimulator(cs)
     s = strike(); cs.player.hand = [s]
-    cs.player.exhaust_card(s); sim.fire(EventType.CARD_EXHAUSTED, s)
+    cs.player.exhaust_card(s); sim.fire(HookType.CARD_EXHAUSTED, s)
     assert cs.energy == 3
 
 

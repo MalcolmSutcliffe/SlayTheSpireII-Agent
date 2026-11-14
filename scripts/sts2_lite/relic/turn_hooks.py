@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from sts2_lite import rng
-from sts2_lite.events import EventType
+from sts2_lite.hooks import HookType
 from sts2_lite.helpers import living_enemies, player_of
 from sts2_lite.status import StatusId
 
@@ -118,7 +118,7 @@ def _toasty_mittens(combat, relic):
     top = player.take_top()
     if top is not None:
         player.exhaust_card(top)
-        combat.fire(EventType.CARD_EXHAUSTED, top)
+        combat.fire(HookType.CARD_EXHAUSTED, top)
     player.apply_status(StatusId.STRENGTH, TOASTY_MITTENS_STRENGTH)
 
 def _history_course_record(combat, relic, card):
@@ -180,7 +180,7 @@ def _paels_eye_exhaust(combat, relic):
     player = player_of(combat)
     for card in list(player.hand):
         player.exhaust_card(card)
-        combat.fire(EventType.CARD_EXHAUSTED, card)
+        combat.fire(HookType.CARD_EXHAUSTED, card)
 
 def take_extra_turn(combat) -> bool:
     """PaelsEye.ShouldTakeExtraTurn, then AfterTakingExtraTurn (UsedThisCombat = true)."""

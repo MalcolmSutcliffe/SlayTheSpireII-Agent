@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from sts2_lite import rng
-from sts2_lite.events import EventType
+from sts2_lite.hooks import HookType
 from sts2_lite.helpers import enemy_at, living_enemies
 from sts2_lite.relic import RelicId, debuff_multiplier
 from sts2_lite.status import StatusId
@@ -113,7 +113,7 @@ def play_cinder(card: Card, combat : CombatSimulator, target_index=0, is_upgrade
     if hand:
         victim = hand[0] if len(hand) == 1 else rng.choice(hand)
         combat.combat_state.player.exhaust_card(victim)
-        combat.fire(EventType.CARD_EXHAUSTED, victim)
+        combat.fire(HookType.CARD_EXHAUSTED, victim)
 
 def play_colossus(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     _gain_block(combat, 8 if is_upgraded else 5)
@@ -186,7 +186,7 @@ def play_fiend_fire(card: Card, combat : CombatSimulator, target_index=0, is_upg
     exhausted = list(player.hand)
     for victim in exhausted:
         player.exhaust_card(victim)
-        combat.fire(EventType.CARD_EXHAUSTED, victim)
+        combat.fire(HookType.CARD_EXHAUSTED, victim)
     if exhausted:
         _attack(combat, 10 if is_upgraded else 7, target, len(exhausted))
 
@@ -215,7 +215,7 @@ def play_havoc(card: Card, combat : CombatSimulator, target_index=0, is_upgraded
         player.unknown_draws += 1   # the top card is unknown to the agent, so this is a chance event
     if top.unplayable:                          # CardCmd.AutoPlay skips only Unplayable
         player.exhaust_card(top)
-        combat.fire(EventType.CARD_EXHAUSTED, top)
+        combat.fire(HookType.CARD_EXHAUSTED, top)
     else:
         combat.auto_play(top, force_exhaust=True)
 
@@ -350,7 +350,7 @@ def play_second_wind(card: Card, combat : CombatSimulator, target_index=0, is_up
     player = combat.combat_state.player
     for victim in [c for c in player.hand if c.type != CardType.Attack]:
         player.exhaust_card(victim)
-        combat.fire(EventType.CARD_EXHAUSTED, victim)
+        combat.fire(HookType.CARD_EXHAUSTED, victim)
         _gain_block(combat, 7 if is_upgraded else 5)
 
 def play_setup_strike(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
@@ -375,7 +375,7 @@ def play_stoke(card: Card, combat : CombatSimulator, target_index=0, is_upgraded
     exhausted = list(player.hand)
     for victim in exhausted:
         player.exhaust_card(victim)
-        combat.fire(EventType.CARD_EXHAUSTED, victim)
+        combat.fire(HookType.CARD_EXHAUSTED, victim)
     for _ in exhausted:         # a random card (repeats allowed) for each one exhausted
         new_card = Card.create_generated(rng.choice(STOKE_POOL), is_upgraded)
         if new_card.type == CardType.Power and RelicId.SPIKED_GAUNTLETS in player.relics:
@@ -425,7 +425,7 @@ def play_thrash(card: Card, combat : CombatSimulator, target_index=0, is_upgrade
         # relics read the victim, not Thrash (Thrash.OnPlay)
         card.bonus_damage += modify_damage(_printed_damage(victim, combat), player, Creature(), victim, in_play=False)
         player.exhaust_card(victim)
-        combat.fire(EventType.CARD_EXHAUSTED, victim)
+        combat.fire(HookType.CARD_EXHAUSTED, victim)
 
 def play_thunderclap(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     for target in list(combat.combat_state.enemies):
@@ -445,7 +445,7 @@ def play_true_grit(card: Card, combat : CombatSimulator, target_index=0, is_upgr
     elif hand:
         victim = hand[0] if len(hand) == 1 else rng.choice(hand)
         player.exhaust_card(victim)
-        combat.fire(EventType.CARD_EXHAUSTED, victim)
+        combat.fire(HookType.CARD_EXHAUSTED, victim)
 
 def play_twin_strike(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     target = enemy_at(combat, target_index)

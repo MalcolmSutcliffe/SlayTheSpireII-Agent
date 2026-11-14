@@ -8,7 +8,7 @@ from sts2_lite.card import Card, CardId
 from sts2_lite.combat import CombatSimulator
 from sts2_lite.enemy import STUNNED
 from sts2_lite.enemy_moves import MOVE_TABLES, table_move_id
-from sts2_lite.events import EventType
+from sts2_lite.hooks import HookType
 from sts2_lite.status import StatusId
 from sts2_lite.Tests.enemies.test_bridge_moves import attack, load, raw_enemy
 from sts2_lite.Tests.enemies.test_glory_simple import at, moves_over, status, turn
@@ -140,9 +140,8 @@ def test_sewer_clam_jets_then_pressurizes_and_its_plating_pays_out():
 
 def test_sewer_clam_gets_block_from_plating_when_its_turn_starts():
     cs = at("SEWER_CLAM", "JET", status=[status("PLATING", 8)])
-    e = cs.enemies[0]
-    CombatSimulator(cs)._start_player_turn()        # the plating block is gained as the player's turn starts (PlatingPower.BeforeSideTurnEndEarly)
-    assert e.block == 8
+    CombatSimulator(cs)._start_player_turn()        # plating pays out as the enemies' side starts its turn
+    assert cs.enemies[0].block == 8
 
 
 # ---------------------------------------------------------------- Sludge Spinner
@@ -301,7 +300,7 @@ def test_hardened_shell_starts_again_with_each_side_turn():
     sim = CombatSimulator(cs)
     e.apply_damage(50, player, True)
     assert e.current_hp == 60
-    sim.fire(EventType.BEFORE_PLAYER_TURN)
+    sim.fire(HookType.BEFORE_PLAYER_TURN)
     e.apply_damage(50, player, True)
     assert e.current_hp == 40
 
@@ -358,5 +357,5 @@ def test_capture_hardened_shell_is_read_as_what_is_left_of_the_cap():
 def test_capture_hardened_shell_comes_back_after_the_turn_passes():
     cs = under("skulking_colony", "hardened_shell_empty")
     sim = CombatSimulator(cs)
-    sim.fire(EventType.BEFORE_PLAYER_TURN)
+    sim.fire(HookType.BEFORE_PLAYER_TURN)
     assert cs.enemies[0].status[StatusId.HARDENED_SHELL].shown_amount == 20

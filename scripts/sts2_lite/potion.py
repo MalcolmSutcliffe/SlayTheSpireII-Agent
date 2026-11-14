@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 from sts2_lite import rng
 from sts2_lite.helpers import player_of, living_enemies
 from sts2_lite.card import Card, CardType, TargetType, GENERATABLE_CARDS, COLORLESS_CARDS, STRIKE_CARDS, temp_strength
-from sts2_lite.events import EventType
+from sts2_lite.hooks import HookType
 from sts2_lite.relic import RelicId, REPTILE_TRINKET_STRENGTH
 from sts2_lite.status import StatusId
 
@@ -361,7 +361,7 @@ def _glowwater_potion(combat, t):
     player = player_of(combat)
     for card in list(player.hand):
         player.exhaust_card(card)
-        combat.fire(EventType.CARD_EXHAUSTED, card)
+        combat.fire(HookType.CARD_EXHAUSTED, card)
     player.draw_cards(GLOWWATER_CARDS)
 
 def _snecko_oil(combat, t):
