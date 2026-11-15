@@ -7,7 +7,10 @@ Scores (ROUTE_WEIGHTS):
   unknown  1.5 (a "?" room)
   shop     the first shop of a route: (gold now + 20 per floor in between) / 100, so 300 gold is 3.0; later shops 0
   treasure, boss: 0 (every route has exactly one treasure room)
-Ties go to the route with the most rest sites, then to the leftmost first step."""
+Ties go to the route with the most rest sites, then to the leftmost first step.
+
+With an `advisor` set (agents/deck_eval), the route is instead the path whose walks through the rest of the act do best (deck_eval/path_search.py); the node scores above only rank the
+paths to be walked, and stand in when there is nothing to walk with."""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -60,6 +63,8 @@ class PathPlanner:
         self.w = weights
         self.route : PlannedRoute | None = None
         self._act = None
+        self.advisor = None                     # a DeckAdvisor: with it the route is planned by walking the paths
+        self.plans = 0
         self.elites : dict[int, list] = {}      # act -> the elite encounters fought in it so far (the game deals them from a bag, so the rest can be known)
 
     def note_elite(self, elite : str | None):
@@ -92,8 +97,40 @@ class PathPlanner:
         if not visited or act != self._act:         # the first room of an act (or of a run): no elite fought yet
             self.elites[act] = []
         self._act = act
-        self.route = PlannedRoute(best[2], combats_done, act, (state.get("boss") or {}).get("encounter"), state.get("act_model"), self.elites.setdefault(act, []))
-        return best[1]
+        boss, act_model, elites = (state.get("boss") or {}).get("encounter"), state.get("act_model"), self.elites.setdefault(act, [])
+        chosen, kinds = best[1], best[2]
+        if self.advisor is not None:
+            try:
+                from agents.deck_eval.path_search import PathSearch
+                planned = PathSearch(self.advisor, self).plan(decision, nodes, combats_done, treasure_done, hurt, gold, here, act, boss, act_model, elites)
+            except Exception as e:          # the walks failing must not stop the run: the node scores decide
+                self.advisor.log("path planning failed (%r) -> node scores" % (e,))
+                planned = None
+            if planned is not None:
+                chosen, kinds = planned
+        self.route = PlannedRoute(kinds, combats_done, act, boss, act_model, elites)
+        return chosen
+
+    def path_score(self, kinds : tuple, first_row : int, combats : int, treasure : bool, hurt : bool, gold : float = 0, here : int = 0) -> float:
+        """The node score of a path (best_route's, for a path that is already known; the i-th node is on row first_row + i)."""
+        w, score, shop_seen = self.w, 0.0, False
+        for i, kind in enumerate(kinds):
+            if kind == "combat":
+                score += w.early_combat if combats < COMBAT_BONUS_COUNT else w.combat
+                combats += 1
+            elif kind == "elite":
+                score += w.elite_after_treasure if treasure else w.elite_before_treasure
+            elif kind == "rest":
+                score += w.rest + (w.low_hp_rest_bonus if hurt else 0.0)
+            elif kind == "unknown":
+                score += w.unknown
+            elif kind == "treasure":
+                treasure = True
+            elif kind == "shop":
+                if not shop_seen:
+                    score += (gold + w.shop_gold_per_floor * max(0, first_row + i - here - 1)) / w.shop_gold_scale
+                shop_seen = True
+        return score
 
     def best_route(self, nodes : dict, coord : tuple, point_type : str | None, combats : int, treasure : bool, hurt : bool, gold : float = 0, here : int = 0, shop_seen : bool = False) -> tuple[float, int, list[str]]:
         """(highest total score, rest sites, node kinds) of the best route that starts at `coord` and runs to the end of the map."""

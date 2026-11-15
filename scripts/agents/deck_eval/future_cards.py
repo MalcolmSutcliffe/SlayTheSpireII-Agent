@@ -40,8 +40,9 @@ def _pool() -> dict[str, list[dict]]:
 CARD_POOL = _pool()
 
 
-def fight_kinds(route, act : int) -> list[str]:
-    """The kinds of the fights ahead, in the order of the route ("combat" is weak while the act's first combats last)."""
+def route_steps(route, act : int) -> list[str]:
+    """The rooms ahead that matter for a deck, in the order of the route: the kinds of its fights ("combat" is weak while the act's first combats last),
+    "rest" for a rest site, "treasure" for the treasure room and "shop" for a shop and "unknown" for a "?" room. A new act (or no route) has no rest sites in it: only the fights an act is expected to hold."""
     if route is None or not route.kinds or route.kinds[0] == "boss":
         weak = WEAK_FIGHTS.get(act if route is None or not route.kinds else min(3, act + 1), 2)
         middle = []
@@ -49,14 +50,19 @@ def fight_kinds(route, act : int) -> list[str]:
             middle += (["normal"] if i < NEW_ACT_NORMALS else []) + (["elite"] if i < NEW_ACT_ELITES else [])
         return ["weak"] * weak + middle + ["boss"]
     weak_left = max(0, WEAK_FIGHTS.get(act, 2) - route.combats_before - (route.kinds[0] == "combat"))
-    kinds = []
+    steps = []
     for kind in route.kinds[1:]:
         if kind == "combat":
-            kinds.append("weak" if weak_left > 0 else "normal")
+            steps.append("weak" if weak_left > 0 else "normal")
             weak_left -= 1
-        elif kind in ("elite", "boss"):
-            kinds.append(kind)
-    return kinds or ["normal"]
+        elif kind in ("elite", "boss", "rest", "treasure", "shop", "unknown"):
+            steps.append(kind)
+    return steps
+
+
+def fight_kinds(route, act : int) -> list[str]:
+    """The kinds of the fights ahead, in the order of the route."""
+    return [k for k in route_steps(route, act) if k in ("weak", "normal", "elite", "boss")] or ["normal"]
 
 
 def extra_cards(n : int, r : random.Random) -> list[dict]:

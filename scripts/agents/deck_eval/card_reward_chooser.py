@@ -3,7 +3,7 @@
 A card is taken only when it clearly beats skipping: its average gain over the fights (each fight played with and without the card, same
 dice) must exceed Z standard errors of that gain plus a floor. The floor falls as the deck's win rate falls (a weak deck needs the help).
 
-With USE_FUTURE the fights are the future-deck fights (future_cards: each is played with the cards the deck is expected to have gained by then),
+With USE_FUTURE the fights are walks through the rest of the act on the engine's run simulator (route_sim: the cards, relics and potions the deck gains on the way come from the engine's own rewards),
 and the current-deck pass is skipped altogether: every fight of the time budget goes to the future-deck pass."""
 from __future__ import annotations
 import math
@@ -11,7 +11,6 @@ import time
 
 from agents.decision import Decision, Option
 from agents.deck_eval.advisor import DeckAdvisor
-from agents.deck_eval.future_cards import sample_future
 
 Z = 1.5                     # standard errors the gain has to clear (a wrong skip costs about as much as a wrong take)
 FLOOR = 0.3                 # reward points (a win is ~20, so 0.3 is ~1.5% of one): the smallest gain worth a card
@@ -102,23 +101,24 @@ class CardRewardChooser:
                  (mix.act, mix.weak, mix.normal, mix.elite, " [" + "/".join(mix.elites) + "]" if mix.elites else "", mix.boss, " [" + mix.boss_id + "]" if mix.boss_id else "", len(deciding["fights"]), time.perf_counter() - start, 100 * deciding["base"].win_rate,
                   (": " + ", ".join("%s %+.2f±%.2f (win %.0f%%)" % (n, g, se, 100 * s.win_rate) for g, se, o, n, s in rows)) if rows else "",
                   needed, "take " + best[3] if take else "skip"))
-        self.log("  with the cards to come (%d fights, %.1f extra cards each, base win %.0f%%): " % (len(future["fights"]), future["extra"], 100 * future["base"].win_rate) +
+        self.log("  walking the rest of the act (%d walks of %.1f fights, %.0f%% get through): " %
+                 (future["walks"], len(future["fights"]) / max(1, future["walks"]), 100 * future["base"].win_rate) +
                  ", ".join("%s %+.2f±%.2f (win %.0f%%)" % (n, g, se, 100 * s.win_rate) for g, se, o, n, s in future["rows"]))
         return chosen
 
     def future_rows(self, decision : Decision, deck : list[dict], player : dict, route, skip, count : int) -> dict:
-        """The same gains with the cards the deck is expected to gain by each fight added to every deck (future_cards): the rows, the base score,
-        the fights, and the average number of extra cards."""
-        ctx = decision.state.get("context") or decision.state.get("run") or {}
-        seed = 5000 + self.advisor._calls
-        fights, extras = sample_future(self.advisor.pool, route, ctx.get("act", 1), ctx.get("ascension", 0), count, seed)
-        base = self.evaluator.score(deck, player, fights, seed, extras)
+        """Each option's gain over the deck as it is, on walks through the rest of the act on the engine's run simulator (route_sim): the fights one after the
+        other with the HP carried over, the rest sites, the treasure room, the potions, gold and card rewards, and the relics the elites drop, all as the engine
+        does them. A deck is rated by how far it gets and how healthy, so the fights it is weakest in weigh the most (the ones it dies in cost it all the fights
+        after them). `count` is the fights to play: the walks are as many as fit. Returns the rows, the base score, the walks and their fights."""
+        walks = self.advisor.walks(decision, count)
+        base = self.evaluator.score_walks(deck, player, walks)
         rows = []
         for opt in decision.options:
             card = opt.data or {}
             if opt is skip or "id" not in card:
                 continue
-            score = self.evaluator.score(deck + [card], player, fights, seed, extras)
+            score = self.evaluator.score_walks(deck + [card], player, walks)
             gain, se = paired_gain(score.rewards, base.rewards)
             rows.append((gain, se, opt, card.get("name", opt.label), score))
-        return {"rows": rows, "base": base, "fights": fights, "extra": sum(map(len, extras)) / max(1, len(extras))}
+        return {"rows": rows, "base": base, "fights": [f for w in walks for f in range(w.fights)], "walks": len(walks)}

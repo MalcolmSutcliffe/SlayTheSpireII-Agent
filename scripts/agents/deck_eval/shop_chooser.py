@@ -3,11 +3,12 @@
 In order:
   1. a relic, if one can be afforded (the cheapest: prices are random, and the dearer uncommon and rare ones are overpriced); never the shop's own relic, the 3rd one listed (too situational for the agent to judge)
   2. potions, when the planned route meets an elite within the next 3 rooms: the best valued first (RewardParams.potion_bonus)
-  3. a card, or a card removal, when the deck with it beats the deck without by Z standard errors on the fights ahead (the best gain first).
+  3. a card, or a card removal, when the deck with it beats the deck without by Z standard errors on walks through the rest of the act (the engine's run simulator: the fights one after the
+     other with the HP carried over, the rest sites, rewards and relics: see route_sim and DeckEvaluator.score_walks); the best gain first.
      The card removed is chosen first: a curse, else a Strike, else a Defend; with none of those left no removal is considered.
-  4. otherwise leave."""
+  4. otherwise leave.
+The analysis in 3 runs for at most SHOP_SECONDS: as many walks as fit, every candidate on each."""
 from __future__ import annotations
-import time
 
 from sts2_lite.card.constants import CARD_ENERGY_COST_AND_TARGET
 from sts2_lite.card.ids import CardId
@@ -18,7 +19,7 @@ from agents.deck_eval.advisor import DeckAdvisor
 from agents.deck_eval.card_reward_chooser import paired_gain
 from agents.sts2_MCTS.params import RewardParams
 
-SHOP_FIGHTS = 2500
+SHOP_SECONDS = 10.0         # the most time the deck analysis of one shop screen may take
 Z = 2.0
 ELITE_LOOKAHEAD = 3         # rooms on the planned route
 SHOP_RELIC_POSITION = 2     # the 3rd relic listed
@@ -97,15 +98,17 @@ class ShopChooser:
                     candidates.append((o, deck[:i] + deck[i + 1:]))
         if not candidates:
             return None
-        mix, fights, seed, _ = self.advisor.sample(decision, SHOP_FIGHTS)
-        ev, player, start = self.advisor.evaluator, decision.player, time.perf_counter()
-        base = ev.score(deck, player, fights, seed)
+        ev, player = self.advisor.evaluator, decision.player
+        plays = {"base": lambda walks: ev.score_walks(deck, player, walks).rewards}
+        for k, (o, new_deck) in enumerate(candidates):
+            plays[k] = lambda walks, d=new_deck: ev.score_walks(d, player, walks).rewards
+        rewards, count, seconds = self.advisor.race(decision, plays, SHOP_SECONDS)
         rows = []
-        for o, new_deck in candidates:
-            gain, se = paired_gain(ev.score(new_deck, player, fights, seed).rewards, base.rewards)
+        for k, (o, new_deck) in enumerate(candidates):
+            gain, se = paired_gain(rewards[k], rewards["base"])
             rows.append((gain, _z(gain, se), o))
         worth = [r for r in rows if r[1] > Z]
-        self.advisor.log("shop (%d gold, %d fights, %.1fs): " % (player.get("gold", 0), len(fights), time.perf_counter() - start) +
+        self.advisor.log("shop (%d gold, %d walks through the route ahead, %.1fs of %.0fs): " % (player.get("gold", 0), count, seconds, SHOP_SECONDS) +
                          ", ".join("%s %+.2f (z %.1f)" % (r[2].label, r[0], r[1]) for r in sorted(rows, key=lambda r: -r[0])) +
                          (" -> " + max(worth, key=lambda r: r[0])[2].label if worth else " -> nothing worth it"))
         return max(worth, key=lambda r: r[0])[2] if worth else None

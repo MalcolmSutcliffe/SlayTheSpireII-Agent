@@ -28,6 +28,8 @@ class MyAgent(BaseAgent):
         self._card_chooser = None
         self._upgrader = None
         self._shopper = None
+        self._eventer = None
+        self._ancient = None
         self._mcts = sts2_MCTS()        # kept between calls: the next search reuses the part of this tree the game went into
 
     def get_combat_action(self, combat_state : CombatState, time_budget):
@@ -84,6 +86,14 @@ class MyAgent(BaseAgent):
             self._shopper = ShopChooser(self._deck_advisor())
         return self._shopper.choose(decision)
 
+    def _get_event_decision(self, decision):
+        """The option whose outcome walks best through the rest of the act (the engine's event model, then route walks): see agents/deck_eval/event_chooser.py. The ancients' relics are chosen the same way (ancient_chooser.py). Events the engine does not model are BaseAgent's."""
+        if self._eventer is None:
+            from agents.deck_eval.event_chooser import EventChooser
+            from agents.deck_eval.ancient_chooser import AncientChooser
+            self._eventer, self._ancient = EventChooser(self._deck_advisor()), AncientChooser(self._deck_advisor())
+        return self._ancient.choose(decision) or self._eventer.choose(decision) or super()._get_event_decision(decision)
+
     def _get_card_select_decision(self, decision):
         picks = decision.options_named("select_card")
         if picks and not decision.options_named("confirm_selection") and "remove" in str(decision.state.get("screen_type", "")).lower():
@@ -98,5 +108,6 @@ class MyAgent(BaseAgent):
         return super()._get_card_select_decision(decision)
 
     def _get_map_decision(self, decision):
-        """The route with the highest node score: see agents/pathing.py."""
+        """The path whose walks through the rest of the map do best (deck_eval/path_search.py); the node scores of agents/pathing.py rank the paths to walk."""
+        self._planner.advisor = self._deck_advisor()
         return self._planner.choose(decision)

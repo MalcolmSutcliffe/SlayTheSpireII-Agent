@@ -11,6 +11,7 @@ from agents.sts2_MCTS.params import SearchConfig, RolloutPolicy
 from agents.sts2_MCTS.rollout_policy import rollout_policy
 from agents.deck_eval.fight_builder import build_fight
 from agents.deck_eval.fight_pool import FightTemplate
+from agents.deck_eval.route_sim import play_walk
 
 MAX_TURNS = 25
 
@@ -28,6 +29,19 @@ class DeckEvaluator:
     def __init__(self, pool : list[FightTemplate], target_types : dict[str, str], policy = RolloutPolicy.ClaudeHeuristic):
         self.pool, self.target_types = pool, target_types
         self.config = SearchConfig().tuned(rollout=policy)
+
+    def score_walks(self, deck : list[dict], player : dict, walks : list, event=None) -> DeckScore:
+        """Every walk through the route ahead played with `deck` (route_sim: the engine's run simulator from the run as `player` has it): a DeckScore with one
+        reward per walk, `win_rate` the share of walks that came through every fight, `mean_hp_left` the HP at the end of them. Two decks on the same walks can
+        be compared walk by walk. `event`: an EventPlan played before each walk."""
+        start, rewards, alive, hp_left = time.perf_counter(), [], 0, 0.0
+        for walk in walks:
+            result = play_walk(walk, deck, player, self.config, self.target_types, event)
+            rewards.append(result.reward)
+            alive += result.alive
+            hp_left += result.hp if result.alive else 0
+        n = max(1, len(walks))
+        return DeckScore(sum(rewards) / n, alive / n, hp_left / n, time.perf_counter() - start, rewards)
 
     def play_chain(self, deck : list[dict], player : dict, fights : list[FightTemplate], seed : int) -> tuple[bool, int]:
         """The fights one after the other with the HP carried over (the combat's own heal after a win included): (alive at the end, HP left)."""

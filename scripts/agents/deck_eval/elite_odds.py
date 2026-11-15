@@ -40,3 +40,19 @@ def elites_left(act : str | None, fought : list) -> tuple[str, ...] | None:
     last = ENCOUNTERS.get(fought[-1]) if fought and fought[-1] else None
     apart = [e for e in left if e is not last and not e.shares_tags_with(last)]
     return tuple(e.id for e in (apart or left))
+
+
+def elite_sequence(act : str, fought : list, rng, slots : int | None = None) -> list:
+    """The act's elite encounters in the order they will be met (the sequence `generate_rooms` makes), continuing from the ones already fought:
+    the first `len(fought)` entries are those (an elite that was not recognized is a random one of the act), the rest is drawn from the bag the game has left."""
+    from sts2_lite.encounters.acts import ELITE_SLOTS, GrabBag, _add_without_repeating_tags
+    elites = ACTS[act].elites
+    chosen = [ENCOUNTERS[e] if e in ENCOUNTERS else rng.choice(elites) for e in fought]
+    bag = GrabBag()
+    size = len(elites)
+    bag.refill([e for e in elites if e not in chosen[(len(chosen) // size) * size:]])
+    while len(chosen) < (slots or max(ELITE_SLOTS, len(fought) + size)):
+        if not bag:
+            bag.refill(elites)
+        _add_without_repeating_tags(chosen, bag, rng)
+    return chosen

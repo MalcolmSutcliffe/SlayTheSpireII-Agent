@@ -262,6 +262,117 @@ def test_a_chain_carries_hp_and_a_dead_deck_fails_it():
     assert alive is False and hp == 0
 
 
+def test_the_route_steps_keep_every_room_but_the_fight_kinds_drop_the_others():
+    from agents.deck_eval.future_cards import route_steps, fight_kinds
+    route = PlannedRoute(["combat", "combat", "rest", "elite", "unknown", "treasure", "shop", "rest", "combat", "boss"], 3, 1)
+    assert route_steps(route, 1) == ["normal", "rest", "elite", "unknown", "treasure", "shop", "rest", "normal", "boss"]
+    assert fight_kinds(route, 1) == ["normal", "elite", "normal", "boss"]
+    assert "rest" not in route_steps(PlannedRoute(["boss"], 6, 1), 1)
+
+
+def test_the_elites_to_come_follow_the_ones_fought():
+    from agents.deck_eval.elite_odds import elite_sequence
+    from sts2_lite.encounters import ACTS
+    hive = {e.id for e in ACTS["HIVE"].elites}
+    seq = elite_sequence("HIVE", ["ENTOMANCER_ELITE", "DECIMILLIPEDE_ELITE"], random.Random(1))
+    assert [e.id for e in seq[:3]] == ["ENTOMANCER_ELITE", "DECIMILLIPEDE_ELITE", "INFESTED_PRISMS_ELITE"] and {e.id for e in seq} == hive
+    assert [e.id for e in elite_sequence("HIVE", [], random.Random(1))[:3]] and len({e.id for e in elite_sequence("HIVE", [], random.Random(1))[:3]}) == 3
+
+
+@needs_pool
+def test_walks_follow_the_route_and_what_the_agent_knows_of_the_act():
+    from agents.deck_eval.route_sim import sample_walks
+    route = PlannedRoute(["combat", "combat", "rest", "elite", "unknown", "treasure", "rest", "combat", "boss"], 3, 2, "KAISER_CRAB_BOSS", "HIVE", ["ENTOMANCER_ELITE", "DECIMILLIPEDE_ELITE"])
+    walks, again = sample_walks(route, 2, 0, 12, 4, floor=20), sample_walks(route, 2, 0, 12, 4, floor=20)
+    assert [w.seed for w in walks] == [w.seed for w in again] and [w.rooms.boss.id for w in walks] == [w.rooms.boss.id for w in again]
+    for w in walks:
+        assert w.steps == ["normal", "rest", "elite", "unknown", "treasure", "rest", "normal", "boss"] and w.act == 2 and w.act_id == "HIVE" and w.fights == 4
+        assert w.rooms.boss.id == "KAISER_CRAB_BOSS" and w.rooms.elite[2].id == "INFESTED_PRISMS_ELITE" and w.elite_fought == 2 and w.normal_fought == 4 and w.floor == 20
+
+
+@needs_pool
+def test_a_boss_reward_looks_at_the_next_act_with_nothing_behind_it():
+    from agents.deck_eval.route_sim import sample_walks
+    walks = sample_walks(PlannedRoute(["boss"], 6, 1), 1, 0, 5, 2)
+    assert all(w.act == 2 and w.act_id == "HIVE" and w.elite_fought == 0 and w.normal_fought == 0 and w.steps[-1] == "boss" for w in walks)
+    assert all(w.act_id in ("OVERGROWTH", "UNDERDOCKS") for w in sample_walks(None, 1, 0, 5, 2))
+
+
+@needs_pool
+def test_the_last_act_at_ascension_ten_has_two_bosses():
+    from agents.deck_eval.route_sim import sample_walks
+    walks = sample_walks(PlannedRoute(["combat", "combat", "boss"], 5, 3, None, "GLORY"), 3, 10, 4, 1)
+    assert all(w.rooms.second_boss is not None and w.rooms.second_boss.id != w.rooms.boss.id and w.fights == 3 for w in walks)
+    assert all(w.rooms.second_boss is None for w in sample_walks(PlannedRoute(["combat", "combat", "boss"], 5, 3, None, "GLORY"), 3, 9, 4, 1))
+
+
+def _walk_run(walk, hp=80, max_hp=80):
+    """The run a walk starts from, as play_walk builds it."""
+    from agents.deck_eval import route_sim as rs
+    from sts2_lite.run import RunState
+    p = _player()
+    p.update(hp=hp, max_hp=max_hp)
+    run = RunState.from_player(p, rs._normalized(p["deck"], target_types(POOL)), act=walk.act, floor=walk.floor, ascension=walk.ascension)
+    run.act_id, run.boss = walk.act_id, walk.rooms.boss.id
+    run.hidden = rs.Hidden()
+    run.hidden.rooms, run.hidden.normal_fought, run.hidden.elite_fought = walk.rooms, walk.normal_fought, walk.elite_fought
+    run.hidden.relic_bag = rs.RelicGrabBag(random.Random(walk.seed))
+    run.hidden.relic_bag.remove("BURNING_BLOOD")
+    return run
+
+
+@needs_pool
+def test_the_engine_pays_an_elite_a_relic_a_rest_site_heals_and_a_treasure_room_gives_gold():
+    from agents.deck_eval.route_sim import RouteSimulator, sample_walks
+    ev = DeckEvaluator(POOL, target_types(POOL))
+    walk = sample_walks(PlannedRoute(["combat", "elite", "rest", "treasure", "combat", "boss"], 4, 1, None, "OVERGROWTH"), 1, 0, 1, 3)[0]
+    run = _walk_run(walk, hp=500, max_hp=500)       # a deck that wins everything
+    relics, gold = len(run.relics), run.gold
+    result = RouteSimulator(run, walk, ev.config).walk_route()
+    rooms = [v.room for v in run.history]
+    assert rooms[:4] == ["Elite", "RestSite", "Treasure", "Monster"]
+    assert len(run.relics) >= relics + 2 and run.gold > gold      # the elite's and the chest's relic, the gold of the fights and the chest
+    hurt = _walk_run(walk, hp=20, max_hp=80)
+    sim = RouteSimulator(hurt, walk, ev.config)
+    sim.reseed(0)
+    sim.rest_site()
+    assert hurt.hp == 44 and [v.room for v in hurt.history] == ["RestSite"]       # a hurt agent heals: 30% of 80 HP
+
+
+@needs_pool
+def test_a_walk_is_repeatable_and_a_deck_that_dies_early_scores_only_what_it_got_through():
+    from agents.deck_eval.route_sim import sample_walks
+    ev, p = DeckEvaluator(POOL, target_types(POOL)), _player()
+    walks = sample_walks(PlannedRoute(["combat", "elite", "combat", "boss"], 3, 1, None, "OVERGROWTH"), 1, 0, 4, 2)       # the first fight ahead is an elite
+    healthy, again = ev.score_walks(p["deck"], p, walks), ev.score_walks(p["deck"], p, walks)
+    assert healthy.rewards == again.rewards
+    dying = ev.score_walks(p["deck"], {**p, "hp": 1}, walks)
+    assert dying.win_rate == 0 and dying.mean_hp_left == 0 and dying.mean < healthy.mean
+    assert all(r < 1.0 for r in dying.rewards)       # dead in the first fight: at most the share of it that was got through, nothing of the rooms after it
+
+
+@needs_pool
+def test_the_walk_agent_takes_the_rarest_card_at_its_take_rate():
+    from agents.deck_eval.route_sim import WalkAgent
+    cards = [{"index": i, "id": c, "name": c, "type": "Attack", "rarity": r} for i, (c, r) in enumerate((("A", "Common"), ("B", "Rare"), ("C", "Uncommon")))]
+    options = [Option(c["name"], {"action": "select_card_reward", "card_index": c["index"]}, c) for c in cards] + [Option("skip", {"action": "skip_card_reward"})]
+    decision = Decision(CARD_REWARD, {"type": "decision", "decision": "card_reward"}, options)
+    assert WalkAgent(1.0, 1).get_decision(decision).data["id"] == "B"
+    assert WalkAgent(0.0, 1).get_decision(decision).name == "skip_card_reward"
+    taken = sum(WalkAgent(0.5, s).get_decision(decision).name == "select_card_reward" for s in range(200))
+    assert 70 < taken < 130
+
+
+@needs_pool
+def test_the_advisor_hands_every_chooser_the_same_kind_of_walks():
+    advisor = DeckAdvisor(fights=30, pool=POOL, log=lambda *_: None, route_provider=lambda: PlannedRoute(["combat", "combat", "rest", "elite", "combat", "boss"], 3, 1))
+    decision = Decision("REST", {"type": "decision", "decision": "rest_site", "player": _player(), "context": {"act": 1, "floor": 7}}, [])
+    walks = advisor.walks(decision)
+    assert len(walks) == 30 // 4 and all(w.steps[-1] == "boss" and w.floor == 7 for w in walks)         # 4 fights ahead; the route ends with its boss
+    assert len(advisor.walks(decision, 4)) == 6          # never fewer than the fewest walks
+    assert len(advisor.walks(decision, 2500)) == 2500 // 4 and advisor.walks(decision)[0].seed != walks[0].seed       # every call a new seed
+
+
 def test_early_floor_is_halved_for_the_first_three_rewards():
     assert skip_floor(early=True) == skip_floor() / 2 and skip_floor(early=True) == 0.15
 
@@ -393,3 +504,267 @@ def test_a_spiral_strike_hits_twice_in_a_built_fight():
         sim.play_card(next(i for i, c in enumerate(state.player.hand) if c.card_id.name == "STRIKE_IRONCLAD"), 0)
         return before - sum(e.current_hp for e in state.enemies)
     assert damage(enchanted(card_entry("STRIKE_IRONCLAD"), "SPIRAL", 1)) == 2 * damage(card_entry("STRIKE_IRONCLAD"))
+
+
+# --- events and the time caps -------------------------------------------------------------------------------------------------------------------------
+
+def _event_walk():
+    from agents.deck_eval.route_sim import sample_walks
+    return sample_walks(PlannedRoute(["combat", "rest", "combat", "boss"], 4, 1, None, "OVERGROWTH"), 1, 0, 1, 3)[0]
+
+
+@needs_pool
+def test_an_event_option_is_played_by_the_engine_before_the_walk():
+    from agents.deck_eval.route_sim import EventPlan, RouteSimulator, EventMismatch
+    ev = DeckEvaluator(POOL, target_types(POOL))
+    walk = _event_walk()
+    run = _walk_run(walk, hp=70, max_hp=80)
+    sim = RouteSimulator(run, walk, ev.config, EventPlan("ABYSSAL_BATHS", [], "immerse"))
+    sim.reseed("event")
+    sim.play_event(sim.opening)
+    assert (run.max_hp, run.hp) == (82 + 0, 69) and [] == run.offers          # +2 max HP (hp+2), -3 HP
+    run = _walk_run(walk, hp=70, max_hp=80)
+    sim = RouteSimulator(run, walk, ev.config, EventPlan("ABYSSAL_BATHS", ["immerse"], "linger"))
+    sim.reseed("event")
+    sim.play_event(sim.opening)
+    assert run.max_hp == 84 and run.hp == 70 + 4 - 3 - 4          # the second dip costs one more
+    with pytest.raises(EventMismatch):
+        RouteSimulator(_walk_run(walk), walk, ev.config, EventPlan("ABYSSAL_BATHS", [], "no such option")).play_event(EventPlan("ABYSSAL_BATHS", [], "no such option"))
+    with pytest.raises(EventMismatch):
+        RouteSimulator(_walk_run(walk), walk, ev.config, None).play_event(EventPlan("NOT_AN_EVENT", [], "x"))
+
+
+@needs_pool
+def test_an_option_that_kills_scores_nothing_and_a_cleared_act_goes_on_into_the_next_one():
+    from agents.deck_eval.route_sim import EventPlan, LOOKAHEAD_ROOMS, sample_walks
+    ev = DeckEvaluator(POOL, target_types(POOL))
+    p = _player()
+    dying = ev.score_walks(p["deck"], {**p, "hp": 1, "max_hp": 80}, [_event_walk()], EventPlan("ABYSSAL_BATHS", [], "immerse"))          # +2 HP, then 3 damage: dead
+    assert dying.win_rate == 0 and dying.rewards[0] == 0.0
+    walks = sample_walks(PlannedRoute(["rest", "combat"], 4, 0, None, "OVERGROWTH"), 1, 0, 1, 3)          # one fight a deck that cannot lose wins
+    strong = {**p, "hp": 500, "max_hp": 500}
+    score = ev.score_walks(p["deck"], strong, walks)
+    assert score.win_rate == 1.0 and score.rewards[0] >= len(walks[0].steps) + 1          # the act's rooms and a good part of the next act's first ones
+    from agents.deck_eval import route_sim as rs
+    run = _walk_run(walks[0], hp=500, max_hp=500)
+    sim = rs.RouteSimulator(run, walks[0], ev.config)
+    result = sim.walk_route()
+    assert run.act == 2 and run.act_id == "HIVE" and result.fights >= len(walks[0].steps) and len(sim.credits) <= len(walks[0].steps) + LOOKAHEAD_ROOMS
+
+
+@needs_pool
+def test_dying_at_the_boss_costs_what_comes_after_it():
+    from agents.deck_eval.route_sim import sample_walks
+    ev, p = DeckEvaluator(POOL, target_types(POOL)), _player()
+    walks = sample_walks(PlannedRoute(["combat", "rest", "boss"], 4, 1, None, "OVERGROWTH"), 1, 0, 6, 3)
+    weak, strong = ev.score_walks(p["deck"], p, walks), ev.score_walks(p["deck"], {**p, "hp": 500, "max_hp": 500}, walks)
+    assert strong.mean - weak.mean > 2.0          # clearing the boss is worth the next act's rooms too, not one more fight in twenty
+
+
+@needs_pool
+def test_potions_held_and_max_hp_gained_count_once_at_the_end():
+    from agents.deck_eval.route_sim import POTION_CREDIT, sample_walks
+    ev, p = DeckEvaluator(POOL, target_types(POOL)), _player()
+    walks = sample_walks(PlannedRoute(["rest", "combat"], 4, 0, None, "OVERGROWTH"), 1, 0, 1, 3)
+    plain = {**p, "hp": 500, "max_hp": 500, "potions": []}
+    held = {**plain, "potions": [{"id": "FIRE_POTION", "name": "Fire Potion"}] * 2}
+    gap = ev.score_walks(p["deck"], held, walks).rewards[0] - ev.score_walks(p["deck"], plain, walks).rewards[0]
+    assert 0 < gap <= 2 * POTION_CREDIT + 1e-6
+
+
+@needs_pool
+def test_the_event_chooser_takes_the_better_option_and_leaves_what_it_cannot_play():
+    from agents.deck_eval.event_chooser import EventChooser
+    advisor = DeckAdvisor(pool=POOL, log=lambda *_: None, route_provider=lambda: PlannedRoute(["combat", "rest", "combat", "boss"], 4, 1, None, "OVERGROWTH"))
+    p = _player()
+    p.update(hp=1, max_hp=80)
+    def screen(event_id, keys):
+        options = [Option(k, {"action": "choose_event_option", "index": i}, {"index": i, "title": k}) for i, k in enumerate(keys)]
+        return Decision("event", {"event_id": event_id, "player": p, "context": {"act": 1, "floor": 5}}, options)
+    chooser = EventChooser(advisor)
+    import agents.deck_eval.event_chooser as ec
+    ec.EVENT_SECONDS = 0.2
+    assert chooser.choose(screen("ABYSSAL_BATHS", ["immerse", "abstain"])).label == "abstain"        # immersing at 1 HP is death, abstaining heals 10
+    assert chooser.path == ["abstain"]
+    assert chooser.choose(screen("ABYSSAL_BATHS", ["only"])).label == "only"
+    assert chooser.choose(screen("SOME_UNMODELLED_EVENT", ["a", "b"])) is None
+    assert chooser.choose(screen("ABYSSAL_BATHS", ["x", "y"])) is None and chooser.path == []          # option names the model does not know
+
+
+@needs_pool
+def test_the_race_stops_at_its_time_and_pairs_the_candidates():
+    advisor = DeckAdvisor(pool=POOL, log=lambda *_: None, route_provider=lambda: PlannedRoute(["combat", "rest", "combat", "boss"], 4, 1, None, "OVERGROWTH"))
+    decision = Decision("rest", {"player": _player(), "context": {"act": 1, "floor": 5}}, [])
+    ev, p = advisor.evaluator, _player()
+    plays = {"a": lambda walks: ev.score_walks(p["deck"], p, walks).rewards, "b": lambda walks: ev.score_walks(p["deck"], {**p, "hp": 20}, walks).rewards}
+    rewards, count, seconds = advisor.race(decision, plays, 0.5)
+    assert len(rewards["a"]) == len(rewards["b"]) == count and count >= 2 and 0.4 < seconds < 3.0
+    assert advisor.race(decision, plays, 0.0)[1] == 2                  # one batch is always played
+    assert advisor.race(decision, plays, 99, max_walks=6)[1] == 6
+
+
+@needs_pool
+def test_an_event_fight_is_not_a_room_and_leaves_the_dice_of_later_fights_alone():
+    from agents.deck_eval.route_sim import EventPlan, RouteSimulator
+    ev = DeckEvaluator(POOL, target_types(POOL))
+    walk = _event_walk()
+    plain = RouteSimulator(_walk_run(walk, hp=70), walk, ev.config)
+    fought = RouteSimulator(_walk_run(walk, hp=70), walk, ev.config, EventPlan("BATTLEWORN_DUMMY", [], "setting_1"))
+    a, b = plain.walk_route(), fought.walk_route()
+    assert plain.credits == fought.credits and a.reward == b.reward and a.fights == b.fights          # the dummy changes nothing it does not pay for
+
+
+@needs_pool
+def test_the_ancient_chooser_reads_the_screen_and_takes_the_best_relic():
+    import agents.deck_eval.ancient_chooser as ac
+    from agents.deck_eval.route_sim import AncientPlan
+    chooser = ac.AncientChooser(DeckAdvisor(pool=POOL, log=lambda *_: None))
+    assert chooser.names["Sea Glass"] == "SEA_GLASS" and chooser.names["Paels Flesh"] == "PAELS_FLESH" and chooser.names["Lost Coffer"] == "LOST_COFFER"
+    assert ac.resolve("Sea Glass (Silent)", "OROBAS", chooser.names) == AncientPlan("OROBAS", "SEA_GLASS", {"character": "SILENT"})
+    assert ac.resolve("Dusty Tome", "DARV", chooser.names).setup == {"card": "CORRUPTION"} and ac.resolve("Not A Relic", "DARV", chooser.names) is None
+    ac.ANCIENT_SECONDS = 0.3
+    p = _player()
+    def screen(ancient, titles):
+        options = [Option(t, {"action": "choose_event_option", "index": i}, {"index": i, "title": t}) for i, t in enumerate(titles)]
+        return Decision("event", {"event_id": ancient, "player": p, "context": {"act": 1, "floor": 0}}, options)
+    assert chooser.choose(screen("PAEL", ["Paels Flesh", "Paels Claw", "Paels Legion"])).label in ("Paels Flesh", "Paels Claw", "Paels Legion")
+    assert chooser.choose(screen("PAEL", ["Paels Flesh", "A Thing The Engine Lacks"])) is None          # a relic it does not know: left to the default
+    assert chooser.choose(screen("ABYSSAL_BATHS", ["immerse", "abstain"])) is None                       # not an ancient
+
+
+@needs_pool
+def test_a_relic_from_an_ancient_is_in_the_run_before_the_walk_and_is_the_same_walk_for_each():
+    from agents.deck_eval.route_sim import AncientPlan, RouteSimulator, sample_walks
+    ev = DeckEvaluator(POOL, target_types(POOL))
+    walk = sample_walks(None, 1, 0, 1, 5)[0]
+    run = _walk_run(walk)
+    sim = RouteSimulator(run, walk, ev.config, AncientPlan("DARV", "ASTROLABE", {}))
+    sim.reseed("ancient")
+    sim.take_ancient_relic(sim.opening.option())
+    assert any(r["id"] == "ASTROLABE" for r in run.relics)
+    p = _player()
+    a = ev.score_walks(p["deck"], p, [walk], AncientPlan("DARV", "ASTROLABE", {}))
+    assert a.rewards == ev.score_walks(p["deck"], p, [walk], AncientPlan("DARV", "ASTROLABE", {})).rewards
+
+
+# --- the planned path -----------------------------------------------------------------------------------------------------------------------------------
+
+def _map(*rows):
+    """A tiny act: `rows` is a list of (col, row, type, children)."""
+    return [{"col": c, "row": r, "type": t, "children": [list(x) for x in ch]} for c, r, t, ch in rows]
+
+
+def test_paths_that_differ_only_in_where_the_question_marks_are_count_once():
+    from agents.deck_eval.path_search import enumerate_paths, path_key
+    from agents.pathing import _kind
+    nodes = {(n["col"], n["row"]): n for n in _map((0, 1, "Monster", [(0, 2), (1, 2)]), (0, 2, "Unknown", [(0, 3)]), (1, 2, "Monster", [(1, 3)]),
+                                                   (0, 3, "RestSite", [(0, 4)]), (1, 3, "RestSite", [(1, 4)]), (0, 4, "Boss", []), (1, 4, "Boss", []))}
+    paths = enumerate_paths(nodes, (0, 1), "Monster", _kind)
+    assert sorted(paths) == [("combat", "combat", "rest", "boss"), ("combat", "unknown", "rest", "boss")]
+    assert path_key(("combat", "unknown", "rest")) != path_key(("combat", "rest"))
+
+
+def test_the_path_score_is_the_node_score_of_the_best_route():
+    from agents.pathing import PathPlanner
+    planner = PathPlanner()
+    nodes = {(n["col"], n["row"]): n for n in _map((0, 1, "Monster", [(0, 2)]), (0, 2, "Elite", [(0, 3)]), (0, 3, "RestSite", [(0, 4)]), (0, 4, "Boss", []))}
+    score, rests, kinds = planner.best_route(nodes, (0, 1), "Monster", 0, False, False, 0, 0)
+    assert abs(planner.path_score(tuple(kinds), 1, 0, False, False, 0, 0) - score) < 1e-9
+
+
+@needs_pool
+def test_the_planner_walks_the_paths_and_keeps_the_best_as_the_planned_route():
+    import agents.deck_eval.path_search as ps
+    from agents.pathing import PathPlanner
+    from agents.decision import MAP
+    ps.PATH_SECONDS = 1.0
+    nodes = _map((0, 1, "Monster", [(0, 2)]), (1, 1, "RestSite", [(1, 2)]), (0, 2, "Elite", [(0, 3)]), (1, 2, "Monster", [(1, 3)]),
+                 (0, 3, "RestSite", [(0, 4)]), (1, 3, "RestSite", [(1, 4)]), (0, 4, "Boss", []), (1, 4, "Boss", []))
+    logs = []
+    advisor = DeckAdvisor(pool=POOL, log=logs.append)
+    planner = PathPlanner()
+    planner.advisor = advisor
+    choices = [n for n in nodes if n["row"] == 1]
+    options = [Option(c["type"], {"action": "choose_map_node", "index": i}, {**c, "index": i}) for i, c in enumerate(choices)]
+    state = {"nodes": nodes, "visited": [], "choices": choices, "player": _player(), "context": {"act": 1, "floor": 1}, "boss": {"encounter": "VANTOM_BOSS"}, "act_model": "OVERGROWTH"}
+    chosen = planner.choose(Decision(MAP, state, options))
+    assert chosen in options and planner.route.kinds[0] == _kind_of(chosen) and planner.route.kinds[-1] == "boss" and planner.route.act == 1
+    assert logs and logs[0].startswith("path (") and "through" in logs[0]
+    planner.advisor = None
+    again = planner.choose(Decision(MAP, {**state, "player": {"hp": 70, "max_hp": 80}}, options))          # no deck, no advisor: the node scores
+    assert again in options
+
+
+def _kind_of(option):
+    from agents.pathing import _kind
+    return _kind(option.data["type"])
+
+
+@needs_pool
+def test_a_shop_in_a_walk_spends_the_gold_relics_first_then_a_strike_removal_then_cards():
+    from agents.deck_eval.route_sim import RouteSimulator
+    ev = DeckEvaluator(POOL, target_types(POOL))
+    walk = _event_walk()
+    run = _walk_run(walk)
+    run.gold, deck, relics = 900, len(run.deck), len(run.relics)
+    sim = RouteSimulator(run, walk, ev.config)
+    sim.reseed("shop")
+    sim.shop()
+    assert len(run.relics) > relics                                          # a relic first
+    strikes = lambda r: sum(c["id"].startswith("STRIKE") for c in r.deck)
+    assert strikes(run) == 4                                                 # then a Strike went
+    assert run.gold < 900 and len(run.deck) != deck                          # the rest went on cards
+    poor = _walk_run(walk)
+    poor.gold = 0
+    sim = RouteSimulator(poor, walk, ev.config)
+    sim.reseed("shop")
+    sim.shop()
+    assert poor.gold == 0 and len(poor.deck) == len(_walk_run(walk).deck)
+
+
+def test_a_shop_on_the_route_is_a_walk_room():
+    from agents.deck_eval.route_sim import sample_walks, ROOM_OF_STEP
+    walk = sample_walks(PlannedRoute(["combat", "shop", "combat", "boss"], 3, 1, None, "OVERGROWTH"), 1, 0, 1, 2)[0]
+    assert "shop" in walk.steps and ROOM_OF_STEP["shop"] == "Shop" and walk.fights == 2
+
+
+def test_a_walk_never_buys_the_shops_third_relic_and_buys_the_cheapest_of_the_others():
+    from agents.deck_eval.route_sim import WalkAgent
+    items = [{"index": i, "category": "relic", "cost": c, "can_afford": True, "is_stocked": True} for i, c in enumerate((120, 200, 300))]
+    options = [Option(f"buy {i['index']}", {"action": "shop_purchase", "index": i["index"]}, i) for i in items] + [Option("leave shop", {"action": "proceed"})]
+    agent = WalkAgent(1.0, 1)
+    state = {"items": items, "player": {"gold": 999, "deck": []}}
+    assert agent.get_decision(Decision("shop", state, options)).data["index"] == 0          # the 300 gold relic is the shop's own; of the others the 120 gold one is cheaper
+    assert agent.get_decision(Decision("shop", state, [options[1], options[2], options[3]])).data["index"] == 1
+    assert agent.get_decision(Decision("shop", state, options[:1] + options[2:])).name in ("shop_purchase", "proceed")
+    only_third = [options[2], options[3]]
+    assert agent.get_decision(Decision("shop", state, only_third)).name == "proceed"
+
+
+@needs_pool
+def test_a_question_mark_in_a_walk_becomes_what_the_odds_make_of_it_and_costs_the_same_for_every_deck():
+    from agents.deck_eval.route_sim import sample_walks, play_walk, ROOM_OF_STEP
+    ev = DeckEvaluator(POOL, target_types(POOL))
+    p = _player()
+    walks = sample_walks(PlannedRoute(["combat", "unknown", "unknown", "unknown", "combat", "boss"], 3, 1, None, "OVERGROWTH"), 1, 0, 12, 7)
+    assert ROOM_OF_STEP["unknown"] == "Unknown" and all(w.steps[:3] == ["unknown"] * 3 and w.fights == 2 for w in walks)
+    again = ev.score_walks(p["deck"], p, walks)
+    assert again.rewards == ev.score_walks(p["deck"], p, walks).rewards          # repeatable
+    seen = set()
+    from agents.deck_eval import route_sim as rs
+    for w in walks:
+        run = _walk_run(w)
+        sim = rs.RouteSimulator(run, w, ev.config)
+        sim.walk_route()
+        seen |= {v.room for v in run.history}
+    assert {"Event", "Monster"} & seen and not {"Unknown"} & seen                   # the "?" shows as the room it turned into
+
+
+def test_an_event_option_in_a_walk_is_a_random_one_the_same_for_every_deck():
+    from agents.deck_eval.route_sim import WalkAgent
+    options = [Option(k, {"action": "choose_event_option", "index": i}, {"index": i, "title": k}) for i, k in enumerate(("a", "b", "c", "d"))]
+    decision = Decision("event", {"event_id": "SOME_EVENT"}, options)
+    a, b = WalkAgent(1.0, 5), WalkAgent(0.0, 5)
+    b._rng.random()            # a deck that used the walk's dice differently
+    assert a.get_decision(decision).label == b.get_decision(decision).label
+    assert len({WalkAgent(1.0, s).get_decision(decision).label for s in range(30)}) > 1
