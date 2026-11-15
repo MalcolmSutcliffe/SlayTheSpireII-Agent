@@ -33,9 +33,12 @@ def rate_outcome(state : CombatState, reward : RewardParams, starting_hp : int, 
 
     # lost or unfinished: minimize the enemy HP that is left, with a small preference for lasting longer
     progress_left = enemy_progress_left(state, expected_total_hp)
+    held = 0.0
+    if current_hp > 0 and not state.final_fight:      # a potion still held is worth something in a line that is not (yet) won
+        held = reward.loss_potion_bonus * len(state.player.potions)
     if progress_left == 0:     # every enemy died and so did the player: no better than a plain loss
         return -1.0
-    return -progress_left + reward.loss_turn_bonus * num_turns
+    return -progress_left + reward.loss_turn_bonus * num_turns + held
 
 def enemy_progress_left(state : CombatState, expected_total_hp : float) -> float:
     """The share of the fight's enemy HP that is still to be removed: 1.0 at the start of the fight, 0.0 when nothing is left.

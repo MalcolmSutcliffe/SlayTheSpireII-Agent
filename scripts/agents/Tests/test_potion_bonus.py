@@ -10,6 +10,7 @@ from agents.sts2_MCTS.MCTS import sts2_MCTS, sts2_DeterministicNode, expand_node
 from agents.sts2_MCTS.params import SearchConfig, PotionParams
 from test_mcts import make_state, strike, defend
 from agents.sts2_MCTS.params import DEFAULT_CONFIG
+from sts2_lite.combat import CombatSimulator
 
 
 def scenario(hand, draw=(), hp=50, enemy_hp=60, damage=8, potions=(PotionId.FIRE_POTION,)):
@@ -29,18 +30,31 @@ def first_move(cs, seed, sims=600, **config):
 def drinks(action):
     return action["action"] == "use_potion"
 
+def drinks_this_turn(cs, seed, sims=600, **config):
+    """Whether the potion is drunk before the turn ends: the search may play a card first (the rollouts credit drinking later in the turn
+    just the same) and drink with the next move."""
+    sim = CombatSimulator(cs)
+    for step in range(8):
+        action = first_move(sim.combat_state, seed + step, sims, **config)
+        if drinks(action):
+            return True
+        if action["action"] == "end_turn" or sim.is_over:
+            return False
+        sim.perform_action(action)
+    return False
+
 
 # 1. The only way to win is the potion: take it over dying
 @pytest.mark.parametrize("seed", range(5))
 def test_the_potion_is_used_when_it_is_the_only_way_to_win(seed):
     cs = scenario([strike()], hp=1, enemy_hp=15, damage=8)
-    assert drinks(first_move(cs, seed))
+    assert drinks_this_turn(cs, seed)
 
 @pytest.mark.parametrize("seed", range(3))
 def test_the_potion_is_used_when_it_is_the_only_way_to_win_with_a_full_hand(seed):
     """At 1 HP, against 20 damage the hand cannot block (2 Defends = 10) or outrun (one Strike = 6 of 15 HP): only the potion wins."""
     cs = scenario([strike(), defend(), defend()], hp=1, enemy_hp=15, damage=20)
-    assert drinks(first_move(cs, seed))
+    assert drinks_this_turn(cs, seed)
 
 @pytest.mark.parametrize("seed", range(5))
 def test_the_potion_is_kept_when_blocking_wins_without_it(seed):
@@ -68,7 +82,7 @@ def test_the_potion_is_kept_over_a_long_but_safe_win(seed):
 @pytest.mark.parametrize("seed", range(5))
 def test_the_potion_is_used_when_it_saves_more_hp_than_it_is_worth(seed):
     cs = scenario([strike()], draw=[strike() for _ in range(6)], hp=50, enemy_hp=12, damage=20)
-    assert drinks(first_move(cs, seed))
+    assert drinks_this_turn(cs, seed)
 
 @pytest.mark.parametrize("seed", range(3))
 def test_the_potion_is_kept_when_it_saves_less_than_it_is_worth(seed):
@@ -338,4 +352,4 @@ def test_priced_the_potion_is_kept_when_it_saves_less_than_it_is_worth(seed):
 
 @pytest.mark.parametrize("seed", range(4))
 def test_priced_the_potion_is_used_when_it_saves_more_hp_than_it_is_worth(seed):
-    assert drinks(first_move(costly(), seed, potions=PRICED))
+    assert drinks_this_turn(costly(), seed, potions=PRICED)

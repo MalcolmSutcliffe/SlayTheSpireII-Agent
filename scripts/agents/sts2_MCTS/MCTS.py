@@ -236,7 +236,7 @@ class sts2_MCTS:
         config = self._search_config
         if config is not self._reward_source:
             gate = config.potions
-            self._reward = dataclasses.replace(config.reward, potion_bonus={}, default_potion_bonus=gate.kept_potion_bonus) if gate.gated else config.reward
+            self._reward = dataclasses.replace(config.reward, potion_bonus={}, default_potion_bonus=gate.kept_potion_bonus, loss_potion_bonus=gate.kept_potion_loss_bonus) if gate.gated else config.reward
             self._reward_source = config
         return self._reward
 
@@ -396,8 +396,13 @@ class sts2_MCTS:
             actions = c.get_available_actions()
             if len(actions) == 0:
                 break
-            c.perform_action(rollout_policy(c, actions, self._search_config.rollout, self._search_config.heuristic))
+            c.perform_action(rollout_policy(c, actions, self._search_config.rollout, self._search_config.heuristic, self._rollout_danger()))
         return self._rate_outcome(cs)
+
+    def _rollout_danger(self) -> float | None:
+        """The danger share at which the rollouts drink a potion, or None when they never do (potions out of the tree, or switched off)."""
+        gate = self._search_config.potions
+        return gate.rollout_danger if gate.rollout_use and self._potions_on else None
 
     def _paired_check(self, picked : sts2_Node) -> dict | None:
         """See paired_check.py."""
@@ -529,7 +534,7 @@ class sts2_MCTS:
             if len(actions) == 0:
                 break
 
-            action = rollout_policy(c, actions, self._search_config.rollout, self._search_config.heuristic)
+            action = rollout_policy(c, actions, self._search_config.rollout, self._search_config.heuristic, self._rollout_danger())
             
             c.perform_action(action)
 

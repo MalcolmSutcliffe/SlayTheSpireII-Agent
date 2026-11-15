@@ -45,6 +45,7 @@ class RewardParams:
     turn_cost : float = 0.1                 # a win loses this much HP of score per turn it took
     loss_turn_bonus : float = 0.02          # a loss gains this much (a share of the enemies' HP) per turn lasted: dying later leaves more chances to find a win
     max_hp_scaling : float = 2.0
+    loss_potion_bonus : float = 0.0         # a line that is not won and has the player alive gains this for each potion held (set from PotionParams.kept_potion_loss_bonus when gated)
     default_potion_bonus : int = 16         # the potion prices below apply only when PotionParams.gated is off
     potion_bonus : dict[PotionId, int] = field(default_factory=lambda: {
         PotionId.BLOOD_POTION : 18,
@@ -99,6 +100,11 @@ class PotionParams:
     win_threshold : float = 0.9             # the gate opens when the best line wins less often than this ...
     hp_loss_fraction : float = 0.35         # ... or is expected to lose more than this share of the max HP in the fight (a loss counts as losing all the HP the fight started with)
     kept_potion_bonus : float = 0.5         # HP a won fight is worth more for each potion still held (gated search only): a tie-break, not a price
+    kept_potion_loss_bonus : float = 0.02   # reward an unfinished or lost line (player still alive) gains for each potion still held (gated search only), so holding is not worth nothing when the line looks bad
+    rollout_use : bool = True               # while potions are allowed, the rollouts drink one when the turn would otherwise end with this much danger (below), so "hold it" lines are credited with a later use
+    rollout_danger : float = 0.3            # ... the damage still to come through the block, as a share of the current HP
+    potion_z : float = 2.0                  # a potion move is only played when the paired check finds it ahead of every non-potion line by this many standard errors ...
+    potion_min_gain_hp : float = 2.0        # ... and by at least this many HP (a share of the starting HP in reward units)
 
 
 @dataclass(frozen=True)

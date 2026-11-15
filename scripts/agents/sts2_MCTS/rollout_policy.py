@@ -25,14 +25,23 @@ BLOCK_CARDS = frozenset(CardId[n] for n in (
     "ARMAMENTS EVIL_EYE PANIC_BUTTON TAUNT FINESSE TORIC_TOUGHNESS").split())
 
 
-def rollout_policy(c : CombatSimulator, actions, policy : RolloutPolicy, params : HeuristicParams | None = None):
-    # rollouts never drink potions (every policy): a potion is only used by a move the tree chose, so a kept one keeps its bonus
+def rollout_policy(c : CombatSimulator, actions, policy : RolloutPolicy, params : HeuristicParams | None = None, potion_danger : float | None = None):
+    """The rollout's next action. Potions are not part of the policies: with `potion_danger` None a rollout never drinks one (a kept one keeps
+    its bonus); otherwise it drinks the first one only when the policy would end the turn with at least that share of the current HP
+    still coming through the block (see _drink)."""
+    potions = [a for a in actions if a["action"] == "use_potion"]
     actions = [a for a in actions if a["action"] != "use_potion"] or actions
     if len(actions) == 0:
         return None
-    if len(actions) == 1:   
-        return actions[0]
-    return ROLLOUT_POLICY_DICT[policy](c, actions, params)
+    action = actions[0] if len(actions) == 1 else ROLLOUT_POLICY_DICT[policy](c, actions, params)
+    if potion_danger is not None and potions and action["action"] == "end_turn" and _drink(c.combat_state, potion_danger):
+        return potions[0]
+    return action
+
+def _drink(cs : CombatState, danger : float) -> bool:
+    """Whether the damage the enemies' next moves still deal through the player's block is at least `danger` of the current HP."""
+    through = _incoming_damage(cs) - cs.player.block
+    return through > 0 and through >= danger * cs.player.current_hp
 
 ###
 ### Rollout Poliocy helpers
