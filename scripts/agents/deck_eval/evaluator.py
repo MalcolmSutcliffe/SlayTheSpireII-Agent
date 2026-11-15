@@ -51,12 +51,13 @@ class DeckEvaluator:
             hp = cs.player.current_hp
         return True, hp
 
-    def score(self, deck : list[dict], player : dict, fights : list[FightTemplate], seed : int) -> DeckScore:
+    def score(self, deck : list[dict], player : dict, fights : list[FightTemplate], seed : int, extras : list[list[dict]] | None = None) -> DeckScore:
+        """`extras`: cards added to the deck for one fight each (the cards the deck is expected to have gained by then); None: the deck as it is."""
         start, rewards, wins, hp_left = time.perf_counter(), [], 0, 0.0
         cfg = self.config
         for i, template in enumerate(fights):
             rng.seed((seed << 10) + i)
-            sim = build_fight(template, deck, player, self.target_types)
+            sim = build_fight(template, deck + extras[i] if extras else deck, player, self.target_types)
             cs = sim.combat_state
             expected, hp0, max0 = outcome_score.expected_total_hp(cs), cs.player.current_hp, cs.player.max_hp
             end_turn = cs.turn_number + MAX_TURNS

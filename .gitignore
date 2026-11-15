@@ -12,6 +12,7 @@ data/runs/
 # ---- Local-only folders
 sts2_decompiled/
 SlayTheSpireII-Agent.sln
+Claude outputs/
 
 # ---- Bridge mod (cli-anything-sts2/ is tracked; only what builds and installs generate is ignored)
 /cli-anything-sts2/agent-harness/bridge/plugin/bin/

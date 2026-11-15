@@ -6,16 +6,6 @@ from sts2_lite.combat import CombatState, CombatSimulator
 from agents.sts2_MCTS.MCTS import sts2_MCTS
 from agents.sts2_MCTS.params import SearchConfig
     
-# Phase constants
-PHASE_MAP_CHOICE = "MAP_CHOICE"
-PHASE_COMBAT = "COMBAT"
-PHASE_CARD_REWARD = "CARD_REWARD"
-PHASE_BOSS_RELIC = "BOSS_RELIC"
-PHASE_SHOP = "SHOP"
-PHASE_REST_SITE = "REST_SITE"
-PHASE_EVENT = "EVENT"
-PHASE_TREASURE = "TREASURE"
-PHASE_RUN_OVER = "RUN_OVER"
 
 ## MCTS for combat. Every screen outside of combat falls back to BaseAgent's get_decision handlers (override a _get_<screen>_decision to take one over).
 class MyAgent(BaseAgent):
