@@ -10,7 +10,7 @@ import math
 
 from sts2_lite import rng
 
-from agents.sts2_MCTS.stats import PAIRED_Z, spread
+from agents.sts2_MCTS.stats import PAIRED_Z, settled, spread
 
 PAIRED_VISIT_FRACTION = 0.05     # a root move needs this share of the picked move's visits to be a contender
 PAIRED_MAX_CONTENDERS = 4        # contenders besides the picked move
@@ -34,16 +34,29 @@ class PairedCheck:
 
         seeds = [rng.randrange(1 << 30) for _ in range(n)]      # fresh scenarios every time
         saved = rng.getstate()                                  # the rollouts reseed the shared source: put it back afterwards
+        step = max(2, mcts._search_config.paired_batch) if mcts._search_config.paired_batch > 0 else n
         try:
             # each move is replayed along the line the tree found after it (the second Strike that is lethal), not as its first play
             # followed by the rollout policy, which need not find that line and then rates the move below one that is merely safe
-            base = [mcts._paired_line_rollout(state, self._contender_line(picked), s) for s in seeds]
+            base_line = self._contender_line(picked)
+            lines = [self._contender_line(rival) for rival in rivals]
+            diffs = [[] for _ in rivals]
+            open_rivals = list(range(len(rivals)))              # those still replayed: a rival that is settled is not replayed again
+            base, ran = [], 0
+            for start in range(0, n, step):
+                if not open_rivals:
+                    break
+                chunk = seeds[start:start + step]
+                base = [mcts._paired_line_rollout(state, base_line, s) for s in chunk]
+                ran += len(chunk)
+                for i in list(open_rivals):
+                    diffs[i] += [mcts._paired_line_rollout(state, lines[i], s) - b for s, b in zip(chunk, base)]
+                    if step < n and settled(diffs[i]):
+                        open_rivals.remove(i)
             results = []
-            for rival in rivals:
-                line = self._contender_line(rival)
-                diffs = [mcts._paired_line_rollout(state, line, s) - b for s, b in zip(seeds, base)]
-                mean, se = spread(diffs)
-                results.append((rival, mean, se))
+            for rival, d in zip(rivals, diffs):
+                mean, se = spread(d)
+                results.append((rival, mean, se, len(d)))
         finally:
             rng.setstate(saved)
 
@@ -53,8 +66,9 @@ class PairedCheck:
         return {
             "replaced" : best is not None,
             "child" : best[0] if best else picked,
-            "scenarios" : n,
-            "compared" : [{"action" : r[0].action, "visits" : r[0].visits, "gain" : r[1], "se" : r[2]} for r in results],
+            "scenarios" : n,                    # the most it replays; "scenarios_run" is how many the picked line was replayed under
+            "scenarios_run" : ran,
+            "compared" : [{"action" : r[0].action, "visits" : r[0].visits, "gain" : r[1], "se" : r[2], "n" : r[3]} for r in results],
         }
 
     def _contender_line(self, node) -> list:

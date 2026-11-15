@@ -20,7 +20,7 @@ from sts2_lite import rng
 from sts2_lite.combat import CombatSimulator, CombatState
 
 from agents.sts2_MCTS.state_key import state_key
-from agents.sts2_MCTS.stats import PAIRED_Z, TIE_MARGIN, spread
+from agents.sts2_MCTS.stats import PAIRED_Z, TIE_MARGIN, settled, spread
 
 ORDER_MAX_UNITS = 7              # a line with more plays than this keeps the tree's order (the orderings multiply)
 ORDER_MAX_STATES = 6             # distinct end states compared with the tree's own
@@ -48,6 +48,7 @@ class Replay:
     diffs : list = field(default_factory=list)      # its outcome minus the tree's line's, one per scenario
     gain : float = 0.0
     se : float = 0.0
+    settled : bool = False              # no longer replayed: it is ahead, or cannot be ahead by much (stats.settled)
 
 
 class OrderCheck:
@@ -185,8 +186,7 @@ class OrderCheck:
                 spent = time.perf_counter() - started
                 if spent + spent / done > budget:
                     break
-            self._add_scenarios(replays, per_round)
-            total += per_round
+            total += self._add_scenarios(replays, per_round)
             for r in replays[1:]:
                 r.gain, r.se = spread(r.diffs)
             if any(r.gain > PAIRED_Z * r.se for r in replays[1:]):
@@ -197,15 +197,28 @@ class OrderCheck:
         replays[0].gain = replays[0].se = 0.0
         return total
 
-    def _add_scenarios(self, replays : list[Replay], count : int):
+    def _add_scenarios(self, replays : list[Replay], count : int) -> int:
+        """Replays the lines under `count` fresh scenarios, in batches of `paired_batch`; a line that is settled (stats.settled) is not
+        replayed again, and when every line is, the rest of the scenarios are not run. Returns the number of scenarios run."""
         seeds = [rng.randrange(1 << 30) for _ in range(count)]      # fresh scenarios every time
+        step = max(2, self.config.paired_batch) if self.config.paired_batch > 0 else count
         saved = rng.getstate()                                      # the rollouts reseed the shared source: put it back afterwards
+        ran = 0
         try:
-            base = [self.mcts._paired_line_rollout(self.root, replays[0].moves, s) for s in seeds]
-            for r in replays[1:]:
-                r.diffs += [self.mcts._paired_line_rollout(self.root, r.moves, s) - b for s, b in zip(seeds, base)]
+            for start in range(0, count, step):
+                open_replays = [r for r in replays[1:] if not r.settled]
+                if not open_replays:
+                    break
+                chunk = seeds[start:start + step]
+                base = [self.mcts._paired_line_rollout(self.root, replays[0].moves, s) for s in chunk]
+                ran += len(chunk)
+                for r in open_replays:
+                    r.diffs += [self.mcts._paired_line_rollout(self.root, r.moves, s) - b for s, b in zip(chunk, base)]
+                    if step < count and settled(r.diffs):
+                        r.settled = True
         finally:
             rng.setstate(saved)
+        return ran
 
     # ---- 4. the choice
 

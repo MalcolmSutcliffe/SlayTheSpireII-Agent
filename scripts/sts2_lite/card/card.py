@@ -590,8 +590,10 @@ class Card:
 
     def _replay(self, combat : CombatSimulator, target_index : int, x):
         """A further play (each fires Before/AfterCardPlayed); a dead target's effect is skipped."""
-        if self.target_type == TargetType.AnyEnemy and combat.combat_state.enemies[target_index].current_hp <= 0:
-            return
+        if self.target_type == TargetType.AnyEnemy:
+            enemies = combat.combat_state.enemies
+            if not 0 <= target_index < len(enemies) or enemies[target_index].current_hp <= 0:       # a stale index (the enemy left the list) skips the play like a dead target
+                return
         if self.type == CardType.Attack or self.type == CardType.Skill:
             combat.combat_state.player.plays_started_this_turn += 1
         from sts2_lite.card.plays.registry import GET_CARD_FUNCTION

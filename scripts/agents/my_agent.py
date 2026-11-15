@@ -20,8 +20,9 @@ PHASE_RUN_OVER = "RUN_OVER"
 ## MCTS for combat. Every screen outside of combat falls back to BaseAgent's get_decision handlers (override a _get_<screen>_decision to take one over).
 class MyAgent(BaseAgent):
 
-    def __init__(self):
+    def __init__(self, seed : int | None = None):
         super().__init__()
+        self._seed = seed         # seeds the deck evaluator's walks (None: drawn at random)
         self.name = "MCTS combat agent"
         self._planner = PathPlanner()
         self._advisor = None            # the fight pool and evaluator the deck choosers share: built on first use
@@ -59,7 +60,7 @@ class MyAgent(BaseAgent):
     def _deck_advisor(self):
         if self._advisor is None:
             from agents.deck_eval.advisor import DeckAdvisor
-            self._advisor = DeckAdvisor(route_provider=lambda: self._planner.route)
+            self._advisor = DeckAdvisor(route_provider=lambda: self._planner.route, seed=self._seed)
         return self._advisor
 
     def _get_card_reward_decision(self, decision):

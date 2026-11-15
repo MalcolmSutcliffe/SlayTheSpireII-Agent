@@ -52,6 +52,21 @@ RARITY_RANK = {"Rare": 3, "Uncommon": 2, "Common": 1}
 ROOM_OF_STEP = {"weak": "Monster", "normal": "Monster", "elite": "Elite", "boss": "Boss", "rest": "RestSite", "treasure": "Treasure", "shop": "Shop", "unknown": "Unknown"}
 
 
+ENGINE_ERRORS : dict[str, int] = {}         # what went wrong inside a rollout (message -> times): a walk meeting one ends there instead of ending the run
+
+
+def note_engine_error(error : Exception, sim, action) -> None:
+    """A rollout hit a bug of the engine: the first time each kind comes up it is printed with what the fight looked like, so the bug can be found."""
+    cs = sim.combat_state
+    key = "%s: %s" % (type(error).__name__, error)
+    ENGINE_ERRORS[key] = ENGINE_ERRORS.get(key, 0) + 1
+    if ENGINE_ERRORS[key] == 1:
+        import traceback
+        where = traceback.extract_tb(error.__traceback__)[-1]
+        print("engine error in a rollout (the walk ends there): %s at %s:%d | enemies %s | hand %s | last action %s" % (
+            key, where.filename.split("sts2_lite")[-1], where.lineno, [e.enemy_id for e in cs.enemies], [getattr(c, "card_id", c).name for c in cs.player.hand], action))
+
+
 @dataclass
 class Walk:
     """What a walk's rooms hold, the same for every deck: built by `sample_walks`."""
@@ -209,11 +224,18 @@ class RouteSimulator(RunSimulator):
             if cs.turn_number != turn:
                 turn = cs.turn_number
                 self.game.stream("combat").seed(f"{self.walk.seed}/turn/{self.fights}/{turn}")
-            actions = sim.get_available_actions()
-            if not actions:
-                break
-            with self.game.scope("combat"):
-                sim.perform_action(rollout_policy(sim, actions, cfg.rollout, cfg.heuristic))
+            action = None
+            try:
+                actions = sim.get_available_actions()
+                if not actions:
+                    break
+                with self.game.scope("combat"):
+                    action = rollout_policy(sim, actions, cfg.rollout, cfg.heuristic)
+                    sim.perform_action(action)
+            except Exception as error:         # an engine bug met by this rollout: the walk ends here, scored as a death in this room
+                note_engine_error(error, sim, action)
+                self.partial = 0.0
+                raise RunOver
 
     def fight_room(self, room : str, encounter, first_of_two : bool = False, last_boss : bool = False):
         r = self.run_state
@@ -380,8 +402,9 @@ def _normalized(deck : list[dict], target_types : dict[str, str]) -> list[dict]:
     return [c if c.get("target_type") else dict(c, target_type=target_types.get(c["id"])) for c in deck]
 
 
-def play_walk(walk : Walk, deck : list[dict], player : dict, config, target_types : dict[str, str], event : EventPlan | AncientPlan | None = None) -> WalkResult:
-    """One walk with `deck`, from the run as `player` (hp, max hp, gold, relics, potions) has it; with `event`, that event option is played first."""
+def play_walk(walk : Walk, deck : list[dict], player : dict, config, target_types : dict[str, str], event : EventPlan | AncientPlan | None = None, simulator=None) -> WalkResult:
+    """One walk with `deck`, from the run as `player` (hp, max hp, gold, relics, potions) has it; with `event`, that event option is played first.
+    `simulator`: a RouteSimulator subclass to play it with (benchmarks/calibrate.py)."""
     run = RunState.from_player(player, _normalized(deck, target_types), act=walk.act, floor=walk.floor, ascension=walk.ascension)
     run.act_id, run.boss = walk.act_id, walk.rooms.boss.id
     hidden = Hidden()
@@ -393,7 +416,7 @@ def play_walk(walk : Walk, deck : list[dict], player : dict, config, target_type
     hidden.events, hidden.events_visited = list(ACTS[walk.act_id].events + SHARED_EVENTS), 0         # the events a "?" can turn into, in the order the act deals them
     random.Random(walk.seed + 1).shuffle(hidden.events)
     run.hidden = hidden
-    return RouteSimulator(run, walk, config, event).walk_route()
+    return (simulator or RouteSimulator)(run, walk, config, event).walk_route()
 
 
 def sample_walks(route, act : int, ascension : int, n : int, seed : int, floor : int = 1) -> list[Walk]:

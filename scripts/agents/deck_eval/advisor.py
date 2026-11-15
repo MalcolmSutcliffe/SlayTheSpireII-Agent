@@ -1,6 +1,7 @@
 """What the deck choosers share: the fight pool, the evaluator, and drawing the same sample of upcoming fights for every option of a decision."""
 from __future__ import annotations
 
+import random
 import time
 
 from agents.deck_eval.evaluator import DeckEvaluator
@@ -19,7 +20,7 @@ NOT_GIVEN = object()
 
 
 class DeckAdvisor:
-    def __init__(self, fights : int = DEFAULT_FIGHTS, pool=None, route_provider=lambda: None, log=print):
+    def __init__(self, fights : int = DEFAULT_FIGHTS, pool=None, route_provider=lambda: None, log=print, seed : int | None = None):
         """`route_provider()` gives the pathing agent's PlannedRoute (what fights lie ahead), or None."""
         self.fights = fights
         self.pool = load_pool() if pool is None else pool
@@ -27,13 +28,14 @@ class DeckAdvisor:
         self.route_provider = route_provider
         self.log = log
         self._calls = 0
+        self.base = (random.SystemRandom().randrange(1, 10_000) if seed is None else seed) * 1_000_000       # every run draws its own walks: nothing of the real run's seed is in them, and the same `seed` replays the same walks
 
     def sample(self, decision, fights : int | None = None):
         """(mix, fights, seed, ascension): `fights` (default: the advisor's) fights lying ahead of this decision; every option is played on all of them with the same dice."""
         ctx = decision.state.get("context") or decision.state.get("run") or {}
         mix = mix_ahead(ctx.get("act", 1), self.route_provider())
         self._calls += 1
-        seed = 1000 + self._calls
+        seed = self.base + 1000 + self._calls
         ascension = ctx.get("ascension", 0)
         return mix, pick_fights(self.pool, mix, fights or self.fights, seed, ascension), seed, ascension
 
@@ -43,7 +45,7 @@ class DeckAdvisor:
         ctx = decision.state.get("context") or decision.state.get("run") or {}
         act, route = ctx.get("act", 1), self.route_provider()
         self._calls += 1
-        seed = 5000 + self._calls
+        seed = self.base + 5000 + self._calls
         count = max(MIN_WALKS, (fights or self.fights) // len(fight_kinds(route, act)))
         return sample_walks(route, act, ctx.get("ascension", 0), count, seed, ctx.get("floor", 1))
 
@@ -55,7 +57,7 @@ class DeckAdvisor:
         act = ctx.get("act", 1)
         route = self.route_provider() if route is NOT_GIVEN else route
         self._calls += 1
-        seed, start = 7000 + self._calls * 1000, time.perf_counter()
+        seed, start = self.base + 7000 + self._calls * 1000, time.perf_counter()
         rewards = {name: [] for name in candidates}
         batch = 0
         while True:

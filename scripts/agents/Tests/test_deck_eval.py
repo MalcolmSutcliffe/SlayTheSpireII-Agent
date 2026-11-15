@@ -768,3 +768,17 @@ def test_an_event_option_in_a_walk_is_a_random_one_the_same_for_every_deck():
     b._rng.random()            # a deck that used the walk's dice differently
     assert a.get_decision(decision).label == b.get_decision(decision).label
     assert len({WalkAgent(1.0, s).get_decision(decision).label for s in range(30)}) > 1
+
+
+@needs_pool
+def test_an_engine_error_in_a_rollout_ends_the_walk_instead_of_the_run(monkeypatch, capsys):
+    from agents.deck_eval import route_sim as rs
+    from sts2_lite.combat import CombatSimulator
+    ev, p = DeckEvaluator(POOL, target_types(POOL)), _player()
+    walks = rs.sample_walks(PlannedRoute(["rest", "combat", "boss"], 4, 0, None, "OVERGROWTH"), 1, 0, 2, 3)
+    monkeypatch.setattr(CombatSimulator, "perform_action", lambda self, action: (_ for _ in ()).throw(IndexError("list index out of range")))
+    rs.ENGINE_ERRORS.clear()
+    score = ev.score_walks(p["deck"], p, walks)
+    assert score.win_rate == 0 and all(r < 1.0 for r in score.rewards)             # a death in the first fight, whatever it was
+    assert rs.ENGINE_ERRORS == {"IndexError: list index out of range": 2}
+    assert capsys.readouterr().out.count("engine error in a rollout") == 1          # reported once, not per walk

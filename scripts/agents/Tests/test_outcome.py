@@ -10,8 +10,10 @@ from sts2_lite.enemy import Enemy
 from sts2_lite.potion import Potion, PotionId
 from sts2_lite.status import StatusId, StatusInstance
 from agents.sts2_MCTS.outcome_score import dormant_hp as _dormant_hp
-from test_mcts import make_state, primed, strike
-from agents.sts2_MCTS.params import DEFAULT_CONFIG
+from test_mcts import make_state, new_mcts, primed, strike
+from agents.sts2_MCTS.params import DEFAULT_CONFIG, SearchConfig
+
+PRICED = SearchConfig().tuned(gated=False)       # potions priced in HP (RewardParams.potion_bonus): what the search used before the potion gate
 
 
 # ---------------------------------------------------------------- builders
@@ -49,13 +51,13 @@ def rate(cs, root=None, starting_hp=None):
 def progress(cs, root=None):
     return primed(root or cs)._enemy_progress_left(cs)
 
-def won(hp=50, max_hp=50, turns=3, potions=(), start=50, start_max=50):
+def won(hp=50, max_hp=50, turns=3, potions=(), start=50, start_max=50, config=None):
     """Score of a win ending at `hp`/`max_hp` for a fight begun at `start`/`start_max`."""
     cs = make_state([])
     cs.enemies[0].current_hp = 0
     cs.player.current_hp, cs.player.max_hp, cs.turn_number = hp, max_hp, turns
     cs.player.potions = [Potion(p, i) for i, p in enumerate(potions)]
-    mcts = primed(cs, starting_hp=start)
+    mcts = primed(cs, new_mcts(config), starting_hp=start)
     mcts._starting_max_hp = start_max
     return mcts._rate_outcome(cs)
 
@@ -196,17 +198,27 @@ def test_each_turn_costs_turn_cost_hp():
     assert won(turns=2) - won(turns=3) == pytest.approx(DEFAULT_CONFIG.reward.turn_cost / 50)
 
 def test_a_kept_potion_is_worth_its_hp():
-    kept = won(hp=30, potions=[PotionId.FIRE_POTION]) - won(hp=30)
+    kept = won(hp=30, potions=[PotionId.FIRE_POTION], config=PRICED) - won(hp=30, config=PRICED)
     assert kept == pytest.approx(DEFAULT_CONFIG.reward.default_potion_bonus / 50)
     assert DEFAULT_CONFIG.reward.default_potion_bonus == 16
 
 def test_a_potion_with_its_own_value_is_worth_that_value():
     potion = next(iter(DEFAULT_CONFIG.reward.potion_bonus))
-    assert won(hp=30, potions=[potion]) - won(hp=30) == pytest.approx(DEFAULT_CONFIG.reward.potion_bonus[potion] / 50)
+    assert won(hp=30, potions=[potion], config=PRICED) - won(hp=30, config=PRICED) == pytest.approx(DEFAULT_CONFIG.reward.potion_bonus[potion] / 50)
 
 def test_potions_add_up():
-    two = won(hp=30, potions=[PotionId.FIRE_POTION, PotionId.FIRE_POTION]) - won(hp=30)
+    two = won(hp=30, potions=[PotionId.FIRE_POTION, PotionId.FIRE_POTION], config=PRICED) - won(hp=30, config=PRICED)
     assert two == pytest.approx(2 * DEFAULT_CONFIG.reward.default_potion_bonus / 50)
+
+# gated (the default): a potion is not priced in HP, a kept one only breaks ties
+def test_gated_a_kept_potion_is_worth_only_the_tie_break():
+    kept = won(hp=30, potions=[PotionId.FIRE_POTION]) - won(hp=30)
+    assert kept == pytest.approx(DEFAULT_CONFIG.potions.kept_potion_bonus / 50)
+    assert 0 < DEFAULT_CONFIG.potions.kept_potion_bonus < 1
+
+def test_gated_every_potion_is_worth_the_same():
+    """The per-potion prices (Ambergris 45, Potion-Shaped Rock 2) are not used: deciding to drink is the gate's job."""
+    assert won(hp=30, potions=[PotionId.AMBERGRIS]) == pytest.approx(won(hp=30, potions=[PotionId.POTION_SHAPED_ROCK]))
 
 def test_a_max_hp_gained_is_worth_two_hp():
     assert won(hp=30, max_hp=51) - won(hp=30, max_hp=50) == pytest.approx(DEFAULT_CONFIG.reward.max_hp_scaling / 50)
@@ -216,7 +228,7 @@ def test_a_max_hp_lost_costs_two_hp():
     assert won(hp=30, max_hp=48) - won(hp=30, max_hp=50) == pytest.approx(-2 * DEFAULT_CONFIG.reward.max_hp_scaling / 50)
 
 def test_a_kept_potion_is_the_same_as_its_value_in_hp():
-    assert won(hp=30, potions=[PotionId.FIRE_POTION], turns=3) == pytest.approx(won(hp=30 + DEFAULT_CONFIG.reward.default_potion_bonus, turns=3))
+    assert won(hp=30, potions=[PotionId.FIRE_POTION], turns=3, config=PRICED) == pytest.approx(won(hp=30 + DEFAULT_CONFIG.reward.default_potion_bonus, turns=3, config=PRICED))
 
 def test_dead_segments_left_do_not_change_a_win():
     """A win is rated on HP only: enemies that were never beaten cannot appear in it."""
