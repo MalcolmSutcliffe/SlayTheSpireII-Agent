@@ -822,6 +822,7 @@ public static partial class BridgeMod
                     ["index"] = index,
                     ["title"] = SafeGetText(() => opt.Title),
                     ["description"] = SafeGetText(() => opt.Description),
+                    ["text_key"] = opt.TextKey,
                     ["is_locked"] = opt.IsLocked,
                     ["is_proceed"] = opt.IsProceed,
                     ["was_chosen"] = opt.WasChosen

@@ -12,7 +12,7 @@ from .combat_session import CombatSession
 from .decision_builders import build_decision, reward_key
 from .executors import execute
 from agents.decision import CARD_REWARD, REWARDS
-from .game_client import POLL_SECONDS, GameClient, dump
+from .game_client import NOT_IN_FIGHT_SECONDS, POLL_SECONDS, GameClient, dump
 from .run_verifier import DEFAULT_LOG as RUN_LOG, DEFAULT_RECORD, RunVerifier
 
 DEFAULT_LOG = "engine_mismatches.jsonl"     # where differences go when no run is named
@@ -135,7 +135,7 @@ class RunManager:
             if game_state.get("decision") == "unknown":
                 self.save_unknown(game_state)
             self.waiting_for = message
-        time.sleep(1.0)
+        time.sleep(NOT_IN_FIGHT_SECONDS)
 
     def save_unknown(self, game_state : dict):
         """A screen the bridge could not name: keep it, so what the game was showing can be read afterwards."""

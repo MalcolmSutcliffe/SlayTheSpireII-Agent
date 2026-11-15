@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from agents.decision import Decision, Option
 from agents.deck_eval.advisor import DeckAdvisor
-from agents.deck_eval.route_sim import EventMismatch, EventPlan
+from agents.deck_eval.route_sim import EventMismatch, EventPlan, event_option_key
 from sts2_lite.event import EVENTS
 
 EVENT_SECONDS = 10.0
@@ -26,7 +26,7 @@ class EventChooser:
         self.path : list[str] = []
 
     def _remember(self, event_id : str, option : Option) -> Option:
-        self.path.append(option.label)
+        self.path.append(event_option_key(option))
         return option
 
     def choose(self, decision : Decision) -> Option | None:
@@ -40,7 +40,7 @@ class EventChooser:
             return self._remember(event_id, options[0])
         deck, player = decision.player.get("deck") or [], decision.player
         ev = self.advisor.evaluator
-        plays = {i: (lambda walks, key=o.label: ev.score_walks(deck, player, walks, EventPlan(event_id, list(self.path), key)).rewards) for i, o in enumerate(options)}
+        plays = {i: (lambda walks, key=event_option_key(o): ev.score_walks(deck, player, walks, EventPlan(event_id, list(self.path), key)).rewards) for i, o in enumerate(options)}
         try:
             rewards, count, seconds = self.advisor.race(decision, plays, EVENT_SECONDS)
         except EventMismatch as e:

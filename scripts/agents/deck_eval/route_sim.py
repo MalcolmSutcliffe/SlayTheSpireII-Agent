@@ -20,6 +20,7 @@ CLEAR_BONUS more. Potions held and max HP gained at the end count once (POTION_C
 Every deck of a decision plays the same walks, and each room reseeds every random stream of the run from the walk's seed, so what a deck meets (the monsters, their
 dice, the rewards) does not depend on what an earlier room did to the deck."""
 from __future__ import annotations
+import re
 import random
 from dataclasses import dataclass
 
@@ -104,6 +105,36 @@ class AncientPlan:
 
     def option(self) -> AncientOption:
         return AncientOption(self.relic, setup=dict(self.setup))
+
+
+EVENT_KEY_ALIASES = {"EXIT_BATHS": "exit", "REJECTION": "reject"}        # game option names the engine's event model spells differently
+
+def event_option_key(option) -> str:
+    """The key a game event option goes by in an EventPlan. The game names an option by its text key ("THIS_OR_THAT.pages.INITIAL.options.PLAIN") and shows a title
+    of its own ("This") that has nothing to do with it: the last part of the text key is the engine's key, in any case. A bridge that does not send the text key
+    leaves the position (`#1/2`: the second of two options), which find_event_option takes only on a page of the same size."""
+    data = option.data or {}
+    text_key = data.get("text_key")
+    if text_key:
+        name = re.sub(r"_\d+$", "", str(text_key).rsplit(".", 1)[-1])       # HOLD_ON_0: the game numbers the options it offers more than once
+        return EVENT_KEY_ALIASES.get(name, name)
+    return "#%d/%d:%s" % (data.get("index", 0), data.get("page_size", 0), data.get("title") or option.label)
+
+def find_event_option(options, key : str):
+    """The engine's option for `key` (see event_option_key) among the options of a page, or None. Names are compared without case or underscores
+    (PLAIN, plain; DRAGON_BONES, dragon_bones); a locked option cannot be chosen. A key that is a position (`#1/2:This`) is first tried as the
+    title it carries (a title that is the engine's key), then as the position on a page of the same size."""
+    plain = lambda name: name.lower().replace("_", "").replace(" ", "")
+    position = None
+    if key.startswith("#"):
+        place, _, key = key[1:].partition(":")
+        index, count = (int(n) for n in place.split("/"))
+        position = (index, count)
+    found = next((o for o in options if not o.locked and plain(o.key) == plain(key)), None)
+    if found is None and position is not None:
+        index, count = position
+        found = options[index] if len(options) == count and index < count and not options[index].locked else None
+    return found
 
 
 class EventMismatch(Exception):
@@ -305,9 +336,10 @@ class RouteSimulator(RunSimulator):
         stream = self.game.stream("events")
         session = EventSession(event, r, stream, PlanPicker(stream))
         for key in plan.path + [plan.option]:
-            if session.finished or key not in [o.key for o in session.available()]:
+            option = None if session.finished else find_event_option(session.options, key)
+            if option is None:
                 raise EventMismatch("%s has no option %r" % (plan.event_id, key))
-            session.choose(key)
+            session.choose(option.key)
             self.take_offers()
         while not session.finished and len(session.available()) == 1:
             session.choose(session.available()[0].key)

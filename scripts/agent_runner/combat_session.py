@@ -8,7 +8,7 @@ from agents.verify import compare, game_order_matches, is_random_step, is_unpred
 from agents.verify_opening import opening_diffs
 from .combat_logs import (capture_turn_start, fight_end, fight_start, fight_update, install_search_hook, log_decision, log_mismatch,
                           potions_of, report_unimplemented, save_decision_state, write_fight)
-from .game_client import POLL_SECONDS, GameClient, dump
+from .game_client import FAST_POLL_SECONDS, POLL_SECONDS, GameClient, dump
 from sts2_lite import rng
 from sts2_lite.card import CardType
 from sts2_lite.combat import CombatState, CombatSimulator
@@ -174,7 +174,7 @@ class CombatSession:
         if kind == "play" and (self.entering_new_fight(game_state) or turn_is_changing(game_state, self.ended)):
             kind = "busy"
         if kind == "busy":
-            time.sleep(POLL_SECONDS)
+            time.sleep(FAST_POLL_SECONDS)       # a fight that is starting or a turn that is changing: look again soon
             return
         if kind == "play":
             self.ended = None

@@ -2,15 +2,36 @@
 The loop and the combat code only ever go through a GameClient, so a test can hand them a scripted one instead."""
 import json
 import subprocess
+import sys
 import time
+from pathlib import Path
 
 from sts2_lite.selection import game_index
 
 CLI = "cli-anything-sts2"
 POLL_SECONDS = 0.4              # between state reads while the game is busy or it is not the agent's turn
+FAST_POLL_SECONDS = 0.15        # between state reads while a fight is starting or a turn is changing: the next state is what the agent is waiting for
+NOT_IN_FIGHT_SECONDS = 0.3      # between state reads while the game shows nothing the agent decides on (a loading screen)
 SETTLE_READS = 3                # identical reads in a row before a state is trusted
 SETTLE_INTERVAL = 0.25          # seconds between those reads
 ACTION_TIMEOUT = 8.0            # seconds to wait for the game to react to a play_card / end_turn
+
+HARNESS = Path(__file__).resolve().parents[2] / "cli-anything-sts2" / "agent-harness"      # the package of the CLI, which is only an HTTP client of the bridge mod
+BRIDGE_URL = "http://localhost:15526"       # the CLI's default
+
+def in_process_reader(base_url : str = BRIDGE_URL, timeout : float = 10.0):
+    """A function that reads the normalized state straight from the bridge mod, as `cli-anything-sts2 state` does, without starting a process
+    (every read through the CLI pays for starting Python and importing the CLI, a good part of a second in a fight that has just begun).
+    None when the CLI's package cannot be imported: the reads then go through the CLI."""
+    try:
+        if str(HARNESS) not in sys.path:
+            sys.path.append(str(HARNESS))
+        from cli_anything.slay_the_spire_ii.core.state_adapter import normalize_state
+        from cli_anything.slay_the_spire_ii.utils.sts2_backend import Sts2RawClient
+    except Exception:                       # noqa: BLE001
+        return None
+    raw = Sts2RawClient(base_url=base_url, timeout=timeout)
+    return lambda: json.loads(json.dumps(normalize_state(raw.get_state(format="json"))))      # the round trip gives what the CLI's output parses to
 
 def dump(game_state : dict) -> str:
     return json.dumps(game_state, sort_keys=True)
@@ -24,8 +45,9 @@ def pile_total(game_state : dict) -> int:
 class GameClient:
     """The live game: `get_state` reads it, `act` sends it an action, and the rest are the waiting and clicking that go with them."""
 
-    def __init__(self):
+    def __init__(self, in_process : bool = True):
         self.picked_on_screen = []      # game indices already selected on an "up to N" pile screen (Neow's Fury)
+        self.read_in_process = in_process_reader() if in_process else None
 
     def command(self, *args : str):
         return subprocess.run([CLI, *args])
@@ -35,6 +57,11 @@ class GameClient:
     ###
 
     def get_state(self) -> dict:
+        if self.read_in_process is not None:
+            try:
+                return self.read_in_process()
+            except Exception:               # noqa: BLE001  the bridge did not answer or answered oddly: let the CLI read it (and say what is wrong)
+                pass
         result = subprocess.run([CLI, "state"], capture_output=True, text=True)
         return json.loads(result.stdout)
 
@@ -59,7 +86,7 @@ class GameClient:
         """After an action: wait until the game reports something other than `before`. False if it never does."""
         deadline = time.time() + ACTION_TIMEOUT
         while time.time() < deadline:
-            time.sleep(POLL_SECONDS)
+            time.sleep(FAST_POLL_SECONDS)
             if dump(self.get_state()) != before:
                 return True
         return False

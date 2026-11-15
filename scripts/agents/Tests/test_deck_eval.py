@@ -585,10 +585,30 @@ def test_the_event_chooser_takes_the_better_option_and_leaves_what_it_cannot_pla
     import agents.deck_eval.event_chooser as ec
     ec.EVENT_SECONDS = 0.2
     assert chooser.choose(screen("ABYSSAL_BATHS", ["immerse", "abstain"])).label == "abstain"        # immersing at 1 HP is death, abstaining heals 10
-    assert chooser.path == ["abstain"]
+    assert [k.rpartition(":")[2] for k in chooser.path] == ["abstain"]          # the key of an option told by its title (no text key from this bridge): its position, then its title
     assert chooser.choose(screen("ABYSSAL_BATHS", ["only"])).label == "only"
     assert chooser.choose(screen("SOME_UNMODELLED_EVENT", ["a", "b"])) is None
     assert chooser.choose(screen("ABYSSAL_BATHS", ["x", "y"])) is None and chooser.path == []          # option names the model does not know
+
+
+@needs_pool
+def test_the_event_chooser_plays_options_the_game_titles_differently():
+    """THIS_OR_THAT: the game shows "This" and "That" for what the engine calls plain and ornate; the text key (sent by the bridge) tells them."""
+    from agents.deck_eval.event_chooser import EventChooser
+    advisor = DeckAdvisor(pool=POOL, log=lambda *_: None, route_provider=lambda: PlannedRoute(["combat", "rest", "combat", "boss"], 4, 1, None, "OVERGROWTH"))
+    import agents.deck_eval.event_chooser as ec
+    ec.EVENT_SECONDS = 0.2
+    p = _player()
+    p.update(hp=40, max_hp=80)
+    def screen(with_text_key):
+        titles = (("This", "PLAIN"), ("That", "ORNATE"))
+        options = [Option(t, {"action": "choose_event_option", "index": i},
+                          {"index": i, "title": t, "page_size": 2, **({"text_key": "THIS_OR_THAT.pages.INITIAL.options." + k} if with_text_key else {})})
+                   for i, (t, k) in enumerate(titles)]
+        return Decision("event", {"event_id": "THIS_OR_THAT", "player": p, "context": {"act": 1, "floor": 5}}, options)
+    for with_text_key in (True, False):          # by name, and by position when the bridge sends no text key
+        chosen = EventChooser(advisor).choose(screen(with_text_key))
+        assert chosen is not None and chosen.label in ("This", "That")
 
 
 @needs_pool
