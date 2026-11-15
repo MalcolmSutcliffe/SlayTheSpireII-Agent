@@ -648,8 +648,13 @@ class RunVerifier:
         want = deck_counter(player.get("deck"))
         if category == "card":
             self.gain_card(anchor, item.get("card_id"), False, expect, paid=item["cost"])
+            modelled = expect.get("deck")
             expect["deck"] = None                    # an egg or Fresnel Lens may have changed the card as it joined: compared by id below
             expect["deck_ids"] = Counter(c.get("id") for c in player.get("deck") or []) + Counter([item.get("card_id")])
+            if modelled is not None and "BING_BONG" in relic_ids(player):
+                expect["deck_ids"] = Counter()           # Bing Bong clones the card as well: the model's own deck says how many
+                for (card_id, _), n in modelled.items():
+                    expect["deck_ids"][card_id] += n
         elif category == "potion":
             if player.get("open_potion_slots", 1) == 0:
                 expect["skip"] = True

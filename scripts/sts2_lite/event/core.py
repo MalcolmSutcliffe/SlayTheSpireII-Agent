@@ -10,7 +10,7 @@ import random
 from dataclasses import dataclass, field
 from typing import Callable
 
-from sts2_lite.event.run import RunSnapshot, can_enchant, can_upgrade, card_entry, enchanted, random_class_cards, is_curse, CLASS_POOL
+from sts2_lite.event.run import RunSnapshot, can_enchant, can_upgrade, card_entry, enchanted, random_class_cards, random_pool_card, placeholder_entry, is_curse, CLASS_POOL
 
 
 class CardPicker:
@@ -86,6 +86,18 @@ class Ctx:
         from sts2_lite.relic.run_hooks import add_to_deck
         add_to_deck(self.run, card_entry(card_id, upgraded))
 
+    def add_placeholder(self, card_id : str, name : str | None = None, card_type : str = "Skill"):
+        """A card the engine has no model for joins the deck (a dead card there)."""
+        from sts2_lite.relic.run_hooks import add_to_deck
+        add_to_deck(self.run, placeholder_entry(card_id, name, card_type))
+
+    def add_pool_card(self, where):
+        """A card of the Ironclad pool that `where` accepts, drawn with the default non-combat odds."""
+        card = random_pool_card(self.rng, where, self.run.ascension)
+        if card is not None:
+            from sts2_lite.relic.run_hooks import add_to_deck
+            add_to_deck(self.run, card)
+
     def removable(self, pred : Callable[[dict], bool] = lambda c: True) -> list[int]:
         return [i for i, c in enumerate(self.run.deck) if c.get("removable") is not False and pred(c)]
 
@@ -154,10 +166,26 @@ class Ctx:
 
     def gain_potion(self, potion_id : str | None = None):
         if len(self.run.potions) < self.run.potion_slots:
-            self.run.potions.append({"id": potion_id or "RANDOM_POTION", "name": (potion_id or "random potion").replace("_", " ").title()})
+            if potion_id is None:
+                from sts2_lite.potion_pool import random_potion_id
+                potion_id = random_potion_id(self.rng).name
+            self.run.potions.append({"id": potion_id, "name": potion_id.replace("_", " ").title()})
 
-    def start_fight(self, name : str):
+    def tradable_relics(self) -> list[str]:
+        from sts2_lite.relic.pickup import tradable
+        return [r["id"] for r in self.run.relics if tradable(self.run, r["id"])]
+
+    def lose_relic(self, relic_id : str):
+        from sts2_lite.relic.pickup import remove_relic
+        remove_relic(self.run, relic_id)
+
+    def discard_potion(self, i : int):
+        del self.run.potions[i]
+
+    def start_fight(self, name : str, **args):
+        """The fight `name` follows the event. args: variant, turn_limit, extra (("relic",), ("potion",)...), on_win (a key the simulator knows)."""
         self.run.pending_fight = name
+        self.run.pending_fight_args = args
 
 
 @dataclass

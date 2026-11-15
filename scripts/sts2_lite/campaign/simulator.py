@@ -13,16 +13,18 @@ from agents.decision import Option
 from sts2_lite.campaign import ancients, screens
 from sts2_lite.campaign.combat import StalledFight, carry_back, play_fight, start_fight
 from sts2_lite.campaign.pickers import AgentPicker
-from sts2_lite.campaign.rewards import Reward, generate_rewards, treasure_gold_range
+from sts2_lite.campaign.rewards import Reward, generate_rewards, random_potion, treasure_gold_range
 from sts2_lite.encounters import ACTS, ENCOUNTERS, generate_rooms
+from sts2_lite.encounters.acts import SHARED_EVENTS
 from sts2_lite.event import EVENTS, EventSession, available, card_entry
 from sts2_lite.event.run import can_upgrade
-from sts2_lite.map import generate_map
+from sts2_lite.map import generate_map, generate_spoils_map
 from sts2_lite.map.points import PointType
 from sts2_lite.relic.bag import RelicGrabBag, pull_relic, relic_name
 from sts2_lite.relic.pickup import obtain_relic
 from sts2_lite.relic import run_hooks
 from sts2_lite.event.core import Ctx
+from sts2_lite.status import StatusId
 from sts2_lite.run import GameRng, SearchRng, Visit, new_run
 from sts2_lite.run.state import WEARY_TRAVELER_ASCENSION, WEARY_TRAVELER_SHARE
 
@@ -111,12 +113,30 @@ class RunSimulator:
         rooms = generate_rooms(act, self.game.stream("up_front"), ascension=self.ascension, last_act=last, shared_ancients=self.shared_ancients.get(act_index, ()))
         r.hidden.rooms, r.hidden.normal_fought, r.hidden.elite_fought = rooms, 0, 0
         r.hidden.unknown_odds.reset()
+        r.hidden.events, r.hidden.events_visited = list(act.events + SHARED_EVENTS), 0
+        self.game.stream("up_front").shuffle(r.hidden.events)
         double = self.ascension >= 10 and last
-        r.map = generate_map(act_id, self.game.stream("map"), act.room_count(), self.ascension, second_boss=double)
+        if act_index == 1 and self.has_card("SPOILS_MAP"):          # SpoilsMap.ModifyGeneratedMap: the hourglass through one treasure room
+            r.map = generate_spoils_map(act_id, self.game.stream("map"), act.room_count(), self.ascension)
+        else:
+            r.map = generate_map(act_id, self.game.stream("map"), act.room_count(), self.ascension, second_boss=double)
         r.position = r.map.start.coord
+        r.hidden.spoils_point = self.spoils_point()
         r.boss = rooms.boss.id
         self.visited : list[tuple[int, int]] = []
         self.ancient(rooms.ancient)
+
+    def has_card(self, card_id : str) -> bool:
+        return any(c["id"] == card_id for c in self.run_state.deck)
+
+    def spoils_point(self):
+        """SpoilsMap.AfterMapGenerated: with the card in the deck when act 2's map is made, its first treasure room (rows from the start up) carries the quest.
+        (The act 2 map should become a SpoilsActMap, an hourglass through one treasure room; the standard map is kept for now.)"""
+        r = self.run_state
+        if r.act != 2 or not self.has_card("SPOILS_MAP"):
+            return None
+        treasures = sorted((p.row, p.col) for col in r.map.grid for p in col if p is not None and p.type == PointType.TREASURE)
+        return (treasures[0][1], treasures[0][0]) if treasures else None
 
     def deal_shared_ancients(self):
         """RunManager.GenerateRooms: the shared ancients (Darv) are shuffled and a random number of them goes to each act after the first."""
@@ -172,9 +192,13 @@ class RunSimulator:
         from_unknown = kind == "Unknown"
         if from_unknown:
             kind = r.hidden.unknown_odds.roll(self.game.stream("unknown_room"), run_hooks.unknown_room_blacklist(r))
-            if run_hooks.golden_path_act(r):
+            if run_hooks.golden_path_act(r) or (r.act == 3 and self.has_card("LANTERN_KEY")):         # LanternKey.ModifyUnknownMapPointRoomTypes
                 kind = "Event"
         self.fur_coat = run_hooks.fur_coat_marked(r, point.coord)
+        if r.hidden.spoils_point is not None and tuple(point.coord) == tuple(r.hidden.spoils_point) and self.has_card("SPOILS_MAP"):       # SpoilsMap.OnQuestComplete
+            run_hooks.gain_gold(r, 600)
+            r.deck.pop(next(i for i, c in enumerate(r.deck) if c["id"] == "SPOILS_MAP"))
+            r.hidden.spoils_point = None
         run_hooks.room_entered(r, kind, from_unknown)
         if kind == "Boss" and point is r.map.boss and r.map.second_boss is not None:
             self.fight_room("Boss", r.hidden.rooms.boss, first_of_two=True)
@@ -207,22 +231,33 @@ class RunSimulator:
             return
         self.rewards(encounter)
 
-    def fight(self, encounter, room : str, final : bool = False):
+    def fight(self, encounter, room : str, final : bool = False, variant : int | None = None, turn_limit : int | None = None) -> bool:
+        """Plays the fight; True when every enemy is dead (False: the turn limit of an event fight ran out)."""
         r = self.run_state
         hp_before = r.hp
-        sim = start_fight(r, encounter.id, room.lower(), self.game, final_fight=final, one_hp=getattr(self, "fur_coat", False))
+        sim = start_fight(r, encounter.id, room.lower(), self.game, final_fight=final, one_hp=getattr(self, "fur_coat", False), variant=variant)
         self.fights += 1
-        play_fight(sim, self.agent, self.game, self.search, self.time_budget)
+        play_fight(sim, self.agent, self.game, self.search, self.time_budget, turn_limit)
         carry_back(r, sim)
+        improvement = sim.combat_state.player.status.get(StatusId.IMPROVEMENT)
+        if improvement is not None and not r.dead:       # Mad Science (Improvement): upgrades a random card of the deck as the combat ends
+            self.ctx().upgrade_random(improvement.amount)
         self.took_damage = r.hp < hp_before or r.dead
         if r.dead:
             self.cause = encounter.id
             raise RunOver
+        return not any(e.current_hp > 0 for e in sim.combat_state.enemies)
 
-    def rewards(self, encounter):
+    def rewards(self, encounter, extra=()):
+        """The reward screen of a won fight; `extra` are an event's own rewards on top of the encounter's (("relic",), ("potion",))."""
         r = self.run_state
         last_boss = encounter.room == "Boss" and r.act == 3
         items = generate_rewards(r, encounter, last_boss, self.game)
+        for kind, *_ in extra:
+            if kind == "relic":
+                items.append(Reward("relic", relic=pull_relic(r) if r.hidden.relic_bag else None))
+            elif kind == "potion":
+                items.append(Reward("potion", potion=random_potion(self.game.stream("potion_rewards"))))
         while items:
             option = self.ask(screens.combat_rewards(r, items))
             if option.action["action"] == "proceed":
@@ -337,6 +372,8 @@ class RunSimulator:
                 r.offers += run_hooks.rest_heal_offers(r)
             elif choice == "DIG":
                 self.gain_relic()
+            elif choice == "HATCH":
+                self.gain_relic("BYRDPIP")
             elif choice == "COOK":
                 removable = [i for i, c in enumerate(r.deck) if c.get("removable") is not False]
                 if len(removable) < 2:
@@ -451,15 +488,35 @@ class RunSimulator:
         shop.after(entry, price)
         return True
 
+    def next_event(self):
+        """ActModel.PullNextEvent / RoomSet.EnsureNextEventIsValid: the pool is a shuffled ring; events that are not allowed now or were met before are stepped over, and the
+        event found is marked visited. Returns (id, EventDef or None for an event the sim does not model: it happens as an empty visit). When every event has been
+        met the ring repeats."""
+        r = self.run_state
+        pool, seen = r.hidden.events, set(r.seen_events)
+        if not pool:
+            return None, None
+        for _ in range(len(pool)):
+            name = pool[r.hidden.events_visited % len(pool)]
+            event = EVENTS.get(name)
+            if name not in seen and (event is None or (r.act in event.acts and event.allowed(r))):
+                break
+            r.hidden.events_visited += 1
+        else:
+            name = pool[r.hidden.events_visited % len(pool)]
+            event = EVENTS.get(name)
+        r.hidden.events_visited += 1
+        if r.act == 3 and self.has_card("LANTERN_KEY"):         # LanternKey.ModifyNextEvent: whatever the pool had is replaced
+            name = "WAR_HISTORIAN_REPY"
+            event = EVENTS[name]
+        return name, event
+
     def event(self):
         r = self.run_state
-        seen = set(r.seen_events)
-        pool = [e for e in available(r) if e.id not in seen]
-        if not pool:
-            r.visit("Event", None)
+        name, event = self.next_event()
+        r.visit("Event", name)
+        if event is None:            # not modelled (or no pool): nothing happens
             return
-        event = self.game.stream("events").choice(pool)
-        r.visit("Event", event.id)
         if event.id == "FAKE_MERCHANT":
             self.fake_merchant()
             return
@@ -474,6 +531,22 @@ class RunSimulator:
             self.cause = event.id
             raise RunOver
         if r.pending_fight is not None:
-            name, r.pending_fight = r.pending_fight, None
+            name, args = r.pending_fight, r.pending_fight_args
+            r.pending_fight, r.pending_fight_args = None, {}
             if name in ENCOUNTERS:
-                self.fight_room(ENCOUNTERS[name].room, ENCOUNTERS[name])
+                self.event_fight(ENCOUNTERS[name], **args)
+
+    def event_fight(self, encounter, variant : int | None = None, turn_limit : int | None = None, extra=(), on_win : str | None = None):
+        """A fight an event started: the event's visit is the room (no second visit), its rewards come on top of the usual ones."""
+        r = self.run_state
+        won = self.fight(encounter, "Monster", variant=variant, turn_limit=turn_limit)
+        run_hooks.combat_finished(r, "Monster", self.game.stream("relics"))
+        if not won:         # the Battleworn Dummy's time ran out: nothing
+            return
+        if on_win == "upgrade_two":
+            self.ctx().upgrade_random(2)
+        elif on_win == "relic":
+            self.gain_relic()
+        elif on_win == "lantern_key":
+            self.ctx().add_placeholder("LANTERN_KEY", "Lantern Key", "Quest")         # the fight's SpecialCardReward
+        self.rewards(encounter, extra=[e if isinstance(e, tuple) else (e,) for e in extra] + ([("potion",)] if on_win == "potion" else []))

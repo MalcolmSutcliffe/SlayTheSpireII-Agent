@@ -315,7 +315,8 @@ NEW_POWER_CARDS = tuple(CardId[n] for n in (
     'HOWL_FROM_BEYOND', 'INFERNAL_BLADE', 'NOT_YET', 'OFFERING', 'PACTS_END',
     'BRAND', 'HELLRAISER', 'INFERNO', 'PRIMAL_FORCE', 'STOKE', 'STOMP'))
 
-UNTARGETED_EVENT = (CardId.EXTERMINATE, CardId.ENLIGHTENMENT, CardId.METAMORPHOSIS, CardId.TORIC_TOUGHNESS)
+UNTARGETED_EVENT = (CardId.EXTERMINATE, CardId.ENLIGHTENMENT, CardId.METAMORPHOSIS, CardId.TORIC_TOUGHNESS, CardId.FEEDING_FRENZY, CardId.MAD_SCIENCE,
+                    CardId.DUAL_WIELD, CardId.ENTRENCH, CardId.CALTROPS, CardId.DISTRACTION, CardId.OUTMANEUVER, CardId.HELLO_WORLD, CardId.STACK, CardId.RIP_AND_TEAR)
 UNTARGETED_COLORLESS = (CardId.FINESSE, CardId.PRODUCTION, CardId.MASTER_OF_STRATEGY, CardId.DRAMATIC_ENTRANCE, CardId.SHOCKWAVE,
                         CardId.PROWESS, CardId.IMPATIENCE, CardId.RESTLESSNESS, CardId.SCRAWL, CardId.ETERNAL_ARMOR, CardId.PURITY,
                         CardId.ULTIMATE_DEFEND, CardId.VOLLEY, CardId.SECRET_TECHNIQUE, CardId.SECRET_WEAPON, CardId.THINKING_AHEAD,
@@ -422,7 +423,7 @@ def test_rare_cards_derive_from_the_table():
     assert not {CardId.BASH, CardId.NEOWS_FURY, CardId.CORRUPTION, CardId.BREAK} & RARE_CARDS
 
 # cards that are in the game but have no class in the decompiled sources (like some potions), so their rarity cannot be checked against it
-NOT_IN_DECOMPILED = {CardId.NOT_IMPLEMENTED, CardId.ABUNDANCE}
+NOT_IN_DECOMPILED = {CardId.NOT_IMPLEMENTED, CardId.ABUNDANCE, CardId.FEEDING_FRENZY, CardId.MAD_SCIENCE}       # Feeding Frenzy: the card class is missing from the sources we have; its numbers come from the user
 
 @pytest.mark.skipif(not DECOMPILED.is_dir(), reason="decompiled sources not present")
 def test_matches_decompiled_source():
@@ -529,7 +530,7 @@ def test_cards_that_get_cheaper_when_upgraded(card_id):
     base = {CardId.BARRICADE: 3, CardId.CORRUPTION: 3, CardId.DARK_EMBRACE: 2, CardId.STAMPEDE: 2, CardId.UNMOVABLE: 2, CardId.HAVOC: 1,
             CardId.EXPECT_A_FIGHT: 2, CardId.INFERNAL_BLADE: 1, CardId.BODY_SLAM: 1, CardId.HELLRAISER: 2, CardId.MIND_BLAST: 1,
             CardId.AUTOMATION: 1, CardId.MAYHEM: 2, CardId.NOSTALGIA: 1, CardId.CALAMITY: 3,
-                CardId.APOTHEOSIS: 2, CardId.ABUNDANCE: 1, CardId.ALCHEMIZE: 1}[card_id]
+                CardId.APOTHEOSIS: 2, CardId.ABUNDANCE: 1, CardId.ALCHEMIZE: 1, CardId.ENTRENCH: 2, CardId.DISTRACTION: 1}[card_id]
     assert power(card_id, base).upgraded_copy().energy_cost == base - 1
 
 def test_cost_never_goes_below_zero():

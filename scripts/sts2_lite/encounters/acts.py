@@ -37,6 +37,12 @@ class Act:
         return self.base_rooms - (1 if multiplayer else 0)
 
 
+# ModelDb.AllSharedEvents: in every act's event pool
+SHARED_EVENTS = ("BRAIN_LEECH", "CRYSTAL_SPHERE", "DOLL_ROOM", "FAKE_MERCHANT", "POTION_COURIER", "RANWID_THE_ELDER", "RELIC_TRADER", "ROOM_FULL_OF_CHEESE", "SELF_HELP_BOOK",
+                 "SLIPPERY_BRIDGE", "STONE_OF_ALL_TIME", "SYMBIOTE", "TEA_MASTER", "THE_FUTURE_OF_POTIONS", "THE_LEGENDS_WERE_TRUE", "THIS_OR_THAT", "WAR_HISTORIAN_REPY",
+                 "WELCOME_TO_WONGOS")
+
+
 ACTS : dict[str, Act] = {
     "OVERGROWTH": Act("OVERGROWTH", (
         "BYGONE_EFFIGY_ELITE",

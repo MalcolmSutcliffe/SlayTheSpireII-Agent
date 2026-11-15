@@ -5,6 +5,8 @@ chooses is carried out on the truth. Everything the engine rolls while ruling (s
 from __future__ import annotations
 
 import copy
+
+from sts2_lite.status import StatusId
 from dataclasses import dataclass
 
 from sts2_lite.card import Card
@@ -39,7 +41,7 @@ def card_dict(card : dict) -> dict:
     return {"id": card["id"], "name": card.get("name", card["id"]), "type": ctype, "cost": card.get("cost", 1), "star_cost": card.get("star_cost"),
             "description": card.get("description", ""), "target_type": target, "can_play": ctype not in UNPLAYABLE_TYPES, "unplayable_reason": None,
             "is_upgraded": bool(card.get("is_upgraded")), "generated": False, "enchantment": card.get("enchantment"), "keywords": [],
-            "_upgrade": bool(card.get("_upgrade"))}
+            "_upgrade": bool(card.get("_upgrade")), **({"rider": card["rider"]} if card.get("rider") else {})}
 
 
 def _combat_start_potions(run : RunState, game):
@@ -55,7 +57,7 @@ def _combat_start_potions(run : RunState, game):
             add(random_potion(game.stream("potion_rewards")))
 
 
-def start_fight(run : RunState, encounter_id : str, room_type : str, game, final_fight : bool = False, one_hp : bool = False) -> CombatSimulator:
+def start_fight(run : RunState, encounter_id : str, room_type : str, game, final_fight : bool = False, one_hp : bool = False, variant : int | None = None) -> CombatSimulator:
     """Round 1 of `encounter_id` with the run's deck shuffled, the opening hand drawn and the start-of-combat relics applied."""
     cards = [card_dict(c) for c in run.deck]
     relics = copy.deepcopy(run.relics)
@@ -73,7 +75,7 @@ def start_fight(run : RunState, encounter_id : str, room_type : str, game, final
             if raw["_upgrade"] and player.draw_pile[i].is_upgradable:
                 player.draw_pile[i] = player.draw_pile[i].upgraded_copy()
         player.shuffle_draw_pile()
-        cs = build_combat(encounter_id, run.ascension, player, game.stream("monster_ai"), max_energy=energy, final_fight=final_fight)
+        cs = build_combat(encounter_id, run.ascension, player, game.stream("monster_ai"), max_energy=energy, final_fight=final_fight, variant=variant)
         if one_hp:          # Fur Coat: a marked fight
             for enemy in cs.enemies:
                 enemy.current_hp = 1
@@ -99,11 +101,18 @@ def agent_view(cs : CombatState, search) -> CombatState:
     return view
 
 
-def play_fight(sim : CombatSimulator, agent, game, search, time_budget : float | None = None) -> FightResult:
+def play_fight(sim : CombatSimulator, agent, game, search, time_budget : float | None = None, turn_limit : int | None = None) -> FightResult:
+    """Plays the fight out. `turn_limit` (the Battleworn Dummy's time limit) ends it after that many turns, won or not."""
     start_hp = sim.combat_state.player.current_hp
     actions = 0
     while not sim.is_over:
         cs = sim.combat_state
+        if turn_limit is not None and cs.turn_number > turn_limit:
+            break
+        if turn_limit is not None:                  # the time limit power counts the turns left
+            for enemy in cs.enemies:
+                if StatusId.BATTLEWORN_DUMMY_TIME_LIMIT in enemy.status:
+                    enemy.status[StatusId.BATTLEWORN_DUMMY_TIME_LIMIT].amount = turn_limit - cs.turn_number + 1
         if actions >= MAX_ACTIONS or cs.turn_number > MAX_ROUNDS:
             raise StalledFight(f"{actions} actions, round {cs.turn_number}")
         with search.scope():

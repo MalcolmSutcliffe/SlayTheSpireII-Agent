@@ -94,7 +94,7 @@ RunSnapshot = RunState        # the old name: events play on the run's state
 
 # --- enchantments -------------------------------------------------------------------------------------------------------------------------------------
 # The card's "enchantment": {"id", "amount"} is what the bridge reports and what the combat sim reads. Rules follow EnchantmentModel.CanEnchant.
-ENCHANT_ATTACK_ONLY = frozenset({"CORRUPTED", "SHARP", "INSTINCT"})
+ENCHANT_ATTACK_ONLY = frozenset({"CORRUPTED", "SHARP", "INSTINCT", "VIGOROUS"})
 
 
 def _sim_card(card : dict):
@@ -131,3 +131,24 @@ def can_enchant(card : dict, enchantment : str, card_type : str | None = None) -
 
 def enchanted(card : dict, enchantment : str, amount : int) -> dict:
     return dict(card, enchantment={"id": enchantment, "amount": amount})
+
+
+# --- cards the engine has no model for -----------------------------------------------------------------------------------------------------------------
+def placeholder_entry(card_id : str, name : str | None = None, card_type : str = "Skill") -> dict:
+    """A card the engine cannot play (another character's, or a quest card): it sits in the deck as a dead card, like the combat engine treats an unknown id."""
+    return {"id": card_id, "name": name or card_id.replace("_", " ").title(), "type": card_type, "rarity": None, "cost": 1, "target_type": "Self", "is_upgraded": False, "modelled": False}
+
+
+def mad_science_entry(card_type : str, rider : str) -> dict:
+    """Tinker Time's card: 1 energy, the type picked (an Attack aims at one enemy) and the rider it was given."""
+    return dict(card_entry("MAD_SCIENCE"), type=card_type, target_type="AnyEnemy" if card_type == "Attack" else "Self", rider=rider)
+
+
+def random_pool_card(r : random.Random, where, ascension : int = 0) -> dict | None:
+    """One Ironclad card that satisfies `where(card_entry)`, with the default non-combat odds (CardCreationOptions.ForNonCombatWithDefaultOdds + a filter)."""
+    from sts2_lite.rewards import CardRarityOdds, OddsType, Source, create_card_reward
+    pool = [cid for cids in CLASS_POOL.values() for cid in cids if where(card_entry(cid))]
+    if not pool:
+        return None
+    offers = create_card_reward(r, CardRarityOdds(r, ascension), 0, 1, OddsType.REGULAR_ENCOUNTER, Source.OTHER, pool=pool, no_upgrade_roll=True)
+    return card_entry(offers[0].card_id)

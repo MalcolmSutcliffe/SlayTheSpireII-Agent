@@ -204,3 +204,20 @@ def test_the_fast_segment_search_finds_what_the_game_search_finds():
         keys = lambda groups: sorted(sorted(map(lambda s: tuple(p.coord for p in s), g)) for g in groups)
         agree += keys(find_matching_segments(m.start)) == keys(find_matching_segments_exact(m.start))
     assert agree >= 10      # the order segments are found in can change which of two overlapping ones is kept
+
+
+def test_the_spoils_map_is_an_hourglass_through_one_centred_treasure_room():
+    import random
+    from sts2_lite.map import PointType, generate_spoils_map
+    for seed in range(60):
+        m = generate_spoils_map("HIVE", random.Random(seed), 14)
+        treasure_row = m.rows - 7
+        treasures = [p for p in m.points() if p.type == PointType.TREASURE]
+        assert len(treasures) == 1 and treasures[0].coord == (3, treasure_row)
+        assert [p.coord for p in m.points() if p.row == treasure_row] == [(3, treasure_row)]
+        for p in m.points():                        # the paths narrow towards the treasure and widen after it, and every room can be reached
+            reach = min(3, abs(p.row - treasure_row), m.rows - p.row)
+            assert 3 - reach <= p.col <= 3 + reach or p.row == 1
+            assert p.row == 1 or p.parents
+        assert all(c.type in (PointType.REST_SITE,) for p in m.points() if p.row == m.rows - 1 for c in [p])
+        assert sum(p.type == PointType.SHOP for p in m.points()) <= 3

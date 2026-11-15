@@ -27,8 +27,11 @@ class Encounter:
     generate : Callable | None = None           # (rng) -> list[Spawn]; None: `fixed`
     fixed : tuple[Spawn, ...] = ()
 
-    def monsters(self, rng) -> list[Spawn]:
-        return list(self.fixed) if self.generate is None else self.generate(rng)
+    def monsters(self, rng, variant : int | None = None) -> list[Spawn]:
+        """`variant` is an event's choice for an encounter that takes one (the Battleworn Dummy's setting)."""
+        if self.generate is None:
+            return list(self.fixed)
+        return self.generate(rng) if variant is None else self.generate(rng, variant)
 
     def shares_tags_with(self, other : "Encounter | None") -> bool:
         return other is not None and bool(set(self.tags) & set(other.tags))

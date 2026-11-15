@@ -643,6 +643,11 @@ class CombatSimulator:
                 self.request_choice("transform", eligible, "hand", choice.amount - 1, picked=picked)
             else:
                 self._transform(picked)
+        elif choice.kind == "dual_wield":
+            for _ in range(choice.amount):         # clones of the pick join the hand (a full hand sends them to the discard pile)
+                clone = Card.create_copy(card)
+                clone.generated = True
+                player.add_to_hand(clone)
         elif choice.kind == "upgrade":
             player.upgrade_card(card)
         elif choice.kind == "exhaust":
@@ -704,7 +709,7 @@ class CombatSimulator:
         # the card leaves the hand first; it reaches its pile after the card-played hooks
         hand.pop(card_index)
         original, card = card, self.private_copy(card)
-        to_top = self._nostalgia_mark(card)
+        to_top = self._nostalgia_mark(card) or self._rebound_mark(card)
         self._face_target(card, target_index)
         self.combat_state.sloth_played += 1         # SlothPower.BeforeCardPlayed: the card counts before it does anything
         try:
@@ -814,6 +819,17 @@ class CombatSimulator:
         player = self.combat_state.player
         nostalgia = player.status.get(StatusId.NOSTALGIA)
         return nostalgia is not None and card.type in (CardType.Attack, CardType.Skill) and player.plays_started_this_turn < nostalgia.amount
+
+    def _rebound_mark(self, card : Card) -> bool:
+        """ReboundPower: the next card played ends on top of the draw pile (a Power or an exhausting card still uses it up and goes nowhere)."""
+        player = self.combat_state.player
+        rebound = player.status.get(StatusId.REBOUND)
+        if rebound is None:
+            return False
+        rebound.amount -= 1
+        if rebound.amount <= 0:
+            del player.status[StatusId.REBOUND]
+        return True
 
     def _finish_card_play(self, card : Card, hp_loss_mark : int, force_exhaust : bool = False, dupe : bool = False, to_top : bool = False):
         player = self.combat_state.player
@@ -1071,7 +1087,7 @@ class CombatSimulator:
     @staticmethod
     def _return_temporary_strength(creature : Creature):
         """Setup Strike, Mangle and Dark Shackles: the Strength they gave or took is returned when the creature's turn ends."""
-        for marker, sign in ((StatusId.SETUP_STRIKE, 1), (StatusId.MANGLE, -1), (StatusId.DARK_SHACKLES, -1), (StatusId.FLEX_POTION, 1), (StatusId.REPTILE_TRINKET, 1)):
+        for marker, sign in ((StatusId.SETUP_STRIKE, 1), (StatusId.MANGLE, -1), (StatusId.DARK_SHACKLES, -1), (StatusId.FLEX_POTION, 1), (StatusId.REPTILE_TRINKET, 1), (StatusId.FEEDING_FRENZY, 1)):
             amount = creature.status.pop(marker, None)
             if amount is not None:
                 creature.apply_status(StatusId.STRENGTH, -sign * amount.amount, bypass_artifact=True)

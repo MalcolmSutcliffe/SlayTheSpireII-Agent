@@ -141,6 +141,13 @@ class StatusId(Enum):
     CLARITY_EXTRACT = auto()        # Clarity Extract: 1 extra card drawn at the start of each of the next `amount` turns
     RADIANT_TINCTURE = auto()       # Radiant Tincture: 1 extra Energy at the start of each of the next `amount` turns
     REPTILE_TRINKET = auto()        # Reptile Trinket: the Strength it gave this turn, lost when the turn ends
+    STRANGLE = auto()               # Mad Science (Choking): whenever the player plays a card this turn, the owner loses this much HP
+    CURIOUS = auto()                # Mad Science (Curious): Powers cost 1 less
+    IMPROVEMENT = auto()            # Mad Science (Improvement): upgrades a random card of the deck when the combat ends
+    HELLO_WORLD = auto()            # Hello World: a random common card joins the hand at the start of each turn
+    REBOUND = auto()                # Rebound: the next card played goes on top of the draw pile
+    BATTLEWORN_DUMMY_TIME_LIMIT = auto()    # the dummy's: turns left to defeat it (captured: 3 on turn 1)
+    FEEDING_FRENZY = auto()         # Feeding Frenzy: the Strength it gave is lost when the turn ends
     FLEX_POTION = auto()            # Flex Potion: the Strength it gave is lost when the turn ends
     SPEED_POTION = auto()           # Speed Potion: the Dexterity it gave is lost when the turn ends
 
@@ -166,7 +173,7 @@ DEBUFFS = frozenset({StatusId.WEAK, StatusId.VULNERABLE, StatusId.FRAIL, StatusI
                      StatusId.NO_DRAW, StatusId.NO_ENERGY_GAIN, StatusId.MANGLE, StatusId.CONFUSED,
                      StatusId.NO_BLOCK, StatusId.THE_GAMBIT, StatusId.DARK_SHACKLES,
                      StatusId.TENDER, StatusId.TAINTED, StatusId.SURROUNDED, StatusId.DISINTEGRATION, StatusId.MIND_ROT,
-                     StatusId.SLOTH, StatusId.WASTE_AWAY, StatusId.HEX, StatusId.DAMPEN, StatusId.CHAINS_OF_BINDING, StatusId.SMOGGY,
+                     StatusId.SLOTH, StatusId.WASTE_AWAY, StatusId.HEX, StatusId.DAMPEN, StatusId.CHAINS_OF_BINDING, StatusId.SMOGGY, StatusId.STRANGLE,
                      StatusId.DEMISE})
 
 def is_debuff(status_id : StatusId, amount : int) -> bool:
@@ -317,6 +324,16 @@ def _smoggy_on_card_played(combat : CombatSimulator, owner : Creature, amount : 
 def _smoggy_on_player_turn_ended(combat : CombatSimulator, owner : Creature, amount : int):
     owner.smogged = False           # SmoggyPower.AfterSideTurnEnd
 
+def _strangle_on_card_played(combat : CombatSimulator, owner : Creature, amount : int, card):
+    # Mad Science (Choking): every card the player plays this turn costs the owner HP (assumed: unpowered damage that block absorbs, and the card that applied it triggers it too)
+    owner.apply_damage(amount)
+
+def _strangle_on_player_turn_ended(combat : CombatSimulator, owner : Creature, amount : int):
+    owner.status.pop(StatusId.STRANGLE, None)
+
+def _rebound_on_player_turn_ended(combat : CombatSimulator, owner : Creature, amount : int):
+    owner.status.pop(StatusId.REBOUND, None)         # Rebound does not last between turns
+
 def _surprise_on_death(combat : CombatSimulator, owner : Creature, amount : int):
     # SurprisePower.AfterDeath: the merc's gremlins step out, and the Fat one carries off the gold the merc took
     from sts2_lite.enemy import Enemy
@@ -448,7 +465,7 @@ def _illusion_on_death(combat : CombatSimulator, owner : Creature, amount : int)
     monster, _, slot = owner.enemy_id.rpartition("_")
     # IllusionPower.ShouldPowerBeRemovedOnDeath: the buffs stay (its own Illusion too); a debuff goes, a temporary one with it
     kept = tuple((sid, st.amount) for sid, st in owner.status.items() if not is_debuff(sid, st.amount) and sid not in (StatusId.ILLUSION, StatusId.MINION))
-    combat.combat_state.revivals.append((monster, int(slot), kept))
+    combat.combat_state.revivals.append((monster, int(slot), kept) if kept else (monster, int(slot)))      # nothing to keep: the plain pair
 
 def _ringing_on_end_turn(combat : CombatSimulator, owner : Creature, amount : int):
     # lasts for the one player turn after it was applied
@@ -570,6 +587,15 @@ def _toric_toughness_on_block_cleared(combat : CombatSimulator, owner : Creature
 def _prep_time_on_turn_start(combat : CombatSimulator, owner : Creature, amount : int):
     if _own(combat, owner):
         owner.apply_status(StatusId.VIGOR, amount)
+
+def _hello_world_on_turn_start(combat : CombatSimulator, owner : Creature, amount : int):
+    """HelloWorldPower: a random common card of the character's pool joins the hand."""
+    if _own(combat, owner):
+        from sts2_lite.card import Card
+        from sts2_lite.card.tables import CARD_RARITY, GENERATABLE_CARDS, CardRarity
+        commons = [cid for cid in GENERATABLE_CARDS if CARD_RARITY[cid] == CardRarity.Common]
+        for _ in range(amount):
+            owner.add_to_hand(Card.create_generated(rng.choice(commons)))
 
 def _hit_all_enemies(combat : CombatSimulator, owner : Creature, damage : int):
     """Unpowered damage from the player to every enemy still alive."""
@@ -710,6 +736,7 @@ STATUS_HANDLERS : dict[tuple[StatusId, HookType], Callable] = HandlerTable({
     (StatusId.ENRAGE, HookType.CARD_PLAYED) : _enrage_on_card_played,
     (StatusId.WITHERING_PRESENCE, HookType.CARD_PLAYED) : _withering_presence_on_card_played,
     (StatusId.INFERNO, HookType.PLAYER_TURN_START) : _inferno_on_turn_start,
+    (StatusId.HELLO_WORLD, HookType.PLAYER_TURN_START) : _hello_world_on_turn_start,
     (StatusId.RITUAL, HookType.ENEMY_TURN_END) : _ritual_on_enemy_turn_end,
     (StatusId.RITUAL, HookType.END_TURN) : _ritual_on_end_turn,
     (StatusId.REGEN, HookType.END_TURN) : _regen_on_end_turn,
@@ -749,6 +776,9 @@ STATUS_HANDLERS : dict[tuple[StatusId, HookType], Callable] = HandlerTable({
     (StatusId.STEAM_ERUPTION, HookType.DEATH) : _steam_eruption_on_death,
     (StatusId.SMOGGY, HookType.CARD_PLAYED) : _smoggy_on_card_played,
     (StatusId.SMOGGY, HookType.PLAYER_TURN_ENDED) : _smoggy_on_player_turn_ended,
+    (StatusId.STRANGLE, HookType.CARD_PLAYED) : _strangle_on_card_played,
+    (StatusId.STRANGLE, HookType.PLAYER_TURN_ENDED) : _strangle_on_player_turn_ended,
+    (StatusId.REBOUND, HookType.PLAYER_TURN_ENDED) : _rebound_on_player_turn_ended,
     (StatusId.SURPRISE, HookType.DEATH) : _surprise_on_death,
     (StatusId.RAVENOUS, HookType.CREATURE_KILLED) : _ravenous_on_creature_killed,
     (StatusId.HARDENED_SHELL, HookType.BEFORE_PLAYER_TURN) : _hardened_shell_on_side_turn_start,

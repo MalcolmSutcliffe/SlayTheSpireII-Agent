@@ -150,6 +150,10 @@ CARD_ENERGY_COST_AND_TARGET : dict[CardId, tuple[int | str, TargetType]] = {
     CardId.THRUMMING_HATCHET : (1, _A),
     CardId.THUNDERCLAP : (1, _ALL),
     CardId.TORIC_TOUGHNESS : (2, _S),
+    CardId.FEEDING_FRENZY : (0, _S),
+    CardId.MAD_SCIENCE : (1, _A),
+    CardId.CLASH : (0, _A), CardId.DUAL_WIELD : (1, _S), CardId.ENTRENCH : (2, _S), CardId.CALTROPS : (1, _S), CardId.DISTRACTION : (1, _S),
+    CardId.OUTMANEUVER : (1, _S), CardId.HELLO_WORLD : (1, _S), CardId.REBOUND : (1, _A), CardId.RIP_AND_TEAR : (1, _RAND), CardId.STACK : (1, _S),
     CardId.TREMBLE : (1, _A),
     CardId.TRUE_GRIT : (1, _S),
     CardId.TWIN_STRIKE : (1, _A),
@@ -181,7 +185,7 @@ UPGRADE_COST_CHANGE = {
     CardId.UNMOVABLE : -1, CardId.HAVOC : -1, CardId.EXPECT_A_FIGHT : -1, CardId.INFERNAL_BLADE : -1,
     CardId.BODY_SLAM : -1, CardId.HELLRAISER : -1, CardId.MIND_BLAST : -1,
     CardId.AUTOMATION : -1, CardId.MAYHEM : -1, CardId.NOSTALGIA : -1, CardId.CALAMITY : -1,
-    CardId.APOTHEOSIS : -1, CardId.ABUNDANCE : -1, CardId.ALCHEMIZE : -1,
+    CardId.APOTHEOSIS : -1, CardId.ABUNDANCE : -1, CardId.ALCHEMIZE : -1, CardId.ENTRENCH : -1, CardId.DISTRACTION : -1,
 }
 
 # CardModel base cost of the cards above (an upgrade caps a rolled Confused cost at base + change)
@@ -190,14 +194,14 @@ UPGRADE_BASE_COST = {
     CardId.UNMOVABLE : 2, CardId.HAVOC : 1, CardId.EXPECT_A_FIGHT : 2, CardId.INFERNAL_BLADE : 1,
     CardId.BODY_SLAM : 1, CardId.HELLRAISER : 2, CardId.MIND_BLAST : 1,
     CardId.AUTOMATION : 1, CardId.MAYHEM : 2, CardId.NOSTALGIA : 1, CardId.CALAMITY : 3,
-    CardId.APOTHEOSIS : 2, CardId.ABUNDANCE : 1, CardId.ALCHEMIZE : 1,
+    CardId.APOTHEOSIS : 2, CardId.ABUNDANCE : 1, CardId.ALCHEMIZE : 1, CardId.ENTRENCH : 2, CardId.DISTRACTION : 1,
 }
 
 # keyword an upgrade removes (Exhaust)
 UPGRADE_REMOVED_KEYWORD = {CardId.SECRET_TECHNIQUE : 1, CardId.SECRET_WEAPON : 1, CardId.THINKING_AHEAD : 1, CardId.PROLONG : 1, CardId.DISCOVERY : 1, CardId.APPARITION : 2}      # Exhaust x5, Ethereal for Apparition
 
 # keyword an upgrade adds
-UPGRADE_KEYWORD = {CardId.SCRAWL : 16, CardId.GOLD_AXE : 16, CardId.ANOINTED : 16, CardId.ENTROPY : 4, CardId.WISH : 16, CardId.AGGRESSION : 4, CardId.JUGGLING : 4}       # Retain, Retain, Retain, Innate (Entropy, Aggression, Juggling), Retain
+UPGRADE_KEYWORD = {CardId.HELLO_WORLD : 4, CardId.MAD_SCIENCE : 4, CardId.SCRAWL : 16, CardId.GOLD_AXE : 16, CardId.ANOINTED : 16, CardId.ENTROPY : 4, CardId.WISH : 16, CardId.AGGRESSION : 4, CardId.JUGGLING : 4}       # Retain, Retain, Retain, Innate (Entropy, Aggression, Juggling), Retain
 
 CONFUSED_MAX_COST = 3
 
@@ -210,7 +214,7 @@ EXHAUSTING_CARDS = frozenset({CardId.SLIMED, CardId.TREMBLE, CardId.IMPERVIOUS, 
                               CardId.PRODUCTION, CardId.MASTER_OF_STRATEGY, CardId.DRAMATIC_ENTRANCE, CardId.SHOCKWAVE,
                               CardId.SCRAWL, CardId.PURITY, CardId.SECRET_TECHNIQUE, CardId.SECRET_WEAPON, CardId.THINKING_AHEAD,
                               CardId.PANIC_BUTTON, CardId.PROLONG, CardId.DARK_SHACKLES, CardId.JACK_OF_ALL_TRADES, CardId.ANOINTED, CardId.DISCOVERY, CardId.ALCHEMIZE, CardId.LUMINESCE,
-                              CardId.ENLIGHTENMENT, CardId.METAMORPHOSIS, CardId.NEOWS_FURY,
+                              CardId.ENLIGHTENMENT, CardId.METAMORPHOSIS, CardId.DISTRACTION, CardId.NEOWS_FURY,
                               CardId.ABUNDANCE, CardId.APOTHEOSIS, CardId.APPARITION, CardId.RELAX, CardId.WHISTLE, CardId.WISH})
 
 # curses (Enthralled is not modelled; Debt's gold loss is not either: the sim does not track gold)
@@ -272,6 +276,19 @@ CHANGED_ON_PLAY = CONSUMED_ON_PLAY | {EnchantmentId.MOMENTUM, EnchantmentId.GLAM
 _unknown_enchantments : set[str] = set()
 
 _unknown_cards : set[str] = set()
+
+# Mad Science: the riders Tinker Time offers for each card type, and (damage / block, rider numbers) the sim plays them with
+MAD_SCIENCE_RIDERS = {"Attack": ("SAPPING", "VIOLENCE", "CHOKING"), "Skill": ("ENERGIZED", "WISDOM", "CHAOS"), "Power": ("EXPERTISE", "CURIOUS", "IMPROVEMENT")}
+MAD_SCIENCE_DAMAGE, MAD_SCIENCE_BLOCK = 12, 8
+MAD_SCIENCE_TEXT = (("weak", "SAPPING"), ("times", "VIOLENCE"), ("lose", "CHOKING"), ("strangle", "CHOKING"), ("energy", "ENERGIZED"), ("draw", "WISDOM"),
+                    ("random", "CHAOS"), ("strength", "EXPERTISE"), ("dexterity", "EXPERTISE"), ("upgrade", "IMPROVEMENT"), ("cost", "CURIOUS"))
+
+
+def mad_science_rider(description : str) -> str | None:
+    """The rider of a Mad Science card the bridge showed, read from its text (the bridge has no field for it)."""
+    text = description.lower()
+    return next((rider for word, rider in MAD_SCIENCE_TEXT if word in text), None)
+
 
 def keyword_mask(keywords) -> int:
     mask = 0

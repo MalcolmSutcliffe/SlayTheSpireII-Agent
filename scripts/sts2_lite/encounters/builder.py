@@ -127,8 +127,8 @@ def _unique_segment_hp(hp : int, monster : str, ascension : int, teammates) -> i
     return hp
 
 
-def build_enemies(encounter_id : str, ascension : int, rng) -> list[Enemy]:
-    spawns = ENCOUNTERS[encounter_id].monsters(rng)
+def build_enemies(encounter_id : str, ascension : int, rng, variant : int | None = None) -> list[Enemy]:
+    spawns = ENCOUNTERS[encounter_id].monsters(rng, variant)
     enemies : list[Enemy] = []
     seen : dict[str, int] = {}
     for spawn in spawns:
@@ -138,11 +138,11 @@ def build_enemies(encounter_id : str, ascension : int, rng) -> list[Enemy]:
     return enemies
 
 
-def build_combat(encounter_id : str, ascension : int, player, rng, max_energy : int = 3, final_fight : bool = False) -> CombatState:
+def build_combat(encounter_id : str, ascension : int, player, rng, max_energy : int = 3, final_fight : bool = False, variant : int | None = None) -> CombatState:
     """A CombatState for the encounter. The player must already be set up for the fight (draw pile shuffled, opening hand drawn, relics applied)."""
     cs = CombatState()
     cs.player = player
-    cs.enemies = build_enemies(encounter_id, ascension, rng)
+    cs.enemies = build_enemies(encounter_id, ascension, rng, variant)
     cs.ascension = ascension
     cs.turn_number = 1
     cs.max_energy = cs.energy = max_energy

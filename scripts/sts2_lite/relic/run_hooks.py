@@ -255,7 +255,10 @@ def rest_healed(run):
 
 
 def rest_extra_options(run) -> list[str]:
-    return [name for relic, name in (("SHOVEL", "DIG"), ("MEAT_CLEAVER", "COOK"), ("PAELS_GROWTH", "CLONE")) if run.has_relic(relic)]
+    names = [name for relic, name in (("SHOVEL", "DIG"), ("MEAT_CLEAVER", "COOK"), ("PAELS_GROWTH", "CLONE")) if run.has_relic(relic)]
+    if any(c["id"] == "BYRDONIS_EGG" for c in run.deck):         # ByrdonisEgg.TryModifyRestSiteOptions: the quest card adds HATCH
+        names.append("HATCH")
+    return names
 
 
 def rest_heal_offers(run) -> list[dict]:

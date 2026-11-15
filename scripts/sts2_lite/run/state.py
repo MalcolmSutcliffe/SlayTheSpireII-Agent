@@ -30,6 +30,9 @@ class Hidden:
     unknown_odds : UnknownRoomOdds = field(default_factory=UnknownRoomOdds)      # what a "?" will turn into
     potion_odds : float = 0.4                       # PotionRewardOdds.CurrentValue
     shop_removals : int = 0                         # ExtraFields.CardShopRemovalsUsed: card removals bought at merchants
+    events : list | None = None                     # the act's event pool, shuffled when the act began (ActModel.GenerateRooms): RoomSet.events
+    events_visited : int = 0                        # RoomSet.eventsVisited: the next event is events[events_visited % len]
+    spoils_point : tuple | None = None              # SpoilsMap: the (col, row) of the first treasure room of act 2, where the quest pays out
     relic_bag : object | None = None                # relic.bag.RelicGrabBag; None outside the sandbox (relics the game would draw are then only counted)
 
 
@@ -57,6 +60,7 @@ class RunState:
     relic_state : dict = field(default_factory=dict)      # what a relic counts: {relic_id: {...}} (combats seen, triggered, bought, ...)
     offers : list = field(default_factory=list)     # reward screens a relic or event queued: {'kind': 'cards', 'cards': [...]} | {'kind': 'potion'} | {'kind': 'relic'}; the run's player takes them
     pending_fight : str | None = None   # the fight an event option started (not played by the event)
+    pending_fight_args : dict = field(default_factory=dict)     # how it is played: variant, turn_limit, extra (reward kinds on top of the usual ones), on_win (what winning does)
     dead : bool = False
     # --- the rest of the run
     ascension : int = 0

@@ -351,11 +351,16 @@ EFFECTS : dict[str, Callable] = {
     "DISTINGUISHED_CAPE": _distinguished_cape, "JEWELRY_BOX": lambda c: c.add_card("APOTHEOSIS"),
     "ORRERY": lambda c: offer_cards(c, 3, n_screens=5), "CAULDRON": lambda c: offer_potions(c, 5),
     "ARCANE_SCROLL": lambda c: offer_cards(c, 1, pool_rarity="Rare", no_upgrade=True),
-    "GLASS_EYE": _glass_eye, "CALLING_BELL": _calling_bell,
+    "GLASS_EYE": _glass_eye, "CALLING_BELL": _calling_bell, "BYRDPIP": lambda c: _byrdpip(c),
 }
 
+def _byrdpip(c):
+    """Byrdpip.AfterObtained: every Byrdonis Egg in the deck becomes a Byrd Swoop (the pet itself does nothing)."""
+    c.run.deck[:] = [dict(card_entry("BYRD_SWOOP"), is_upgraded=card.get("is_upgraded", False)) if card["id"] == "BYRDONIS_EGG" else card for card in c.run.deck]
+
+
 # relics whose pickup effect needs something the sandbox does not model (maps, colourless / other-class cards, transformations into set cards, ...)
-NOT_MODELLED = frozenset({"BYRDPIP", "KALEIDOSCOPE", "SEA_GLASS"})      # other characters' cards (the engine has only Ironclad's); Byrdpip comes with the egg quest card
+NOT_MODELLED = frozenset({"KALEIDOSCOPE", "SEA_GLASS"})      # other characters' cards (the engine has only Ironclad's)
 
 
 def obtain_relic(ctx, relic_id : str | None = None, name : str | None = None, **pull):
@@ -370,3 +375,29 @@ def obtain_relic(ctx, relic_id : str | None = None, name : str | None = None, **
     if effect is not None:
         effect(ctx)
     return relic_id
+
+
+# RelicModel.IsTradable (Relic Trader, Ranwid the Elder): not a Starter / Event / Ancient relic, not used up, no pickup effect, no pet
+HAS_PICKUP_EFFECT = frozenset("""ALCHEMICAL_COFFER ASTROLABE BYRDPIP CALLING_BELL CAULDRON DISTINGUISHED_CAPE DOLLYS_MIRROR ELECTRIC_SHRYMP EMPTY_CAGE FAKE_LEES_WAFFLE FAKE_MANGO
+FRAGRANT_MUSHROOM GNARLED_HAMMER GOLDEN_COMPASS GOLDEN_PEARL HEFTY_TABLET JEWELRY_BOX KALEIDOSCOPE KIFUDA LEES_WAFFLE LOOMING_FRUIT LOST_COFFER MANGO
+NEOWS_TALISMAN NEOWS_TORMENT NEW_LEAF NUTRITIOUS_OYSTER OLD_COIN ORRERY PAELS_TOOTH PANDORAS_BOX PEAR PHIAL_HOLSTER POTION_BELT PRECARIOUS_SHEARS
+PRECISE_SCISSORS PUNCH_DAGGER ROYAL_STAMP SAND_CASTLE SEA_GLASS SERE_TALON STRAWBERRY TOY_BOX WAR_PAINT WHETSTONE YUMMY_COOKIE BOUND_PHYLACTERY PHYLACTERY_UNBOUND""".split())
+TRADABLE_RARITIES = frozenset({"Common", "Uncommon", "Rare", "Shop"})
+
+
+def tradable(run, relic_id : str) -> bool:
+    from sts2_lite.relic.pool_data import POOL
+    from sts2_lite.relic.run_hooks import state
+    rarity = {r[0]: r[1] for r in POOL}.get(relic_id)
+    if rarity not in TRADABLE_RARITIES or relic_id in HAS_PICKUP_EFFECT:
+        return False
+    s = run.relic_state.get(relic_id, {})
+    return not ((relic_id == "WONGOS_MYSTERY_TICKET" and s.get("gave")) or (relic_id == "MAW_BANK" and s.get("bought")) or (relic_id == "WINGED_BOOTS" and s.get("used", 0) >= 3))
+
+
+def remove_relic(run, relic_id : str):
+    """RelicCmd.Remove: none of the tradable relics undoes anything when it goes."""
+    for i, r in enumerate(run.relics):
+        if r["id"] == relic_id:
+            del run.relics[i]
+            break
