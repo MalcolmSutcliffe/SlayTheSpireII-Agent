@@ -1,8 +1,8 @@
 """The merchant: stock, prices, purchases, card removal."""
 from sts2_lite import rng
-from sandbox import RunSimulator
-from sandbox.shop import Shop
-from sandbox.Tests.test_sandbox import RandomFighter, sim_of
+from sts2_lite.campaign import RunSimulator
+from sts2_lite.campaign.shop import Shop
+from sts2_lite.campaign.Tests.test_sandbox import RandomFighter, sim_of
 from sts2_lite.potion import POTION_INFO, PotionId
 from sts2_lite.potion_pool import create_random_potions, potion_pool
 
@@ -212,7 +212,7 @@ def test_fake_merchant_sells_six_fake_relics_at_fifty_gold():
 
 def test_venerable_tea_set_gives_energy_in_the_fight_after_a_rest():
     from sts2_lite.relic import run_hooks
-    from sandbox.combat import start_fight
+    from sts2_lite.campaign.combat import start_fight
     for relic, extra in (("VENERABLE_TEA_SET", 2), ("FAKE_VENERABLE_TEA_SET", 1)):
         sim = sim_of(RandomFighter(), seed=1)
         r = sim.run_state

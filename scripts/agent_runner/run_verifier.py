@@ -1,4 +1,4 @@
-"""Checks the run model (sts2_lite and the sandbox) against a real run: every screen the game shows out of combat, and what each action did to the run.
+"""Checks the run model (sts2_lite and its campaign simulator) against a real run: every screen the game shows out of combat, and what each action did to the run.
 
     verifier = RunVerifier(log_path="run_mismatches.jsonl", record_path="run_states.jsonl")
     verifier.state(game_state)          # a screen the agent is about to decide on
@@ -25,6 +25,7 @@ from collections import Counter
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
+from sts2_lite.campaign.rewards import treasure_gold_range
 from sts2_lite.relic import run_hooks
 from sts2_lite.run import RunState
 from sts2_lite.run.state import Hidden
@@ -92,7 +93,7 @@ def known_relics() -> set:
     """Every relic id the model has any rule for: the pools, the pickup table, the ancients' offers and the ids the combat sim knows."""
     global _KNOWN_RELICS
     if _KNOWN_RELICS is None:
-        from sandbox import ancients
+        from sts2_lite.campaign import ancients
         from sts2_lite.relic import RelicId, ancient_data
         from sts2_lite.relic.bag import RELIC_INFO
         from sts2_lite.relic.pickup import EFFECTS, NOT_MODELLED
@@ -124,7 +125,7 @@ def known_relics() -> set:
 def node_kind(type_name : str | None) -> str | None:
     name = str(type_name or "").lower()
     for key, kind in (("shop", "Shop"), ("rest", "RestSite"), ("treasure", "Treasure"), ("elite", "Elite"), ("boss", "Boss"), ("monster", "Monster"),
-                      ("enemy", "Monster"), ("combat", "Monster"), ("unknown", "Unknown"), ("?", "Unknown"), ("event", "Event")):
+                      ("enemy", "Monster"), ("combat", "Monster"), ("unknown", "Unknown"), ("?", "Unknown"), ("event", "Event"), ("ancient", "Event")):
         if key in name:
             return kind
     return None
@@ -260,7 +261,7 @@ class RunVerifier:
         self.check_known(state, player)
 
     def check_known(self, state : dict, player : dict):
-        """Ids the model has never heard of: a relic, card or potion it would have to be taught before a sandbox run could meet it."""
+        """Ids the model has never heard of: a relic, card or potion it would have to be taught before a simulated run could meet it."""
         from sts2_lite.card.tables import CardId
         from sts2_lite.potion import PotionId
         for relic in relic_ids(player):
@@ -351,7 +352,7 @@ class RunVerifier:
         event_id = state.get("event_id")
         if not event_id or state.get("in_dialogue"):
             return
-        if _is_ancient(state) or event_id in ("FAKE_MERCHANT", "SCROLL_BOXES"):           # SCROLL_BOXES: the sandbox's screen for a relic's bundle choice
+        if _is_ancient(state) or event_id in ("FAKE_MERCHANT", "SCROLL_BOXES"):           # SCROLL_BOXES: the campaign simulator's screen for a relic's bundle choice
             return
         if event_id not in EVENTS:
             self.report("event.unmodelled", "warn", state, f"event {event_id} is not modelled", once=event_id)
@@ -375,7 +376,7 @@ class RunVerifier:
         from sts2_lite.card.tables import CARD_RARITY, COLORLESS_CARDS, CardId
         from sts2_lite.potion import POTION_INFO, PotionId, PotionRarity
         from sts2_lite.relic.bag import MERCHANT_BASE_COST, RELIC_INFO
-        from sandbox import shop as model
+        from sts2_lite.campaign import shop as model
         items = state.get("items") or []
         if not items:
             return
@@ -532,6 +533,21 @@ class RunVerifier:
             held = set(relic_ids(_player(anchor)))
             presets = tuple({"MAW_BANK": {"bought": b}} for b in (False, True)) if "MAW_BANK" in held else ({},)
             self.merge(self.outcomes(anchor, lambda run: run_hooks.room_entered(run, room, kind == "Unknown"), presets), expect)
+            if room == "Treasure":
+                self.expect_chest_gold(anchor, expect)
+
+    def expect_chest_gold(self, anchor, expect):
+        """The chest pays 42-52 gold as the room opens (x0.75 from Poverty): any of those is allowed."""
+        low, high = treasure_gold_range(mirror(anchor).ascension)
+        base = expect.get("gold")
+        if base is None:
+            base = _player(anchor).get("gold")
+        bases = base if isinstance(base, frozenset) else {base}
+        if any(b is None for b in bases):
+            return
+        expect["gold"] = frozenset(b + g for b in bases for g in range(low, high + 1))
+        if any(c.get("id") == "SPOILS_MAP" for c in (_player(anchor).get("deck") or [])):
+            expect["skip"] = True                  # Spoils Map adds more gold when the chest opens
 
     def after_rest(self, anchor, first, actions, seen, end, expect):
         action = first.get("action")
@@ -707,7 +723,7 @@ class RunVerifier:
         run.relics = [dict(r) for r in before.get("relics") or []]
         try:
             obtain_relic(Ctx(run, random.Random(0), CardPicker(random.Random(0))), relic)
-        except Exception as error:                                  # a pickup that needs the sandbox: leave it to the plain comparison
+        except Exception as error:                                  # a pickup that needs the campaign: leave it to the plain comparison
             self.report("relic.pickup", "warn", anchor, f"{relic}: the model could not play the pickup here ({type(error).__name__}: {error})", once=relic)
             expect["skip"] = True
             return
@@ -745,7 +761,7 @@ class RunVerifier:
 def _is_ancient(state : dict) -> bool:
     if state.get("decision") != "event_choice":
         return False
-    from sandbox import ancients
+    from sts2_lite.campaign import ancients
     return bool(state.get("is_ancient")) or state.get("event_id") in (ancients.ACT_ANCIENTS | set(ancients.SHARED) | {"NEOW"})
 
 

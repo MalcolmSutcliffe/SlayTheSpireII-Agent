@@ -446,7 +446,9 @@ def _constrict_on_creature_killed(combat : CombatSimulator, owner : Creature, am
 def _illusion_on_death(combat : CombatSimulator, owner : Creature, amount : int):
     # comes back at full hit points at the end of the enemy turn
     monster, _, slot = owner.enemy_id.rpartition("_")
-    combat.combat_state.revivals.append((monster, int(slot)))
+    # IllusionPower.ShouldPowerBeRemovedOnDeath: the buffs stay (its own Illusion too); a debuff goes, a temporary one with it
+    kept = tuple((sid, st.amount) for sid, st in owner.status.items() if not is_debuff(sid, st.amount) and sid not in (StatusId.ILLUSION, StatusId.MINION))
+    combat.combat_state.revivals.append((monster, int(slot), kept))
 
 def _ringing_on_end_turn(combat : CombatSimulator, owner : Creature, amount : int):
     # lasts for the one player turn after it was applied

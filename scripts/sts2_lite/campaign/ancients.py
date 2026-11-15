@@ -1,6 +1,6 @@
 """The ancients (Neow, Orobas, Pael, Tezcatara, Nonupeipe, Tanx, Vakuu, Darv): the three relics each one offers, as `GenerateInitialOptions` rolls them.
 
-Each ancient draws from the "ancients" stream (the game seeds one Rng per event; the sandbox shares one). `NextItem` is `choice`, `NextBool` a coin flip,
+Each ancient draws from the "ancients" stream (the game seeds one Rng per event; the campaign shares one). `NextItem` is `choice`, `NextBool` a coin flip,
 `NextFloat` a `random()`, `UnstableShuffle` a shuffle."""
 from __future__ import annotations
 

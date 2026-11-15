@@ -44,7 +44,7 @@ def card_dict(card : dict) -> dict:
 
 def _combat_start_potions(run : RunState, game):
     """BeforeCombatStart: Petrified Toad brings a Potion-Shaped Rock, Delicate Frond fills every open slot with a random potion (they stay on the belt after the fight)."""
-    from sandbox.rewards import random_potion
+    from sts2_lite.campaign.rewards import random_potion
     def add(potion_id : str):
         if len(run.potions) < run.potion_slots:
             run.potions.append({"id": potion_id, "name": potion_id.replace("_", " ").title()})

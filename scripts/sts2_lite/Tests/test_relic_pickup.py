@@ -82,7 +82,7 @@ def test_swift_on_a_card_that_picks_from_the_draw_pile_draws_after_the_pick():
     """Secret Weapon with Swift: the draw must not move the pile under the choice that is still open."""
     from sts2_lite.card import Card, CardId, EnchantmentId
     from sts2_lite.run import GameRng
-    from sandbox.combat import start_fight
+    from sts2_lite.campaign.combat import start_fight
     from sts2_lite.encounters import ENCOUNTERS
     run = new_run(0)
     run.deck = [card_entry("SECRET_WEAPON")] + [card_entry("STRIKE_IRONCLAD") for _ in range(12)] + [card_entry("BASH")]

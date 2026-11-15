@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from sts2_lite.event import CardPicker
 
-from sandbox import screens
+from sts2_lite.campaign import screens
 
 
 class AgentPicker(CardPicker):

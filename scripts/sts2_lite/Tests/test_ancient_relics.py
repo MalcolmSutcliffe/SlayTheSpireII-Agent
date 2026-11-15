@@ -118,7 +118,7 @@ def test_silken_tress_takes_the_gold_and_glams_the_first_card_reward_only():
 
 
 def test_neow_never_offers_massive_scroll():
-    from sandbox.ancients import neow
+    from sts2_lite.campaign.ancients import neow
     import random
     from sts2_lite.run import new_run
     for i in range(300):

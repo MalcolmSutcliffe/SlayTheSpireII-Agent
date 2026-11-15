@@ -6,7 +6,7 @@ import pytest
 
 from agent_runner.run_verifier import RunVerifier, replay, deck_counter
 from agents.base_agent import BaseAgent
-from sandbox import RunSimulator
+from sts2_lite.campaign import RunSimulator
 from sts2_lite import rng
 from sts2_lite.combat import CombatSimulator
 

@@ -10,10 +10,10 @@ from dataclasses import dataclass, field
 from agent_runner.decision_builders import build_decision
 from agents.decision import Option
 
-from sandbox import ancients, screens
-from sandbox.combat import StalledFight, carry_back, play_fight, start_fight
-from sandbox.pickers import AgentPicker
-from sandbox.rewards import Reward, generate_rewards
+from sts2_lite.campaign import ancients, screens
+from sts2_lite.campaign.combat import StalledFight, carry_back, play_fight, start_fight
+from sts2_lite.campaign.pickers import AgentPicker
+from sts2_lite.campaign.rewards import Reward, generate_rewards, treasure_gold_range
 from sts2_lite.encounters import ACTS, ENCOUNTERS, generate_rooms
 from sts2_lite.event import EVENTS, EventSession, available, card_entry
 from sts2_lite.event.run import can_upgrade
@@ -266,7 +266,7 @@ class RunSimulator:
                 if picked:
                     run_hooks.add_to_deck(r, picked)
             elif offer["kind"] == "potion":
-                from sandbox.rewards import random_potion
+                from sts2_lite.campaign.rewards import random_potion
                 self.add_potion(random_potion(self.game.stream("potion_rewards")))
             elif offer["kind"] == "relic":
                 self.gain_relic(offer.get("relic"))
@@ -285,7 +285,7 @@ class RunSimulator:
 
     def make_cards(self, room : str) -> list[dict]:
         """A card reward of `room`'s odds, as deck entries."""
-        from sandbox.rewards import _pool_options
+        from sts2_lite.campaign.rewards import _pool_options
         from sts2_lite.rewards import CardRarityOdds, create_reward_for_room
         r = self.run_state
         rng = self.game.stream("card_rewards")
@@ -368,6 +368,8 @@ class RunSimulator:
     def treasure(self):
         r = self.run_state
         r.visit("Treasure")
+        low, high = treasure_gold_range(r.ascension)
+        run_hooks.gain_gold(r, self.game.stream("treasure").randint(low, high))      # the chest pays on arrival
         if not run_hooks.treasure_gives_relic(r):
             self.ask(screens.treasure(r, [], True))
             return
@@ -378,7 +380,7 @@ class RunSimulator:
 
     def shop(self):
         """A merchant: buy until the agent leaves (or nothing is left to want). Card removal asks which card; The Courier restocks what is bought."""
-        from sandbox.shop import Shop, name_of, shop_ids
+        from sts2_lite.campaign.shop import Shop, name_of, shop_ids
         r = self.run_state
         r.visit("Shop")
         shop = Shop(r, self.game, self.game.stream("relics"))
@@ -409,7 +411,7 @@ class RunSimulator:
         stock = list(FAKE_MERCHANT_RELICS)
         self.game.stream("events").shuffle(stock)
         stock = stock[:FAKE_MERCHANT_STOCK]
-        from sandbox.shop import RELIC_JITTER, _jitter
+        from sts2_lite.campaign.shop import RELIC_JITTER, _jitter
         prices = [round(FAKE_MERCHANT_PRICE * _jitter(self.game.stream("events"), *RELIC_JITTER)) for _ in stock]
         while True:
             items = [{"index": i, "category": "relic", "is_stocked": relic is not None, "cost": prices[i] if relic else 0,

@@ -56,6 +56,8 @@ class Creature:
     def lose_hp(self, hp_loss : int):
         if hp_loss > 0 and StatusId.BUFFER in self.status and self._buffered():
             return
+        if hp_loss >= 1 and StatusId.INTANGIBLE in self.status:
+            hp_loss = 1                     # IntangiblePower.ModifyHpLostAfterOsty: any HP loss (Offering, Bloodletting, poison...), not only damage
         if hp_loss > 0 and self.relics:
             hp_loss = modify_hp_loss(self, hp_loss)
         if hp_loss > 0:

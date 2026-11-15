@@ -79,6 +79,6 @@ def _continuations(cs) -> tuple:
 
 def state_key(cs : CombatState) -> tuple:
     """Hashable fingerprint of `cs`; equal for states reached by playing the same cards in a different order."""
-    return (cs.energy, cs.max_energy, cs.turn_number, cs.extra_turns, cs.ascension, cs.cards_played, cs.won,
+    return (cs.energy, cs.max_energy, cs.turn_number, cs.extra_turns, cs.ascension, cs.cards_played, cs.sloth_played, cs.won,
             tuple(sorted(cs.revivals, key=repr)), tuple(_enemy(e) for e in cs.dormant), _continuations(cs), _choice(cs),
             _player(cs.player), tuple(_enemy(e) for e in cs.enemies))

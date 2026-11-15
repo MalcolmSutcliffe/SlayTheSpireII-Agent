@@ -605,7 +605,7 @@ class Card:
         if StatusId.RINGING in combat.combat_state.player.status and combat.combat_state.cards_played >= 1:
             return False
         sloth = combat.combat_state.player.status.get(StatusId.SLOTH)
-        if sloth is not None and combat.combat_state.cards_played >= sloth.amount:
+        if sloth is not None and combat.combat_state.sloth_played >= sloth.amount:
             return False            # Sloth: at most this many cards a turn
         if combat.combat_state.cards_played >= NORMALITY_CARD_LIMIT and any(c.card_id == CardId.NORMALITY for c in combat.combat_state.player.hand):
             return False            # Normality: at most 3 cards a turn while it is in hand

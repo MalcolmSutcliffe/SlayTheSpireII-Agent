@@ -272,6 +272,7 @@ class CombatSession:
         combat_state.final_fight = is_final_fight(game_state, self.act3_boss_floors)
         report_unimplemented(game_state, self.log_path, self.reported_cards)
         combat_state.carry_turn_counters(self.previous)
+        combat_state.carry_dampened_cards(self.previous)
         combat_state.carry_card_costs(self.previous)    # true costs under Brilliant Scarf's all-zero display
         combat_state.carry_known_top(self.previous)    # cards the agent put on top (Headbutt)
         combat_state.carry_boss_state(self.previous)         # the form of a dead Test Subject

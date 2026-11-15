@@ -1,10 +1,10 @@
-"""The run sandbox: whole runs with simple agents, determinism, the wall between the game's dice and the agent's, and the reward rules."""
+"""The campaign simulator: whole runs with simple agents, determinism, the wall between the game's dice and the agent's, and the reward rules."""
 import pytest
 
 from agents.base_agent import BaseAgent
-from sandbox import RunSimulator
-from sandbox.combat import agent_view, start_fight
-from sandbox.rewards import generate_rewards, gold_range
+from sts2_lite.campaign import RunSimulator
+from sts2_lite.campaign.combat import agent_view, start_fight
+from sts2_lite.campaign.rewards import generate_rewards, gold_range
 from sts2_lite import rng
 from sts2_lite.combat import CombatSimulator
 from sts2_lite.encounters import ENCOUNTERS

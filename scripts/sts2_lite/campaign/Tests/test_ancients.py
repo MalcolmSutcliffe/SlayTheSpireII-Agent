@@ -1,8 +1,8 @@
 """The ancients: what each offers, who turns up in which act, and the heal."""
 import random
 
-from sandbox import ancients
-from sandbox.Tests.test_sandbox import RandomFighter, sim_of
+from sts2_lite.campaign import ancients
+from sts2_lite.campaign.Tests.test_sandbox import RandomFighter, sim_of
 from sts2_lite.event import card_entry
 from sts2_lite.run import new_run
 

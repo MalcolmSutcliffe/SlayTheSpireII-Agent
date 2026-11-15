@@ -37,6 +37,16 @@ def gold_range(encounter : Encounter, ascension : int) -> tuple[int, int]:
     return low, high
 
 
+TREASURE_GOLD = (42, 52)    # OneOffSynchronizer.DoTreasureRoomRewards: NextInt(42, 53), times the Poverty multiplier
+
+
+def treasure_gold_range(ascension : int) -> tuple[int, int]:
+    low, high = TREASURE_GOLD
+    if ascension >= POVERTY_ASCENSION:
+        low, high = int(low * POVERTY_GOLD), int(high * POVERTY_GOLD)
+    return low, high
+
+
 def roll_potion_reward(run : RunState, room : str, rng) -> bool:
     """PotionRewardOdds.Roll: a pity system that moves 10% each way."""
     bonus = POTION_ELITE_BONUS if room == "Elite" else 0.0

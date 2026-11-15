@@ -65,6 +65,7 @@ class CombatState:
     def __init__(self):
         self.enemies = []
         self.cards_played = 0   # this player turn
+        self.sloth_played = 0   # SlothPower._cardsPlayedThisTurn: counted before a card's effect, auto-plays included
         self.revivals = []      # (monster, slot) killed enemies that return after the enemy turn
         self.continuations = []     # what a card still has to do once its card choice is answered, in order: ("finish", card, ...) its after-play step,
                                     # ("play", cards) the cards Cascade/Mayhem took off the draw pile
@@ -97,6 +98,7 @@ class CombatState:
         for raw_status in combat_state["player"].get("status", ()):
             if raw_status["id"] == "SLOTH_POWER":
                 cs.cards_played = max(cs.cards_played, raw_status["amount"])        # Sloth shows the cards played this turn
+                cs.sloth_played = raw_status["amount"]
         cs._read_hp_loss_count(combat_state)
         cs._infer_surround_facing(combat_state["enemies"])
         for enemy, raw in zip(cs.enemies, combat_state["enemies"]):
@@ -227,6 +229,7 @@ class CombatState:
                 if relic_id in PER_TURN_FLAG and kept.used:
                     relic.used = True
         self.cards_played = max(self.cards_played, previous.cards_played)
+        self.sloth_played = max(self.sloth_played, previous.sloth_played)
 
     def carry_card_costs(self, previous : CombatState | None):
         """While Brilliant Scarf's free card is due the game shows the whole hand at 0, so the costs were put back from the card
@@ -246,6 +249,38 @@ class CombatState:
                         self.player.hand[i] = own
                     del known[j]
                     break
+
+    def carry_dampened_cards(self, previous : CombatState | None):
+        """Dampen shows the plain versions of every upgraded card, so a state read from the game cannot say which ones Magi Knight's debuff
+        downgraded. The state before it did: those cards are matched up (pile by pile, then anywhere) so they come back when it ends."""
+        if previous is None or StatusId.DAMPEN not in self.player.status:
+            return
+        def originals(player):
+            found = []
+            for name in ("hand", "draw_pile", "discard_pile", "exhaust_pile"):
+                for card in getattr(player, name):
+                    if card.dampened_from is not None:
+                        found.append((name, card.card_id, card.dampened_from))
+                    elif card.is_upgraded:
+                        found.append((name, card.card_id, card))
+            return found
+        left = originals(previous.player)
+        if not left:
+            return
+        piles = ("hand", "draw_pile", "discard_pile", "exhaust_pile")
+        for same_pile in (True, False):
+            for name in piles:
+                pile = getattr(self.player, name)
+                for i, card in enumerate(pile):
+                    if card.is_upgraded or card.dampened_from is not None:
+                        continue
+                    for j, (old_name, card_id, original) in enumerate(left):
+                        if card_id == card.card_id and (old_name == name or not same_pile):
+                            own = Card.create_copy(card)
+                            own.dampened_from = original
+                            pile[i] = own
+                            del left[j]
+                            break
 
     def _read_hp_loss_count(self, combat_state : dict):
         """Tear Asunder's text counts the times HP was lost this fight ("Hits 12 times"): the game's own number, which the bridge does not give otherwise."""
@@ -412,6 +447,7 @@ class CombatState:
         new_cs.dormant = [Enemy.deepcopy(e) for e in combat_state.dormant]
         new_cs.continuations = list(combat_state.continuations)
         new_cs.cards_played = combat_state.cards_played
+        new_cs.sloth_played = combat_state.sloth_played
         new_cs.pending_choice = combat_state.pending_choice.deepcopy() if combat_state.pending_choice else None
         new_cs.won = combat_state.won
         return new_cs
@@ -670,10 +706,12 @@ class CombatSimulator:
         original, card = card, self.private_copy(card)
         to_top = self._nostalgia_mark(card)
         self._face_target(card, target_index)
+        self.combat_state.sloth_played += 1         # SlothPower.BeforeCardPlayed: the card counts before it does anything
         try:
             with self._playing(card):
                 card.play_card(self, target_index)
         except ValueError:
+            self.combat_state.sloth_played -= 1
             hand.insert(card_index, original)
             release_card(self.combat_state.player)
             raise
@@ -817,6 +855,11 @@ class CombatSimulator:
         if player.relics and blocks_play(player):
             self._move_played_card(card, force_exhaust, played=False)     # Velvet Choker: ShouldPlay false -> result pile unplayed
             return
+        sloth = player.status.get(StatusId.SLOTH)
+        if sloth is not None and cs.sloth_played >= sloth.amount:
+            self._move_played_card(card, force_exhaust, played=False)     # Sloth.ShouldPlay is false for an auto-play too
+            return
+        cs.sloth_played += 1
         auto_playing, self.auto_playing = self.auto_playing, True
         try:
             with self._playing(card):
@@ -1085,6 +1128,7 @@ class CombatSimulator:
             if radiant.amount <= 0:
                 del player.status[StatusId.RADIANT_TINCTURE]
         self.combat_state.cards_played = 0
+        self.combat_state.sloth_played = 0
         if enemies_start:
             for enemy in self.combat_state.enemies:
                 plating = enemy.status.get(StatusId.PLATING)
@@ -1177,8 +1221,11 @@ class CombatSimulator:
         revivals, self.combat_state.revivals = self.combat_state.revivals, []
         if all(e.is_minion for e in self.combat_state.enemies):
             return      # minions do not come back without their leader
-        for monster, slot in revivals:
-            self.summon(Enemy.spawn(monster, slot, self.combat_state.ascension), front=True)
+        for monster, slot, *kept in revivals:
+            enemy = Enemy.spawn(monster, slot, self.combat_state.ascension)
+            for status_id, amount in (kept[0] if kept else ()):
+                enemy.apply_status(status_id, amount)        # an Illusion keeps its buffs when it comes back
+            self.summon(enemy, front=True)
     
     def resolve_deaths(self):
         """Remove dead enemies and run their death effects. Cards with several hits call this

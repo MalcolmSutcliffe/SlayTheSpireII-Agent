@@ -4,7 +4,7 @@ A live bridge state already contains these effects, so none of this is registere
 Order follows CombatManager: room entry -> BeforeSideTurnStart -> energy reset -> BeforeHandDraw -> innate cards to the top ->
 hand draw -> AfterPlayerTurnStart -> AfterSideTurnStart. The choice relics (Toolbox, Choices Paradox, Gambling Chip) open a card choice only for an `interactive`
 Opening (a fight played for real); a deck evaluation leaves them out. Map relics (Fur Coat), Venerable Tea Set and the Poison/Soul relics (Twisted Funnel,
-Funerary Mask) are not modelled. Petrified Toad and Delicate Frond put potions on the belt before the fight (sandbox/combat.py).
+Funerary Mask) are not modelled. Petrified Toad and Delicate Frond put potions on the belt before the fight (sts2_lite/campaign/combat.py).
 """
 from __future__ import annotations
 from typing import TYPE_CHECKING
