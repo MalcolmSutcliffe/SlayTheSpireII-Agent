@@ -11,9 +11,10 @@ POOL = load_pool()
 needs_pool = pytest.mark.skipif(not POOL, reason="no round-1 captures in data/runs")
 
 
-def test_skip_floor_falls_as_the_deck_grows():
-    assert skip_floor(10) > skip_floor(20) > skip_floor(40)
-    assert skip_floor(5) == skip_floor(10)
+def test_skip_floor_does_not_depend_on_the_deck_size():
+    import inspect
+    assert "deck_size" not in inspect.signature(skip_floor).parameters
+    assert skip_floor() == 0.3
 
 
 def test_paired_gain():
@@ -178,7 +179,7 @@ def test_a_chain_carries_hp_and_a_dead_deck_fails_it():
 
 
 def test_early_floor_is_halved_for_the_first_three_rewards():
-    assert skip_floor(10, early=True) == skip_floor(10) / 2 and skip_floor(10, early=True) == 0.15
+    assert skip_floor(early=True) == skip_floor() / 2 and skip_floor(early=True) == 0.15
 
 
 @needs_pool
@@ -197,9 +198,9 @@ def test_early_floor_applies_to_the_first_three_rewards_of_a_run():
 
 
 def test_skip_floor_shrinks_with_a_weak_deck():
-    assert skip_floor(10, win_rate=0.8) == skip_floor(10) == 0.3
-    assert skip_floor(10, win_rate=0.4) == 0.15
-    assert abs(skip_floor(16, win_rate=0.3) - 0.3 * 10 / 16 * 0.375) < 1e-9
+    assert skip_floor(win_rate=0.8) == skip_floor() == 0.3
+    assert skip_floor(win_rate=0.4) == 0.15
+    assert abs(skip_floor(win_rate=0.3) - 0.3 * 0.375) < 1e-9
 
 
 def test_fights_fit_the_time_budget():
