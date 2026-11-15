@@ -8,7 +8,13 @@ from agents.sts2_MCTS.stats import expected_excess, settled, SETTLE_MIN_SCENARIO
 from test_mcts import defend
 from test_order import tree_with_line, dexterity_turn
 from test_paired import block_choice, root_with_visits, child_for
+from sts2_lite import rng
 from sts2_lite.card import CardId
+
+
+@pytest.fixture(autouse=True)
+def seeded():
+    rng.seed(3)          # the scenarios are drawn from the shared source: a fixed one keeps the counts below from changing from run to run
 
 
 # ---------------------------------------------------------------- the helpers
@@ -47,7 +53,7 @@ def test_a_noisy_even_line_is_settled_once_the_error_is_small_enough():
 
 
 # ---------------------------------------------------------------- the paired check
-CONFIG = SearchConfig(paired_scenarios=300)
+CONFIG = SearchConfig(paired_scenarios=300, check_workers=1)
 
 def test_a_decided_comparison_stops_after_the_minimum():
     """Defend+ beats Defend by 3 HP in every scenario: 100 are enough, not 300."""
@@ -59,7 +65,7 @@ def test_a_decided_comparison_stops_after_the_minimum():
     assert all(c["n"] == SETTLE_MIN_SCENARIOS for c in result["compared"])
 
 def test_a_batch_of_zero_replays_every_scenario_as_before():
-    mcts, root = root_with_visits(block_choice(), SearchConfig(paired_scenarios=300, paired_batch=0))
+    mcts, root = root_with_visits(block_choice(), SearchConfig(paired_scenarios=300, paired_batch=0, check_workers=1))
     result = mcts._paired_check(child_for(root, "play_card", 0))
     assert result["replaced"] and result["scenarios_run"] == 300 and result["compared"][0]["n"] == 300
 
@@ -67,7 +73,7 @@ def test_the_decision_is_the_same_with_and_without_batches():
     for picked in (0, 1):
         decisions = []
         for batch in (0, 50, 7):
-            mcts, root = root_with_visits(block_choice(), SearchConfig(paired_scenarios=300, paired_batch=batch))
+            mcts, root = root_with_visits(block_choice(), SearchConfig(paired_scenarios=300, paired_batch=batch, check_workers=1))
             result = mcts._paired_check(child_for(root, "play_card", picked))
             decisions.append(result["replaced"])
         assert len(set(decisions)) == 1
@@ -91,7 +97,7 @@ def test_an_undecided_rival_is_replayed_under_every_scenario(monkeypatch):
 def test_the_rollouts_used_are_fewer_when_the_comparison_is_decided(monkeypatch):
     calls = []
     for batch in (0, 50):
-        mcts, root = root_with_visits(block_choice(), SearchConfig(paired_scenarios=300, paired_batch=batch))
+        mcts, root = root_with_visits(block_choice(), SearchConfig(paired_scenarios=300, paired_batch=batch, check_workers=1))
         count = [0]
         original = mcts._paired_line_rollout
         def counting(*args, original=original, count=count):
@@ -104,7 +110,7 @@ def test_the_rollouts_used_are_fewer_when_the_comparison_is_decided(monkeypatch)
 
 
 # ---------------------------------------------------------------- the order check
-ORDER = dict(paired_scenarios=300, rollout=RolloutPolicy.ClaudeHeuristicGreedy)
+ORDER = dict(paired_scenarios=300, check_workers=1, rollout=RolloutPolicy.ClaudeHeuristicGreedy)
 
 def test_a_decided_order_stops_early_and_is_the_same_order():
     results = []

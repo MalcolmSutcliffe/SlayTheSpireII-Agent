@@ -80,7 +80,7 @@ class UctParams:
 class ConfidenceParams:
     """When the search may stop on its own (MCTS._check_statistical_exit) and when the top moves count as tied (MCTS._pick_root_child)."""
     epsilon : float = 0.005
-    max_regret_hp : float = 0.0             # stop when picking the most visited move is expected to cost no more than this many HP against the other moves, whatever the sampling noise (0 = off); see MCTS._expected_regret
+    max_regret_hp : float = 1.0             # stop when picking the most visited move is expected to cost no more than this many HP against the other moves, whatever the sampling noise (0 = off; 1.0 chosen by benchmarking 22 captured fights, see the regret table); see MCTS._expected_regret
     regret_min_visits : int = 150           # ... but not before the most visited move has this many visits: a rare loss that no rollout has met yet would make the estimates look surer than they are
     tie_min_visits : int = 30               # the top move needs this many visits before a tie is considered
     tie_visit_fraction : float = 0.5        # a tied move needs this share of the top move's visits: a thin estimate is within the margin by luck
@@ -150,6 +150,8 @@ class SearchConfig:
     reuse_tree : bool = True             # keep the part of the previous search the game actually went into (needs the same sts2_MCTS object)
     paired_scenarios : int = 300         # after the search, replay the picked move and its close rivals under the same random scenarios and keep the picked move unless a rival is significantly ahead (0 = off)
     order_check : bool = True            # after the search, try the turn's plain plays (no random outcome) in every order under the same scenarios and play first what the best order starts with (needs paired_scenarios > 0)
+    paired_batch : int = 50              # the paired and order checks replay their scenarios in batches of this size and stop replaying a line once it is settled (stats.settled); 0 = always all of them
+    check_workers : int = 6              # processes the paired and order checks replay their scenarios on (1 = in this process); the result does not depend on it, see parallel.py
     reward : RewardParams = field(default_factory=RewardParams)
     uct : UctParams = field(default_factory=UctParams)
     confidence : ConfidenceParams = field(default_factory=ConfidenceParams)

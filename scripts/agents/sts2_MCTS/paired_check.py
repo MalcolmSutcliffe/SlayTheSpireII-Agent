@@ -10,6 +10,7 @@ import math
 
 from sts2_lite import rng
 
+from agents.sts2_MCTS.parallel import Rollouts
 from agents.sts2_MCTS.stats import PAIRED_Z, settled, spread
 
 PAIRED_VISIT_FRACTION = 0.05     # a root move needs this share of the picked move's visits to be a contender
@@ -43,16 +44,21 @@ class PairedCheck:
             diffs = [[] for _ in rivals]
             open_rivals = list(range(len(rivals)))              # those still replayed: a rival that is settled is not replayed again
             base, ran = [], 0
-            for start in range(0, n, step):
-                if not open_rivals:
-                    break
-                chunk = seeds[start:start + step]
-                base = [mcts._paired_line_rollout(state, base_line, s) for s in chunk]
-                ran += len(chunk)
-                for i in list(open_rivals):
-                    diffs[i] += [mcts._paired_line_rollout(state, lines[i], s) - b for s, b in zip(chunk, base)]
-                    if step < n and settled(diffs[i]):
-                        open_rivals.remove(i)
+            with Rollouts(mcts, state, mcts._search_config.check_workers) as rollouts:
+                for start in range(0, n, step):
+                    if not open_rivals:
+                        break
+                    chunk = seeds[start:start + step]
+                    ran += len(chunk)
+                    # the picked line and every open rival under the chunk's scenarios, all at once
+                    jobs = [(base_line, s) for s in chunk] + [(lines[i], s) for i in open_rivals for s in chunk]
+                    ratings = rollouts.run(jobs)
+                    base = ratings[:len(chunk)]
+                    for k, i in enumerate(list(open_rivals)):
+                        rated = ratings[(k + 1) * len(chunk):(k + 2) * len(chunk)]
+                        diffs[i] += [r - b for r, b in zip(rated, base)]
+                        if step < n and settled(diffs[i]):
+                            open_rivals.remove(i)
             results = []
             for rival, d in zip(rivals, diffs):
                 mean, se = spread(d)

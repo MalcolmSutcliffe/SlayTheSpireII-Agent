@@ -16,6 +16,7 @@ def searcher(*children, sims=500):
     """A searcher whose root has children with the given (visits, mean reward, standard deviation)."""
     mcts = sts2_MCTS()
     mcts._search_config = SearchConfig()
+    mcts._starting_hp = 80                  # the regret exit states its limit in HP, so it needs the fight's starting HP
     root = sts2_DeterministicNode(None, make_state([strike()]), None)
     for i, (visits, mean, std) in enumerate(children):
         child = sts2_DeterministicNode(root, make_state([strike()]), {"action": "play_card", "card_index": i, "target": 0})

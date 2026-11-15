@@ -9,7 +9,7 @@ from sts2_lite import rng
 from sts2_lite.combat import CombatState, CombatSimulator
 
 from agents.sts2_MCTS.state_key import state_key
-from agents.sts2_MCTS.stats import Z_SCORE, TIE_MARGIN
+from agents.sts2_MCTS.stats import Z_SCORE, TIE_MARGIN, expected_excess
 from agents.sts2_MCTS.order_check import OrderCheck
 from agents.sts2_MCTS.paired_check import PairedCheck
 from agents.sts2_MCTS import outcome_score
@@ -637,11 +637,7 @@ class sts2_MCTS:
             rival_var = var(rival) if rival.visits > 30 else lead_var
             se = math.sqrt(lead_var/leader.visits + rival_var/max(1, rival.visits))
             gap = (rival.total_reward/rival.visits if rival.visits else lead_mean) - lead_mean       # > 0: the rival looks better
-            if se == 0.0:
-                regret += max(0.0, gap)
-                continue
-            d = gap / se
-            regret += gap * 0.5 * (1.0 + math.erf(d / math.sqrt(2.0))) + se * math.exp(-0.5 * d * d) / math.sqrt(2.0 * math.pi)
+            regret += expected_excess(gap, se)
         return regret
 
     def _check_exit(self) -> tuple[bool, str]:

@@ -20,6 +20,7 @@ from sts2_lite import rng
 from sts2_lite.combat import CombatSimulator, CombatState
 
 from agents.sts2_MCTS.state_key import state_key
+from agents.sts2_MCTS.parallel import Rollouts
 from agents.sts2_MCTS.stats import PAIRED_Z, TIE_MARGIN, settled, spread
 
 ORDER_MAX_UNITS = 7              # a line with more plays than this keeps the tree's order (the orderings multiply)
@@ -59,6 +60,7 @@ class OrderCheck:
         self.steps = 0                          # sim steps spent listing the orderings
         self.found : dict[tuple, list[tuple]] = {}      # end state -> the move ids that lead there (the tree's order first)
         self.memo = set()
+        self.rollouts = None                    # the processes the scenarios are replayed on, while the check runs
 
     def run(self, picked) -> dict | None:
         """Returns the details (and whether another order replaced the tree's, with its first play in "action"), or None when there
@@ -79,7 +81,9 @@ class OrderCheck:
         replays = self._replays(orders)
         if len(replays) < 2:
             return None
-        total = self._replay_under_scenarios(replays, scenarios)
+        with Rollouts(self.mcts, self.root, self.config.check_workers) as self.rollouts:
+            total = self._replay_under_scenarios(replays, scenarios)
+        self.rollouts = None
         chosen = self._choose(replays)
         return {
             "replaced" : chosen is not replays[0],
@@ -203,6 +207,7 @@ class OrderCheck:
         seeds = [rng.randrange(1 << 30) for _ in range(count)]      # fresh scenarios every time
         step = max(2, self.config.paired_batch) if self.config.paired_batch > 0 else count
         saved = rng.getstate()                                      # the rollouts reseed the shared source: put it back afterwards
+        rollouts = self.rollouts or Rollouts(self.mcts, self.root, 1)
         ran = 0
         try:
             for start in range(0, count, step):
@@ -210,10 +215,13 @@ class OrderCheck:
                 if not open_replays:
                     break
                 chunk = seeds[start:start + step]
-                base = [self.mcts._paired_line_rollout(self.root, replays[0].moves, s) for s in chunk]
                 ran += len(chunk)
-                for r in open_replays:
-                    r.diffs += [self.mcts._paired_line_rollout(self.root, r.moves, s) - b for s, b in zip(chunk, base)]
+                jobs = [(replays[0].moves, s) for s in chunk] + [(r.moves, s) for r in open_replays for s in chunk]
+                ratings = rollouts.run(jobs)
+                base = ratings[:len(chunk)]
+                for k, r in enumerate(open_replays):
+                    rated = ratings[(k + 1) * len(chunk):(k + 2) * len(chunk)]
+                    r.diffs += [x - b for x, b in zip(rated, base)]
                     if step < count and settled(r.diffs):
                         r.settled = True
         finally:
