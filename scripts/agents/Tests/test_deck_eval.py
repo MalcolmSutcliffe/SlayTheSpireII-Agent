@@ -260,7 +260,51 @@ def test_future_sample_is_repeatable_and_a_deck_with_extras_plays_them():
     a = sample_future(POOL, route, 1, 0, 30, 5)
     b = sample_future(POOL, route, 1, 0, 30, 5)
     assert [f.name for f in a[0]] == [f.name for f in b[0]] and a[1] == b[1]
-    assert {len(e) for e in a[1]} <= {1, 2, 3}
+    assert {len(e) for e in a[1]} <= {0, 1, 2, 3}      # act 1: 0.8 cards per fight ahead, 3 fights ahead
     ev, p = DeckEvaluator(POOL, target_types(POOL)), _player()
     with_extras = ev.score(p["deck"], p, a[0][:5], 3, a[1][:5])
     assert len(with_extras.rewards) == 5
+
+
+def test_extra_cards_scale_with_the_act():
+    from agents.deck_eval.future_cards import cards_gained, fight_act
+    from types import SimpleNamespace
+    import random
+    r = random.Random(3)
+    mean = lambda k, act: sum(cards_gained(k, act, r) for _ in range(4000)) / 4000
+    assert abs(mean(10, 1) - 8.0) < 0.01 and abs(mean(10, 2) - 5.0) < 0.01 and abs(mean(10, 3) - 3.0) < 0.01
+    assert abs(mean(3, 1) - 2.4) < 0.1 and abs(mean(1, 3) - 0.3) < 0.05
+    assert fight_act(SimpleNamespace(kinds=["boss"]), 1) == 2 and fight_act(SimpleNamespace(kinds=["combat", "boss"]), 1) == 1
+    assert fight_act(SimpleNamespace(kinds=["boss"]), 3) == 3
+
+
+def test_a_deck_changed_by_an_event_builds_a_fight_with_its_enchantment_and_new_cards():
+    """An event's result (enchanted card, added card) goes straight into a fight: the sim reads the enchantment and knows the new card."""
+    import random as _random
+    from agents.deck_eval.fight_builder import build_fight
+    from sts2_lite.event import EVENTS, EventSession, RunSnapshot, card_entry
+    if not POOL:
+        pytest.skip("no captures")
+    deck = [card_entry("STRIKE_IRONCLAD") for _ in range(5)] + [card_entry("DEFEND_IRONCLAD") for _ in range(5)] + [card_entry("BASH")]
+    run = RunSnapshot(hp=70, max_hp=80, gold=0, deck=deck)
+    EventSession(EVENTS["SAPPHIRE_SEED"], run, _random.Random(3)).play(["plant"])
+    EventSession(EVENTS["BUGSLAYER"], run, _random.Random(3)).play(["squash"])
+    sim = build_fight(next(t for t in POOL if t.kind == "weak"), run.deck, {"hp": 70, "max_hp": 80, "relics": []}, target_types(POOL))
+    cards = sim.combat_state.player.hand + sim.combat_state.player.draw_pile
+    assert [c.enchantment.name for c in cards if c.enchantment] == ["SOWN"] and any(c.name == "Squash" for c in cards)
+
+
+def test_a_spiral_strike_hits_twice_in_a_built_fight():
+    from agents.deck_eval.fight_builder import build_fight
+    from sts2_lite.event.run import card_entry, enchanted
+    if not POOL:
+        pytest.skip("no captures")
+
+    def damage(card):
+        deck = [card] + [card_entry("DEFEND_IRONCLAD")] * 4
+        sim = build_fight(next(t for t in POOL if t.kind == "weak"), deck, {"hp": 70, "max_hp": 80, "relics": []}, target_types(POOL))
+        state = sim.combat_state
+        before = sum(e.current_hp for e in state.enemies)
+        sim.play_card(next(i for i, c in enumerate(state.player.hand) if c.card_id.name == "STRIKE_IRONCLAD"), 0)
+        return before - sum(e.current_hp for e in state.enemies)
+    assert damage(enchanted(card_entry("STRIKE_IRONCLAD"), "SPIRAL", 1)) == 2 * damage(card_entry("STRIKE_IRONCLAD"))

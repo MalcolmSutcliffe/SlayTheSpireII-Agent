@@ -1,0 +1,613 @@
+{
+  "type": "decision",
+  "decision": "combat_play",
+  "room_type": "monster",
+  "context": {
+    "act": 2,
+    "floor": 11,
+    "ascension": 2
+  },
+  "run": {
+    "act": 2,
+    "floor": 11,
+    "ascension": 2
+  },
+  "round": 1,
+  "turn": "player",
+  "is_play_phase": null,
+  "energy": 3,
+  "max_energy": 3,
+  "hand": [
+    {
+      "index": 0,
+      "id": "STRIKE_IRONCLAD",
+      "name": "Strike",
+      "type": "Attack",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Deal 6 damage.",
+      "target_type": "AnyEnemy",
+      "can_play": true,
+      "unplayable_reason": null,
+      "is_upgraded": false,
+      "generated": false,
+      "enchantment": null,
+      "keywords": []
+    },
+    {
+      "index": 1,
+      "id": "STRIKE_IRONCLAD",
+      "name": "Strike",
+      "type": "Attack",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Deal 6 damage.",
+      "target_type": "AnyEnemy",
+      "can_play": true,
+      "unplayable_reason": null,
+      "is_upgraded": false,
+      "generated": false,
+      "enchantment": null,
+      "keywords": []
+    },
+    {
+      "index": 2,
+      "id": "BASH",
+      "name": "Bash",
+      "type": "Attack",
+      "cost": "2",
+      "star_cost": null,
+      "description": "Deal 8 damage. Apply 2 Vulnerable.",
+      "target_type": "AnyEnemy",
+      "can_play": true,
+      "unplayable_reason": null,
+      "is_upgraded": false,
+      "generated": false,
+      "enchantment": null,
+      "keywords": [
+        {
+          "name": "Vulnerable",
+          "description": "Vulnerable creatures take 50% more damage from Attacks."
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "id": "STRIKE_IRONCLAD",
+      "name": "Strike",
+      "type": "Attack",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Deal 6 damage.",
+      "target_type": "AnyEnemy",
+      "can_play": true,
+      "unplayable_reason": null,
+      "is_upgraded": false,
+      "generated": false,
+      "enchantment": null,
+      "keywords": []
+    },
+    {
+      "index": 4,
+      "id": "DEFEND_IRONCLAD",
+      "name": "Defend",
+      "type": "Skill",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Gain 5 Block.",
+      "target_type": "Self",
+      "can_play": true,
+      "unplayable_reason": null,
+      "is_upgraded": false,
+      "generated": false,
+      "enchantment": null,
+      "keywords": [
+        {
+          "name": "Block",
+          "description": "Until next turn, prevents damage."
+        }
+      ]
+    }
+  ],
+  "enemies": [
+    {
+      "entity_id": "BATTLE_FRIEND_V3_0",
+      "combat_id": 1,
+      "name": "Battle Friend V3.0",
+      "hp": 300,
+      "max_hp": 300,
+      "block": 0,
+      "status": [
+        {
+          "id": "BATTLEWORN_DUMMY_TIME_LIMIT_POWER",
+          "name": "Time Limit",
+          "amount": 3,
+          "type": "Buff",
+          "description": "You have 3 more turns to defeat the Battleworn Dummy.",
+          "keywords": []
+        }
+      ],
+      "move_id": "NOTHING_MOVE",
+      "follow_up_id": "NOTHING_MOVE",
+      "move_log": [
+        "NOTHING_MOVE"
+      ],
+      "intents": []
+    }
+  ],
+  "player": {
+    "character": "The Ironclad",
+    "hp": 76,
+    "max_hp": 80,
+    "block": 0,
+    "energy": 3,
+    "max_energy": 3,
+    "hand": [
+      {
+        "index": 0,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": []
+      },
+      {
+        "index": 1,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": []
+      },
+      {
+        "index": 2,
+        "id": "BASH",
+        "name": "Bash",
+        "type": "Attack",
+        "cost": "2",
+        "star_cost": null,
+        "description": "Deal 8 damage. Apply 2 Vulnerable.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Vulnerable",
+            "description": "Vulnerable creatures take 50% more damage from Attacks."
+          }
+        ]
+      },
+      {
+        "index": 3,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": []
+      },
+      {
+        "index": 4,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      }
+    ],
+    "draw_pile_count": 8,
+    "discard_pile_count": 0,
+    "exhaust_pile_count": 0,
+    "draw_pile": [
+      {
+        "index": 0,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "id": "INFLAME",
+        "name": "Inflame",
+        "type": "Power",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 2 Strength.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Strength",
+            "description": "Strength adds additional damage to Attacks."
+          }
+        ]
+      },
+      {
+        "index": 2,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 3,
+        "id": "MAD_SCIENCE",
+        "name": "Mad Science",
+        "type": "Power",
+        "cost": "1",
+        "star_cost": null,
+        "description": "At the end of combat, Upgrade a random card.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": []
+      },
+      {
+        "index": 4,
+        "id": "MAD_SCIENCE",
+        "name": "Mad Science",
+        "type": "Power",
+        "cost": "1",
+        "star_cost": null,
+        "description": "At the end of combat, Upgrade a random card.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": []
+      },
+      {
+        "index": 5,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": []
+      },
+      {
+        "index": 6,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Deal 6 damage.",
+        "target_type": "AnyEnemy",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": []
+      },
+      {
+        "index": 7,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block.",
+        "target_type": "Self",
+        "can_play": true,
+        "unplayable_reason": null,
+        "is_upgraded": false,
+        "generated": false,
+        "enchantment": null,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      }
+    ],
+    "discard_pile": [],
+    "exhaust_pile": [],
+    "gold": 99,
+    "status": [],
+    "relics": [
+      {
+        "id": "BURNING_BLOOD",
+        "name": "Burning Blood",
+        "description": "At the end of combat, heal 6 HP.",
+        "counter": null,
+        "status": "Normal",
+        "keywords": []
+      }
+    ],
+    "potions": [],
+    "potion_slots": 3,
+    "open_potion_slots": 3,
+    "deck": [
+      {
+        "index": 0,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "rarity": "Basic",
+        "cost": "1",
+        "star_cost": null,
+        "is_upgraded": false,
+        "upgrade_level": 0,
+        "can_upgrade": true,
+        "removable": true,
+        "floor_added": 1,
+        "enchantment": null
+      },
+      {
+        "index": 1,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "rarity": "Basic",
+        "cost": "1",
+        "star_cost": null,
+        "is_upgraded": false,
+        "upgrade_level": 0,
+        "can_upgrade": true,
+        "removable": true,
+        "floor_added": 1,
+        "enchantment": null
+      },
+      {
+        "index": 2,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "rarity": "Basic",
+        "cost": "1",
+        "star_cost": null,
+        "is_upgraded": false,
+        "upgrade_level": 0,
+        "can_upgrade": true,
+        "removable": true,
+        "floor_added": 1,
+        "enchantment": null
+      },
+      {
+        "index": 3,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "rarity": "Basic",
+        "cost": "1",
+        "star_cost": null,
+        "is_upgraded": false,
+        "upgrade_level": 0,
+        "can_upgrade": true,
+        "removable": true,
+        "floor_added": 1,
+        "enchantment": null
+      },
+      {
+        "index": 4,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "rarity": "Basic",
+        "cost": "1",
+        "star_cost": null,
+        "is_upgraded": false,
+        "upgrade_level": 0,
+        "can_upgrade": true,
+        "removable": true,
+        "floor_added": 1,
+        "enchantment": null
+      },
+      {
+        "index": 5,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "rarity": "Basic",
+        "cost": "1",
+        "star_cost": null,
+        "is_upgraded": false,
+        "upgrade_level": 0,
+        "can_upgrade": true,
+        "removable": true,
+        "floor_added": 1,
+        "enchantment": null
+      },
+      {
+        "index": 6,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "rarity": "Basic",
+        "cost": "1",
+        "star_cost": null,
+        "is_upgraded": false,
+        "upgrade_level": 0,
+        "can_upgrade": true,
+        "removable": true,
+        "floor_added": 1,
+        "enchantment": null
+      },
+      {
+        "index": 7,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "rarity": "Basic",
+        "cost": "1",
+        "star_cost": null,
+        "is_upgraded": false,
+        "upgrade_level": 0,
+        "can_upgrade": true,
+        "removable": true,
+        "floor_added": 1,
+        "enchantment": null
+      },
+      {
+        "index": 8,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "rarity": "Basic",
+        "cost": "1",
+        "star_cost": null,
+        "is_upgraded": false,
+        "upgrade_level": 0,
+        "can_upgrade": true,
+        "removable": true,
+        "floor_added": 1,
+        "enchantment": null
+      },
+      {
+        "index": 9,
+        "id": "BASH",
+        "name": "Bash",
+        "type": "Attack",
+        "rarity": "Basic",
+        "cost": "2",
+        "star_cost": null,
+        "is_upgraded": false,
+        "upgrade_level": 0,
+        "can_upgrade": true,
+        "removable": true,
+        "floor_added": 1,
+        "enchantment": null
+      },
+      {
+        "index": 10,
+        "id": "MAD_SCIENCE",
+        "name": "Mad Science",
+        "type": "Power",
+        "rarity": "Event",
+        "cost": "1",
+        "star_cost": null,
+        "is_upgraded": false,
+        "upgrade_level": 0,
+        "can_upgrade": true,
+        "removable": true,
+        "floor_added": 3,
+        "enchantment": null
+      },
+      {
+        "index": 11,
+        "id": "MAD_SCIENCE",
+        "name": "Mad Science",
+        "type": "Power",
+        "rarity": "Event",
+        "cost": "1",
+        "star_cost": null,
+        "is_upgraded": false,
+        "upgrade_level": 0,
+        "can_upgrade": true,
+        "removable": true,
+        "floor_added": 5,
+        "enchantment": null
+      },
+      {
+        "index": 12,
+        "id": "INFLAME",
+        "name": "Inflame",
+        "type": "Power",
+        "rarity": "Uncommon",
+        "cost": "1",
+        "star_cost": null,
+        "is_upgraded": false,
+        "upgrade_level": 0,
+        "can_upgrade": true,
+        "removable": true,
+        "floor_added": 6,
+        "enchantment": null
+      }
+    ]
+  },
+  "draw_pile_count": 8,
+  "discard_pile_count": 0,
+  "exhaust_pile_count": 0,
+  "battle": {
+    "round": 1,
+    "turn": "player",
+    "reviving": []
+  }
+}

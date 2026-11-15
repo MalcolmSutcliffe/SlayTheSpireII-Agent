@@ -236,6 +236,7 @@ SEEKER_STRIKE_OPTIONS = 3
 
 def play_seeker_strike(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], enemy_at(combat, target_index))
+    combat.resolve_deaths()     # what a kill triggers (Gremlin Horn's draw) happens before the pick is asked for
     draw = combat.combat_state.player.draw_pile
     if draw:        # three random cards of the draw pile (the game's own three are adopted when its screen appears)
         offered = rng.sample(range(len(draw)), min(SEEKER_STRIKE_OPTIONS, len(draw)))

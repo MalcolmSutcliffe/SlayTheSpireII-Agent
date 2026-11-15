@@ -3,7 +3,7 @@ from sts2_lite.card import Card, CardId, CardType, TargetType
 from sts2_lite.combat import CombatSimulator, CombatState
 from sts2_lite.creature import Creature
 from sts2_lite.enemy import Enemy
-from sts2_lite.events import EventType
+from sts2_lite.hooks import HookType
 from sts2_lite.player import Player
 from sts2_lite.status import StatusId, StatusInstance, TICKS_DOWN
 
@@ -157,21 +157,21 @@ def test_ritual_and_territorial_stack_without_mutation_errors():
     cs = make_state()
     cs.enemies[0].apply_status(StatusId.RITUAL, 3)
     cs.enemies[0].apply_status(StatusId.TERRITORIAL, 1)
-    CombatSimulator(cs).fire(EventType.ENEMY_TURN_END)
+    CombatSimulator(cs).fire(HookType.ENEMY_TURN_END)
     assert cs.enemies[0].status_amount(StatusId.STRENGTH) == 4
 
 def test_fire_with_no_handlers_is_a_noop():
     cs = make_state(hand=[strike()])
     sim = CombatSimulator(cs)
-    sim.fire(EventType.CARD_PLAYED, cs.player.hand[0])
-    sim.fire(EventType.END_TURN)
+    sim.fire(HookType.CARD_PLAYED, cs.player.hand[0])
+    sim.fire(HookType.END_TURN)
     assert cs.player.status == {}
 
 def test_handler_fires_for_clones_without_any_setup():
     cs = make_state()
     cs.enemies[0].apply_status(StatusId.RITUAL, 2)
     clone = CombatState.deepcopy(cs)
-    CombatSimulator(clone).fire(EventType.ENEMY_TURN_END)
+    CombatSimulator(clone).fire(HookType.ENEMY_TURN_END)
     assert clone.enemies[0].status_amount(StatusId.STRENGTH) == 2
     assert cs.enemies[0].status_amount(StatusId.STRENGTH) == 0
 

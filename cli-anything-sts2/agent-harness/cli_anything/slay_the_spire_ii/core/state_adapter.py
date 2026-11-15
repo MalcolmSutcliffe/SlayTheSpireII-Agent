@@ -144,6 +144,7 @@ def _normalize_card_reward(raw_state: JsonDict, context: JsonDict) -> JsonDict:
         "run": _copy_dict(raw_state.get("run")),
         "cards": _copy_list(reward.get("cards")),
         "can_skip": reward.get("can_skip", False),
+        "alternatives": _copy_list(reward.get("alternatives")),
         "player": _copy_dict(reward.get("player")),
         "card_reward": reward,
     }

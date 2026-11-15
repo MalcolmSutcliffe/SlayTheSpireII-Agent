@@ -8,6 +8,7 @@ import time
 
 from agents.decision import Decision, Option
 from agents.deck_eval.advisor import DeckAdvisor
+from agents.deck_eval.future_cards import sample_future
 
 Z = 1.5                     # standard errors the gain has to clear (a wrong skip costs about as much as a wrong take)
 FLOOR_AT_10_CARDS = 0.3     # reward points (a win is ~20, so 0.3 is ~1.5% of one): the smallest gain worth a card in a 10 card deck
@@ -18,7 +19,10 @@ FULL_FLOOR_WIN_RATE = 0.8   # the floor applies in full from this win rate on th
 BUDGET_SECONDS = 8.0        # thinking time of an ordinary card reward; the number of fights is set from it (a pilot of PILOT_FIGHTS measures the speed)
 BIG_BUDGET_SECONDS = 15.0   # the first EARLY_REWARDS picks and the boss reward shape the whole run: they get longer
 PILOT_FIGHTS = 100
+FUTURE_SHARE = 0.5          # the future-deck pass (future_cards) gets this share of the fights of the main pass, and its share of the time budget
+USE_FUTURE = False          # True: decide on the future-deck gain; False: only log it next to the current-deck gain
 MIN_FIGHTS, MAX_FIGHTS = 400, 12000
+MIN_FUTURE_FIGHTS = 200
 #              # sims per card reward (about 10 times what a quick decision needs)
 
 
@@ -67,7 +71,7 @@ class CardRewardChooser:
             pilot = self.advisor.sample(decision, PILOT_FIGHTS)
             clock = time.perf_counter()
             self.evaluator.score(deck, player, pilot[1], pilot[2])
-            count = fights_for(BIG_BUDGET_SECONDS if big else BUDGET_SECONDS, (time.perf_counter() - clock) / len(pilot[1]), offered + 1)
+            count = fights_for(BIG_BUDGET_SECONDS if big else BUDGET_SECONDS, (time.perf_counter() - clock) / len(pilot[1]), (offered + 1) * (1 + FUTURE_SHARE))
         mix, fights, seed, _ = self.advisor.sample(decision, count)
         start = time.perf_counter()
         skip = next((o for o in decision.options if o.action.get("action") == "skip_card_reward"), None)
@@ -80,14 +84,34 @@ class CardRewardChooser:
             score = self.evaluator.score(deck + [card], player, fights, seed)
             gain, se = paired_gain(score.rewards, base.rewards)
             rows.append((gain, se, opt, card.get("name", opt.label), score))
-        best = max(rows, key=lambda r: r[0], default=None)
+        future = self.future_rows(decision, deck, player, route, skip, max(MIN_FUTURE_FIGHTS, int(count * FUTURE_SHARE)))
+        best = max(future["rows"] if USE_FUTURE else rows, key=lambda r: r[0], default=None)
         if best is None:
             return skip or decision.options[0]
-        needed = Z * best[1] + skip_floor(len(deck), early, base.win_rate) if best else 0.0
+        needed = Z * best[1] + skip_floor(len(deck), early, future['base'].win_rate if USE_FUTURE else base.win_rate) if best else 0.0
         take = best is not None and best[0] > needed
         chosen = best[2] if take else (skip or best[2])
         self.log("card reward act %d (weak %.0f normal %.0f elite %.0f boss %.1f, %d fights, %.1fs, base win %.0f%%): " %
                  (mix.act, mix.weak, mix.normal, mix.elite, mix.boss, len(fights), time.perf_counter() - start, 100 * base.win_rate) +
                  ", ".join("%s %+.2f±%.2f (win %.0f%%)" % (n, g, se, 100 * s.win_rate) for g, se, o, n, s in rows) +
                  (" | needs > %.2f -> %s" % (needed, "take " + best[3] if take else "skip")) if best else "no cards")
+        self.log("  with the cards to come (%d fights, %.1f extra cards each, base win %.0f%%): " % (len(future["fights"]), future["extra"], 100 * future["base"].win_rate) +
+                 ", ".join("%s %+.2f±%.2f (win %.0f%%)" % (n, g, se, 100 * s.win_rate) for g, se, o, n, s in future["rows"]))
         return chosen
+
+    def future_rows(self, decision : Decision, deck : list[dict], player : dict, route, skip, count : int) -> dict:
+        """The same gains with the cards the deck is expected to gain by each fight added to every deck (future_cards): the rows, the base score,
+        the fights, and the average number of extra cards."""
+        ctx = decision.state.get("context") or decision.state.get("run") or {}
+        seed = 5000 + self.advisor._calls
+        fights, extras = sample_future(self.advisor.pool, route, ctx.get("act", 1), ctx.get("ascension", 0), count, seed)
+        base = self.evaluator.score(deck, player, fights, seed, extras)
+        rows = []
+        for opt in decision.options:
+            card = opt.data or {}
+            if opt is skip or "id" not in card:
+                continue
+            score = self.evaluator.score(deck + [card], player, fights, seed, extras)
+            gain, se = paired_gain(score.rewards, base.rewards)
+            rows.append((gain, se, opt, card.get("name", opt.label), score))
+        return {"rows": rows, "base": base, "fights": fights, "extra": sum(map(len, extras)) / max(1, len(extras))}

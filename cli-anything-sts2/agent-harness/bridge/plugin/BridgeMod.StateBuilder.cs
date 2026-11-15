@@ -1,4 +1,8 @@
 using System.Collections.Generic;
+using System.Reflection;
+using MegaCrit.Sts2.Core.Models.Events;
+using MegaCrit.Sts2.Core.Nodes.Events.Custom;
+using MegaCrit.Sts2.Core.Entities.CardRewardAlternatives;
 using System.Linq;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Context;
@@ -146,6 +150,24 @@ public static partial class BridgeMod
             {
                 result["state_type"] = "map";
                 result["map"] = BuildMapState(runState);
+            }
+            else if (topOverlay is NCardRewardSelectionScreen eventCardScreen)
+            {
+                // an event that offers cards (RewardsCmd.OfferCustom) shows the card choice over the event
+                result["state_type"] = "card_reward";
+                result["card_reward"] = BuildCardRewardState(eventCardScreen);
+            }
+            else if (topOverlay is NRewardsScreen eventRewardsScreen)
+            {
+                // Potion Courier, and every event that offers rewards: they are claimed like a combat's, over the event screen
+                result["state_type"] = "combat_rewards";
+                result["rewards"] = BuildRewardsState(eventRewardsScreen, runState);
+            }
+            else if (eventRoom.CanonicalEvent is FakeMerchant && GetLiveFakeMerchant(runState) is { StartedFight: false } fakeMerchant)
+            {
+                // The Merchant???: its stock is an inventory the event keeps, not a merchant room, so it is shown (and bought from) as a shop
+                result["state_type"] = "shop";
+                result["shop"] = BuildFakeMerchantShopState(fakeMerchant, runState);
             }
             else
             {
@@ -857,6 +879,71 @@ public static partial class BridgeMod
         return state;
     }
 
+    /// <summary>The player's own copy of the Merchant??? event, or null when this is not that event.</summary>
+    internal static FakeMerchant? GetLiveFakeMerchant(RunState runState)
+    {
+        try
+        {
+            var player = LocalContext.GetMe(runState);
+            return player == null ? null : RunManager.Instance.EventSynchronizer.GetEventForPlayer(player) as FakeMerchant;
+        }
+        catch (System.Exception)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>The Merchant???'s relics in the shape of a shop state (only relics; costs are the rolled ones, no shop discounts apply there).</summary>
+    private static Dictionary<string, object?> BuildFakeMerchantShopState(FakeMerchant fakeMerchant, RunState runState)
+    {
+        var state = new Dictionary<string, object?>();
+
+        var player = LocalContext.GetMe(runState);
+        if (player != null)
+        {
+            state["player"] = new Dictionary<string, object?>
+            {
+                ["character"] = SafeGetText(() => player.Character.Title),
+                ["hp"] = player.Creature.CurrentHp,
+                ["max_hp"] = player.Creature.MaxHp,
+                ["gold"] = player.Gold,
+                ["potion_slots"] = player.PotionSlots.Count,
+                ["open_potion_slots"] = player.PotionSlots.Count(s => s == null)
+            };
+        }
+
+        var items = new List<Dictionary<string, object?>>();
+        int index = 0;
+        foreach (var entry in fakeMerchant.Inventory.RelicEntries)
+        {
+            var item = new Dictionary<string, object?>
+            {
+                ["index"] = index,
+                ["category"] = "relic",
+                ["cost"] = entry.Cost,
+                ["is_stocked"] = entry.IsStocked,
+                ["can_afford"] = entry.EnoughGold
+            };
+            if (entry.Model is { } relic)
+            {
+                item["relic_id"] = relic.Id.Entry;
+                item["relic_name"] = SafeGetText(() => relic.Title);
+                item["relic_description"] = SafeGetText(() => relic.DynamicDescription);
+                item["keywords"] = BuildHoverTips(relic.HoverTipsExcludingRelic);
+            }
+            items.Add(item);
+            index++;
+        }
+        state["items"] = items;
+        state["is_fake_merchant"] = true;
+
+        var node = NEventRoom.Instance == null ? null : FindFirst<NFakeMerchant>(NEventRoom.Instance);
+        var proceedButton = node == null ? null : GetFieldValue<NProceedButton>(node, "_proceedButton");
+        state["can_proceed"] = proceedButton?.IsEnabled ?? false;
+
+        return state;
+    }
+
     private static Dictionary<string, object?> BuildShopState(MerchantRoom merchantRoom, RunState runState)
     {
         var state = new Dictionary<string, object?>();
@@ -1161,6 +1248,13 @@ public static partial class BridgeMod
         return state;
     }
 
+    /// <summary>The screen's private list of extra options (Skip, Reroll, Sacrifice, ...), in the order its buttons were made.</summary>
+    internal static IReadOnlyList<CardRewardAlternative> GetCardRewardAlternatives(NCardRewardSelectionScreen cardScreen)
+    {
+        var field = typeof(NCardRewardSelectionScreen).GetField("_extraOptions", BindingFlags.NonPublic | BindingFlags.Instance);
+        return field?.GetValue(cardScreen) as IReadOnlyList<CardRewardAlternative> ?? new List<CardRewardAlternative>();
+    }
+
     private static Dictionary<string, object?> BuildCardRewardState(NCardRewardSelectionScreen cardScreen)
     {
         var state = new Dictionary<string, object?>();
@@ -1200,8 +1294,24 @@ public static partial class BridgeMod
         }
         state["cards"] = cards;
 
+        // The screen's extra options, in button order: SKIP, then REROLL (Driftwood) and/or SACRIFICE (Pael's Wing).
+        var extra = GetCardRewardAlternatives(cardScreen);
+        var alternatives = new List<Dictionary<string, object?>>();
+        for (int i = 0; i < extra.Count; i++)
+        {
+            var alt = extra[i];
+            alternatives.Add(new Dictionary<string, object?>
+            {
+                ["index"] = i,
+                ["id"] = alt.OptionId.ToUpperInvariant(),
+                ["name"] = SafeGetText(() => alt.Title)
+            });
+        }
+        state["alternatives"] = alternatives;
         var altButtons = FindAll<NCardRewardAlternativeButton>(cardScreen);
-        state["can_skip"] = altButtons.Count > 0;
+        state["can_skip"] = extra.Count > 0
+            ? alternatives.Any(a => (string?)a["id"] == "SKIP")
+            : altButtons.Count > 0;
 
         return state;
     }

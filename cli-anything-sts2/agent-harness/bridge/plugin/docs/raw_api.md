@@ -176,6 +176,19 @@ Every state with a run in progress carries a top-level `player` object, built on
 { "action": "skip_card_reward" }
 ```
 
+**The Merchant??? (Fake Merchant event):**
+- The event is reported as a `shop` state (`shop.is_fake_merchant: true`) with only `relic` items; `cost` is the rolled price (no shop discounts apply there)
+- `shop_purchase` with the item `index` buys a relic; `proceed` closes its inventory, and a second `proceed` leaves
+- Before this the same screen was an `event` state with no options
+
+**Card reward extra options (Driftwood reroll, Pael's Wing sacrifice):**
+```json
+{ "action": "card_reward_alternative", "option_id": "REROLL" }
+```
+- `option_id`: one of the `alternatives[].id` of the `card_reward` state (`SKIP`, `REROLL`, `SACRIFICE`)
+- `REROLL` draws a new set of cards (once per reward); `SACRIFICE` gives the reward to Pael and completes it
+- The state's `card_reward.alternatives` lists them in button order: `[{"index", "id", "name"}, ...]`
+
 **Proceed:**
 ```json
 { "action": "proceed" }

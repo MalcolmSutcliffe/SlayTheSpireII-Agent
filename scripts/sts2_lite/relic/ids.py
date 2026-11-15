@@ -10,6 +10,7 @@ class RelicId(Enum):
     __hash__ = object.__hash__      # members are singletons; Enum.__hash__ is pure Python
     STRIKE_DUMMY = auto()
     MINIATURE_CANNON = auto()
+    MYSTIC_LIGHTER = auto()
     PAPER_PHROG = auto()
     PAPER_KRANE = auto()
     VAMBRACE = auto()

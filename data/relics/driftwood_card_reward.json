@@ -1,0 +1,319 @@
+{
+  "type": "decision",
+  "decision": "card_reward",
+  "context": {
+    "act": 1,
+    "floor": 2,
+    "ascension": 2
+  },
+  "run": {
+    "act": 1,
+    "floor": 2,
+    "ascension": 2
+  },
+  "cards": [
+    {
+      "index": 0,
+      "id": "BLOODLETTING",
+      "name": "Bloodletting",
+      "type": "Skill",
+      "cost": "0",
+      "star_cost": null,
+      "description": "Lose 3 HP. Gain [ironclad_energy_icon.png][ironclad_energy_icon.png].",
+      "rarity": "Common",
+      "is_upgraded": false,
+      "keywords": [
+        {
+          "name": "Energy",
+          "description": "Energy is used to play cards from your Hand."
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "id": "STOMP",
+      "name": "Stomp",
+      "type": "Attack",
+      "cost": "3",
+      "star_cost": null,
+      "description": "Deal 12 damage to ALL enemies. Costs 1 less [ironclad_energy_icon.png] for each Attack played this turn.",
+      "rarity": "Uncommon",
+      "is_upgraded": false,
+      "keywords": []
+    },
+    {
+      "index": 2,
+      "id": "BULLY",
+      "name": "Bully",
+      "type": "Attack",
+      "cost": "0",
+      "star_cost": null,
+      "description": "Deal 4 damage. Deals 2 additional damage for each Vulnerable on the enemy.",
+      "rarity": "Uncommon",
+      "is_upgraded": false,
+      "keywords": [
+        {
+          "name": "Vulnerable",
+          "description": "Vulnerable creatures take 50% more damage from Attacks."
+        }
+      ]
+    }
+  ],
+  "can_skip": true,
+  "player": {
+    "character": "The Ironclad",
+    "hp": 70,
+    "max_hp": 80,
+    "block": 0,
+    "energy": 3,
+    "max_energy": 3,
+    "hand": [],
+    "draw_pile_count": 0,
+    "discard_pile_count": 0,
+    "exhaust_pile_count": 0,
+    "draw_pile": [],
+    "discard_pile": [],
+    "exhaust_pile": [],
+    "gold": 119,
+    "status": [],
+    "relics": [
+      {
+        "id": "BURNING_BLOOD",
+        "name": "Burning Blood",
+        "description": "At the end of combat, heal 6 HP.",
+        "counter": null,
+        "status": "Normal",
+        "keywords": []
+      },
+      {
+        "id": "DRIFTWOOD",
+        "name": "Driftwood",
+        "description": "You may reroll each card reward once.",
+        "counter": null,
+        "status": "Normal",
+        "keywords": []
+      }
+    ],
+    "potions": [
+      {
+        "id": "FORTIFIER",
+        "name": "Fortifier",
+        "description": "Triple your Block.",
+        "slot": 0,
+        "can_use_in_combat": true,
+        "target_type": "AnyPlayer",
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      }
+    ],
+    "potion_slots": 3,
+    "open_potion_slots": 2,
+    "deck": [
+      {
+        "index": 0,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "rarity": "Basic",
+        "cost": "1",
+        "star_cost": null,
+        "is_upgraded": false,
+        "upgrade_level": 0,
+        "can_upgrade": true,
+        "removable": true,
+        "floor_added": 1,
+        "enchantment": null
+      },
+      {
+        "index": 1,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "rarity": "Basic",
+        "cost": "1",
+        "star_cost": null,
+        "is_upgraded": false,
+        "upgrade_level": 0,
+        "can_upgrade": true,
+        "removable": true,
+        "floor_added": 1,
+        "enchantment": null
+      },
+      {
+        "index": 2,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "rarity": "Basic",
+        "cost": "1",
+        "star_cost": null,
+        "is_upgraded": false,
+        "upgrade_level": 0,
+        "can_upgrade": true,
+        "removable": true,
+        "floor_added": 1,
+        "enchantment": null
+      },
+      {
+        "index": 3,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "rarity": "Basic",
+        "cost": "1",
+        "star_cost": null,
+        "is_upgraded": false,
+        "upgrade_level": 0,
+        "can_upgrade": true,
+        "removable": true,
+        "floor_added": 1,
+        "enchantment": null
+      },
+      {
+        "index": 4,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "rarity": "Basic",
+        "cost": "1",
+        "star_cost": null,
+        "is_upgraded": false,
+        "upgrade_level": 0,
+        "can_upgrade": true,
+        "removable": true,
+        "floor_added": 1,
+        "enchantment": null
+      },
+      {
+        "index": 5,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "rarity": "Basic",
+        "cost": "1",
+        "star_cost": null,
+        "is_upgraded": false,
+        "upgrade_level": 0,
+        "can_upgrade": true,
+        "removable": true,
+        "floor_added": 1,
+        "enchantment": null
+      },
+      {
+        "index": 6,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "rarity": "Basic",
+        "cost": "1",
+        "star_cost": null,
+        "is_upgraded": false,
+        "upgrade_level": 0,
+        "can_upgrade": true,
+        "removable": true,
+        "floor_added": 1,
+        "enchantment": null
+      },
+      {
+        "index": 7,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "rarity": "Basic",
+        "cost": "1",
+        "star_cost": null,
+        "is_upgraded": false,
+        "upgrade_level": 0,
+        "can_upgrade": true,
+        "removable": true,
+        "floor_added": 1,
+        "enchantment": null
+      },
+      {
+        "index": 8,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "rarity": "Basic",
+        "cost": "1",
+        "star_cost": null,
+        "is_upgraded": false,
+        "upgrade_level": 0,
+        "can_upgrade": true,
+        "removable": true,
+        "floor_added": 1,
+        "enchantment": null
+      },
+      {
+        "index": 9,
+        "id": "BASH",
+        "name": "Bash",
+        "type": "Attack",
+        "rarity": "Basic",
+        "cost": "2",
+        "star_cost": null,
+        "is_upgraded": false,
+        "upgrade_level": 0,
+        "can_upgrade": true,
+        "removable": true,
+        "floor_added": 1,
+        "enchantment": null
+      }
+    ]
+  },
+  "card_reward": {
+    "cards": [
+      {
+        "index": 0,
+        "id": "BLOODLETTING",
+        "name": "Bloodletting",
+        "type": "Skill",
+        "cost": "0",
+        "star_cost": null,
+        "description": "Lose 3 HP. Gain [ironclad_energy_icon.png][ironclad_energy_icon.png].",
+        "rarity": "Common",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Energy",
+            "description": "Energy is used to play cards from your Hand."
+          }
+        ]
+      },
+      {
+        "index": 1,
+        "id": "STOMP",
+        "name": "Stomp",
+        "type": "Attack",
+        "cost": "3",
+        "star_cost": null,
+        "description": "Deal 12 damage to ALL enemies. Costs 1 less [ironclad_energy_icon.png] for each Attack played this turn.",
+        "rarity": "Uncommon",
+        "is_upgraded": false,
+        "keywords": []
+      },
+      {
+        "index": 2,
+        "id": "BULLY",
+        "name": "Bully",
+        "type": "Attack",
+        "cost": "0",
+        "star_cost": null,
+        "description": "Deal 4 damage. Deals 2 additional damage for each Vulnerable on the enemy.",
+        "rarity": "Uncommon",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Vulnerable",
+            "description": "Vulnerable creatures take 50% more damage from Attacks."
+          }
+        ]
+      }
+    ],
+    "can_skip": true
+  }
+}

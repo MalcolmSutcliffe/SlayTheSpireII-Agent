@@ -1,8 +1,8 @@
-# Events that status handlers hook into (see STATUS_HANDLERS).
+# Combat hooks: the events that status and relic handlers subscribe to (see STATUS_HANDLERS). Event rooms live in sts2_lite/event.
 from enum import Enum, auto
 
 
-class EventType(Enum):
+class HookType(Enum):
     __hash__ = object.__hash__      # members are singletons; Enum.__hash__ is pure Python
     PLAY_PHASE_END = auto()    # player ends their turn, before anything else happens
     TURN_END_EARLY = auto()    # after the end-of-turn auto-plays, before END_TURN (BeforeSideTurnEndEarly)

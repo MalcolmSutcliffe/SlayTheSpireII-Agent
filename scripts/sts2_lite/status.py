@@ -9,7 +9,7 @@ import re
 from enum import Enum, auto
 
 from sts2_lite import rng
-from sts2_lite.events import EventType, HandlerTable
+from sts2_lite.hooks import HookType, HandlerTable
 
 class StatusId(Enum):
     __hash__ = object.__hash__      # members are singletons; Enum.__hash__ is pure Python
@@ -141,6 +141,13 @@ class StatusId(Enum):
     CLARITY_EXTRACT = auto()        # Clarity Extract: 1 extra card drawn at the start of each of the next `amount` turns
     RADIANT_TINCTURE = auto()       # Radiant Tincture: 1 extra Energy at the start of each of the next `amount` turns
     REPTILE_TRINKET = auto()        # Reptile Trinket: the Strength it gave this turn, lost when the turn ends
+    STRANGLE = auto()               # Mad Science (Choking): whenever the player plays a card this turn, the owner loses this much HP
+    CURIOUS = auto()                # Mad Science (Curious): Powers cost 1 less
+    IMPROVEMENT = auto()            # Mad Science (Improvement): upgrades a random card of the deck when the combat ends
+    HELLO_WORLD = auto()            # Hello World: a random common card joins the hand at the start of each turn
+    REBOUND = auto()                # Rebound: the next card played goes on top of the draw pile
+    BATTLEWORN_DUMMY_TIME_LIMIT = auto()    # the dummy's: turns left to defeat it (captured: 3 on turn 1)
+    FEEDING_FRENZY = auto()         # Feeding Frenzy: the Strength it gave is lost when the turn ends
     FLEX_POTION = auto()            # Flex Potion: the Strength it gave is lost when the turn ends
     SPEED_POTION = auto()           # Speed Potion: the Dexterity it gave is lost when the turn ends
 
@@ -166,7 +173,7 @@ DEBUFFS = frozenset({StatusId.WEAK, StatusId.VULNERABLE, StatusId.FRAIL, StatusI
                      StatusId.NO_DRAW, StatusId.NO_ENERGY_GAIN, StatusId.MANGLE, StatusId.CONFUSED,
                      StatusId.NO_BLOCK, StatusId.THE_GAMBIT, StatusId.DARK_SHACKLES,
                      StatusId.TENDER, StatusId.TAINTED, StatusId.SURROUNDED, StatusId.DISINTEGRATION, StatusId.MIND_ROT,
-                     StatusId.SLOTH, StatusId.WASTE_AWAY, StatusId.HEX, StatusId.DAMPEN, StatusId.CHAINS_OF_BINDING, StatusId.SMOGGY,
+                     StatusId.SLOTH, StatusId.WASTE_AWAY, StatusId.HEX, StatusId.DAMPEN, StatusId.CHAINS_OF_BINDING, StatusId.SMOGGY, StatusId.STRANGLE,
                      StatusId.DEMISE})
 
 def is_debuff(status_id : StatusId, amount : int) -> bool:
@@ -317,6 +324,16 @@ def _smoggy_on_card_played(combat : CombatSimulator, owner : Creature, amount : 
 def _smoggy_on_player_turn_ended(combat : CombatSimulator, owner : Creature, amount : int):
     owner.smogged = False           # SmoggyPower.AfterSideTurnEnd
 
+def _strangle_on_card_played(combat : CombatSimulator, owner : Creature, amount : int, card):
+    # Mad Science (Choking): every card the player plays this turn costs the owner HP (assumed: unpowered damage that block absorbs, and the card that applied it triggers it too)
+    owner.apply_damage(amount)
+
+def _strangle_on_player_turn_ended(combat : CombatSimulator, owner : Creature, amount : int):
+    owner.status.pop(StatusId.STRANGLE, None)
+
+def _rebound_on_player_turn_ended(combat : CombatSimulator, owner : Creature, amount : int):
+    owner.status.pop(StatusId.REBOUND, None)         # Rebound does not last between turns
+
 def _surprise_on_death(combat : CombatSimulator, owner : Creature, amount : int):
     # SurprisePower.AfterDeath: the merc's gremlins step out, and the Fat one carries off the gold the merc took
     from sts2_lite.enemy import Enemy
@@ -446,7 +463,9 @@ def _constrict_on_creature_killed(combat : CombatSimulator, owner : Creature, am
 def _illusion_on_death(combat : CombatSimulator, owner : Creature, amount : int):
     # comes back at full hit points at the end of the enemy turn
     monster, _, slot = owner.enemy_id.rpartition("_")
-    combat.combat_state.revivals.append((monster, int(slot)))
+    # IllusionPower.ShouldPowerBeRemovedOnDeath: the buffs stay (its own Illusion too); a debuff goes, a temporary one with it
+    kept = tuple((sid, st.amount) for sid, st in owner.status.items() if not is_debuff(sid, st.amount) and sid not in (StatusId.ILLUSION, StatusId.MINION))
+    combat.combat_state.revivals.append((monster, int(slot), kept) if kept else (monster, int(slot)))      # nothing to keep: the plain pair
 
 def _ringing_on_end_turn(combat : CombatSimulator, owner : Creature, amount : int):
     # lasts for the one player turn after it was applied
@@ -568,6 +587,15 @@ def _toric_toughness_on_block_cleared(combat : CombatSimulator, owner : Creature
 def _prep_time_on_turn_start(combat : CombatSimulator, owner : Creature, amount : int):
     if _own(combat, owner):
         owner.apply_status(StatusId.VIGOR, amount)
+
+def _hello_world_on_turn_start(combat : CombatSimulator, owner : Creature, amount : int):
+    """HelloWorldPower: a random common card of the character's pool joins the hand."""
+    if _own(combat, owner):
+        from sts2_lite.card import Card
+        from sts2_lite.card.tables import CARD_RARITY, GENERATABLE_CARDS, CardRarity
+        commons = [cid for cid in GENERATABLE_CARDS if CARD_RARITY[cid] == CardRarity.Common]
+        for _ in range(amount):
+            owner.add_to_hand(Card.create_generated(rng.choice(commons)))
 
 def _hit_all_enemies(combat : CombatSimulator, owner : Creature, damage : int):
     """Unpowered damage from the player to every enemy still alive."""
@@ -704,75 +732,79 @@ def nemesis_toggle(combat : CombatSimulator, owner : Creature):
     else:
         owner.status.pop(StatusId.INTANGIBLE, None)
 
-STATUS_HANDLERS : dict[tuple[StatusId, EventType], Callable] = HandlerTable({
-    (StatusId.ENRAGE, EventType.CARD_PLAYED) : _enrage_on_card_played,
-    (StatusId.WITHERING_PRESENCE, EventType.CARD_PLAYED) : _withering_presence_on_card_played,
-    (StatusId.INFERNO, EventType.PLAYER_TURN_START) : _inferno_on_turn_start,
-    (StatusId.RITUAL, EventType.ENEMY_TURN_END) : _ritual_on_enemy_turn_end,
-    (StatusId.RITUAL, EventType.END_TURN) : _ritual_on_end_turn,
-    (StatusId.REGEN, EventType.END_TURN) : _regen_on_end_turn,
-    (StatusId.DEMISE, EventType.ENEMY_TURN_END) : _demise_on_enemy_turn_end,
-    (StatusId.DUPLICATION, EventType.PLAYER_TURN_ENDED) : _duplicator_on_player_turn_ended,
-    (StatusId.TERRITORIAL, EventType.ENEMY_TURN_END) : _territorial_on_enemy_turn_end,
-    (StatusId.SHRINK, EventType.CREATURE_KILLED) : _shrink_on_creature_killed,
-    (StatusId.SLOW, EventType.CARD_PLAYED) : _slow_on_card_played,
-    (StatusId.CURL_UP, EventType.CARD_PLAYED) : _curl_up_on_card_played,
-    (StatusId.SLUMBER, EventType.ENEMY_TURN_END) : _slumber_on_enemy_turn_end,
-    (StatusId.CRAB_RAGE, EventType.CREATURE_KILLED) : _crab_rage_on_creature_killed,
-    (StatusId.SURROUNDED, EventType.CREATURE_KILLED) : _surrounded_on_creature_killed,
-    (StatusId.DISINTEGRATION, EventType.PLAYER_TURN_ENDED) : _disintegration_on_player_turn_ended,
-    (StatusId.SANDPIT, EventType.ENEMY_TURN_START) : _sandpit_on_enemy_turn_start,
-    (StatusId.HATCH, EventType.ENEMY_TURN_END) : _hatch_on_enemy_turn_end,
-    (StatusId.ESCAPE_ARTIST, EventType.ENEMY_TURN_END) : _escape_artist_on_enemy_turn_end,
-    (StatusId.VITAL_SPARK, EventType.CARD_PLAYED) : _vital_spark_on_card_played,
-    (StatusId.TAINTED, EventType.ENEMY_TURN_END) : _tainted_on_enemy_turn_end,
-    (StatusId.TENDER, EventType.CARD_PLAYED) : _tender_on_card_played,
-    (StatusId.TENDER, EventType.PLAYER_TURN_ENDED) : _tender_on_player_turn_ended,
-    (StatusId.INFESTED, EventType.DEATH) : _infested_on_death,
-    (StatusId.HEX, EventType.CREATURE_KILLED) : _hex_on_creature_killed,
-    (StatusId.DAMPEN, EventType.CREATURE_KILLED) : _dampen_on_creature_killed,
-    (StatusId.RAMPART, EventType.BEFORE_PLAYER_TURN) : _rampart_on_before_player_turn,
-    (StatusId.HIGH_VOLTAGE, EventType.ENEMY_TURN_END) : _high_voltage_on_enemy_turn_end,
-    (StatusId.STOCK, EventType.DEATH) : _stock_on_death,
-    (StatusId.GALVANIC, EventType.CARD_PLAYED) : _galvanic_on_card_played,
-    (StatusId.POSSESS_STRENGTH, EventType.DEATH) : _possess_on_death(StatusId.STRENGTH),
-    (StatusId.POSSESS_SPEED, EventType.DEATH) : _possess_on_death(StatusId.DEXTERITY),
-    (StatusId.ILLUSION, EventType.DEATH) : _illusion_on_death,
-    (StatusId.TANGLED, EventType.END_TURN) : _tangled_on_end_turn,
-    (StatusId.RINGING, EventType.END_TURN) : _ringing_on_end_turn,
-    (StatusId.CONSTRICT, EventType.END_TURN) : _constrict_on_end_turn,
-    (StatusId.CONSTRICT, EventType.CREATURE_KILLED) : _constrict_on_creature_killed,
-    (StatusId.PLATING, EventType.END_TURN) : _plating_on_end_turn,
-    (StatusId.ASLEEP, EventType.ENEMY_TURN_END) : _asleep_on_enemy_turn_end,
-    (StatusId.STEAM_ERUPTION, EventType.DEATH) : _steam_eruption_on_death,
-    (StatusId.SMOGGY, EventType.CARD_PLAYED) : _smoggy_on_card_played,
-    (StatusId.SMOGGY, EventType.PLAYER_TURN_ENDED) : _smoggy_on_player_turn_ended,
-    (StatusId.SURPRISE, EventType.DEATH) : _surprise_on_death,
-    (StatusId.RAVENOUS, EventType.CREATURE_KILLED) : _ravenous_on_creature_killed,
-    (StatusId.HARDENED_SHELL, EventType.BEFORE_PLAYER_TURN) : _hardened_shell_on_side_turn_start,
-    (StatusId.HARDENED_SHELL, EventType.ENEMY_TURN_START) : _hardened_shell_on_side_turn_start,
-    (StatusId.SELF_FORMING_CLAY, EventType.PLAYER_TURN_START) : _self_forming_clay_on_turn_start,
-    (StatusId.DEMON_FORM, EventType.PLAYER_TURN_START) : _demon_form_on_turn_start,
-    (StatusId.FEEL_NO_PAIN, EventType.CARD_EXHAUSTED) : _feel_no_pain_on_exhausted,
-    (StatusId.DARK_EMBRACE, EventType.CARD_EXHAUSTED) : _dark_embrace_on_exhausted,
-    (StatusId.DARK_EMBRACE, EventType.ETHEREAL_EXHAUSTED) : _dark_embrace_on_ethereal_exhausted,
-    (StatusId.JUGGERNAUT, EventType.BLOCK_GAINED) : _juggernaut_on_block_gained,
-    (StatusId.RAGE, EventType.CARD_PLAYED) : _rage_on_card_played,
-    (StatusId.RAGE, EventType.END_TURN) : _rage_on_end_turn,
-    (StatusId.FLAME_BARRIER, EventType.ENEMY_TURN_END) : _flame_barrier_on_enemy_turn_end,
-    (StatusId.DIAMOND_DIADEM, EventType.ENEMY_TURN_END) : _diamond_diadem_on_enemy_turn_end,
-    (StatusId.ONE_TWO_PUNCH, EventType.END_TURN) : _one_two_punch_on_end_turn,
-    (StatusId.JUGGLING, EventType.CARD_PLAYED) : _juggling_on_card_played,
-    (StatusId.AGGRESSION, EventType.BEFORE_PLAYER_TURN) : _aggression_on_before_player_turn,
-    (StatusId.STAMPEDE, EventType.PLAY_PHASE_END) : _stampede_on_end_turn,
-    (StatusId.BLOCK_NEXT_TURN, EventType.BLOCK_CLEARED) : _block_next_turn_on_block_cleared,
-    (StatusId.TORIC_TOUGHNESS, EventType.BLOCK_CLEARED) : _toric_toughness_on_block_cleared,
-    (StatusId.PREP_TIME, EventType.PLAYER_TURN_START) : _prep_time_on_turn_start,
-    (StatusId.ROLLING_BOULDER, EventType.PLAYER_TURN_START) : _rolling_boulder_on_turn_start,
-    (StatusId.PANACHE, EventType.CARD_PLAYED) : _panache_on_card_played,
-    (StatusId.PANACHE, EventType.PLAYER_TURN_ENDED) : _panache_on_player_turn_ended,
-    (StatusId.THE_BOMB, EventType.END_TURN) : _the_bomb_on_end_turn,
-    (StatusId.MAYHEM, EventType.AUTO_PRE_PLAY) : _mayhem_on_auto_pre_play,
-    (StatusId.CALAMITY, EventType.CARD_PLAYED) : _calamity_on_card_played,
-    (StatusId.ENTROPY, EventType.PLAYER_TURN_START) : _entropy_on_turn_start,
+STATUS_HANDLERS : dict[tuple[StatusId, HookType], Callable] = HandlerTable({
+    (StatusId.ENRAGE, HookType.CARD_PLAYED) : _enrage_on_card_played,
+    (StatusId.WITHERING_PRESENCE, HookType.CARD_PLAYED) : _withering_presence_on_card_played,
+    (StatusId.INFERNO, HookType.PLAYER_TURN_START) : _inferno_on_turn_start,
+    (StatusId.HELLO_WORLD, HookType.PLAYER_TURN_START) : _hello_world_on_turn_start,
+    (StatusId.RITUAL, HookType.ENEMY_TURN_END) : _ritual_on_enemy_turn_end,
+    (StatusId.RITUAL, HookType.END_TURN) : _ritual_on_end_turn,
+    (StatusId.REGEN, HookType.END_TURN) : _regen_on_end_turn,
+    (StatusId.DEMISE, HookType.ENEMY_TURN_END) : _demise_on_enemy_turn_end,
+    (StatusId.DUPLICATION, HookType.PLAYER_TURN_ENDED) : _duplicator_on_player_turn_ended,
+    (StatusId.TERRITORIAL, HookType.ENEMY_TURN_END) : _territorial_on_enemy_turn_end,
+    (StatusId.SHRINK, HookType.CREATURE_KILLED) : _shrink_on_creature_killed,
+    (StatusId.SLOW, HookType.CARD_PLAYED) : _slow_on_card_played,
+    (StatusId.CURL_UP, HookType.CARD_PLAYED) : _curl_up_on_card_played,
+    (StatusId.SLUMBER, HookType.ENEMY_TURN_END) : _slumber_on_enemy_turn_end,
+    (StatusId.CRAB_RAGE, HookType.CREATURE_KILLED) : _crab_rage_on_creature_killed,
+    (StatusId.SURROUNDED, HookType.CREATURE_KILLED) : _surrounded_on_creature_killed,
+    (StatusId.DISINTEGRATION, HookType.PLAYER_TURN_ENDED) : _disintegration_on_player_turn_ended,
+    (StatusId.SANDPIT, HookType.ENEMY_TURN_START) : _sandpit_on_enemy_turn_start,
+    (StatusId.HATCH, HookType.ENEMY_TURN_END) : _hatch_on_enemy_turn_end,
+    (StatusId.ESCAPE_ARTIST, HookType.ENEMY_TURN_END) : _escape_artist_on_enemy_turn_end,
+    (StatusId.VITAL_SPARK, HookType.CARD_PLAYED) : _vital_spark_on_card_played,
+    (StatusId.TAINTED, HookType.ENEMY_TURN_END) : _tainted_on_enemy_turn_end,
+    (StatusId.TENDER, HookType.CARD_PLAYED) : _tender_on_card_played,
+    (StatusId.TENDER, HookType.PLAYER_TURN_ENDED) : _tender_on_player_turn_ended,
+    (StatusId.INFESTED, HookType.DEATH) : _infested_on_death,
+    (StatusId.HEX, HookType.CREATURE_KILLED) : _hex_on_creature_killed,
+    (StatusId.DAMPEN, HookType.CREATURE_KILLED) : _dampen_on_creature_killed,
+    (StatusId.RAMPART, HookType.BEFORE_PLAYER_TURN) : _rampart_on_before_player_turn,
+    (StatusId.HIGH_VOLTAGE, HookType.ENEMY_TURN_END) : _high_voltage_on_enemy_turn_end,
+    (StatusId.STOCK, HookType.DEATH) : _stock_on_death,
+    (StatusId.GALVANIC, HookType.CARD_PLAYED) : _galvanic_on_card_played,
+    (StatusId.POSSESS_STRENGTH, HookType.DEATH) : _possess_on_death(StatusId.STRENGTH),
+    (StatusId.POSSESS_SPEED, HookType.DEATH) : _possess_on_death(StatusId.DEXTERITY),
+    (StatusId.ILLUSION, HookType.DEATH) : _illusion_on_death,
+    (StatusId.TANGLED, HookType.END_TURN) : _tangled_on_end_turn,
+    (StatusId.RINGING, HookType.END_TURN) : _ringing_on_end_turn,
+    (StatusId.CONSTRICT, HookType.END_TURN) : _constrict_on_end_turn,
+    (StatusId.CONSTRICT, HookType.CREATURE_KILLED) : _constrict_on_creature_killed,
+    (StatusId.PLATING, HookType.END_TURN) : _plating_on_end_turn,
+    (StatusId.ASLEEP, HookType.ENEMY_TURN_END) : _asleep_on_enemy_turn_end,
+    (StatusId.STEAM_ERUPTION, HookType.DEATH) : _steam_eruption_on_death,
+    (StatusId.SMOGGY, HookType.CARD_PLAYED) : _smoggy_on_card_played,
+    (StatusId.SMOGGY, HookType.PLAYER_TURN_ENDED) : _smoggy_on_player_turn_ended,
+    (StatusId.STRANGLE, HookType.CARD_PLAYED) : _strangle_on_card_played,
+    (StatusId.STRANGLE, HookType.PLAYER_TURN_ENDED) : _strangle_on_player_turn_ended,
+    (StatusId.REBOUND, HookType.PLAYER_TURN_ENDED) : _rebound_on_player_turn_ended,
+    (StatusId.SURPRISE, HookType.DEATH) : _surprise_on_death,
+    (StatusId.RAVENOUS, HookType.CREATURE_KILLED) : _ravenous_on_creature_killed,
+    (StatusId.HARDENED_SHELL, HookType.BEFORE_PLAYER_TURN) : _hardened_shell_on_side_turn_start,
+    (StatusId.HARDENED_SHELL, HookType.ENEMY_TURN_START) : _hardened_shell_on_side_turn_start,
+    (StatusId.SELF_FORMING_CLAY, HookType.PLAYER_TURN_START) : _self_forming_clay_on_turn_start,
+    (StatusId.DEMON_FORM, HookType.PLAYER_TURN_START) : _demon_form_on_turn_start,
+    (StatusId.FEEL_NO_PAIN, HookType.CARD_EXHAUSTED) : _feel_no_pain_on_exhausted,
+    (StatusId.DARK_EMBRACE, HookType.CARD_EXHAUSTED) : _dark_embrace_on_exhausted,
+    (StatusId.DARK_EMBRACE, HookType.ETHEREAL_EXHAUSTED) : _dark_embrace_on_ethereal_exhausted,
+    (StatusId.JUGGERNAUT, HookType.BLOCK_GAINED) : _juggernaut_on_block_gained,
+    (StatusId.RAGE, HookType.CARD_PLAYED) : _rage_on_card_played,
+    (StatusId.RAGE, HookType.END_TURN) : _rage_on_end_turn,
+    (StatusId.FLAME_BARRIER, HookType.ENEMY_TURN_END) : _flame_barrier_on_enemy_turn_end,
+    (StatusId.DIAMOND_DIADEM, HookType.ENEMY_TURN_END) : _diamond_diadem_on_enemy_turn_end,
+    (StatusId.ONE_TWO_PUNCH, HookType.END_TURN) : _one_two_punch_on_end_turn,
+    (StatusId.JUGGLING, HookType.CARD_PLAYED) : _juggling_on_card_played,
+    (StatusId.AGGRESSION, HookType.BEFORE_PLAYER_TURN) : _aggression_on_before_player_turn,
+    (StatusId.STAMPEDE, HookType.PLAY_PHASE_END) : _stampede_on_end_turn,
+    (StatusId.BLOCK_NEXT_TURN, HookType.BLOCK_CLEARED) : _block_next_turn_on_block_cleared,
+    (StatusId.TORIC_TOUGHNESS, HookType.BLOCK_CLEARED) : _toric_toughness_on_block_cleared,
+    (StatusId.PREP_TIME, HookType.PLAYER_TURN_START) : _prep_time_on_turn_start,
+    (StatusId.ROLLING_BOULDER, HookType.PLAYER_TURN_START) : _rolling_boulder_on_turn_start,
+    (StatusId.PANACHE, HookType.CARD_PLAYED) : _panache_on_card_played,
+    (StatusId.PANACHE, HookType.PLAYER_TURN_ENDED) : _panache_on_player_turn_ended,
+    (StatusId.THE_BOMB, HookType.END_TURN) : _the_bomb_on_end_turn,
+    (StatusId.MAYHEM, HookType.AUTO_PRE_PLAY) : _mayhem_on_auto_pre_play,
+    (StatusId.CALAMITY, HookType.CARD_PLAYED) : _calamity_on_card_played,
+    (StatusId.ENTROPY, HookType.PLAYER_TURN_START) : _entropy_on_turn_start,
 })

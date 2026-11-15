@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 from sts2_lite.relic import RelicId, block_gained, block_multiplier, debuff_multiplier
 from sts2_lite.status import StatusId
 
-from sts2_lite.card.constants import ENCHANT_CORRUPTED_DAMAGE, ENCHANT_EMBER_DAMAGE, ENCHANT_INSTINCT_DAMAGE
+from sts2_lite.card.constants import ENCHANT_CORRUPTED_DAMAGE, ENCHANT_EMBER_DAMAGE, ENCHANT_INSTINCT_DAMAGE, MAD_SCIENCE_DAMAGE
 from sts2_lite.card.ids import CardId, EnchantmentId
 from sts2_lite.card.tables import DEFEND_CARDS
 
@@ -94,7 +94,7 @@ def temp_strength(target : Creature, marker : StatusId, amount : int, sign : int
     target.apply_status(StatusId.STRENGTH, sign * amount, bypass_artifact=True)
 
 PLAIN_DAMAGE = {        # id : (damage, damage upgraded) of the cards that print one fixed number
-    CardId.BYRD_SWOOP : (14, 18), CardId.PECK : (2, 2), CardId.EXTERMINATE : (3, 4), CardId.SQUASH : (10, 12),
+    CardId.BYRD_SWOOP : (14, 18), CardId.CLASH : (14, 18), CardId.REBOUND : (9, 12), CardId.RIP_AND_TEAR : (7, 9), CardId.PECK : (2, 2), CardId.EXTERMINATE : (3, 4), CardId.SQUASH : (10, 12),
     CardId.ANGER : (6, 8), CardId.BASH : (8, 10), CardId.BLUDGEON : (32, 42), CardId.BREAK : (20, 30),
     CardId.BREAKTHROUGH : (9, 13), CardId.CINDER : (18, 24), CardId.CONFLAGRATION : (2, 2),
     CardId.DISMANTLE : (8, 10), CardId.FEED : (10, 12), CardId.FIEND_FIRE : (7, 10), CardId.FIGHT_ME : (5, 6),
@@ -133,6 +133,14 @@ def _printed_damage(card : Card, combat : CombatSimulator) -> int:
         return (6 if up else 5) + card.bonus_damage
     if card.card_id == CardId.THRASH:
         return (6 if up else 4) + card.bonus_damage
+    if card.card_id == CardId.MIND_BLAST:
+        return len(player.draw_pile)
+    if card.card_id == CardId.GOLD_AXE:
+        return player.cards_played_total
+    if card.card_id == CardId.REND:      # no target in the hand: the printed damage, without the bonus for the debuffs on a target
+        return 18 if up else 15
+    if card.card_id == CardId.MAD_SCIENCE:      # an Attack Mad Science: 12 a hit whatever its rider
+        return MAD_SCIENCE_DAMAGE
     return PLAIN_DAMAGE[card.card_id][up]
 
 ###

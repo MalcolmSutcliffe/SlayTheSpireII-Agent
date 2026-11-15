@@ -6,7 +6,7 @@ from sts2_lite.combat import CombatSimulator, CombatState
 from sts2_lite.damage import modify_damage
 from sts2_lite.enemy import Enemy, STUNNED
 from sts2_lite.enemy_moves import Move, Branch
-from sts2_lite.events import EventType
+from sts2_lite.hooks import HookType
 from sts2_lite.player import Player
 from sts2_lite.status import StatusId, StatusInstance
 
@@ -150,10 +150,10 @@ def test_curl_up_gives_block_after_the_card_that_hit():
     hit(e, cs, 3)
     hit(e, cs, 3)
     assert e.block == 0         # still in the middle of the card
-    sim.fire(EventType.CARD_PLAYED, Card.create(CardId.DAZED))
+    sim.fire(HookType.CARD_PLAYED, Card.create(CardId.DAZED))
     assert e.block == 7 and StatusId.CURL_UP not in e.status
     hit(e, cs, 3)
-    sim.fire(EventType.CARD_PLAYED, Card.create(CardId.DAZED))
+    sim.fire(HookType.CARD_PLAYED, Card.create(CardId.DAZED))
     assert e.block == 4         # the 7 absorbed the hit; no second Curl Up
 
 def test_flutter_counts_down_on_unblocked_powered_hits_then_stuns():

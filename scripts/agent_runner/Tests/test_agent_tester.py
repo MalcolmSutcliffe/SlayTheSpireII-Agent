@@ -11,8 +11,12 @@ from agent_runner import combat_logs, combat_session, game_client, run_manager
 from data_paths import RELICS, VERIFIER
 
 
+real_verify_opening = combat_session.verify_opening
+
+
 @pytest.fixture
 def runner(monkeypatch):
+    monkeypatch.setattr(combat_session, "verify_opening", lambda game_state, log_path: True)      # the fights below are not real openings (see the opening tests)
     for name in ("agents.base_agent", "agents.my_agent"):       # the real agents are not under test (agents.verify is real)
         monkeypatch.setitem(sys.modules, name, types.ModuleType(name))
     sys.modules["agents.base_agent"].BaseAgent = object
@@ -634,3 +638,23 @@ def test_the_next_fight_starts_clean(runner, monkeypatch, tmp_path, capsys):
     away = {"type": "decision", "decision": "map_select"}
     game, _ = run(runner, monkeypatch, [capture(), away, capture()], tmp_path)
     assert len(game.acted) == 1 and "waiting for the next fight" in capsys.readouterr().out
+
+
+def test_a_fights_first_state_is_checked_against_the_sims_opening(runner, monkeypatch, tmp_path):
+    monkeypatch.setattr(combat_session, "verify_opening", real_verify_opening)
+    bad = capture()
+    bad["player"]["energy"] = bad["energy"] = bad["max_energy"] + 1       # the sim opens the fight with 3
+    game, log = run(runner, monkeypatch, [bad], tmp_path)
+    entry = json.loads(log.read_text().splitlines()[0])
+    assert entry["actions"] == [{"action": "combat_start"}] and any("energy" in d for d in entry["differences"])
+
+def test_the_opening_is_checked_once_per_fight(runner, monkeypatch, tmp_path):
+    calls = []
+    monkeypatch.setattr(combat_session, "verify_opening", lambda game_state, log_path: calls.append(1) or True)
+    run(runner, monkeypatch, [capture(), capture()], tmp_path)
+    assert len(calls) == 1         # the second state of a fight is not an opening
+
+def test_a_check_that_cannot_run_does_not_stop_the_run(monkeypatch, capsys, tmp_path):
+    monkeypatch.setattr(combat_session, "opening_diffs", lambda state: 1 / 0)
+    assert real_verify_opening({}, str(tmp_path / "log.jsonl")) is True
+    assert "could not be checked" in capsys.readouterr().out

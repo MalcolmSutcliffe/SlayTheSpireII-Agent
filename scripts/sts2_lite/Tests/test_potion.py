@@ -4,7 +4,7 @@ from sts2_lite import rng
 from sts2_lite.card import Card, CardId, CardType, TargetType, STRIKE_CARDS, JACK_POOL, TRANSFORM_COLORLESS, CARD_RARITY, CardRarity, COLORLESS_CARDS
 from sts2_lite.combat import CombatState, CombatSimulator, IllegalActionError
 from sts2_lite.player import Player
-from sts2_lite.potion import Potion, PotionId, PotionRarity, POTION_INFO, EFFECTS, usable_potion_actions, use_potion, RANDOM_POTION_POOL
+from sts2_lite.potion import Potion, PotionId, PotionRarity, POTION_INFO, EFFECTS, usable_potion_actions, use_potion
 from agents.sts2_MCTS.state_key import state_key
 from sts2_lite.status import StatusId
 from sts2_lite.Tests.card.test_card import make_card, make_state, make_enemy
@@ -836,3 +836,12 @@ def test_the_radiant_pearl_capture_loads_luminesce_as_a_playable_card():
     before = cs.energy
     sim.play_card(index, 0)
     assert cs.energy == before + 2
+
+
+def test_random_potion_pool_is_the_characters_plus_shared_potions():
+    import random
+    from sts2_lite.potion_pool import create_random_potions, potion_pool
+    pool = potion_pool("IRONCLAD")
+    assert PotionId.BLOOD_POTION in pool and PotionId.SOLDIERS_STEW in pool and len(pool) == len(set(pool))
+    picks = create_random_potions(random.Random(0), 3)
+    assert len(set(picks)) == 3 and all(p in pool for p in picks)

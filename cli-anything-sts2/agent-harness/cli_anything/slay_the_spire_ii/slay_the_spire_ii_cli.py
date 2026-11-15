@@ -177,6 +177,15 @@ def skip_card_reward(ctx: click.Context) -> None:
     _run_post(runtime.client, actions.skip_card_reward())
 
 
+@cli.command("card-reward-alternative")
+@click.argument("option_id", type=str)
+@click.pass_context
+def card_reward_alternative(ctx: click.Context, option_id: str) -> None:
+    """Use an extra card reward option: REROLL (Driftwood) or SACRIFICE (Pael's Wing)."""
+    runtime = _get_runtime(ctx)
+    _run_post(runtime.client, actions.card_reward_alternative(option_id))
+
+
 @cli.command("proceed")
 @click.pass_context
 def proceed(ctx: click.Context) -> None:

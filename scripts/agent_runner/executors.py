@@ -11,6 +11,7 @@ COMMANDS = {
     "claim_reward": ("claim-reward", ("index",)),
     "select_card_reward": ("pick-card-reward", ("card_index",)),
     "skip_card_reward": ("skip-card-reward", ()),
+    "card_reward_alternative": ("card-reward-alternative", ("option_id",)),
     "proceed": ("proceed", ()),
     "select_card": ("select-card", ("index",)),
     "confirm_selection": ("confirm-selection", ()),

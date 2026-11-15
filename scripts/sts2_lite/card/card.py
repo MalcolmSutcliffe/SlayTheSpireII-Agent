@@ -5,7 +5,7 @@ import re
 from sts2_lite.relic import before_card_played, blocks_play, extra_plays, free_by_relic, restore, snapshot, x_bonus
 from sts2_lite.status import StatusId
 
-from sts2_lite.card.constants import BECKON_HP_LOSS, BURN_DAMAGE, CONSUMED_ON_PLAY, CURSE_NAMES, ENCHANT_CORRUPTED_HP_LOSS, ENCHANT_SOWN_ENERGY, INFECTION_DAMAGE, NORMALITY_CARD_LIMIT, TOXIC_DAMAGE, UPGRADE_BASE_COST, UPGRADE_COST_CHANGE, UPGRADE_KEYWORD, UPGRADE_REMOVED_KEYWORD, WITHER_DAMAGE, _AXE, _CHOKER, _ETHEREAL, _EXHAUST, _INNATE, _REPLAY, _RETAIN, _SCARF, _UNPLAYABLE, _unknown_cards, _unknown_enchantments, keyword_mask
+from sts2_lite.card.constants import MAD_SCIENCE_BLOCK, MAD_SCIENCE_DAMAGE, mad_science_rider, BECKON_HP_LOSS, BURN_DAMAGE, CONSUMED_ON_PLAY, CURSE_NAMES, ENCHANT_CORRUPTED_HP_LOSS, ENCHANT_SOWN_ENERGY, INFECTION_DAMAGE, NORMALITY_CARD_LIMIT, TOXIC_DAMAGE, UPGRADE_BASE_COST, UPGRADE_COST_CHANGE, UPGRADE_KEYWORD, UPGRADE_REMOVED_KEYWORD, WITHER_DAMAGE, _AXE, _CHOKER, _ETHEREAL, _EXHAUST, _INNATE, _REPLAY, _RETAIN, _SCARF, _UNPLAYABLE, _unknown_cards, _unknown_enchantments, keyword_mask
 from sts2_lite.card.effects import _gain_block
 from sts2_lite.card.ids import CardId, CardKeyword, CardType, EnchantmentId, TargetType
 from sts2_lite.card.tables import ANCIENT_CARDS, COLORLESS_CARDS, EVENT_CARDS, GENERATABLE_CARDS, HAND_CURSE_EFFECTS, STRIKE_CARDS, TOKEN_CARDS
@@ -32,6 +32,7 @@ class Card:
     enchant_bonus : int = 0                    # damage Momentum has added this combat
     dampened_from : Card | None = None         # Dampen: the upgraded card this one was downgraded from
     wither_level : int = 0                     # Aeonglass's Increasing Intensity: how often this Wither has been fake-upgraded
+    rider : str | None = None                  # Mad Science: what Tinker Time added (SAPPING, VIOLENCE, CHOKING, ENERGIZED, WISDOM, CHAOS, EXPERTISE, CURIOUS, IMPROVEMENT)
     bound : bool = False                       # the Queen's Chains of Binding: only one Bound card can be played a turn
     _keywords : int | None = None              # keyword mask; None: the card's canonical keywords
     generated : bool = False                   # made during this fight (the game's DeckVersion is null); the Thieving Hopper cannot take it
@@ -121,10 +122,14 @@ class Card:
             new_card.wither_level = max(0, int(damage.group(1)) // WITHER_DAMAGE - 1) if damage else 0
         replay = re.search(r"Replay (\d+)\.", card.get("description") or "")       # Hidden Gem (Glam prints "Replay 1." too, but it is the keyword)
         new_card.replay = int(replay.group(1)) if replay and new_card.card_id != CardId.HIDDEN_GEM and new_card.enchantment != EnchantmentId.GLAM else 0
+        if new_card.enchantment == EnchantmentId.SPIRAL:
+            new_card.replay = max(new_card.replay, 1)       # EnchantPlayCount: one more play (the bridge's text may already print "Replay 1.")
         if card["target_type"] == "None":
             new_card.target_type = TargetType.NONE
         else:
             new_card.target_type = TargetType[card["target_type"]]
+        if new_card.card_id == CardId.MAD_SCIENCE:
+            new_card.rider = card.get("rider") or mad_science_rider(card.get("description") or "")
         return new_card
 
     def _read_enchantment(self, raw : dict):
@@ -138,6 +143,8 @@ class Card:
         self.enchantment, self.enchant_amount = enchantment, int(raw.get("amount") or 0)
         if enchantment == EnchantmentId.ROYALLY_APPROVED:
             self._keywords = self._mask | _INNATE | _RETAIN
+        elif enchantment == EnchantmentId.STEADY:       # Steady.EnchantedCard: Retain
+            self._keywords = self._mask | _RETAIN
         elif enchantment == EnchantmentId.GLAM:
             self._keywords = self._mask | _REPLAY
         elif enchantment == EnchantmentId.GOOPY:
@@ -435,13 +442,14 @@ class Card:
         new_card.dampened_from = card.dampened_from
         new_card.wither_level = card.wither_level
         new_card.bound = card.bound
+        new_card.rider = card.rider
         return new_card
 
     def signature(self) -> tuple:
         """Everything that decides how this card plays: two cards with equal signatures are interchangeable
         (the fields create_copy carries over, minus name/type/target which follow from the id)."""
         return (self.card_id, self.is_upgraded, self.energy_cost, self.is_unplayable, self.restore_cost, self.until_played,
-                self.bonus_damage, self.replay, self.enchantment, self.enchant_amount, self.enchant_bonus, self._mask, self.generated, self.dampened_from is not None, self.wither_level, self.bound)
+                self.bonus_damage, self.replay, self.enchantment, self.enchant_amount, self.enchant_bonus, self._mask, self.generated, self.dampened_from is not None, self.wither_level, self.bound, self.rider)
 
     def current_cost(self, player) -> int | str:
         """Energy cost now: the base cost plus Tangled on attacks."""
@@ -539,7 +547,11 @@ class Card:
         enchantment = self.enchantment
         if enchantment is None:
             return
-        player = combat.combat_state.player
+        cs = combat.combat_state
+        if cs.pending_choice is not None:        # the card's own choice is still open (Secret Weapon): the enchantment comes after the answer, before the after-play step
+            cs.continuations = [("enchant", self)] + cs.continuations
+            return
+        player = cs.player
         amount = self.enchant_amount
         if enchantment == EnchantmentId.ADROIT:
             _gain_block(combat, amount)
@@ -592,6 +604,8 @@ class Card:
     def can_play_card(self, combat : CombatSimulator, target_index):
         if self.is_unplayable or self.unplayable:
             return False
+        if self.card_id == CardId.CLASH and any(c.type != CardType.Attack for c in combat.combat_state.player.hand):
+            return False            # Clash: only while the hand holds nothing but Attacks
         if self.type == CardType.Skill and combat.combat_state.player.smogged:
             return False            # Smoggy: afflicted with Smog
         if self.bound and combat.combat_state.player.bound_played:
@@ -599,7 +613,7 @@ class Card:
         if StatusId.RINGING in combat.combat_state.player.status and combat.combat_state.cards_played >= 1:
             return False
         sloth = combat.combat_state.player.status.get(StatusId.SLOTH)
-        if sloth is not None and combat.combat_state.cards_played >= sloth.amount:
+        if sloth is not None and combat.combat_state.sloth_played >= sloth.amount:
             return False            # Sloth: at most this many cards a turn
         if combat.combat_state.cards_played >= NORMALITY_CARD_LIMIT and any(c.card_id == CardId.NORMALITY for c in combat.combat_state.player.hand):
             return False            # Normality: at most 3 cards a turn while it is in hand

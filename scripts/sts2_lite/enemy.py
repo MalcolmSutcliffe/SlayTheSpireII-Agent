@@ -271,6 +271,8 @@ class Enemy(Creature):
         new_e.hp_loss_events = enemy.hp_loss_events
         return new_e
 
+    plating_at_turn_start = False       # its Plating block comes before the player's turn starts (CombatSimulator._start_player_turn)
+
     def turn_start(self):
         # block lasts until this enemy's own turn (see perform_turn)
         block = self.block

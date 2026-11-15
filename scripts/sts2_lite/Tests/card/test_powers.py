@@ -644,10 +644,10 @@ def test_stampede_choice_is_random_among_attacks():
     assert seen == {94, 92}
 
 def test_stampede_attack_goes_to_the_discard_pile():
-    from sts2_lite.events import EventType
+    from sts2_lite.hooks import HookType
     cs = one_enemy([strike()])
     cs.player.apply_status(StatusId.STAMPEDE, 1)
-    CombatSimulator(cs).fire(EventType.PLAY_PHASE_END)
+    CombatSimulator(cs).fire(HookType.PLAY_PHASE_END)
     assert cs.player.hand == [] and len(cs.player.discard_pile) == 1
 
 def test_stampede_kills_end_the_fight():
@@ -959,9 +959,9 @@ def test_end_of_turn_plating_block_is_for_the_player_only():
     sim = CombatSimulator(cs)
     sim.end_turn()
     assert cs.enemies[0].block == 4         # an enemy's Plating does not wear down in the first round (captured: Sewer Clam, Matriarch)
-    from sts2_lite.events import EventType
+    from sts2_lite.hooks import HookType
     cs.enemies[0].block = 0
-    sim.fire(EventType.END_TURN)
+    sim.fire(HookType.END_TURN)
     assert cs.enemies[0].block == 0
 
 def test_enemy_plating_wears_down_from_the_second_round():
@@ -1032,33 +1032,33 @@ def test_auto_play_of_a_power_stays_out_of_the_piles():
     assert status(cs.player, StatusId.DEMON_FORM) == 2 and cs.player.discard_pile == []
 
 def test_gain_block_event_ignores_zero():
-    from sts2_lite.events import EventType
+    from sts2_lite.hooks import HookType
     import sts2_lite.status as st
     cs = one_enemy([])
     sim = CombatSimulator(cs)
     seen = []
-    st.STATUS_HANDLERS[(StatusId.STRENGTH, EventType.BLOCK_GAINED)] = lambda c, o, a, creature, amount: seen.append(amount)
+    st.STATUS_HANDLERS[(StatusId.STRENGTH, HookType.BLOCK_GAINED)] = lambda c, o, a, creature, amount: seen.append(amount)
     try:
         cs.player.apply_status(StatusId.STRENGTH, 1)
         sim.gain_block(cs.player, 0)
         sim.gain_block(cs.player, 4)
     finally:
-        del st.STATUS_HANDLERS[(StatusId.STRENGTH, EventType.BLOCK_GAINED)]
+        del st.STATUS_HANDLERS[(StatusId.STRENGTH, HookType.BLOCK_GAINED)]
     assert seen == [4] and cs.player.block == 4
 
 def test_player_turn_start_event_fires_after_the_draw():
-    from sts2_lite.events import EventType
+    from sts2_lite.hooks import HookType
     import sts2_lite.status as st
     cs = one_enemy([])
     cs.player.draw_pile = [strike() for _ in range(6)]
     sim = CombatSimulator(cs)
     seen = []
-    st.STATUS_HANDLERS[(StatusId.STRENGTH, EventType.PLAYER_TURN_START)] = lambda c, o, a: seen.append(len(cs.player.hand))
+    st.STATUS_HANDLERS[(StatusId.STRENGTH, HookType.PLAYER_TURN_START)] = lambda c, o, a: seen.append(len(cs.player.hand))
     try:
         cs.player.apply_status(StatusId.STRENGTH, 1)
         sim.end_turn()
     finally:
-        del st.STATUS_HANDLERS[(StatusId.STRENGTH, EventType.PLAYER_TURN_START)]
+        del st.STATUS_HANDLERS[(StatusId.STRENGTH, HookType.PLAYER_TURN_START)]
     assert seen == [5]
 
 def test_deepcopy_keeps_the_new_player_counters():

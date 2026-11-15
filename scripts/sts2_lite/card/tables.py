@@ -104,6 +104,13 @@ EVENT_CARDS = {
     CardId.EXTERMINATE : ("Exterminate", CardType.Attack, 1, ALL), CardId.SQUASH : ("Squash", CardType.Attack, 1, A),
     CardId.ENLIGHTENMENT : ("Enlightenment", CardType.Skill, 0, S), CardId.METAMORPHOSIS : ("Metamorphosis", CardType.Skill, 2, S),
     CardId.TORIC_TOUGHNESS : ("Toric Toughness", CardType.Skill, 2, S),
+    CardId.FEEDING_FRENZY : ("Feeding Frenzy", CardType.Skill, 0, S),
+    CardId.MAD_SCIENCE : ("Mad Science", CardType.Attack, 1, A),
+    CardId.CLASH : ("Clash", CardType.Attack, 0, A), CardId.DUAL_WIELD : ("Dual Wield", CardType.Skill, 1, S), CardId.ENTRENCH : ("Entrench", CardType.Skill, 2, S),
+    CardId.CALTROPS : ("Caltrops", CardType.Power, 1, S), CardId.DISTRACTION : ("Distraction", CardType.Skill, 1, S),
+    CardId.OUTMANEUVER : ("Outmaneuver", CardType.Skill, 1, S), CardId.HELLO_WORLD : ("Hello World", CardType.Power, 1, S),
+    CardId.REBOUND : ("Rebound", CardType.Attack, 1, A), CardId.RIP_AND_TEAR : ("Rip and Tear", CardType.Attack, 1, RAND),
+    CardId.STACK : ("Stack", CardType.Skill, 1, S),
 }
 
 # colorless cards that card effects can add (Jack of All Trades, Toolbox): (name, type, cost, target). Multiplayer-only
@@ -201,7 +208,8 @@ _RARITY_NAMES = {
         "BREAK NEOWS_FURY CORRUPTION ABUNDANCE APOTHEOSIS APPARITION BRIGHTEST_FLAME MAUL RELAX WHISTLE WISH"
     ),
     CardRarity.Event : (
-        "BYRD_SWOOP EXTERMINATE PECK SQUASH ENLIGHTENMENT METAMORPHOSIS TORIC_TOUGHNESS"
+        "BYRD_SWOOP EXTERMINATE PECK SQUASH ENLIGHTENMENT METAMORPHOSIS TORIC_TOUGHNESS FEEDING_FRENZY MAD_SCIENCE "
+        "CLASH DUAL_WIELD ENTRENCH CALTROPS DISTRACTION OUTMANEUVER HELLO_WORLD REBOUND RIP_AND_TEAR STACK"
     ),
     CardRarity.Token : (
         "GIANT_ROCK LUMINESCE"
