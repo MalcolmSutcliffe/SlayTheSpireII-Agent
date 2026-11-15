@@ -1,14 +1,17 @@
 """What to buy in a shop, one purchase per call (the shop screen comes back after each one, with the new gold and deck).
 
+Everything is judged by the deck evaluator: each candidate is played on the same walks through the rest of the act (the engine's run simulator: the fights one after the other
+with the HP carried over, the rest sites, rewards and relics: see route_sim and DeckEvaluator.score_walks) and compared with buying nothing, walk for walk. A candidate's
+price is paid in its walks (the gold is gone from the shops ahead). Its Z-score is the mean gain over the standard error of the gain.
 In order:
-  1. a relic, if one can be afforded (the cheapest: prices are random, and the dearer uncommon and rare ones are overpriced); never the shop's own relic, the 3rd one listed (too situational for the agent to judge)
-  2. potions, when the planned route meets an elite within the next 3 rooms: the best valued first (RewardParams.potion_bonus)
-  3. a card, or a card removal, when the deck with it beats the deck without by Z standard errors on walks through the rest of the act (the engine's run simulator: the fights one after the
-     other with the HP carried over, the rest sites, rewards and relics: see route_sim and DeckEvaluator.score_walks); the best gain first.
-     The card removed is chosen first: a curse, else a Strike, else a Defend; with none of those left no removal is considered.
+  1. a relic whose Z-score is over Z, the best Z-score first (relics are played by the engine's own pickup, route_sim.ShopRelicPlan); the shop's own relic (the 3rd one listed) is judged like the others
+  2. potions, when the planned route meets an elite or the boss within the next 3 rooms: the best valued first (RewardParams.potion_bonus)
+  3. a card or a card removal: the one with the best Z-score, if it is over Z. The card removed is chosen first: a curse, else a Strike, else a Defend; with none of those left no removal is considered.
   4. otherwise leave.
-The analysis in 3 runs for at most SHOP_SECONDS: as many walks as fit, every candidate on each."""
+The analysis runs for at most SHOP_SECONDS: as many walks as fit, every candidate (relics, cards and the removal) on each.
+"""
 from __future__ import annotations
+from typing import NamedTuple
 
 from sts2_lite.card.constants import CARD_ENERGY_COST_AND_TARGET
 from sts2_lite.card.ids import CardId
@@ -17,12 +20,14 @@ from sts2_lite.potion import PotionId
 from agents.decision import Decision, Option
 from agents.deck_eval.advisor import DeckAdvisor
 from agents.deck_eval.card_reward_chooser import paired_gain
+from agents.deck_eval.route_sim import ShopRelicPlan
 from agents.sts2_MCTS.params import RewardParams
 
-SHOP_SECONDS = 10.0         # the most time the deck analysis of one shop screen may take
-Z = 2.0
-ELITE_LOOKAHEAD = 3         # rooms on the planned route
-SHOP_RELIC_POSITION = 2     # the 3rd relic listed
+SHOP_SECONDS = 15.0         # the most time the deck analysis of one shop screen may take (relics, cards and the removal are all played)
+Z = 1.5                     # the Z-score a purchase has to clear
+POTION_LOOKAHEAD = 3        # rooms on the planned route: an elite or the boss within them is a reason to buy potions
+DANGEROUS_ROOMS = ("elite", "boss")
+SHOP_RELIC_POSITION = 2     # the 3rd relic listed, the shop's own: judged like the others here, but the walks' stand-in shopper (route_sim.WalkAgent) still never buys it
 POTION_BONUS = RewardParams()
 
 
@@ -55,6 +60,17 @@ def _z(gain : float, se : float) -> float:
     return gain / se if se > 0 else (float("inf") if gain > 0 else 0.0)
 
 
+class Row(NamedTuple):
+    option : Option
+    kind : str          # "relic", "card" or "removal"
+    gain : float
+    z : float
+
+
+def best(rows : list[Row]) -> Row:
+    return max(rows, key=lambda r: (r.z, r.gain))
+
+
 class ShopChooser:
     def __init__(self, advisor : DeckAdvisor):
         self.advisor = advisor
@@ -68,47 +84,51 @@ class ShopChooser:
     def choose(self, decision : Decision) -> Option:
         buys = [o for o in decision.options if o.name == "shop_purchase"]
         leave = next((o for o in decision.options if o.name == "proceed"), None) or Option("leave shop", {"action": "proceed"})
-        items = decision.state.get("items") or []
-        relic_items = [i for i in items if i.get("category") == "relic"]
-        shop_relic = relic_items[SHOP_RELIC_POSITION]["index"] if len(relic_items) > SHOP_RELIC_POSITION else None
+        relics = [o for o in buys if o.data.get("category") == "relic" and o.data.get("relic_id")]
 
-        relics = [o for o in buys if o.data.get("category") == "relic" and o.data.get("index") != shop_relic]
-        if relics:
-            return min(relics, key=lambda o: o.data.get("cost", 0))
+        rows = self._analyse(decision, relics, buys)
+        worth = [r for r in rows if r.kind == "relic" and r.z > Z]
+        if worth:
+            return best(worth).option
 
         route = self.advisor.route_provider()
-        if route is not None and "elite" in route.kinds[1:1 + ELITE_LOOKAHEAD]:
+        if route is not None and any(kind in DANGEROUS_ROOMS for kind in route.kinds[1:1 + POTION_LOOKAHEAD]):
             potions = [o for o in buys if o.data.get("category") == "potion"]
             if potions:
                 return max(potions, key=lambda o: (potion_value(o.data), -o.data.get("cost", 0)))
 
-        picked = self._best_deck_change(decision, buys)
-        return picked or leave
+        worth = [r for r in rows if r.kind != "relic" and r.z > Z]
+        return best(worth).option if worth else leave
 
-    def _best_deck_change(self, decision : Decision, buys : list[Option]) -> Option | None:
-        deck = decision.player.get("deck") or []
-        candidates = []     # (option, the deck after it)
+    def _analyse(self, decision : Decision, relics : list[Option], buys : list[Option]) -> list[Row]:
+        """Every relic, card and the removal played on the same walks as buying nothing: a Row for each (empty when there is nothing to buy)."""
+        player = decision.player
+        deck, gold = player.get("deck") or [], player.get("gold", 0)
+        paid = lambda cost: {**player, "gold": max(0, gold - cost)}
+        ev = self.advisor.evaluator
+        candidates = []     # (option, kind, play(walks) -> rewards)
+        for o in relics:
+            plan = ShopRelicPlan(o.data["relic_id"], o.data.get("cost", 0))
+            candidates.append((o, "relic", lambda walks, plan=plan: ev.score_walks(deck, player, walks, plan).rewards))
         for o in buys:
             item = o.data
             if item.get("category") == "card" and item.get("card_id"):
-                candidates.append((o, deck + [self.card_dict(item)]))
+                new_deck, after = deck + [self.card_dict(item)], paid(item.get("cost", 0))
+                candidates.append((o, "card", lambda walks, d=new_deck, p=after: ev.score_walks(d, p, walks).rewards))
             elif item.get("category") == "card_removal":
                 i = card_to_remove(deck)
                 if i is not None:
-                    candidates.append((o, deck[:i] + deck[i + 1:]))
+                    new_deck, after = deck[:i] + deck[i + 1:], paid(item.get("cost", 0))
+                    candidates.append((o, "removal", lambda walks, d=new_deck, p=after: ev.score_walks(d, p, walks).rewards))
         if not candidates:
-            return None
-        ev, player = self.advisor.evaluator, decision.player
+            return []
         plays = {"base": lambda walks: ev.score_walks(deck, player, walks).rewards}
-        for k, (o, new_deck) in enumerate(candidates):
-            plays[k] = lambda walks, d=new_deck: ev.score_walks(d, player, walks).rewards
+        plays.update({k: play for k, (_, _, play) in enumerate(candidates)})
         rewards, count, seconds = self.advisor.race(decision, plays, SHOP_SECONDS)
         rows = []
-        for k, (o, new_deck) in enumerate(candidates):
+        for k, (o, kind, _) in enumerate(candidates):
             gain, se = paired_gain(rewards[k], rewards["base"])
-            rows.append((gain, _z(gain, se), o))
-        worth = [r for r in rows if r[1] > Z]
-        self.advisor.log("shop (%d gold, %d walks through the route ahead, %.1fs of %.0fs): " % (player.get("gold", 0), count, seconds, SHOP_SECONDS) +
-                         ", ".join("%s %+.2f (z %.1f)" % (r[2].label, r[0], r[1]) for r in sorted(rows, key=lambda r: -r[0])) +
-                         (" -> " + max(worth, key=lambda r: r[0])[2].label if worth else " -> nothing worth it"))
-        return max(worth, key=lambda r: r[0])[2] if worth else None
+            rows.append(Row(o, kind, gain, _z(gain, se)))
+        self.advisor.log("shop (%d gold, %d walks through the route ahead, %.1fs of %.0fs): " % (gold, count, seconds, SHOP_SECONDS) +
+                         ", ".join("%s %+.2f (z %.1f)" % (r.option.label, r.gain, r.z) for r in sorted(rows, key=lambda r: -r.z)) + "; needs z over %.1f" % Z)
+        return rows

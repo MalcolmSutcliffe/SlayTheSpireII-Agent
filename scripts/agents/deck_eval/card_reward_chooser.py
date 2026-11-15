@@ -13,8 +13,8 @@ from agents.decision import Decision, Option
 from agents.deck_eval.advisor import DeckAdvisor
 
 Z = 1.5                     # standard errors the gain has to clear (a wrong skip costs about as much as a wrong take)
-FLOOR = 0.3                 # reward points (a win is ~20, so 0.3 is ~1.5% of one): the smallest gain worth a card
-EARLY_FLOOR = 0.15          # the same for the first EARLY_REWARDS card rewards of a run: a starter deck nearly always takes a card
+FLOOR = 0.02                 # reward points (a win is ~20, so 0.3 is ~1.5% of one): the smallest gain worth a card
+EARLY_FLOOR = 0.01          # the same for the first EARLY_REWARDS card rewards of a run: a starter deck nearly always takes a card
 EARLY_REWARDS = 3
 FULL_FLOOR_WIN_RATE = 0.8   # the floor applies in full from this win rate on the fights ahead; a weaker deck needs help, so the floor shrinks with it
 BUDGET_SECONDS = 8.0        # thinking time of an ordinary card reward; the number of fights is set from it (a pilot of PILOT_FIGHTS measures the speed)

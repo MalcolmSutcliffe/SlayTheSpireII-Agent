@@ -97,6 +97,13 @@ class EventPlan:
 
 
 @dataclass
+class ShopRelicPlan:
+    """A relic bought in a shop before a walk: its price is paid, then the engine's own pickup follows (its effect, the screens it queues)."""
+    relic_id : str
+    cost : int
+
+
+@dataclass
 class AncientPlan:
     """The relic to take from an ancient's offer before a walk (the engine's own pickup: its effect, its setup, the screens it queues)."""
     ancient_id : str
@@ -325,6 +332,13 @@ class RouteSimulator(RunSimulator):
         else:
             {"Event": self.event, "Shop": self.shop, "Treasure": self.treasure}.get(kind, lambda: None)()
 
+    def buy_relic(self, plan : ShopRelicPlan):
+        """The relic of a `ShopRelicPlan`: paid for, then picked up as the engine does (a max HP gain, a potion slot, cards or potions queued for the run to take)."""
+        r = self.run_state
+        r.gold = max(0, r.gold - plan.cost)
+        self.gain_relic(plan.relic_id)
+        self.take_offers()
+
     def play_event(self, plan : EventPlan):
         """The event option `plan` names, played by the engine's EventSession on this run (the pages already chosen are replayed first; the numbers the event rolls
         come from the walk's own seed, the same for every option). A page with one option left is taken. What the option starts (a fight, a relic from the bag,
@@ -408,6 +422,9 @@ class RouteSimulator(RunSimulator):
             if isinstance(self.opening, AncientPlan):
                 self.reseed("ancient")
                 self.take_ancient_relic(self.opening.option())
+            elif isinstance(self.opening, ShopRelicPlan):
+                self.reseed("shop")
+                self.buy_relic(self.opening)
             elif self.opening is not None:
                 self.reseed("event")
                 self.play_event(self.opening)

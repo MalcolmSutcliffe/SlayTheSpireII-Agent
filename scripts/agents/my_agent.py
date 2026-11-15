@@ -81,7 +81,7 @@ class MyAgent(BaseAgent):
         return self._upgrade_chooser().choose_rest(decision) or super()._get_rest_decision(decision)
 
     def _get_shop_decision(self, decision):
-        """Relics, then potions before an elite, then the cards and removals that clearly help: see agents/deck_eval/shop_chooser.py."""
+        """Every relic, card and the removal rated by the deck evaluator (a Z-score over 1.5 to buy): relics first, then potions before an elite, then the best card or removal: see agents/deck_eval/shop_chooser.py."""
         if self._shopper is None:
             from agents.deck_eval.shop_chooser import ShopChooser
             self._shopper = ShopChooser(self._deck_advisor())
