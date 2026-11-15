@@ -65,5 +65,5 @@ def treasure(run : RunState, relics : list[dict], can_proceed : bool) -> dict:
     return screen(run, "treasure", relics=[{**r, "index": i} for i, r in enumerate(relics)], can_proceed=can_proceed)
 
 
-def shop(run : RunState, items : list[dict]) -> dict:
-    return screen(run, "shop", items=items, can_proceed=True)
+def shop(run : RunState, items : list[dict], fake_merchant : bool = False) -> dict:
+    return screen(run, "shop", items=items, can_proceed=True, **({"is_fake_merchant": True} if fake_merchant else {}))

@@ -168,3 +168,14 @@ def name_of(entry : Entry) -> str:
     if entry.kind == "potion":
         return POTION_INFO[PotionId[entry.item]].name
     return "Card Removal"
+
+
+def shop_ids(entry : Entry) -> dict:
+    """The id fields the bridge reports for a stocked entry (card_id, relic_id, potion_id, with the card's type and rarity)."""
+    if not entry.stocked or entry.kind == "removal":
+        return {}
+    if entry.kind == "card":
+        return {"card_id": entry.item["id"], "card_name": entry.item.get("name"), "card_type": entry.item.get("type"), "card_rarity": entry.item.get("rarity")}
+    if entry.kind == "relic":
+        return {"relic_id": entry.item, "relic_name": relic_name(entry.item)}
+    return {"potion_id": entry.item, "potion_name": POTION_INFO[PotionId[entry.item]].name}

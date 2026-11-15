@@ -2,6 +2,7 @@
 RunManager polls the game and routes each state: a fight goes to the CombatSession, a screen the agent decides on (map, rewards, rest site,
 shop, event, card or relic pick, treasure) becomes a Decision with its legal options, the agent picks one, and the executor sends it.
 Anything else (loading, the main menu, game over) is only waited out."""
+import os
 import time
 from pathlib import Path
 from collections import Counter
@@ -12,6 +13,7 @@ from .decision_builders import build_decision, reward_key
 from .executors import execute
 from agents.decision import CARD_REWARD, REWARDS
 from .game_client import POLL_SECONDS, GameClient, dump
+from .run_verifier import DEFAULT_LOG as RUN_LOG, DEFAULT_RECORD, RunVerifier
 
 DEFAULT_LOG = "engine_mismatches.jsonl"     # where differences go when no run is named
 SETTLE_BEFORE_DECIDING = True               # read a screen until it stops changing before deciding on it (it animates in)
@@ -35,7 +37,7 @@ class RunManager:
 
     def __init__(self, agent, step : bool = False, verify : bool = True, log_path : str = DEFAULT_LOG, capture_dir : str | None = None,
                  decision_log : str | None = None, state_dir : str | None = None, fight_log : str | None = None, first_decision : int = 0,
-                 client : GameClient | None = None):
+                 client : GameClient | None = None, run_verifier : RunVerifier | None = None):
         self.agent = agent
         self.single_step = step
         self.client = client or GameClient()
@@ -45,6 +47,17 @@ class RunManager:
         self.tried : dict[str, set[str]] = {}       # screen (as the game showed it) -> actions sent on it that changed nothing
         self.declined = Counter()       # reward items the agent skipped: the game keeps listing them, so they are not claimed again
         self.opened = None              # the reward item whose card screen is open, to know what a Skip declines
+        self.run_verifier = run_verifier or (self.default_verifier(log_path) if verify else None)
+
+    @staticmethod
+    def default_verifier(log_path : str) -> RunVerifier | None:
+        """The run verifier next to the combat log: findings in run_mismatches.jsonl, and (for a named run, whose log lives in its own folder) every out-of-combat
+        screen and action in run_states.jsonl, so the run can be checked again after the model changes. Nothing is written when the log goes to /dev/null."""
+        if os.fspath(log_path) == os.devnull:
+            return None
+        folder = Path(log_path).parent
+        named = Path(log_path).name != DEFAULT_LOG
+        return RunVerifier(log_path=str(folder / RUN_LOG), record_path=str(folder / DEFAULT_RECORD) if named else None)
 
     def run(self):
         try:
@@ -53,6 +66,18 @@ class RunManager:
         except KeyboardInterrupt:
             combat = self.combat
             print(f"\nstopped. {combat.checked} step(s) checked, {combat.mismatched} with differences" + (f" (see {combat.log_path})" if combat.mismatched else ""))
+            if self.run_verifier is not None:
+                print(f"run verifier: {self.run_verifier.summary()}")
+
+    def verify_run(self, call, *args):
+        """Tell the run verifier something. It watches: whatever goes wrong inside it must never stop the run, so it is switched off after its first failure."""
+        if self.run_verifier is None:
+            return
+        try:
+            getattr(self.run_verifier, call)(*args)
+        except Exception as error:                  # noqa: BLE001
+            print(f"the run verifier failed ({type(error).__name__}: {error}) and is switched off")
+            self.run_verifier = None
 
     def tick(self):
         """One pass: read the game and, when it is the agent's turn to act, decide and act. Returns early to read the game again."""
@@ -63,6 +88,7 @@ class RunManager:
             return
         self.waiting_for = None
         self.forget_rewards()           # a fight is on: the rewards of the last one are gone
+        self.verify_run("interrupted")
         self.combat.handle(kind, game_state)
 
     def away(self, game_state : dict):
@@ -142,6 +168,8 @@ class RunManager:
         self.run_state.history.append({"floor": self.run_state.floor, "act": self.run_state.act, "kind": decision.kind,
                                        "label": option.label, "action": option.action})
         self.track_rewards(decision, option)
+        self.verify_run("state", game_state)
+        self.verify_run("acted", option.action)
         execute(self.client, option.action)
         if not self.client.wait_for_change(screen):
             tried.add(dump(option.action))

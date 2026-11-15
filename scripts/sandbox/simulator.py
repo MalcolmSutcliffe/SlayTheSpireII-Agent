@@ -378,7 +378,7 @@ class RunSimulator:
 
     def shop(self):
         """A merchant: buy until the agent leaves (or nothing is left to want). Card removal asks which card; The Courier restocks what is bought."""
-        from sandbox.shop import Shop, name_of
+        from sandbox.shop import Shop, name_of, shop_ids
         r = self.run_state
         r.visit("Shop")
         shop = Shop(r, self.game, self.game.stream("relics"))
@@ -391,7 +391,8 @@ class RunSimulator:
             for i, e in enumerate(shop.entries):
                 price = shop.price(e) if e.stocked else 0
                 items.append({"index": i, "category": e.kind if e.kind != "removal" else "card_removal", "is_stocked": e.stocked, "cost": price,
-                              "can_afford": e.stocked and price <= r.gold, "name": name_of(e) if e.stocked else None, "on_sale": e.on_sale})
+                              "can_afford": e.stocked and price <= r.gold, "name": name_of(e) if e.stocked else None, "on_sale": e.on_sale,
+                              **shop_ids(e)})
             option = self.ask(screens.shop(r, items))
             if option.action["action"] != "shop_purchase":
                 return
@@ -412,9 +413,10 @@ class RunSimulator:
         prices = [round(FAKE_MERCHANT_PRICE * _jitter(self.game.stream("events"), *RELIC_JITTER)) for _ in stock]
         while True:
             items = [{"index": i, "category": "relic", "is_stocked": relic is not None, "cost": prices[i] if relic else 0,
-                      "can_afford": relic is not None and r.gold >= prices[i], "name": relic_name(relic) if relic else None, "on_sale": False}
+                      "can_afford": relic is not None and r.gold >= prices[i], "name": relic_name(relic) if relic else None, "on_sale": False,
+                      **({"relic_id": relic, "relic_name": relic_name(relic)} if relic else {})}
                      for i, relic in enumerate(stock)]
-            option = self.ask(screens.shop(r, items))
+            option = self.ask(screens.shop(r, items, fake_merchant=True))
             if option.action["action"] != "shop_purchase":
                 return
             i = option.action["index"]
