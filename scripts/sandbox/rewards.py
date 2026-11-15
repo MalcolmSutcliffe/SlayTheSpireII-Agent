@@ -15,7 +15,6 @@ POVERTY_ASCENSION = 3
 POVERTY_GOLD = 0.75         # AscensionHelper.PovertyAscensionGoldMultiplier: not in the decompile, 0.75 assumed
 POTION_ELITE_BONUS = 0.25   # PotionRewardOdds: the roll adds half of it
 POTION_STEP = 0.1
-POTION_RARITY_ODDS = ((PotionRarity.COMMON, 0.65), (PotionRarity.UNCOMMON, 0.25), (PotionRarity.RARE, 0.10))      # assumed (Slay the Spire 1's)
 
 
 @dataclass
@@ -50,14 +49,9 @@ def roll_potion_reward(run : RunState, room : str, rng) -> bool:
 
 
 def random_potion(rng) -> str:
-    """A potion by rarity (the sim's own list: the game's drop table is not in the decompile)."""
-    x, rarity = rng.random(), PotionRarity.COMMON
-    for kind, share in POTION_RARITY_ODDS:
-        rarity = kind
-        x -= share
-        if x < 0:
-            break
-    return rng.choice([p.name for p, info in POTION_INFO.items() if info.rarity == rarity])
+    """PotionFactory.CreateRandomPotionOutOfCombat: rarity roll (10% rare, 25% uncommon, else common), Ironclad + shared pools."""
+    from sts2_lite.potion_pool import random_potion_id
+    return random_potion_id(rng).name
 
 
 def generate_rewards(run : RunState, encounter : Encounter, last_act_boss : bool, game) -> list[Reward]:

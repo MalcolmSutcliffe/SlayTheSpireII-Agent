@@ -30,8 +30,8 @@ class AgentPicker(CardPicker):
                 return []
             chosen.append(allowed[action["index"]])         # a card's index on the screen is its place in `allowed`, whatever was picked before
 
-    def remove(self, deck, n, allowed):
-        return self.select("remove", deck, n, allowed)
+    def remove(self, deck, n, allowed, cancel : bool = False):
+        return self.select("remove", deck, n, allowed, cancel)
 
     def upgrade(self, deck, n, allowed, cancel : bool = False):
         return self.select("upgrade", deck, n, allowed, cancel)

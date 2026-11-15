@@ -12,20 +12,25 @@ from sts2_lite.run.state import RunState
 
 REST_HEAL_SHARE = 0.30          # what a rest site heals, as a share of max HP (the Dense Vegetation and Unrest Site heal match it)
 # The cards a transform / reward event draws from: the Ironclad pool only (rarity odds: sts2_lite.rewards)
-EXTRA_TYPES = {CardId.FEED : CardType.Attack, CardId.NOT_YET : CardType.Skill, CardId.APPARITION : CardType.Skill, CardId.APOTHEOSIS : CardType.Skill, CardId.MAUL : CardType.Attack}      # cards GENERATABLE_CARDS lacks (Feed, Not Yet: Ironclad; the rest: relics, ancients)
+EXTRA_TYPES = {CardId.FEED : CardType.Attack, CardId.NOT_YET : CardType.Skill, CardId.APPARITION : CardType.Skill, CardId.APOTHEOSIS : CardType.Skill, CardId.MAUL : CardType.Attack, CardId.BREAK : CardType.Attack, CardId.NEOWS_FURY : CardType.Attack, CardId.CORRUPTION : CardType.Power}      # cards GENERATABLE_CARDS lacks (Feed, Not Yet: Ironclad; the rest: relics, ancients)
 
 
 BASIC_CARDS = {CardId.STRIKE_IRONCLAD : ("Strike", CardType.Attack), CardId.DEFEND_IRONCLAD : ("Defend", CardType.Skill), CardId.BASH : ("Bash", CardType.Attack)}
 CURSE_IDS = frozenset(CardId[n] for n in ("DECAY", "NORMALITY", "INJURY", "POOR_SLEEP", "GREED", "CLUMSY", "BAD_LUCK", "DEBT", "GUILTY", "SPORE_MIND",
-                                          "CURSE_OF_THE_BELL", "ASCENDERS_BANE"))
+                                          "CURSE_OF_THE_BELL", "ASCENDERS_BANE", "DOUBT", "REGRET", "SHAME", "WRITHE", "FOLLY"))
 
 
 def card_entry(card_id : CardId | str, upgraded : bool = False) -> dict:
     """A deck entry for a card by id, in the shape the bridge and the deck evaluator use (cost and target from the sim's own tables)."""
-    from sts2_lite.card.tables import EVENT_CARDS, TOKEN_CARDS
+    from sts2_lite.card.tables import ANCIENT_CARDS, EVENT_CARDS, TOKEN_CARDS
     cid = card_id if isinstance(card_id, CardId) else CardId[card_id]
-    cost, target = CARD_ENERGY_COST_AND_TARGET.get(cid, (0, None)) if cid in CURSE_IDS else CARD_ENERGY_COST_AND_TARGET[cid]       # a curse cannot be played
-    for table in (GENERATABLE_CARDS, COLORLESS_CARDS, EVENT_CARDS, TOKEN_CARDS):
+    if cid in CURSE_IDS:
+        cost, target = CARD_ENERGY_COST_AND_TARGET.get(cid, (0, None))       # a curse cannot be played
+    elif cid in CARD_ENERGY_COST_AND_TARGET:
+        cost, target = CARD_ENERGY_COST_AND_TARGET[cid]
+    else:
+        cost, target = ANCIENT_CARDS[cid][2:4]
+    for table in (GENERATABLE_CARDS, COLORLESS_CARDS, EVENT_CARDS, TOKEN_CARDS, ANCIENT_CARDS):
         if cid in table:
             name, ctype = table[cid][0], table[cid][1]
             break
@@ -89,7 +94,7 @@ RunSnapshot = RunState        # the old name: events play on the run's state
 
 # --- enchantments -------------------------------------------------------------------------------------------------------------------------------------
 # The card's "enchantment": {"id", "amount"} is what the bridge reports and what the combat sim reads. Rules follow EnchantmentModel.CanEnchant.
-ENCHANT_ATTACK_ONLY = frozenset({"CORRUPTED", "SHARP"})
+ENCHANT_ATTACK_ONLY = frozenset({"CORRUPTED", "SHARP", "INSTINCT"})
 
 
 def _sim_card(card : dict):
@@ -109,6 +114,10 @@ def can_enchant(card : dict, enchantment : str, card_type : str | None = None) -
     sim = _sim_card(card)
     if sim.unplayable or sim.is_unplayable:
         return False
+    if enchantment == "GOOPY":
+        return CardId.__members__.get(card.get("id")) in DEFEND_CARDS          # CardTag.Defend
+    if enchantment == "TEZCATARAS_EMBER":
+        return is_basic_strike(card)
     if enchantment == "SPIRAL":
         return card.get("rarity", "Basic") == "Basic" and (is_basic_strike(card) or is_basic_defend(card))
     if enchantment == "SOULS_POWER":

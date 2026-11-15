@@ -167,7 +167,7 @@ def _add_without_repeating_tags(chosen : list[Encounter], bag : GrabBag, rng):
         chosen.append(found)
 
 
-def generate_rooms(act : Act, rng, multiplayer : bool = False, ascension : int = 0, last_act : bool = False) -> Rooms:
+def generate_rooms(act : Act, rng, multiplayer : bool = False, ascension : int = 0, last_act : bool = False, shared_ancients : tuple = ()) -> Rooms:
     """ActModel.GenerateRooms: the weak, regular and elite encounters of the act in the order they will be met, its boss and its ancient."""
     rooms = Rooms()
     bag = GrabBag()
@@ -188,5 +188,5 @@ def generate_rooms(act : Act, rng, multiplayer : bool = False, ascension : int =
     rooms.boss = rng.choice(act.bosses)
     if ascension >= 10 and last_act:
         rooms.second_boss = rng.choice([b for b in act.bosses if b is not rooms.boss])
-    rooms.ancient = rng.choice(act.ancients)
+    rooms.ancient = rng.choice(tuple(act.ancients) + tuple(shared_ancients))       # the act's own ancients and the shared ones it was dealt (Darv)
     return rooms

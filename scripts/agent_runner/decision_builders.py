@@ -19,6 +19,10 @@ def map_options(state : dict) -> list[Option]:
 def card_reward_options(state : dict) -> list[Option]:
     options = [Option(c.get("name") or c.get("id") or "card", {"action": "select_card_reward", "card_index": c["index"]}, c)
                for c in state.get("cards") or []]
+    for alt in state.get("alternatives") or []:
+        if str(alt.get("id", "")).upper() != "SKIP":       # not a card: the data has no "id" key, so card choosers pass over it
+            options.append(Option(str(alt.get("name") or alt["id"]).lower(), {"action": "card_reward_alternative", "option_id": str(alt["id"]).upper()},
+                                  {"alternative": str(alt["id"]).upper()}))
     if state.get("can_skip"):
         options.append(Option("skip", {"action": "skip_card_reward"}))
     return options

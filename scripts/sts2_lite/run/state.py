@@ -29,6 +29,7 @@ class Hidden:
     elite_fought : int = 0
     unknown_odds : UnknownRoomOdds = field(default_factory=UnknownRoomOdds)      # what a "?" will turn into
     potion_odds : float = 0.4                       # PotionRewardOdds.CurrentValue
+    shop_removals : int = 0                         # ExtraFields.CardShopRemovalsUsed: card removals bought at merchants
     relic_bag : object | None = None                # relic.bag.RelicGrabBag; None outside the sandbox (relics the game would draw are then only counted)
 
 
@@ -88,7 +89,7 @@ class RunState:
         return [r for r in self.relics if str(r.get("id", "")) in RelicId.__members__]
 
     def has_relic(self, relic_id : str) -> bool:
-        return any(r.get("id") == relic_id for r in self.relics)
+        return any(r.get("id") == relic_id and not r.get("melted") for r in self.relics)
 
     def visit(self, room : str, id : str | None = None):
         self.history.append(Visit(self.act, self.floor, room, id))

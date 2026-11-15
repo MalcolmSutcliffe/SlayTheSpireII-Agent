@@ -95,8 +95,8 @@ class RunManager:
         elif decision.kind == CARD_REWARD and action == "skip_card_reward" and self.opened is not None:
             self.declined[reward_key(self.opened)] += 1
             self.opened = None
-        elif decision.kind == CARD_REWARD and action == "select_card_reward":
-            self.opened = None
+        elif decision.kind == CARD_REWARD and (action == "select_card_reward" or (action == "card_reward_alternative" and option.action.get("option_id") == "SACRIFICE")):
+            self.opened = None          # taken, or given to Pael: used up (a reroll keeps the reward open)
 
     def wait(self, game_state : dict):
         what = game_state.get("decision", game_state.get("type"))

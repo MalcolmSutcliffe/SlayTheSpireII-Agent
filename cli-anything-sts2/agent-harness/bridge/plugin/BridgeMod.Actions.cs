@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using MegaCrit.Sts2.Core.Models.Events;
+using MegaCrit.Sts2.Core.Nodes.Events.Custom;
 using System.Text.Json;
 using MegaCrit.Sts2.Core.Nodes.Cards;
 using MegaCrit.Sts2.Core.Nodes.Cards.Holders;
@@ -62,6 +64,7 @@ public static partial class BridgeMod
             "claim_reward" => ExecuteClaimReward(data),
             "select_card_reward" => ExecuteSelectCardReward(data),
             "skip_card_reward" => ExecuteSkipCardReward(),
+            "card_reward_alternative" => ExecuteCardRewardAlternative(data),
             "proceed" => ExecuteProceed(),
             "select_card" => ExecuteSelectCard(data),
             "confirm_selection" => ExecuteConfirmSelection(),
@@ -521,6 +524,9 @@ public static partial class BridgeMod
 
     private static Dictionary<string, object?> ExecuteShopPurchase(Player player, Dictionary<string, JsonElement> data)
     {
+        if (player.RunState.CurrentRoom is EventRoom && GetLiveFakeMerchant(RunManager.Instance.DebugOnlyGetState()!) is { } fakeMerchant)
+            return ExecuteFakeMerchantPurchase(player, fakeMerchant, data);
+
         if (player.RunState.CurrentRoom is not MerchantRoom merchantRoom)
             return Error("Not in a shop");
 
@@ -551,6 +557,37 @@ public static partial class BridgeMod
         {
             ["status"] = "ok",
             ["message"] = $"Purchasing item for {entry.Cost} gold"
+        };
+    }
+
+    /// <summary>Buys one of the Merchant???'s relics by its index in the shop state (the same path Lord's Parasol buys through).</summary>
+    private static Dictionary<string, object?> ExecuteFakeMerchantPurchase(Player player, FakeMerchant fakeMerchant, Dictionary<string, JsonElement> data)
+    {
+        if (!data.TryGetValue("index", out var indexElem))
+            return Error("Missing 'index' (shop item index)");
+
+        var entries = fakeMerchant.Inventory.RelicEntries.ToList();
+        int index = indexElem.GetInt32();
+        if (index < 0 || index >= entries.Count)
+            return Error($"Shop item index {index} out of range ({entries.Count} items)");
+
+        var entry = entries[index];
+        if (!entry.IsStocked)
+            return Error("Item is sold out");
+        if (!entry.EnoughGold)
+            return Error($"Not enough gold (need {entry.Cost}, have {player.Gold})");
+
+        // The screen's own inventory is opened first, as a click on the merchant would
+        var node = NEventRoom.Instance == null ? null : FindFirst<NFakeMerchant>(NEventRoom.Instance);
+        if (node != null && !node.Inventory.IsOpen)
+            typeof(NFakeMerchant).GetMethod("OpenInventory", BindingFlags.NonPublic | BindingFlags.Instance)?.Invoke(node, null);
+
+        _ = entry.OnTryPurchaseWrapper(fakeMerchant.Inventory);
+
+        return new Dictionary<string, object?>
+        {
+            ["status"] = "ok",
+            ["message"] = $"Purchasing relic for {entry.Cost} gold"
         };
     }
 
@@ -667,6 +704,38 @@ public static partial class BridgeMod
         };
     }
 
+    /// <summary>Clicks one of the card reward screen's extra buttons by its option id (REROLL, SACRIFICE, SKIP).</summary>
+    private static Dictionary<string, object?> ExecuteCardRewardAlternative(Dictionary<string, JsonElement> data)
+    {
+        var overlay = NOverlayStack.Instance?.Peek();
+        if (overlay is not NCardRewardSelectionScreen cardScreen)
+            return Error("Card reward selection screen is not open");
+
+        if (!data.TryGetValue("option_id", out var idElem))
+            return Error("Missing 'option_id'");
+        string optionId = idElem.GetString() ?? "";
+
+        var extra = GetCardRewardAlternatives(cardScreen);
+        int which = -1;
+        for (int i = 0; i < extra.Count; i++)
+            if (string.Equals(extra[i].OptionId, optionId, System.StringComparison.OrdinalIgnoreCase)) which = i;
+        if (which < 0)
+            return Error($"No card reward option '{optionId}' on this screen");
+
+        // After a reroll the old buttons may still be in the tree for a frame: the screen's own buttons are the last ones.
+        var buttons = FindAll<NCardRewardAlternativeButton>(cardScreen);
+        int first = buttons.Count - extra.Count;
+        if (first < 0 || first + which >= buttons.Count)
+            return Error("Card reward option buttons are not ready");
+        buttons[first + which].ForceClick();
+
+        return new Dictionary<string, object?>
+        {
+            ["status"] = "ok",
+            ["message"] = $"Card reward option: {optionId}"
+        };
+    }
+
     private static Dictionary<string, object?> ExecuteProceed()
     {
         // Try rewards overlay
@@ -686,6 +755,25 @@ public static partial class BridgeMod
         {
             restRoom.ProceedButton.ForceClick();
             return new Dictionary<string, object?> { ["status"] = "ok", ["message"] = "Proceeding from rest site" };
+        }
+
+        // The Merchant???: close its inventory first if open (the proceed button is off while it is), then proceed
+        var fakeNode = NEventRoom.Instance == null ? null : FindFirst<NFakeMerchant>(NEventRoom.Instance);
+        if (fakeNode != null)
+        {
+            if (fakeNode.Inventory.IsOpen)
+            {
+                var backBtn = FindFirst<NBackButton>(fakeNode);
+                if (backBtn is { IsEnabled: true })
+                    backBtn.ForceClick();
+            }
+            var fakeProceed = GetFieldValue<NProceedButton>(fakeNode, "_proceedButton");
+            if (fakeProceed is { IsEnabled: true })
+            {
+                fakeProceed.ForceClick();
+                return new Dictionary<string, object?> { ["status"] = "ok", ["message"] = "Proceeding from the Merchant???" };
+            }
+            return new Dictionary<string, object?> { ["status"] = "ok", ["message"] = "Closing the Merchant??? inventory" };
         }
 
         // Try merchant — close inventory first if open, then proceed

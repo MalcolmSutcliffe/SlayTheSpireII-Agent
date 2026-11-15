@@ -150,7 +150,7 @@ def test_relics_are_drawn_from_the_bag_and_never_repeat():
     for seed in range(6):
         result = sim_of(RandomFighter(), seed=seed).run()
         assert len(set(result.relics)) == len(result.relics)          # a drawn relic is never offered twice
-        assert result.pending_relics <= 2                              # only boss relics are still counted (act 1 and act 2)
+        assert result.pending_relics == 0                              # bosses drop no relic; an event's bag relic is drawn on the spot
 
 
 def test_a_relic_that_conjures_cards_at_the_start_of_a_fight_does_not_crash():
@@ -178,7 +178,8 @@ def test_runs_with_every_run_modifier_relic_stay_legal():
         result = sim.run()
         assert result.illegal_choices == 0
         others = [r for r in result.relics if r != "CIRCLET"]          # the fallback relic of an empty bag may repeat
-        assert len(set(others)) == len(others)
+        dupes = {r for r in others if others.count(r) > 1}
+        assert dupes <= set(RUN_MODIFIERS)          # only a relic an ancient offers on top of an injected copy (an ancient does not check what you own)
 
 
 def fight_with(*relics, deck=None, seed=0):

@@ -38,6 +38,7 @@ STREAMS = (
     "relics",                   # relic rewards and the relic bag
     "shop",
     "events",                   # event choice and the numbers an event rolls
+    "ancients",                 # the options an ancient (Neow, Orobas, ...) offers
     "rest",
     "treasure",
     "niche",

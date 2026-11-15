@@ -1,0 +1,319 @@
+{
+  "type": "decision",
+  "decision": "card_reward",
+  "context": {
+    "act": 1,
+    "floor": 3,
+    "ascension": 2
+  },
+  "run": {
+    "act": 1,
+    "floor": 3,
+    "ascension": 2
+  },
+  "cards": [
+    {
+      "index": 0,
+      "id": "WHIRLWIND",
+      "name": "Whirlwind",
+      "type": "Attack",
+      "cost": "X",
+      "star_cost": null,
+      "description": "Deal 5 damage to ALL enemies X times.",
+      "rarity": "Uncommon",
+      "is_upgraded": false,
+      "keywords": []
+    },
+    {
+      "index": 1,
+      "id": "ARMAMENTS",
+      "name": "Armaments",
+      "type": "Skill",
+      "cost": "1",
+      "star_cost": null,
+      "description": "Gain 5 Block. Upgrade a card in your Hand.",
+      "rarity": "Common",
+      "is_upgraded": false,
+      "keywords": [
+        {
+          "name": "Block",
+          "description": "Until next turn, prevents damage."
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "id": "EXPECT_A_FIGHT",
+      "name": "Expect a Fight",
+      "type": "Skill",
+      "cost": "2",
+      "star_cost": null,
+      "description": "Gain [ironclad_energy_icon.png] for each Attack in your Hand. You cannot gain additional [ironclad_energy_icon.png] this turn.",
+      "rarity": "Uncommon",
+      "is_upgraded": false,
+      "keywords": [
+        {
+          "name": "Energy",
+          "description": "Energy is used to play cards from your Hand."
+        }
+      ]
+    }
+  ],
+  "can_skip": true,
+  "player": {
+    "character": "The Ironclad",
+    "hp": 76,
+    "max_hp": 80,
+    "block": 0,
+    "energy": 3,
+    "max_energy": 3,
+    "hand": [],
+    "draw_pile_count": 0,
+    "discard_pile_count": 0,
+    "exhaust_pile_count": 0,
+    "draw_pile": [],
+    "discard_pile": [],
+    "exhaust_pile": [],
+    "gold": 133,
+    "status": [],
+    "relics": [
+      {
+        "id": "BURNING_BLOOD",
+        "name": "Burning Blood",
+        "description": "At the end of combat, heal 6 HP.",
+        "counter": null,
+        "status": "Normal",
+        "keywords": []
+      },
+      {
+        "id": "PAELS_WING",
+        "name": "Pael's Wing",
+        "description": "You may sacrifice card rewards to Pael. Every 2 sacrifices, obtain a Relic.",
+        "counter": 0,
+        "status": "Normal",
+        "keywords": []
+      }
+    ],
+    "potions": [
+      {
+        "id": "FORTIFIER",
+        "name": "Fortifier",
+        "description": "Triple your Block.",
+        "slot": 0,
+        "can_use_in_combat": true,
+        "target_type": "AnyPlayer",
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      }
+    ],
+    "potion_slots": 3,
+    "open_potion_slots": 2,
+    "deck": [
+      {
+        "index": 0,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "rarity": "Basic",
+        "cost": "1",
+        "star_cost": null,
+        "is_upgraded": false,
+        "upgrade_level": 0,
+        "can_upgrade": true,
+        "removable": true,
+        "floor_added": 1,
+        "enchantment": null
+      },
+      {
+        "index": 1,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "rarity": "Basic",
+        "cost": "1",
+        "star_cost": null,
+        "is_upgraded": false,
+        "upgrade_level": 0,
+        "can_upgrade": true,
+        "removable": true,
+        "floor_added": 1,
+        "enchantment": null
+      },
+      {
+        "index": 2,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "rarity": "Basic",
+        "cost": "1",
+        "star_cost": null,
+        "is_upgraded": false,
+        "upgrade_level": 0,
+        "can_upgrade": true,
+        "removable": true,
+        "floor_added": 1,
+        "enchantment": null
+      },
+      {
+        "index": 3,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "rarity": "Basic",
+        "cost": "1",
+        "star_cost": null,
+        "is_upgraded": false,
+        "upgrade_level": 0,
+        "can_upgrade": true,
+        "removable": true,
+        "floor_added": 1,
+        "enchantment": null
+      },
+      {
+        "index": 4,
+        "id": "STRIKE_IRONCLAD",
+        "name": "Strike",
+        "type": "Attack",
+        "rarity": "Basic",
+        "cost": "1",
+        "star_cost": null,
+        "is_upgraded": false,
+        "upgrade_level": 0,
+        "can_upgrade": true,
+        "removable": true,
+        "floor_added": 1,
+        "enchantment": null
+      },
+      {
+        "index": 5,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "rarity": "Basic",
+        "cost": "1",
+        "star_cost": null,
+        "is_upgraded": false,
+        "upgrade_level": 0,
+        "can_upgrade": true,
+        "removable": true,
+        "floor_added": 1,
+        "enchantment": null
+      },
+      {
+        "index": 6,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "rarity": "Basic",
+        "cost": "1",
+        "star_cost": null,
+        "is_upgraded": false,
+        "upgrade_level": 0,
+        "can_upgrade": true,
+        "removable": true,
+        "floor_added": 1,
+        "enchantment": null
+      },
+      {
+        "index": 7,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "rarity": "Basic",
+        "cost": "1",
+        "star_cost": null,
+        "is_upgraded": false,
+        "upgrade_level": 0,
+        "can_upgrade": true,
+        "removable": true,
+        "floor_added": 1,
+        "enchantment": null
+      },
+      {
+        "index": 8,
+        "id": "DEFEND_IRONCLAD",
+        "name": "Defend",
+        "type": "Skill",
+        "rarity": "Basic",
+        "cost": "1",
+        "star_cost": null,
+        "is_upgraded": false,
+        "upgrade_level": 0,
+        "can_upgrade": true,
+        "removable": true,
+        "floor_added": 1,
+        "enchantment": null
+      },
+      {
+        "index": 9,
+        "id": "BASH",
+        "name": "Bash",
+        "type": "Attack",
+        "rarity": "Basic",
+        "cost": "2",
+        "star_cost": null,
+        "is_upgraded": false,
+        "upgrade_level": 0,
+        "can_upgrade": true,
+        "removable": true,
+        "floor_added": 1,
+        "enchantment": null
+      }
+    ]
+  },
+  "card_reward": {
+    "cards": [
+      {
+        "index": 0,
+        "id": "WHIRLWIND",
+        "name": "Whirlwind",
+        "type": "Attack",
+        "cost": "X",
+        "star_cost": null,
+        "description": "Deal 5 damage to ALL enemies X times.",
+        "rarity": "Uncommon",
+        "is_upgraded": false,
+        "keywords": []
+      },
+      {
+        "index": 1,
+        "id": "ARMAMENTS",
+        "name": "Armaments",
+        "type": "Skill",
+        "cost": "1",
+        "star_cost": null,
+        "description": "Gain 5 Block. Upgrade a card in your Hand.",
+        "rarity": "Common",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Block",
+            "description": "Until next turn, prevents damage."
+          }
+        ]
+      },
+      {
+        "index": 2,
+        "id": "EXPECT_A_FIGHT",
+        "name": "Expect a Fight",
+        "type": "Skill",
+        "cost": "2",
+        "star_cost": null,
+        "description": "Gain [ironclad_energy_icon.png] for each Attack in your Hand. You cannot gain additional [ironclad_energy_icon.png] this turn.",
+        "rarity": "Uncommon",
+        "is_upgraded": false,
+        "keywords": [
+          {
+            "name": "Energy",
+            "description": "Energy is used to play cards from your Hand."
+          }
+        ]
+      }
+    ],
+    "can_skip": true
+  }
+}

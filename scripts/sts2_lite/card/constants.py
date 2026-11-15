@@ -10,6 +10,9 @@ from sts2_lite.card.ids import CardId, EnchantmentId, TargetType
 _S, _A, _ALL, _RAND, _NONE = TargetType.Self, TargetType.AnyEnemy, TargetType.AllEnemies, TargetType.RandomEnemy, TargetType.NONE
 CARD_ENERGY_COST_AND_TARGET : dict[CardId, tuple[int | str, TargetType]] = {
     CardId.ABUNDANCE : (1, _S),
+    CardId.BREAK : (1, _A),
+    CardId.CORRUPTION : (3, _S),
+    CardId.NEOWS_FURY : (1, _A),
     CardId.AGGRESSION : (1, _S),
     CardId.ALCHEMIZE : (1, _S),
     CardId.ANGER : (0, _A),

@@ -36,16 +36,18 @@ def combat_rewards(run : RunState, rewards) -> dict:
     return screen(run, "combat_rewards", items=[{"index": i, "type": r.kind, "description": r.description()} for i, r in enumerate(rewards)], can_proceed=True)
 
 
-def card_reward(run : RunState, offers) -> dict:
-    return screen(run, "card_reward", cards=[card_view(o, i) for i, o in enumerate(offers)], can_skip=True)
+def card_reward(run : RunState, offers, alternatives=()) -> dict:
+    """`alternatives`: the options besides taking a card and skipping (REROLL from Driftwood, SACRIFICE from Pael's Wing), as ids."""
+    return screen(run, "card_reward", cards=[card_view(o, i) for i, o in enumerate(offers)], can_skip=True,
+                  alternatives=[{"index": i, "id": a, "name": a.title()} for i, a in enumerate(alternatives)])
 
 
 REST_NAMES = {"HEAL": "Rest", "SMITH": "Smith"}
 
 
-def rest_site(run : RunState, names : list[str], can_smith : bool, can_proceed : bool) -> dict:
+def rest_site(run : RunState, names : list[str], can_smith : bool, can_proceed : bool, disabled : tuple = ()) -> dict:
     """The options still open at a rest site (HEAL, SMITH, DIG, ...); `can_proceed` once one has been used."""
-    options = [{"index": i, "id": n, "name": REST_NAMES.get(n, n.title()), "is_enabled": can_smith if n == "SMITH" else True} for i, n in enumerate(names)]
+    options = [{"index": i, "id": n, "name": REST_NAMES.get(n, n.title()), "is_enabled": can_smith if n == "SMITH" else n not in disabled} for i, n in enumerate(names)]
     return screen(run, "rest_site", options=options, can_proceed=can_proceed)
 
 

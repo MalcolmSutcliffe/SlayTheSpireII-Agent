@@ -44,7 +44,7 @@ class Opening:
         self.interactive = interactive          # the relics that open with a card choice (a fight played for real, not a deck evaluation)
         self.active : dict[str, dict] = {}
         for r in relics:
-            if r.get("status") == "Disabled" or (r["id"] in COUNTER_RELICS and r.get("counter") is not None and r["counter"] <= 0):
+            if r.get("status") == "Disabled" or r.get("melted") or (r["id"] in COUNTER_RELICS and r.get("counter") is not None and r["counter"] <= 0):
                 continue
             self.active[r["id"]] = r
         self.elite = room_type == "elite"
@@ -72,6 +72,8 @@ class Opening:
         for relic, (status, amount) in PLAYER_STATUS.items():
             if self.has(relic):
                 player.apply_status(status, amount)
+        if self.has("FAKE_SNECKO_EYE"):
+            player.apply_status(StatusId.CONFUSED, 1)
         if self.has("SLING_OF_COURAGE") and self.elite:
             player.apply_status(StatusId.STRENGTH, SLING_STRENGTH)
         if self.has("EMBER_TEA"):
@@ -151,6 +153,9 @@ class Opening:
                     break
                 player.add_to_hand(card)
         energy = 0
+        for tea, amount in (("VENERABLE_TEA_SET", 2), ("FAKE_VENERABLE_TEA_SET", 1)):
+            if self.has(tea) and self.active[tea].get("status") == "Active":
+                energy += amount
         if self.has("LANTERN"):
             energy += LANTERN_ENERGY
         if self.has("VERY_HOT_COCOA"):

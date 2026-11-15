@@ -53,6 +53,11 @@ def skip_card_reward() -> JsonDict:
     return {"action": "skip_card_reward"}
 
 
+def card_reward_alternative(option_id: str) -> JsonDict:
+    """REROLL (Driftwood) or SACRIFICE (Pael's Wing): an extra button of the card reward screen."""
+    return {"action": "card_reward_alternative", "option_id": option_id.upper()}
+
+
 def proceed() -> JsonDict:
     return {"action": "proceed"}
 
@@ -118,6 +123,7 @@ def from_name(name: str, **kwargs: object) -> JsonDict:
         "claim_reward": claim_reward,
         "select_card_reward": select_card_reward,
         "skip_card_reward": skip_card_reward,
+        "card_reward_alternative": card_reward_alternative,
         "proceed": proceed,
         "select_card": select_card,
         "confirm_selection": confirm_selection,

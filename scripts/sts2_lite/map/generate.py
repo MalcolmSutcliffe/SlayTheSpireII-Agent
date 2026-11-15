@@ -1,4 +1,4 @@
-"""Act map generation (StandardActMap) with its pruning and post-processing.
+"""Act map generation (StandardActMap) with its pruning.
 
 Seven paths are walked up a 7-wide grid, merging where they meet (and never crossing); the first row is monsters, the last row rests, a treasure row sits
 six rows below it; the other room types are dealt out at random under the placement rules; duplicate stretches are pruned (`pruning`). The game then centres, spreads and straightens the grid
@@ -195,3 +195,21 @@ def generate_map(act_id : str, rng, rooms : int, ascension : int = 0, second_bos
     if prune:
         prune_and_repair(b.grid, b.start_points, b.start, b.all_points_by_column, chosen, rng, b.valid)
     return ActMap(b.grid, b.start, b.boss, b.second_boss, b.rows, b.start_points)
+
+
+GOLDEN_PATH = ("MONSTER", "UNKNOWN", "MONSTER", "REST_SITE", "MONSTER", "REST_SITE", "UNKNOWN", "TREASURE", "UNKNOWN", "TREASURE", "UNKNOWN", "SHOP",
+               "ELITE", "REST_SITE", "ELITE", "REST_SITE")
+
+
+def golden_path_map() -> ActMap:
+    """GoldenPathActMap (Golden Compass, single player): one column of 16 rooms from the ancient to a single boss, no second boss."""
+    rows = len(GOLDEN_PATH) + 1
+    grid : list[list[MapPoint | None]] = [[None] * rows for _ in range(WIDTH)]
+    start, boss = MapPoint(WIDTH // 2, 0, PointType.ANCIENT), MapPoint(WIDTH // 2, rows, PointType.BOSS)
+    previous = start
+    for i, name in enumerate(GOLDEN_PATH):
+        point = grid[WIDTH // 2][i + 1] = MapPoint(WIDTH // 2, i + 1, PointType[name])
+        previous.add_child(point)
+        previous = point
+    previous.add_child(boss)
+    return ActMap(grid, start, boss, None, rows, [grid[WIDTH // 2][1]])

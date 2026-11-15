@@ -55,12 +55,15 @@ def _combat_start_potions(run : RunState, game):
             add(random_potion(game.stream("potion_rewards")))
 
 
-def start_fight(run : RunState, encounter_id : str, room_type : str, game, final_fight : bool = False) -> CombatSimulator:
+def start_fight(run : RunState, encounter_id : str, room_type : str, game, final_fight : bool = False, one_hp : bool = False) -> CombatSimulator:
     """Round 1 of `encounter_id` with the run's deck shuffled, the opening hand drawn and the start-of-combat relics applied."""
     cards = [card_dict(c) for c in run.deck]
     relics = copy.deepcopy(run.relics)
     _combat_start_potions(run, game)
     opening = Opening(relics, room_type, room_type == "boss", interactive=True)
+    for relic in run.relics:            # the tea set's stored energy is spent by this fight
+        if relic["id"] in ("VENERABLE_TEA_SET", "FAKE_VENERABLE_TEA_SET") and relic.get("status") == "Active":
+            relic["status"] = "Normal"
     energy = BASE_ENERGY + opening.energy_bonus()
     me = {"hp": run.hp, "max_hp": run.max_hp, "block": 0, "gold": run.gold, "status": [], "hand": [], "draw_pile": cards, "discard_pile": [], "exhaust_pile": [],
           "relics": relics, "potions": [dict(p, slot=i) for i, p in enumerate(run.potions)], "potion_slots": run.potion_slots, "energy": energy, "max_energy": energy}
@@ -71,6 +74,9 @@ def start_fight(run : RunState, encounter_id : str, room_type : str, game, final
                 player.draw_pile[i] = player.draw_pile[i].upgraded_copy()
         player.shuffle_draw_pile()
         cs = build_combat(encounter_id, run.ascension, player, game.stream("monster_ai"), max_energy=energy, final_fight=final_fight)
+        if one_hp:          # Fur Coat: a marked fight
+            for enemy in cs.enemies:
+                enemy.current_hp = 1
         opening.before_combat(cs)
         opening.before_turn(cs)
         player.opening_hook = opening.before_draw

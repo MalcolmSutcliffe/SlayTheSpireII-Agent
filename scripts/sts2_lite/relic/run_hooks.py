@@ -98,6 +98,19 @@ def combat_finished(run, room : str = "Monster", rng=None, won : bool = True):
         stored = state(run, "PAELS_TOOTH")["cards"]
         card = stored.pop(rng.randrange(len(stored)))
         add_to_deck(run, _upgraded(card) if can_upgrade(card) else card)
+    if run.has_relic("WAR_HAMMER") and room == "Elite" and won and rng is not None:
+        allowed = [i for i, c in enumerate(run.deck) if can_upgrade(c)]
+        rng.shuffle(allowed)
+        for i in allowed[:4]:
+            run.deck[i] = _upgraded(run.deck[i])
+    if run.has_relic("TOY_BOX"):
+        s = state(run, "TOY_BOX")
+        s["combats"] = s.get("combats", 0) + 1
+        if s["combats"] % 3 == 0 and s["combats"] <= 12:
+            for relic in run.relics:
+                if relic.get("wax") and not relic.get("melted"):
+                    relic["melted"] = True
+                    break
     if run.has_relic("SWORD_OF_STONE") and room == "Elite" and won:
         s = state(run, "SWORD_OF_STONE")
         s["elites"] = s.get("elites", 0) + 1
@@ -107,7 +120,7 @@ def combat_finished(run, room : str = "Monster", rng=None, won : bool = True):
                     relic["id"], relic["name"] = "SWORD_OF_JADE", "Sword of Jade"
 
 
-def modify_card_offers(run, cards : list[dict], rng, in_combat_room : bool, took_damage : bool = True) -> list[dict]:
+def modify_card_offers(run, cards : list[dict], rng, in_combat_room : bool, took_damage : bool = True, is_reward : bool = True) -> list[dict]:
     """TryModifyCardRewardOptions(Late) on a card reward's cards (deck entries): the eggs upgrade their type, Lava Lamp upgrades all after a hit-free fight, Wing Charm
     makes one card Swift, Fresnel Lens makes every valid card Nimble."""
     cards = list(cards)
@@ -123,6 +136,14 @@ def modify_card_offers(run, cards : list[dict], rng, in_combat_room : bool, took
             cards[i] = enchanted(cards[i], "SWIFT", 1)
     if run.has_relic("FRESNEL_LENS"):
         cards = [enchanted(c, "NIMBLE", 2) if can_enchant(c, "NIMBLE") else c for c in cards]
+    if is_reward and run.has_relic("SILKEN_TRESS") and not state(run, "SILKEN_TRESS").get("used"):
+        cards = [enchanted(c, "GLAM", 1) if can_enchant(c, "GLAM") else c for c in cards]      # the first card reward only
+        state(run, "SILKEN_TRESS")["used"] = True
+    if is_reward and run.has_relic("SILVER_CRUCIBLE") and state(run, "SILVER_CRUCIBLE").get("used", 0) < 3:
+        cards = [_upgraded(c) if can_upgrade(c) else c for c in cards]           # the first three card rewards come upgraded
+        state(run, "SILVER_CRUCIBLE")["used"] = state(run, "SILVER_CRUCIBLE").get("used", 0) + 1
+    if run.has_relic("GLITTER"):
+        cards = [enchanted(c, "GLAM", 1) if can_enchant(c, "GLAM") else c for c in cards]      # every card reward
     return cards
 
 
@@ -163,10 +184,54 @@ def unknown_room_blacklist(run) -> frozenset[str]:
     return frozenset({"Monster"}) if run.has_relic("JUZU_BRACELET") else frozenset()
 
 
+def golden_path_act(run) -> bool:
+    """Golden Compass: in the act it was taken in every "?" room is an event."""
+    return run.has_relic("GOLDEN_COMPASS") and state(run, "GOLDEN_COMPASS").get("act") == run.act
+
+
+def fur_coat_marked(run, coord) -> bool:
+    """Fur Coat: the enemies of a marked fight start with 1 hit point."""
+    s = state(run, "FUR_COAT")
+    return run.has_relic("FUR_COAT") and s.get("act") == run.act and tuple(coord) in {tuple(c) for c in s.get("marked", ())}
+
+
+def free_travel(run) -> bool:
+    """Winged Boots: any room of the next row can be entered, three times."""
+    return run.has_relic("WINGED_BOOTS") and state(run, "WINGED_BOOTS").get("used", 0) < 3
+
+
+def sacrificed(run):
+    """Pael's Wing: a card reward given up; the counter on the relic follows (every second one gives a relic: the simulator draws it)."""
+    s = state(run, "PAELS_WING")
+    s["sacrificed"] = s.get("sacrificed", 0) + 1
+    for relic in run.relics:
+        if relic["id"] == "PAELS_WING":
+            relic["counter"] = s["sacrificed"] % 2
+
+
+def traveled(run, was_child : bool):
+    if run.has_relic("WINGED_BOOTS") and not was_child:
+        s = state(run, "WINGED_BOOTS")
+        s["used"] = s.get("used", 0) + 1
+
+
+def treasure_gives_relic(run) -> bool:
+    """Silver Crucible: the first treasure room of the run is empty (ShouldGenerateTreasure, checked after the room is entered)."""
+    if not run.has_relic("SILVER_CRUCIBLE"):
+        return True
+    s = state(run, "SILVER_CRUCIBLE")
+    s["treasures"] = s.get("treasures", 0) + 1
+    return s["treasures"] > 1
+
+
 def room_entered(run, room : str, from_unknown : bool = False):
     """AfterRoomEntered for the relics that act on entering a room."""
     if run.has_relic("MAW_BANK") and not state(run, "MAW_BANK").get("bought"):
         gain_gold(run, 12)
+    if room == "RestSite":
+        for relic in run.relics:
+            if relic["id"] in ("VENERABLE_TEA_SET", "FAKE_VENERABLE_TEA_SET") and not relic.get("melted"):
+                relic["status"] = "Active"          # GainEnergyInNextCombat
     if room == "RestSite" and run.has_relic("ETERNAL_FEATHER"):
         _heal(run, 3 * (len(run.deck) // 5))
     if room == "Shop" and run.has_relic("MEAL_TICKET"):
@@ -190,7 +255,7 @@ def rest_healed(run):
 
 
 def rest_extra_options(run) -> list[str]:
-    return ["DIG"] if run.has_relic("SHOVEL") else []
+    return [name for relic, name in (("SHOVEL", "DIG"), ("MEAT_CLEAVER", "COOK"), ("PAELS_GROWTH", "CLONE")) if run.has_relic(relic)]
 
 
 def rest_heal_offers(run) -> list[dict]:

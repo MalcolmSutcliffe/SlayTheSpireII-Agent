@@ -154,8 +154,6 @@ _BY_NORMALISED_NAME = {_normalise(p.name): p for p in PotionId}
 _BY_NORMALISED_NAME.update({_normalise(info.name): p for p, info in POTION_INFO.items()})
 
 # what Entropic Brew and Alchemize can make (rolled by rarity as in the first game: 65 / 25 / 10), assumed; Entropic Brew makes no Entropic Brew (assumed)
-RANDOM_POTION_WEIGHTS = {C : 65, U : 25, R : 10}
-RANDOM_POTION_POOL = {rarity : [p for p, info in POTION_INFO.items() if info.rarity == rarity] for rarity in RANDOM_POTION_WEIGHTS}
 
 
 @dataclass(frozen=True)
@@ -387,14 +385,14 @@ def _soldiers_stew(combat, t):
             pile[i] = copy
 
 def procure_random_potion(player, exclude=()) -> Potion | None:
-    """A random potion (rarity 65 / 25 / 10, as in the first game, assumed) goes into the lowest free slot; None when every slot is full.
+    """A random potion (PotionFactory: 10% rare, 25% uncommon, else common; Ironclad + shared pools) goes into the lowest free slot; None when every slot is full.
     The wiki: Alchemize and Entropic Brew (in a fight) never make Fruit Juice."""
     taken = {p.slot for p in player.potions}
     slot = next((s for s in range(player.potion_slots) if s not in taken), None)
     if slot is None:
         return None
-    rarity = rng.choices(list(RANDOM_POTION_WEIGHTS), weights=list(RANDOM_POTION_WEIGHTS.values()))[0]
-    potion = Potion(rng.choice([p for p in RANDOM_POTION_POOL[rarity] if p not in exclude]), slot)
+    from sts2_lite.potion_pool import random_potion_id
+    potion = Potion(random_potion_id(rng.current(), exclude=exclude), slot)
     player.potions.append(potion)
     return potion
 

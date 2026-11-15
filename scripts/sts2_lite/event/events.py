@@ -367,6 +367,17 @@ def self_help_book(c : Ctx) -> Page:
     return page if any(not o.locked for o in page) else [Option("no_options", lambda c: None)]
 
 
+FAKE_MERCHANT_RELICS = ("FAKE_ANCHOR", "FAKE_BLOOD_VIAL", "FAKE_HAPPY_FLOWER", "FAKE_LEES_WAFFLE", "FAKE_MANGO", "FAKE_ORICHALCUM", "FAKE_SNECKO_EYE",
+                        "FAKE_STRIKE_DUMMY", "FAKE_VENERABLE_TEA_SET")
+FAKE_MERCHANT_PRICE, FAKE_MERCHANT_STOCK = 50, 6
+
+
+@event("FAKE_MERCHANT", allowed=lambda run: run.gold >= 100 or any(p.get("id") == "FOUL_POTION" for p in getattr(run, "potions", ())), acts=(2, 3))
+def fake_merchant(c : Ctx) -> Page:
+    """A shop of fake relics (50 gold each). The simulator plays it as a shop (`RunSimulator.fake_merchant`); the fight a thrown Foul Potion starts is not modelled."""
+    return []
+
+
 def modelled() -> list[str]:
     return sorted(EVENTS)
 
