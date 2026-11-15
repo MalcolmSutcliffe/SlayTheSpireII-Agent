@@ -45,6 +45,14 @@ from agents.sts2_MCTS import outcome_score
 from agents.sts2_MCTS.rollout_policy import rollout_policy
 
 MAX_TURNS = 25
+CORRECT = True              # turn the rollout policy's fights into what the MCTS would get (see CORRECTION)
+# The rollout policy plays worse than the MCTS (no lookahead: it blocks too much and kills too slowly), so a walk reads every deck as weaker than the agent plays it.
+# Fitted by `python -m benchmarks.policy_fit fit` on fights both played from the same start, per kind of fight:
+#   (keep, rescue, rescue_cost): a fight the policy wins costs `keep` times the HP it took (the MCTS loses about half as much); a fight the policy loses is won
+#   anyway with chance rescue[i] (i: how much of the enemy HP was left when it died: up to LEFT_EDGES[0], up to LEFT_EDGES[1], more), at the cost of `rescue_cost` of the HP the fight began with.
+# The chance is rolled from the walk's seed, so every deck of a decision meets the same roll; a deck's own result (how far it got) sets which chance applies.
+CORRECTION = {'weak': (0.48, (0.79, 0.46, 0.26), 0.52), 'normal': (0.48, (0.79, 0.46, 0.26), 0.52), 'elite': (0.61, (0.88, 0.39, 0.05), 0.61), 'boss': (1.0, (0.08, 0.07, 0.01), 0.85)}
+LEFT_EDGES = (0.35, 0.7)
 LOOKAHEAD_ROOMS = 3         # rooms of the next act a walk that clears its act goes on to play
 CLEAR_BONUS = 3.0           # a cleared last act: the run is won, worth as much as the lookahead's rooms
 POTION_CREDIT = 0.1         # rooms' worth of progress each potion held at the end of the walk (counted once, not at every fight)
@@ -293,6 +301,8 @@ class RouteSimulator(RunSimulator):
         expected, hp0, max0 = outcome_score.expected_total_hp(cs), cs.player.current_hp, cs.player.max_hp
         self.turn_limit = turn_limit
         self.play(sim)
+        if CORRECT and turn_limit is None:
+            self.correct(sim, room, expected, hp0)
         won = cs.player.current_hp > 0 and all(e.is_minion or e.current_hp <= 0 for e in cs.enemies)
         if not won:
             self.partial = max(0.0, min(0.99, 1.0 - outcome_score.enemy_progress_left(cs, expected)))         # how far the deck got before it died
@@ -305,6 +315,23 @@ class RouteSimulator(RunSimulator):
             self.cause = encounter.id
             raise RunOver
         return won
+
+    def correct(self, sim, room : str, expected : float, hp0 : int):
+        """The fight as the MCTS would have fought it (CORRECTION): a won fight costs less HP; a lost one is sometimes won, in proportion to how far the policy got."""
+        cs = sim.combat_state
+        keep, rescue, cost = CORRECTION.get("weak" if room == "Monster" else room.lower(), CORRECTION["normal"])
+        player = cs.player
+        if player.current_hp > 0 and all(e.is_minion or e.current_hp <= 0 for e in cs.enemies):
+            lost = hp0 - player.current_hp
+            if lost > 0:
+                player.current_hp = min(player.max_hp, hp0 - round(keep * lost))
+            return
+        left = outcome_score.enemy_progress_left(cs, expected)
+        chance = rescue[0 if left <= LEFT_EDGES[0] else 1 if left <= LEFT_EDGES[1] else 2]
+        if chance > 0 and random.Random(f"{self.walk.seed}/rescue/{self.fights}").random() < chance:
+            for enemy in cs.enemies:
+                enemy.current_hp = 0
+            player.current_hp = max(1, hp0 - round(cost * hp0))
 
     def event_fight(self, *args, **kwargs):
         """A fight an event started: not a room of its own (the event's room is scored when it is over); the rewards it pays and the HP it costs show in the rooms after it, and losing it ends the walk."""

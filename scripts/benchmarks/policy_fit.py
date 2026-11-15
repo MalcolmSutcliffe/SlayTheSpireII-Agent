@@ -68,6 +68,8 @@ def policy_job(job):
     cfg = SearchConfig().tuned(rollout=RolloutPolicy[spec.get("policy", "ClaudeHeuristic")], **{k: v for k, v in spec.items() if k != "policy"})
     sim, template, hp, act = build(seed, i)
     cs = sim.combat_state
+    from agents.sts2_MCTS import outcome_score
+    expected = outcome_score.expected_total_hp(cs)
     rng.seed(seed * 7919 + i * 31 + rep)
     start_turn = cs.turn_number
     while not sim.is_over and cs.turn_number < start_turn + 25:
@@ -76,7 +78,8 @@ def policy_job(job):
             break
         sim.perform_action(rollout_policy(sim, actions, cfg.rollout, cfg.heuristic))
     won = cs.player.current_hp > 0 and all(e.is_minion or e.current_hp <= 0 for e in cs.enemies)
-    return {"i": i, "name": name, "won": won, "hp_lost": hp - max(0, cs.player.current_hp), "hp": hp}
+    left = outcome_score.enemy_progress_left(cs, expected)
+    return {"i": i, "name": name, "won": won, "hp_lost": hp - max(0, cs.player.current_hp), "hp": hp, "left": 0.0 if won else left}
 
 
 def cost(row) -> float:
@@ -104,6 +107,74 @@ def parse_variant(text : str) -> tuple[str, dict]:
     return name, spec
 
 
+LEFT_EDGES = (0.35, 0.7)            # a lost fight's share of enemy HP left: close / half way / far
+
+
+def fit(cached : list[dict], args):
+    """Per kind of fight: KEEP (the share of the HP a won fight costs that the MCTS also loses) and RESCUE (the chance the MCTS wins a fight the policy lost, by how much
+    of the enemy was left, and the HP that win costs as a share of the HP the fight began with)."""
+    jobs = [(args.seed, r["i"], "shipped", {}, rep) for r in cached for rep in range(args.reps)]
+    runs = map_jobs(policy_job, jobs, args.workers, "policy fights")
+    by_case = {r["i"]: r for r in cached}
+    groups = {"weak": ("weak", "normal"), "normal": ("weak", "normal"), "elite": ("elite",), "boss": ("boss",)}
+    print("# kind: KEEP, RESCUE by (left <= %.2f, <= %.2f, more), RESCUE_COST (n of won pairs / n of lost runs)" % LEFT_EDGES)
+    table = {}
+    for kind, members in groups.items():
+        rows = [(r, by_case[r["i"]]) for r in runs if by_case[r["i"]]["kind"] in members]
+        both = [(r, m) for r, m in rows if r["won"] and m["won"]]
+        keep = sum(m["hp_lost"] for r, m in both) / max(1, sum(r["hp_lost"] for r, m in both)) if both else 1.0
+        lost = [(r, m) for r, m in rows if not r["won"]]
+        rescue = []
+        for lo, hi in ((0, LEFT_EDGES[0]), (LEFT_EDGES[0], LEFT_EDGES[1]), (LEFT_EDGES[1], 99)):
+            part = [(r, m) for r, m in lost if lo < r["left"] <= hi or (lo == 0 and r["left"] <= hi)]
+            rescue.append(round(sum(m["won"] for r, m in part) / len(part), 2) if part else 0.0)
+        saved = [m["hp_lost"] / m["hp"] for r, m in lost if m["won"]]
+        cost = round(statistics.fmean(saved), 2) if saved else 0.5
+        table[kind] = (round(keep, 2), tuple(rescue), cost)
+        print("%-7s keep %.2f  rescue %s  rescue_cost %.2f   (%d / %d)" % (kind, keep, rescue, cost, len(both), len(lost)))
+    print("CORRECTION = " + repr(table))
+
+
+def corrected(run : dict, case : dict, roll : float) -> dict:
+    """What route_sim.correct makes of one run of the policy on a case (roll: the uniform number that decides a rescue)."""
+    from agents.deck_eval import route_sim
+    keep, rescue, cost_share = route_sim.CORRECTION.get("weak" if case["kind"] == "normal" else case["kind"], route_sim.CORRECTION["normal"])
+    if run["won"]:
+        return {"won": True, "hp_lost": round(keep * run["hp_lost"]), "hp": run["hp"]}
+    left = run["left"]
+    chance = rescue[0 if left <= route_sim.LEFT_EDGES[0] else 1 if left <= route_sim.LEFT_EDGES[1] else 2]
+    if roll < chance:
+        return {"won": True, "hp_lost": min(run["hp"] - 1, round(cost_share * run["hp"])), "hp": run["hp"]}
+    return run
+
+
+def check(cached : list[dict], args):
+    jobs = [(args.seed, r["i"], "shipped", {}, rep) for r in cached for rep in range(args.reps)]
+    runs = map_jobs(policy_job, jobs, args.workers, "policy fights")
+    by_case = {r["i"]: r for r in cached}
+    rolls = random.Random(5)
+    out = [(r, by_case[r["i"]], corrected(r, by_case[r["i"]], rolls.random())) for r in runs]
+    def line(name, sel):
+        part = [(r, m, c) for r, m, c in out if sel(m)]
+        if not part:
+            return
+        ids = sorted({m["i"] for r, m, c in part})
+        per = lambda who, f: {i: statistics.fmean(f(x) for x in who if x[1]["i"] == i) for i in ids}
+        raw, fixed = per(part, lambda x: cost(x[0])), per(part, lambda x: cost(x[2]))
+        mc = {i: cost({"won": by_case[i]["won"], "hp_lost": by_case[i]["hp_lost"], "hp": by_case[i]["hp"]}) for i in ids}
+        win = lambda f: 100 * statistics.fmean(f(x) for x in part)
+        mw = 100 * statistics.fmean(by_case[i]["won"] for i in ids)
+        print("%-8s n=%3d | win raw %3.0f%% fixed %3.0f%% mcts %3.0f%% | cost raw %5.1f fixed %5.1f mcts %5.1f | MAE raw %4.1f fixed %4.1f | rank agr raw %.2f fixed %.2f" % (
+            name, len(ids), win(lambda x: x[0]["won"]), win(lambda x: x[2]["won"]), mw, statistics.fmean(raw.values()), statistics.fmean(fixed.values()), statistics.fmean(mc.values()),
+            statistics.fmean(abs(raw[i] - mc[i]) for i in ids), statistics.fmean(abs(fixed[i] - mc[i]) for i in ids),
+            spearman([raw[i] for i in ids], [mc[i] for i in ids]), spearman([fixed[i] for i in ids], [mc[i] for i in ids])))
+    line("all", lambda m: True)
+    for kind in ("weak", "normal", "elite", "boss"):
+        line(kind, lambda m, k=kind: m["kind"] == k)
+    for act in (1, 2, 3):
+        line("act %d" % act, lambda m, a=act: m["act"] == a)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -117,6 +188,16 @@ def main():
     s.add_argument("--time-budget", type=float, default=0.1)
     s.add_argument("--reps", type=int, default=6)
     s.add_argument("--workers", type=int, default=default_workers())
+    c = sub.add_parser("check", help="the shipped policy with route_sim.CORRECTION applied, against the MCTS on these cases (use a seed the fit has not seen)")
+    c.add_argument("--seed", type=int, default=2)
+    c.add_argument("--time-budget", type=float, default=0.1)
+    c.add_argument("--reps", type=int, default=8)
+    c.add_argument("--workers", type=int, default=default_workers())
+    f = sub.add_parser("fit", help="the numbers of route_sim.CORRECTION: how the shipped policy's fights are turned into the MCTS's")
+    f.add_argument("--seed", type=int, default=1)
+    f.add_argument("--time-budget", type=float, default=0.1)
+    f.add_argument("--reps", type=int, default=8)
+    f.add_argument("--workers", type=int, default=default_workers())
     s.add_argument("--set", action="append", default=[], metavar="NAME=field:value,...")
     args = ap.parse_args()
     cache = CACHE_DIR / f"policy_fit_mcts_s{args.seed}_b{args.time_budget}.json"
@@ -131,6 +212,10 @@ def main():
         return
     if not cached:
         raise SystemExit("no MCTS cases: run the `mcts` command first")
+    if args.cmd == "fit":
+        return fit(cached, args)
+    if args.cmd == "check":
+        return check(cached, args)
     variants = dict(parse_variant(t) for t in args.set) or VARIANTS
     jobs = [(args.seed, r["i"], name, spec, rep) for name, spec in variants.items() for r in cached for rep in range(args.reps)]
     rows = map_jobs(policy_job, jobs, args.workers, "policy fights")

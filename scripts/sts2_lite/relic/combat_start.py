@@ -240,6 +240,7 @@ def undo_enemy_effects(enemies : list[dict], relics : list[dict]):
             else:
                 if status is not StatusId.STRENGTH:       # the debuff was not there: Artifact took it, and a charge with it
                     _give_artifact(enemy)
-        healed = (POPPER_DAMAGE if opening.has("FESTIVE_POPPER") else 0) + (MERCURY_HOURGLASS_DAMAGE if opening.has("MERCURY_HOURGLASS") else 0)
+        healed = (POPPER_DAMAGE if opening.has("FESTIVE_POPPER") else 0) + (MERCURY_HOURGLASS_DAMAGE if opening.has("MERCURY_HOURGLASS") else 0) \
+            + (1 if opening.has("MR_STRUGGLES") else 0)         # Mr. Struggles hurts every enemy for the turn number as the fight's first turn starts: 1 (the sim's own turn start does it again)
         if healed:
             enemy["hp"] = min(enemy.get("max_hp", enemy["hp"]), enemy["hp"] + healed)

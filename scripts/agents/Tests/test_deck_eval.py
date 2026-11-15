@@ -14,7 +14,8 @@ needs_pool = pytest.mark.skipif(not POOL, reason="the engine has no encounters")
 def test_skip_floor_does_not_depend_on_the_deck_size():
     import inspect
     assert "deck_size" not in inspect.signature(skip_floor).parameters
-    assert skip_floor() == 0.3
+    from agents.deck_eval.card_reward_chooser import FLOOR
+    assert skip_floor() == FLOOR
 
 
 def test_paired_gain():
@@ -374,7 +375,7 @@ def test_the_advisor_hands_every_chooser_the_same_kind_of_walks():
 
 
 def test_early_floor_is_halved_for_the_first_three_rewards():
-    assert skip_floor(early=True) == skip_floor() / 2 and skip_floor(early=True) == 0.15
+    assert skip_floor(early=True) == skip_floor() / 2
 
 
 @needs_pool
@@ -393,9 +394,10 @@ def test_early_floor_applies_to_the_first_three_rewards_of_a_run():
 
 
 def test_skip_floor_shrinks_with_a_weak_deck():
-    assert skip_floor(win_rate=0.8) == skip_floor() == 0.3
-    assert skip_floor(win_rate=0.4) == 0.15
-    assert abs(skip_floor(win_rate=0.3) - 0.3 * 0.375) < 1e-9
+    from agents.deck_eval.card_reward_chooser import FLOOR
+    assert skip_floor(win_rate=0.8) == skip_floor() == FLOOR
+    assert abs(skip_floor(win_rate=0.4) - FLOOR / 2) < 1e-9
+    assert abs(skip_floor(win_rate=0.3) - FLOOR * 0.375) < 1e-9
 
 
 def test_fights_fit_the_time_budget():
@@ -802,3 +804,20 @@ def test_an_engine_error_in_a_rollout_ends_the_walk_instead_of_the_run(monkeypat
     assert score.win_rate == 0 and all(r < 1.0 for r in score.rewards)             # a death in the first fight, whatever it was
     assert rs.ENGINE_ERRORS == {"IndexError: list index out of range": 2}
     assert capsys.readouterr().out.count("engine error in a rollout") == 1          # reported once, not per walk
+
+
+@needs_pool
+def test_the_fight_correction_turns_some_of_the_policys_losses_into_wins_the_same_for_every_deck(monkeypatch):
+    from agents.deck_eval import route_sim
+    from agents.deck_eval.route_sim import sample_walks
+    ev, p = DeckEvaluator(POOL, target_types(POOL)), _player()
+    walks = sample_walks(PlannedRoute(["combat", "elite", "combat", "boss"], 3, 1, None, "OVERGROWTH"), 1, 0, 4, 2)
+    dying = {**p, "hp": 1}
+    monkeypatch.setattr(route_sim, "CORRECT", False)
+    raw = ev.score_walks(p["deck"], dying, walks)
+    monkeypatch.setattr(route_sim, "CORRECT", True)
+    monkeypatch.setattr(route_sim, "CORRECTION", {k: (0.5, (1.0, 1.0, 1.0), 0.5) for k in route_sim.CORRECTION})
+    sure = ev.score_walks(p["deck"], dying, walks)
+    assert sure.mean > raw.mean and sure.rewards == ev.score_walks(p["deck"], dying, walks).rewards          # rescued, and the rolls repeat
+    monkeypatch.setattr(route_sim, "CORRECTION", {k: (0.5, (0.0, 0.0, 0.0), 0.5) for k in route_sim.CORRECTION})
+    assert ev.score_walks(p["deck"], dying, walks).rewards == raw.rewards           # no chance of a rescue: the policy's own losses
