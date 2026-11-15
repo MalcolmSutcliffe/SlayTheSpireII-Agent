@@ -10,7 +10,7 @@ import random
 from sts2_lite.combat import CombatState, CombatSimulator
 from sts2_lite.encounters import build_combat
 from sts2_lite.player import Player
-from sts2_lite.relic.combat_start import Opening, undo_enemy_effects
+from sts2_lite.relic.combat_start import Opening, undo_enemy_effects, undo_rampart_block
 
 from agents.deck_eval.fight_pool import FightTemplate
 
@@ -48,7 +48,8 @@ def _build_captured(template : FightTemplate, deck : list[dict], player : dict, 
     """The fight of a captured round-1 state: its enemies are kept, its player is replaced by the deck being rated."""
     state = copy.deepcopy(template.state)
     me = state["player"]
-    undo_enemy_effects(state["enemies"], me.get("relics", []))       # the captured player's relics are on its enemies: the deck's own are applied below
+    undo_enemy_effects(state["enemies"], me.get("relics", []))
+    undo_rampart_block(state["enemies"])       # the captured player's relics are on its enemies: the deck's own are applied below
     cards = [card_dict(c, target_types) for c in deck]
     relics = copy.deepcopy(player.get("relics", []))
     for relic in relics:
