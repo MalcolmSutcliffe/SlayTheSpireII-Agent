@@ -11,9 +11,10 @@ POOL = load_pool()
 needs_pool = pytest.mark.skipif(not POOL, reason="no round-1 captures in data/runs")
 
 
-def test_skip_floor_falls_as_the_deck_grows():
-    assert skip_floor(10) > skip_floor(20) > skip_floor(40)
-    assert skip_floor(5) == skip_floor(10)
+def test_skip_floor_does_not_depend_on_the_deck_size():
+    import inspect
+    assert "deck_size" not in inspect.signature(skip_floor).parameters
+    assert skip_floor() == 0.3
 
 
 def test_paired_gain():
@@ -178,7 +179,7 @@ def test_a_chain_carries_hp_and_a_dead_deck_fails_it():
 
 
 def test_early_floor_is_halved_for_the_first_three_rewards():
-    assert skip_floor(10, early=True) == skip_floor(10) / 2 and skip_floor(10, early=True) == 0.15
+    assert skip_floor(early=True) == skip_floor() / 2 and skip_floor(early=True) == 0.15
 
 
 @needs_pool
@@ -197,9 +198,9 @@ def test_early_floor_applies_to_the_first_three_rewards_of_a_run():
 
 
 def test_skip_floor_shrinks_with_a_weak_deck():
-    assert skip_floor(10, win_rate=0.8) == skip_floor(10) == 0.3
-    assert skip_floor(10, win_rate=0.4) == 0.15
-    assert abs(skip_floor(16, win_rate=0.3) - 0.3 * 10 / 16 * 0.375) < 1e-9
+    assert skip_floor(win_rate=0.8) == skip_floor() == 0.3
+    assert skip_floor(win_rate=0.4) == 0.15
+    assert abs(skip_floor(win_rate=0.3) - 0.3 * 0.375) < 1e-9
 
 
 def test_fights_fit_the_time_budget():
@@ -242,6 +243,19 @@ def test_future_fights_count_fights_only_and_cards_follow_the_position():
     assert all(c["type"] in ("Attack", "Skill", "Power") for rarity in CARD_POOL.values() for c in rarity)
 
 
+def test_cards_gained_scale_by_act_and_boss_reward_looks_at_the_next_act():
+    from types import SimpleNamespace
+    from agents.deck_eval.future_cards import cards_gained, fight_act
+    import random
+    r = random.Random(3)
+    mean = lambda k, act: sum(cards_gained(k, act, r) for _ in range(4000)) / 4000
+    for act, share in ((1, 0.8), (2, 0.5), (3, 0.3)):
+        assert abs(mean(3, act) - share * 3) < 0.05        # 2.4, 1.5 and 0.9 cards on average: the fraction is rounded by chance
+    assert cards_gained(5, 1, r) == 4 and cards_gained(10, 2, r) == 5        # whole numbers are not rounded by chance
+    assert fight_act(SimpleNamespace(kinds=["boss"]), 1) == 2 and fight_act(SimpleNamespace(kinds=["boss"]), 3) == 3
+    assert fight_act(SimpleNamespace(kinds=["combat", "boss"]), 1) == 1 and fight_act(None, 2) == 2
+
+
 def test_extra_cards_follow_the_reward_rarity_odds():
     from agents.deck_eval.future_cards import extra_cards, CARD_POOL
     import random
@@ -260,7 +274,7 @@ def test_future_sample_is_repeatable_and_a_deck_with_extras_plays_them():
     a = sample_future(POOL, route, 1, 0, 30, 5)
     b = sample_future(POOL, route, 1, 0, 30, 5)
     assert [f.name for f in a[0]] == [f.name for f in b[0]] and a[1] == b[1]
-    assert {len(e) for e in a[1]} <= {1, 2, 3}
+    assert {len(e) for e in a[1]} <= {0, 1, 2, 3}        # fights 1 to 3 ahead, 0.8 cards each in act 1, the fraction rounded by chance
     ev, p = DeckEvaluator(POOL, target_types(POOL)), _player()
     with_extras = ev.score(p["deck"], p, a[0][:5], 3, a[1][:5])
     assert len(with_extras.rewards) == 5

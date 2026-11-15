@@ -34,25 +34,22 @@ https://simthespire.wordpress.com/ -> Massive dataset of fights (expected damage
 
 (Out of combat)
 
-No functionality
+ - Pathing: Heuristic node score, finds maximal path
+ - Card choice: simulates from upcoming act pool of fights with mutated deck to decide which card has highest value
+ - Events: random choice
+ - Shops: buys relics first, then potions (if elite is coming up), then cards using mutated simulator
+ - Rest sites: If above 80% hp: upgrade, otherwise simulate combats until next rest site. If it survives 80%+ of the time, upgrade, otherwise rest.
 
 ## known issues:
 
 - Enthralled, Splash, and Strategem not implemented.
+- Kaleidoscope, sea Glass, Prismatic gem, Question card, Busted crown not implemented fully
+- the divine event
 
 # TODO :
 
 ## sts_lite (slay the spire II headless imitator)
 
-Card pools (multiplayer ignored)
- - [x] Colourless
-    Not implemented:
-    - Strategem (Sim doesnt have events in between turns)
-    - Splash (need other character card pools)
- - [x] Curse
-    Not implemented:
-    - Enthralled (Enforcing play order not implemented in engine)
- 
  - [X] Status
  - [X] Ancient
  - [x] Ironclad
@@ -61,11 +58,6 @@ Card pools (multiplayer ignored)
  - [ ] Regent
  - [ ] Defect
 
-Other features:
- - [x] In-combat relics
- - [x] Potions
- - [x] Enchantments
- 
 
  ## MCTS :
 
@@ -86,11 +78,3 @@ Other features:
  - [ ] Root parallelization
  - [ ] Neural network rollout policy
  - [x] Seeded rollouts to reduce noise
-
- 
- Waiting on engine:
- - [x] Potion use
- - [ ] end of act healing. Not strictly neccesarry. Most hp is still best
-
- ## Out of combat actions
- - Needs to be addressed
