@@ -10,7 +10,7 @@ Scores (ROUTE_WEIGHTS):
 Ties go to the route with the most rest sites, then to the leftmost first step."""
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from agents.decision import Decision, Option
 
@@ -51,12 +51,22 @@ class PlannedRoute:
     act : int
     boss : str | None = None        # the act's boss encounter id, once the map shows it (the bridge's map `boss.encounter`)
     act_model : str | None = None   # "OVERGROWTH" | "UNDERDOCKS" | "HIVE" | "GLORY"
+    elites_seen : list = field(default_factory=list)    # the elite encounters fought in this act, in order (None: one that was not recognized); shared with the planner
+    elite_counted : bool = False        # the elite fight of kinds[0] is already in elites_seen
 
 
 class PathPlanner:
     def __init__(self, weights : RouteWeights = ROUTE_WEIGHTS):
         self.w = weights
         self.route : PlannedRoute | None = None
+        self._act = None
+        self.elites : dict[int, list] = {}      # act -> the elite encounters fought in it so far (the game deals them from a bag, so the rest can be known)
+
+    def note_elite(self, elite : str | None):
+        """The agent is in an elite fight: `elite` is its encounter id (None: not recognized). Counts once per room."""
+        if self.route is not None and self.route.kinds and self.route.kinds[0] == "elite" and not self.route.elite_counted:
+            self.route.elite_counted = True
+            self.route.elites_seen.append(elite)
 
     def choose(self, decision : Decision) -> Option:
         state, player = decision.state, decision.player
@@ -78,7 +88,11 @@ class PathPlanner:
             if best is None or key > best[0]:
                 best = (key, opt, kinds)
         ctx = state.get("context") or state.get("run") or {}
-        self.route = PlannedRoute(best[2], combats_done, ctx.get("act", 1), (state.get("boss") or {}).get("encounter"), state.get("act_model"))
+        act = ctx.get("act", 1)
+        if not visited or act != self._act:         # the first room of an act (or of a run): no elite fought yet
+            self.elites[act] = []
+        self._act = act
+        self.route = PlannedRoute(best[2], combats_done, act, (state.get("boss") or {}).get("encounter"), state.get("act_model"), self.elites.setdefault(act, []))
         return best[1]
 
     def best_route(self, nodes : dict, coord : tuple, point_type : str | None, combats : int, treasure : bool, hurt : bool, gold : float = 0, here : int = 0, shop_seen : bool = False) -> tuple[float, int, list[str]]:

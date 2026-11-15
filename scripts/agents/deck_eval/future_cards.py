@@ -11,7 +11,7 @@ from sts2_lite.card.constants import CARD_ENERGY_COST_AND_TARGET
 from sts2_lite.card.ids import CardId, CardType
 from sts2_lite.card.tables import CARD_RARITY, GENERATABLE_CARDS
 
-from agents.deck_eval.fight_mix import kind_templates, mix_ahead, new_act_mix, NEW_ACT_ELITES, NEW_ACT_NORMALS
+from agents.deck_eval.fight_mix import draw, kind_templates, mix_ahead, new_act_mix, NEW_ACT_ELITES, NEW_ACT_NORMALS
 from agents.deck_eval.fight_pool import FightTemplate, WEAK_FIGHTS
 
 # A card reward offers roughly 60% commons, 25% uncommons, 15% rares, and the rare share grows with every reward seen.
@@ -87,11 +87,11 @@ def sample_future(pool : list[FightTemplate], route, act : int, ascension : int,
     r = random.Random(seed)
     kinds = fight_kinds(route, act)
     mix = mix_ahead(act, route)
-    templates = kind_templates(pool, mix, ascension)
+    templates = kind_templates(pool, mix)
     played_in = fight_act(route, act)
     fights, extras = [], []
     for _ in range(n):
         position = r.randrange(len(kinds))
-        fights.append(r.choice(templates(kinds[position])))
+        fights.append(draw(templates, kinds[position], ascension, r, kinds[:position].count("elite")))
         extras.append(extra_cards(cards_gained(position + 1, played_in, r), r))
     return fights, extras

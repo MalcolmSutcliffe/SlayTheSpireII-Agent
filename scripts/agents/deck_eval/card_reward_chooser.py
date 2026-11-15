@@ -98,8 +98,8 @@ class CardRewardChooser:
         needed = Z * best[1] + skip_floor(early, deciding["base"].win_rate)
         take = best[0] > needed
         chosen = best[2] if take else (skip or best[2])
-        self.log("card reward act %d (weak %.0f normal %.0f elite %.0f boss %.1f, %d fights, %.1fs, base win %.0f%%)%s | needs > %.2f -> %s" %
-                 (mix.act, mix.weak, mix.normal, mix.elite, mix.boss, len(deciding["fights"]), time.perf_counter() - start, 100 * deciding["base"].win_rate,
+        self.log("card reward act %d (weak %.0f normal %.0f elite %.0f%s boss %.1f%s, %d fights, %.1fs, base win %.0f%%)%s | needs > %.2f -> %s" %
+                 (mix.act, mix.weak, mix.normal, mix.elite, " [" + "/".join(mix.elites) + "]" if mix.elites else "", mix.boss, " [" + mix.boss_id + "]" if mix.boss_id else "", len(deciding["fights"]), time.perf_counter() - start, 100 * deciding["base"].win_rate,
                   (": " + ", ".join("%s %+.2f±%.2f (win %.0f%%)" % (n, g, se, 100 * s.win_rate) for g, se, o, n, s in rows)) if rows else "",
                   needed, "take " + best[3] if take else "skip"))
         self.log("  with the cards to come (%d fights, %.1f extra cards each, base win %.0f%%): " % (len(future["fights"]), future["extra"], 100 * future["base"].win_rate) +

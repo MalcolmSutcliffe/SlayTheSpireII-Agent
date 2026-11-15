@@ -8,7 +8,7 @@ from agents.deck_eval.evaluator import DeckEvaluator
 from agents.deck_eval.card_reward_chooser import CardRewardChooser, paired_gain, skip_floor
 
 POOL = load_pool()
-needs_pool = pytest.mark.skipif(not POOL, reason="no round-1 captures in data/runs")
+needs_pool = pytest.mark.skipif(not POOL, reason="the engine has no encounters")
 
 
 def test_skip_floor_does_not_depend_on_the_deck_size():
@@ -38,17 +38,33 @@ def test_boss_reward_looks_at_the_next_act():
     assert mix_ahead(3, PlannedRoute(["boss"], 6, 3)).act == 3
 
 
-@needs_pool
+def test_pool_is_the_engines_encounters():
+    from sts2_lite.encounters import ACTS
+    from agents.deck_eval.fight_pool import ACT_NUMBER, WEAK_FIGHTS
+    assert WEAK_FIGHTS == {1: 3, 2: 2, 3: 2}
+    for act in ACTS.values():
+        mine = {t.encounter: t for t in POOL if t.encounter in act.encounters and t.act == ACT_NUMBER[act.id]}
+        assert set(mine) == set(act.encounters)
+        for kind, encounters in (("weak", act.weak), ("normal", act.regular), ("elite", act.elites), ("boss", act.bosses)):
+            assert {e for e, t in mine.items() if t.kind == kind} == {e.id for e in encounters}
+        assert all(t.variant == (act.id if ACT_NUMBER[act.id] == 1 else None) for t in mine.values())
+        assert all(t.state is None and (t.boss == t.encounter) == (t.kind == "boss") for t in mine.values())
+
+
 def test_pool_kinds():
     assert {t.kind for t in POOL} <= {"weak", "normal", "elite", "boss"}
     assert any(t.kind == "boss" for t in POOL)
     fights = pick_fights(POOL, new_act_mix(1), 50, 1)
     assert fights == pick_fights(POOL, new_act_mix(1), 50, 1)
+    assert len({f.seed for f in fights}) > 1 and all(f.ascension == 0 for f in fights)
+    assert all(f.ascension == 7 for f in pick_fights(POOL, new_act_mix(2), 5, 1, 7))
 
 
 def _player():
-    template = next(t for t in POOL if t.kind == "weak").state["player"]
-    return {"hp": 70, "max_hp": 80, "relics": template["relics"], "deck": template["deck"]}
+    import copy
+    from sts2_lite.run import new_run
+    run = new_run()
+    return {"hp": 70, "max_hp": 80, "relics": copy.deepcopy(run.relics), "deck": copy.deepcopy(run.deck)}
 
 
 @needs_pool
@@ -71,39 +87,107 @@ def test_chooser_returns_one_of_the_options_and_skips_a_useless_card():
     assert len(logged) == 2 and "needs" in logged[0] and "cards to come" in logged[1]
 
 
-from agents.deck_eval.boss_spawner import BOSS_ACTS, boss_of, bosses_of_act, enemy_dict, normalize_boss_id, spawn_boss
+from agents.deck_eval.boss_spawner import BOSS_ACTS, bosses_of_act, normalize_boss_id
+from agents.deck_eval.fight_builder import build_fight
+from agents.deck_eval.fight_pool import instance
+import random
 
 
 def test_boss_ids():
     assert normalize_boss_id("soul fysh") == "SOUL_FYSH_BOSS" and normalize_boss_id("VANTOM_BOSS") == "VANTOM_BOSS" and normalize_boss_id(None) is None
-    assert boss_of(["CRUSHER_0", "ROCKET_0"]) == "KAISER_CRAB_BOSS" and boss_of(["TOADPOLE_0"]) is None
     assert {v for a, v in BOSS_ACTS.values() if a == 1} == {"OVERGROWTH", "UNDERDOCKS"}
+    assert BOSS_ACTS["KAISER_CRAB_BOSS"] == (2, "HIVE") and BOSS_ACTS["QUEEN_BOSS"] == (3, "GLORY")
+    assert {t.boss for t in bosses_of_act(POOL, 1, variant="UNDERDOCKS")} == {"WATERFALL_GIANT_BOSS", "SOUL_FYSH_BOSS", "LAGAVULIN_MATRIARCH_BOSS"}
+    assert [t.boss for t in bosses_of_act(POOL, 2, "knowledge demon")] == ["KNOWLEDGE_DEMON_BOSS"]
 
 
-def test_enemy_dict_first_move_comes_from_the_sim_table():
-    giant = enemy_dict("WATERFALL_GIANT", "Waterfall Giant", 240, "PRESSURIZE", 0)
-    assert giant["move_id"] == "PRESSURIZE_MOVE" and giant["follow_up_id"] == "STOMP_MOVE" and giant["intents"][0]["type"] == "Buff"
-    assert enemy_dict("SOUL_FYSH", "Soul Fysh", 211, "BECKON", 0)["intents"][0]["type"] == "StatusCard"
-
-
-@needs_pool
-def test_spawned_bosses_by_ascension_and_played_to_the_end():
-    ev, p = DeckEvaluator(POOL, target_types(POOL)), _player()
+def test_bosses_are_built_by_the_engine_with_the_hit_points_of_the_ascension():
+    p = _player()
     for enc, hp0, hp9 in (("WATERFALL_GIANT_BOSS", 240, 250), ("SOUL_FYSH_BOSS", 211, 221), ("KNOWLEDGE_DEMON_BOSS", 379, 399)):
-        base = next(t for t in POOL if t.act == BOSS_ACTS[enc][0])
-        assert spawn_boss(enc, base, 0).state["enemies"][0]["max_hp"] == hp0
-        assert spawn_boss(enc, base, 9).state["enemies"][0]["max_hp"] == hp9
-        s = ev.score(p["deck"], p, [spawn_boss(enc, base, 0)] * 3, 1)
-        assert len(s.rewards) == 3
+        template = next(t for t in POOL if t.boss == enc)
+        for ascension, hp in ((0, hp0), (9, hp9)):
+            cs = build_fight(instance(template, ascension, random.Random(1)), p["deck"], p, target_types()).combat_state
+            assert cs.enemies[0].max_hp == hp and cs.ascension == ascension
+
+
+def test_a_drawn_fight_rolls_the_same_monsters_for_every_deck():
+    p = _player()
+    for fight in pick_fights(POOL, new_act_mix(1), 10, 4):
+        a = build_fight(fight, p["deck"], p, target_types()).combat_state
+        b = build_fight(fight, p["deck"][:-1], p, target_types()).combat_state
+        key = lambda cs: [(e.enemy_id, e.max_hp, e.move_id) for e in cs.enemies]
+        assert key(a) == key(b)
 
 
 @needs_pool
+def test_a_boss_is_played_to_the_end():
+    ev, p = DeckEvaluator(POOL, target_types(POOL)), _player()
+    template = next(t for t in POOL if t.boss == "WATERFALL_GIANT_BOSS")
+    s = ev.score(p["deck"], p, [instance(template, 0, random.Random(i)) for i in range(3)], 1)
+    assert len(s.rewards) == 3
+
+
 def test_pick_fights_uses_the_boss_the_map_showed():
     for enc in ("SOUL_FYSH_BOSS", "VANTOM_BOSS"):
-        if enc == "VANTOM_BOSS" and not any(t.boss == enc for t in POOL):
-            continue        # no capture of it in this checkout
         mix = new_act_mix(1).__class__(1, 0, 0, 0, 1.0, BOSS_ACTS[enc][1], enc)
         assert {f.boss for f in pick_fights(POOL, mix, 20, 1)} == {enc}
+
+
+def test_the_elites_left_in_the_bag():
+    from agents.deck_eval.elite_odds import elites_left
+    hive = ("DECIMILLIPEDE_ELITE", "ENTOMANCER_ELITE", "INFESTED_PRISMS_ELITE")
+    assert set(elites_left("HIVE", [])) == set(hive)
+    assert elites_left("HIVE", ["ENTOMANCER_ELITE", "DECIMILLIPEDE_ELITE"]) == ("INFESTED_PRISMS_ELITE",)
+    assert set(elites_left("HIVE", [None, "DECIMILLIPEDE_ELITE"])) == {"ENTOMANCER_ELITE", "INFESTED_PRISMS_ELITE"}
+    again = elites_left("HIVE", list(hive))                 # the bag refilled: anything but the last one
+    assert set(again) == set(hive) - {hive[-1]}
+    assert elites_left("OVERGROWTH", ["BYRDONIS_ELITE"]) != elites_left("OVERGROWTH", [])
+    assert elites_left(None, []) is None
+
+
+def test_an_elite_is_told_by_its_monsters():
+    from agents.deck_eval.elite_odds import identify
+    assert identify("HIVE", ["ENTOMANCER_0"]) == "ENTOMANCER_ELITE"
+    assert identify("HIVE", ["DECIMILLIPEDE_SEGMENT_FRONT_0", "DECIMILLIPEDE_SEGMENT_MIDDLE_1"]) == "DECIMILLIPEDE_ELITE"
+    assert identify("OVERGROWTH", ["PHROG_PARASITE_0", "WRIGGLER_1"]) == "PHROG_PARASITE_ELITE"
+    assert identify("GLORY", ["ENTOMANCER_0"]) is None
+
+
+@needs_pool
+def test_the_last_elite_is_the_one_not_fought_yet():
+    seen = ["ENTOMANCER_ELITE", "DECIMILLIPEDE_ELITE"]
+    route = PlannedRoute(["rest", "combat", "elite", "combat", "boss"], 4, 2, None, "HIVE", seen)
+    mix = mix_ahead(2, route)
+    assert mix.elites == ("INFESTED_PRISMS_ELITE",)
+    elites = [f for f in pick_fights(POOL, mix, 60, 3) if f.kind == "elite"]
+    assert elites and {f.encounter for f in elites} == {"INFESTED_PRISMS_ELITE"}
+    fresh = mix_ahead(2, PlannedRoute(["rest", "combat", "elite", "combat", "boss"], 4, 2, None, "HIVE", []))
+    assert {f.encounter for f in pick_fights(POOL, fresh, 200, 3) if f.kind == "elite"} == set(fresh.elites)
+
+
+@needs_pool
+def test_only_the_next_elite_is_narrowed():
+    from agents.deck_eval.future_cards import sample_future
+    seen = ["ENTOMANCER_ELITE", "DECIMILLIPEDE_ELITE"]
+    route = PlannedRoute(["rest", "elite", "combat", "elite", "boss"], 4, 2, None, "HIVE", seen)
+    fights, _ = sample_future(POOL, route, 2, 0, 300, 1)
+    # the first elite on the route can only be the Prisms; the second one is open
+    assert {f.encounter for f in fights if f.kind == "elite"} > {"INFESTED_PRISMS_ELITE"}
+    one = PlannedRoute(["rest", "elite", "combat", "boss"], 4, 2, None, "HIVE", seen)
+    fights, _ = sample_future(POOL, one, 2, 0, 200, 1)
+    assert {f.encounter for f in fights if f.kind == "elite"} == {"INFESTED_PRISMS_ELITE"}
+
+
+def test_the_planner_counts_an_elite_room_once():
+    from agents.pathing import PathPlanner
+    planner = PathPlanner()
+    planner.route = PlannedRoute(["elite", "rest"], 3, 2, None, "HIVE", planner.elites.setdefault(2, []))
+    planner.note_elite("ENTOMANCER_ELITE")
+    planner.note_elite("ENTOMANCER_ELITE")
+    assert planner.elites[2] == ["ENTOMANCER_ELITE"]
+    planner.route = PlannedRoute(["combat"], 3, 2, None, "HIVE", planner.elites[2])
+    planner.note_elite("X")
+    assert planner.elites[2] == ["ENTOMANCER_ELITE"]
 
 
 from agents.deck_eval.advisor import DeckAdvisor

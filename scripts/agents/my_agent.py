@@ -24,13 +24,14 @@ class MyAgent(BaseAgent):
         super().__init__()
         self.name = "MCTS combat agent"
         self._planner = PathPlanner()
-        self._advisor = None            # the fight pool and evaluator the deck choosers share: built on first use (it reads data/runs)
+        self._advisor = None            # the fight pool and evaluator the deck choosers share: built on first use
         self._card_chooser = None
         self._upgrader = None
         self._shopper = None
         self._mcts = sts2_MCTS()        # kept between calls: the next search reuses the part of this tree the game went into
 
     def get_combat_action(self, combat_state : CombatState, time_budget):
+        self._note_elite(combat_state)
         mcts = self._mcts
         search_config = SearchConfig(time_budget=time_budget)
         c = CombatSimulator(combat_state)
@@ -41,6 +42,17 @@ class MyAgent(BaseAgent):
         return action
 
     
+
+    def _note_elite(self, combat_state : CombatState):
+        """In an elite room, remember which elite it is (once): the game deals an act's elites from a bag, so the elites met say which can come next."""
+        route = self._planner.route
+        if route is None or not route.kinds or route.kinds[0] != "elite" or route.elite_counted:
+            return
+        from agents.deck_eval.elite_odds import act_id, identify
+        from agents.deck_eval.boss_spawner import BOSS_ACTS, normalize_boss_id
+        boss = normalize_boss_id(route.boss)
+        variant = BOSS_ACTS[boss][1] if boss in BOSS_ACTS and route.act == 1 else route.act_model
+        self._planner.note_elite(identify(act_id(route.act, variant), [e.enemy_id for e in combat_state.enemies]))
 
     def _deck_advisor(self):
         if self._advisor is None:
