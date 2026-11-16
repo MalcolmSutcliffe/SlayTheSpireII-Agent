@@ -1,7 +1,7 @@
 """The screens an agent decides on, in the shape the bridge reports them (`agent_runner.decision_builders` turns each into the legal options)."""
 from __future__ import annotations
 
-import copy
+from sts2_lite.datacopy import deepcopy_data
 
 from sts2_lite.map import ActMap
 from sts2_lite.run import RunState
@@ -14,7 +14,7 @@ def context(run : RunState) -> dict:
 def player(run : RunState) -> dict:
     out = run.player_dict()
     out["open_potion_slots"] = max(0, run.potion_slots - len(run.potions))
-    out["deck"] = copy.deepcopy(run.deck)
+    out["deck"] = deepcopy_data(run.deck)
     return out
 
 

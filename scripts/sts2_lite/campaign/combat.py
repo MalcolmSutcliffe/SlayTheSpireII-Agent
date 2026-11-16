@@ -4,7 +4,7 @@ The engine's state is the truth. The agent is handed a copy in which the order o
 chooses is carried out on the truth. Everything the engine rolls while ruling (shuffles, enemy moves, random targets) comes from the game's own rng."""
 from __future__ import annotations
 
-import copy
+from sts2_lite.datacopy import deepcopy_data
 
 from sts2_lite.status import StatusId
 from dataclasses import dataclass
@@ -60,7 +60,7 @@ def _combat_start_potions(run : RunState, game):
 def start_fight(run : RunState, encounter_id : str, room_type : str, game, final_fight : bool = False, one_hp : bool = False, variant : int | None = None) -> CombatSimulator:
     """Round 1 of `encounter_id` with the run's deck shuffled, the opening hand drawn and the start-of-combat relics applied."""
     cards = [card_dict(c) for c in run.deck]
-    relics = copy.deepcopy(run.relics)
+    relics = deepcopy_data(run.relics)
     _combat_start_potions(run, game)
     opening = Opening(relics, room_type, room_type == "boss", interactive=True)
     for relic in run.relics:            # the tea set's stored energy is spent by this fight

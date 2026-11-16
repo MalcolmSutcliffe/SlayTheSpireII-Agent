@@ -6,6 +6,7 @@ keeps the full state. The first fields are those the events always used, so even
 from __future__ import annotations
 
 import copy
+from sts2_lite.datacopy import deepcopy_data
 from dataclasses import dataclass, field
 
 from sts2_lite.relic import RelicId
@@ -85,8 +86,8 @@ class RunState:
     @classmethod
     def from_player(cls, player : dict, deck : list[dict], act : int = 1, floor : int = 1, ascension : int = 0) -> "RunState":
         """From a bridge `player` dict plus the deck (a real run: nothing hidden is known)."""
-        return cls(hp=player["hp"], max_hp=player["max_hp"], gold=player.get("gold", 0), deck=copy.deepcopy(deck), relics=copy.deepcopy(player.get("relics", [])),
-                   potions=copy.deepcopy([p for p in player.get("potions", []) if p]), potion_slots=player.get("potion_slots", 3), act=act, floor=floor, ascension=ascension)
+        return cls(hp=player["hp"], max_hp=player["max_hp"], gold=player.get("gold", 0), deck=deepcopy_data(deck), relics=deepcopy_data(player.get("relics", [])),
+                   potions=deepcopy_data([p for p in player.get("potions", []) if p]), potion_slots=player.get("potion_slots", 3), act=act, floor=floor, ascension=ascension)
 
     def sim_relics(self) -> list[dict]:
         """The relics the combat sim knows (the rest cannot change a fight it plays)."""
@@ -102,7 +103,7 @@ class RunState:
 
     def player_dict(self) -> dict:
         """The bridge's `player` shape (out of combat) for the part the agent reads."""
-        return {"hp": self.hp, "max_hp": self.max_hp, "gold": self.gold, "relics": copy.deepcopy(self.relics), "potions": copy.deepcopy(self.potions),
+        return {"hp": self.hp, "max_hp": self.max_hp, "gold": self.gold, "relics": deepcopy_data(self.relics), "potions": deepcopy_data(self.potions),
                 "potion_slots": self.potion_slots}
 
 
