@@ -46,6 +46,7 @@ def simulated_opening(game_state : dict) -> CombatState:
     room = game_state.get("room_type") or "monster"
     template = FightTemplate("live", (game_state.get("context") or game_state.get("run") or {}).get("act", 1), room, game_state)
     relics = counters_before_opening(me.get("relics") or [])
+    relics = [r for r in relics if r.get("id") != "STONE_CRACKER"]      # its upgrades are in the captured deck already: the sim would upgrade 2 other cards
     opening = Opening(relics, room)
     player = {"hp": hp_before_opening(game_state, opening), "max_hp": me["max_hp"], "relics": relics}
     return build_fight(template, deck_of(game_state), player, {}).combat_state

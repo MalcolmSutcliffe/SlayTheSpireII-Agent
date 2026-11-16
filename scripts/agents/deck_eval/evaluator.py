@@ -4,16 +4,14 @@ import time
 from dataclasses import dataclass
 
 from sts2_lite import rng
-from sts2_lite.combat import CombatState
 
 from agents.sts2_MCTS import outcome_score
 from agents.sts2_MCTS.params import SearchConfig, RolloutPolicy
-from agents.sts2_MCTS.rollout_policy import rollout_policy
+from agents.deck_eval.config import DEFAULT, DeckEvalConfig
 from agents.deck_eval.fight_builder import build_fight
+from agents.deck_eval.playout import play_out
 from agents.deck_eval.fight_pool import FightTemplate
 from agents.deck_eval.route_sim import play_walk
-
-MAX_TURNS = 25
 
 
 @dataclass
@@ -26,8 +24,9 @@ class DeckScore:
 
 
 class DeckEvaluator:
-    def __init__(self, pool : list[FightTemplate], target_types : dict[str, str], policy = RolloutPolicy.ClaudeHeuristic):
-        self.pool, self.target_types = pool, target_types
+    def __init__(self, pool : list[FightTemplate], target_types : dict[str, str], policy = RolloutPolicy.ClaudeHeuristic, config : DeckEvalConfig = DEFAULT):
+        """`config`: how walks are scored and how long a fight may last (deck_eval/config.py); the rollouts play with `policy`."""
+        self.pool, self.target_types, self.deck_config = pool, target_types, config
         self.config = SearchConfig().tuned(rollout=policy)
 
     def score_walks(self, deck : list[dict], player : dict, walks : list, event=None) -> DeckScore:
@@ -36,56 +35,26 @@ class DeckEvaluator:
         be compared walk by walk. `event`: an EventPlan played before each walk."""
         start, rewards, alive, hp_left = time.perf_counter(), [], 0, 0.0
         for walk in walks:
-            result = play_walk(walk, deck, player, self.config, self.target_types, event)
+            result = play_walk(walk, deck, player, self.config, self.target_types, event, scoring=self.deck_config)
             rewards.append(result.reward)
             alive += result.alive
             hp_left += result.hp if result.alive else 0
         n = max(1, len(walks))
         return DeckScore(sum(rewards) / n, alive / n, hp_left / n, time.perf_counter() - start, rewards)
 
-    def play_chain(self, deck : list[dict], player : dict, fights : list[FightTemplate], seed : int) -> tuple[bool, int]:
-        """The fights one after the other with the HP carried over (the combat's own heal after a win included): (alive at the end, HP left)."""
-        cfg, hp = self.config, player["hp"]
-        for i, template in enumerate(fights):
-            rng.seed((seed << 10) + i)
-            sim = build_fight(template, deck, {**player, "hp": hp}, self.target_types)
-            cs = sim.combat_state
-            end_turn = cs.turn_number + MAX_TURNS
-            turn = cs.turn_number
-            while not sim.is_over and cs.turn_number < end_turn:
-                if cs.turn_number != turn:
-                    turn = cs.turn_number
-                    rng.seed(((seed << 10) + i << 10) + turn)
-                actions = sim.get_available_actions()
-                if not actions:
-                    break
-                sim.perform_action(rollout_policy(sim, actions, cfg.rollout, cfg.heuristic))
-            if not (cs.player.current_hp > 0 and all(e.is_minion or e.current_hp <= 0 for e in cs.enemies)):
-                return False, 0
-            hp = cs.player.current_hp
-        return True, hp
-
-    def score(self, deck : list[dict], player : dict, fights : list[FightTemplate], seed : int, extras : list[list[dict]] | None = None) -> DeckScore:
-        """`extras`: cards added to the deck for one fight each (the cards the deck is expected to have gained by then); None: the deck as it is."""
+    def score(self, deck : list[dict], player : dict, fights : list[FightTemplate], seed : int) -> DeckScore:
+        """`deck` played through each of `fights` on its own, from the HP `player` has (a timing pilot for the card reward chooser, and the benchmarks)."""
         start, rewards, wins, hp_left = time.perf_counter(), [], 0, 0.0
         cfg = self.config
         for i, template in enumerate(fights):
             rng.seed((seed << 10) + i)
-            sim = build_fight(template, deck + extras[i] if extras else deck, player, self.target_types)
+            sim = build_fight(template, deck, player, self.target_types)
             cs = sim.combat_state
             expected, hp0, max0 = outcome_score.expected_total_hp(cs), cs.player.current_hp, cs.player.max_hp
-            end_turn = cs.turn_number + MAX_TURNS
-            turn = cs.turn_number
-            while not sim.is_over and cs.turn_number < end_turn:
-                if cs.turn_number != turn:      # every deck meets each turn with the same dice: the policy's luck cancels out between decks
-                    turn = cs.turn_number
-                    rng.seed(((seed << 10) + i << 10) + turn)
-                actions = sim.get_available_actions()
-                if not actions:
-                    break
-                sim.perform_action(rollout_policy(sim, actions, cfg.rollout, cfg.heuristic))
+            # every deck meets each turn with the same dice: the policy's luck cancels out between decks
+            play_out(sim, cfg, self.deck_config.max_turns, new_turn=lambda turn, i=i: rng.seed(((seed << 10) + i << 10) + turn))
             rewards.append(outcome_score.rate_outcome(cs, cfg.reward, hp0, max0, expected))
-            won = cs.player.current_hp > 0 and all(e.is_minion or e.current_hp <= 0 for e in cs.enemies)
+            won = outcome_score.is_win(cs)
             wins += won
             hp_left += max(0, cs.player.current_hp) if won else 0
         n = max(1, len(fights))

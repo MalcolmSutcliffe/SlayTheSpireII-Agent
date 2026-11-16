@@ -5,7 +5,7 @@ every walk, and the walks go through a whole act from there (a new act: no rest 
 walks, so the dice, the monsters and the relic draws are the same for each; the relic with the best mean reward is taken. At the start of the run that is the whole of act 1.
 
 The screen gives the relics' names; the chooser finds the relic each one is (Sea Glass with the character in its title, Dusty Tome with a Corruption card). A name it does not know
-leaves the choice to the caller (`choose` returns None). The analysis takes at most ANCIENT_SECONDS."""
+leaves the choice to the caller (`choose` returns None). The analysis takes at most DeckEvalConfig.ancient_seconds."""
 from __future__ import annotations
 import re
 
@@ -17,7 +17,6 @@ from agents.decision import Decision, Option
 from agents.deck_eval.advisor import DeckAdvisor
 from agents.deck_eval.route_sim import AncientPlan
 
-ANCIENT_SECONDS = 10.0
 EXTRA_RELICS = ("SEA_GLASS", "PRISMATIC_GEM", "TOUCH_OF_OROBAS", "ARCHAIC_TOOTH", "PAELS_WING", "PAELS_CLAW", "PAELS_TOOTH", "PAELS_GROWTH", "PAELS_LEGION", "LAVA_ROCK", "SMALL_CAPSULE",
                 "NUTRITIOUS_OYSTER", "STONE_HUMIDIFIER", "NEOWS_TALISMAN", "POMANDER", "NUTRITIOUS_SOUP", "BEAUTIFUL_BRACELET", "TRI_BOOMERANG", "DUSTY_TOME", "LARGE_CAPSULE")
 ID = re.compile(r"^[A-Z][A-Z0-9_]+$")
@@ -80,9 +79,9 @@ class AncientChooser:
             return options[0]
         deck, player, ev = decision.player.get("deck") or [], decision.player, self.advisor.evaluator
         plays = {i: (lambda walks, plan=plan: ev.score_walks(deck, player, walks, plan).rewards) for i, plan in enumerate(plans)}
-        rewards, count, seconds = self.advisor.race(decision, plays, ANCIENT_SECONDS, route=None)
+        rewards, count, seconds = self.advisor.race(decision, plays, self.advisor.config.ancient_seconds, route=None)
         means = {i: sum(r) / len(r) for i, r in rewards.items()}
         best = max(means, key=lambda i: (means[i], -i))
-        self.advisor.log("ancient %s (%d walks, %.1fs of %.0fs): " % (ancient_id, count, seconds, ANCIENT_SECONDS) +
+        self.advisor.log("ancient %s (%d walks, %.1fs of %.0fs): " % (ancient_id, count, seconds, self.advisor.config.ancient_seconds) +
                          ", ".join("%s %.2f" % (options[i].label, means[i]) for i in sorted(means, key=lambda i: -means[i])) + " -> " + options[best].label)
         return options[best]

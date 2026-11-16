@@ -1,23 +1,21 @@
 import re
 
-from agents.base_agent import BaseAgent
-from agents.pathing import PathPlanner
-
 from sts2_lite.combat import CombatState, CombatSimulator
 
+from agents.base_agent import BaseAgent
+from agents.pathing import PathPlanner
+from agents.deck_eval.advisor import DeckAdvisor
+from agents.deck_eval.ancient_chooser import AncientChooser
+from agents.deck_eval.boss_spawner import BOSS_ACTS, normalize_boss_id
+from agents.deck_eval.card_reward_chooser import CardRewardChooser
+from agents.deck_eval.cards import removal_rank
+from agents.deck_eval.config import DEFAULT as DEFAULT_DECK_CONFIG, DeckEvalConfig
+from agents.deck_eval.elite_odds import act_id, identify
+from agents.deck_eval.event_chooser import EventChooser
+from agents.deck_eval.shop_chooser import ShopChooser
+from agents.deck_eval.upgrade_chooser import UpgradeChooser
 from agents.sts2_MCTS.MCTS import sts2_MCTS
 from agents.sts2_MCTS.params import SearchConfig
-    
-# Phase constants
-PHASE_MAP_CHOICE = "MAP_CHOICE"
-PHASE_COMBAT = "COMBAT"
-PHASE_CARD_REWARD = "CARD_REWARD"
-PHASE_BOSS_RELIC = "BOSS_RELIC"
-PHASE_SHOP = "SHOP"
-PHASE_REST_SITE = "REST_SITE"
-PHASE_EVENT = "EVENT"
-PHASE_TREASURE = "TREASURE"
-PHASE_RUN_OVER = "RUN_OVER"
 
 def enchant_score(card : dict) -> float:
     """How much an enchantment is worth on a card (Sharp, Adroit, Swift ... all pay per play): a card played often and cheaply, one that hits several times, a good card over a Basic one.
@@ -35,9 +33,11 @@ def enchant_score(card : dict) -> float:
 ## MCTS for combat. Every screen outside of combat falls back to BaseAgent's get_decision handlers (override a _get_<screen>_decision to take one over).
 class MyAgent(BaseAgent):
 
-    def __init__(self, seed : int | None = None):
+    def __init__(self, seed : int | None = None, deck_config : DeckEvalConfig = DEFAULT_DECK_CONFIG):
+        """`seed` seeds the deck evaluator's walks (None: drawn at random); `deck_config` tunes every out-of-combat chooser (agents/deck_eval/config.py)."""
         super().__init__()
-        self._seed = seed         # seeds the deck evaluator's walks (None: drawn at random)
+        self._seed = seed
+        self._deck_config = deck_config
         self.name = "MCTS combat agent"
         self._planner = PathPlanner()
         self._advisor = None            # the fight pool and evaluator the deck choosers share: built on first use
@@ -66,28 +66,23 @@ class MyAgent(BaseAgent):
         route = self._planner.route
         if route is None or not route.kinds or route.kinds[0] != "elite" or route.elite_counted:
             return
-        from agents.deck_eval.elite_odds import act_id, identify
-        from agents.deck_eval.boss_spawner import BOSS_ACTS, normalize_boss_id
         boss = normalize_boss_id(route.boss)
         variant = BOSS_ACTS[boss][1] if boss in BOSS_ACTS and route.act == 1 else route.act_model
         self._planner.note_elite(identify(act_id(route.act, variant), [e.enemy_id for e in combat_state.enemies]))
 
     def _deck_advisor(self):
         if self._advisor is None:
-            from agents.deck_eval.advisor import DeckAdvisor
-            self._advisor = DeckAdvisor(route_provider=lambda: self._planner.route, seed=self._seed)
+            self._advisor = DeckAdvisor(route_provider=lambda: self._planner.route, seed=self._seed, config=self._deck_config)
         return self._advisor
 
     def _get_card_reward_decision(self, decision):
         """Each card (and skip) is tried on the same sample of fights: see agents/deck_eval."""
         if self._card_chooser is None:
-            from agents.deck_eval.card_reward_chooser import CardRewardChooser
             self._card_chooser = CardRewardChooser(advisor=self._deck_advisor())
         return self._card_chooser.choose(decision)
 
     def _upgrade_chooser(self):
         if self._upgrader is None:
-            from agents.deck_eval.upgrade_chooser import UpgradeChooser
             self._upgrader = UpgradeChooser(self._deck_advisor())
         return self._upgrader
 
@@ -96,17 +91,14 @@ class MyAgent(BaseAgent):
         return self._upgrade_chooser().choose_rest(decision) or super()._get_rest_decision(decision)
 
     def _get_shop_decision(self, decision):
-        """Every relic, card and the removal rated by the deck evaluator (a Z-score over 1.5 to buy): relics first, then potions before an elite, then the best card or removal: see agents/deck_eval/shop_chooser.py."""
+        """Every relic, card and the removal rated by the deck evaluator (a Z-score over deck_config.shop_z to buy): relics first, then potions before an elite, then the best card or removal: see agents/deck_eval/shop_chooser.py."""
         if self._shopper is None:
-            from agents.deck_eval.shop_chooser import ShopChooser
             self._shopper = ShopChooser(self._deck_advisor())
         return self._shopper.choose(decision)
 
     def _get_event_decision(self, decision):
         """The option whose outcome walks best through the rest of the act (the engine's event model, then route walks): see agents/deck_eval/event_chooser.py. The ancients' relics are chosen the same way (ancient_chooser.py). Events the engine does not model are BaseAgent's."""
         if self._eventer is None:
-            from agents.deck_eval.event_chooser import EventChooser
-            from agents.deck_eval.ancient_chooser import AncientChooser
             self._eventer, self._ancient = EventChooser(self._deck_advisor()), AncientChooser(self._deck_advisor())
         return self._ancient.choose(decision) or self._eventer.choose(decision) or super()._get_event_decision(decision)
 
@@ -115,7 +107,6 @@ class MyAgent(BaseAgent):
         an upgrade the card with the best gain on the walks, an enchantment the card that will use it most (see `enchant_score`)."""
         screen = "%s %s" % (decision.state.get("screen_type", ""), decision.state.get("prompt", ""))
         if re.search(r"remove|transform", screen, re.I):
-            from agents.deck_eval.shop_chooser import removal_rank
             def worst(item):
                 position, option = item
                 rank = removal_rank(option.data)

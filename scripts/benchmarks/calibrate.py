@@ -30,12 +30,13 @@ if str(SCRIPTS_DIR) not in sys.path:
 
 from benchmarks.bench import default_workers, map_jobs, play_fight, SEARCH_SEED_OFFSET
 from sts2_lite.combat import CombatState
+from agents.sts2_MCTS import outcome_score
 
 RESULTS_DIR = Path(__file__).resolve().parent / "results"
 
 
 def _won(cs) -> bool:
-    return cs.player.current_hp > 0 and all(e.is_minion or e.current_hp <= 0 for e in cs.enemies)
+    return outcome_score.is_win(cs)
 
 
 def make_simulator(budget : float):

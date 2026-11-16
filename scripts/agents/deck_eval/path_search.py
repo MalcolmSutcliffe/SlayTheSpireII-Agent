@@ -9,7 +9,8 @@ A path is worth the mean reward of its walks (rooms of progress: HP carried over
 are alike until the paths part.
 
 The candidates are cut in two ways. Paths are first ranked by the old node scores (agents/pathing.py), keeping the best of each kind of path (how many elites, how many rest
-sites) and up to PER_OPTION for each option; then the walks go in rounds, and every ROUNDS_PER_CUT rounds the worse half is dropped. The search stops at PATH_SECONDS.
+sites) and up to `per_option` for each option; then the walks go in rounds, and every `rounds_per_cut` rounds the worse half is dropped. The search stops at `path_seconds`
+(these numbers are DeckEvalConfig's: config.py).
 
 Whether such a plan is too careful about elites (a path's risk is counted in full: a death costs the rest of the act, while an elite's reward - its relic, a stronger deck for the
 fights after it - is seen only by walking on) is something to watch in the log lines: the chosen path's elites and its chance to come through are printed."""
@@ -19,29 +20,24 @@ import time
 from dataclasses import dataclass, field
 
 from agents.decision import Decision, Option
+from agents.deck_eval.config import DEFAULT, DeckEvalConfig
 from agents.deck_eval.route_sim import sample_walks
+from agents.route import PlannedRoute, node_kind
 
-PATH_SECONDS = 10.0
-MAX_CANDIDATES = 24
-PER_OPTION = 5
-ROUND_WALKS = 2             # walks every candidate plays in a round
-ROUNDS_PER_CUT = 3
-MIN_KEEP = 4
 NODE_CAP = 600              # most distinct paths kept below one node
 WALK_KINDS = ("combat", "elite", "rest", "treasure", "shop", "unknown", "boss")
 LETTER = {"combat": "C", "elite": "E", "rest": "R", "unknown": "?", "treasure": "T", "shop": "$", "boss": "B", "other": "-"}
-ELITE_BONUS = 0.4           # rooms of progress added to a path for each elite on it at the end of the act (the walks see an elite's risk in full, its reward only in part)
-ELITE_EARLY = 0.25          # an elite at the start of the act gets this share of ELITE_BONUS; the share grows linearly with the row to 1 at the boss: the later the elite, the stronger the deck that meets it
 SURROGATE = {"combat": 1.0, "elite": 1.2, "rest": 1.5, "unknown": 1.5, "treasure": 0.5, "shop": 1.0, "boss": 0.0}
 
 
-def elite_bonus(kinds : tuple, first_row : int, last_row : int) -> float:
-    """The bonus of a path: ELITE_BONUS for each elite, scaled from ELITE_EARLY (the act's first row) to 1 (its last row) by where the elite is. `kinds` begins on row `first_row`."""
-    total = 0.0
+def elite_bonus(kinds : tuple, first_row : int, last_row : int, config : DeckEvalConfig = DEFAULT) -> float:
+    """The bonus of a path: config.elite_bonus for each elite, scaled from config.elite_early (the act's first row) to 1 (its last row) by where the elite is.
+    `kinds` begins on row `first_row`. The walks see an elite's risk in full and its reward only in part; the later the elite, the stronger the deck that meets it."""
+    total, early = 0.0, config.elite_early
     for i, kind in enumerate(kinds):
         if kind == "elite":
             share = min(1.0, max(0.0, (first_row + i) / max(1, last_row)))
-            total += ELITE_BONUS * (ELITE_EARLY + (1.0 - ELITE_EARLY) * share)
+            total += config.elite_bonus * (early + (1.0 - early) * share)
     return total
 
 
@@ -101,22 +97,21 @@ class PathSearch:
         self.advisor, self.planner = advisor, planner
 
     def candidates(self, decision, nodes, combats_done, treasure_done, hurt, gold, here, act, boss, act_model, elites) -> list[Candidate]:
-        from agents.pathing import PlannedRoute, _kind
-        planner, found = self.planner, []
+        planner, found, cfg = self.planner, [], self.advisor.config
         last_row = max((r for _, r in nodes), default=1)
         for opt in decision.options:
             data = opt.data or {}
             first = (data.get("col"), data.get("row"))
             by_group : dict = {}
-            for kinds in enumerate_paths(nodes, first, data.get("type"), _kind):
+            for kinds in enumerate_paths(nodes, first, data.get("type"), node_kind):
                 score = planner.path_score(kinds, first[1], combats_done, treasure_done, hurt, gold, here)
                 group = (kinds.count("elite"), kinds.count("rest"))
                 if group not in by_group or score > by_group[group][0]:
                     by_group[group] = (score, kinds)
-            for score, kinds in sorted(by_group.values(), key=lambda sk: -sk[0])[:PER_OPTION]:
-                found.append(Candidate(opt, kinds, score, elite_bonus(kinds, first[1] or 0, last_row)))
+            for score, kinds in sorted(by_group.values(), key=lambda sk: -sk[0])[:cfg.per_option]:
+                found.append(Candidate(opt, kinds, score, elite_bonus(kinds, first[1] or 0, last_row, cfg)))
         found.sort(key=lambda c: -c.heuristic)
-        found = found[:MAX_CANDIDATES]
+        found = found[:cfg.max_candidates]
         for c in found:
             walked = list(c.kinds) if c.kinds[-1] == "boss" else list(c.kinds) + ["boss"]
             c.route = PlannedRoute(["other"] + walked, combats_done, act, boss, act_model, elites)
@@ -134,28 +129,29 @@ class PathSearch:
         if len({c.kinds for c in cands}) == 1 or len(cands) == 1:
             return cands[0].option, list(cands[0].kinds)
         ctx = decision.state.get("context") or decision.state.get("run") or {}
-        ev, start = self.advisor.evaluator, time.perf_counter()
+        ev, cfg, start = self.advisor.evaluator, self.advisor.config, time.perf_counter()
+        budget = cfg.path_seconds
         self.planner.plans += 1
         seed, alive_now, rounds, played = 9000 + self.planner.plans * 1000, list(cands), 0, 0
-        while time.perf_counter() - start < PATH_SECONDS:
+        while time.perf_counter() - start < budget:
             for c in alive_now:
-                if time.perf_counter() - start >= PATH_SECONDS and played:
+                if time.perf_counter() - start >= budget and played:
                     break
-                walks = sample_walks(c.route, act, ctx.get("ascension", 0), ROUND_WALKS, seed + rounds, ctx.get("floor", 1))
+                walks = sample_walks(c.route, act, ctx.get("ascension", 0), cfg.round_walks, seed + rounds, ctx.get("floor", 1))
                 score = ev.score_walks(deck, player, walks)
                 c.rewards += score.rewards
                 c.alive += round(score.win_rate * len(walks))
                 played += len(walks)
             rounds += 1
-            if rounds % ROUNDS_PER_CUT == 0 and len(alive_now) > MIN_KEEP:
-                alive_now = sorted(alive_now, key=lambda c: -c.value)[:max(MIN_KEEP, math.ceil(len(alive_now) / 2))]
+            if rounds % cfg.rounds_per_cut == 0 and len(alive_now) > cfg.min_keep:
+                alive_now = sorted(alive_now, key=lambda c: -c.value)[:max(cfg.min_keep, math.ceil(len(alive_now) / 2))]
         walked = [c for c in cands if c.rewards]
         best = max(walked, key=lambda c: (c.value, c.heuristic))
         per_option = {}
         for c in walked:
             if id(c.option) not in per_option or c.value > per_option[id(c.option)].value:
                 per_option[id(c.option)] = c
-        self.advisor.log("path (%d paths of %d kinds of path, %d walks, %.1fs of %.0fs): " % (len(cands), len({path_key(c.kinds) for c in cands}), played, time.perf_counter() - start, PATH_SECONDS) +
+        self.advisor.log("path (%d paths of %d kinds of path, %d walks, %.1fs of %.0fs): " % (len(cands), len({path_key(c.kinds) for c in cands}), played, time.perf_counter() - start, budget) +
                          ", ".join("%s %.2f (%d%% through, %d elites%s)" % (c.show(), c.value, 100 * c.alive / len(c.rewards), c.kinds.count("elite"), ", +%.2f elite bonus" % c.bonus if c.bonus else "") for c in sorted(per_option.values(), key=lambda c: -c.value)) +
                          " -> " + best.show())
         return best.option, list(best.kinds)

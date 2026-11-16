@@ -5,13 +5,14 @@ so two versions of the agent are compared run by run.
 
 Usage (from scripts/):
   python -m benchmarks.runs run --seeds 20 --preset fast --label baseline
-  python -m benchmarks.runs run --seeds 20 --preset fast --label my_change --set agents.deck_eval.path_search.PATH_SECONDS=4
+  python -m benchmarks.runs run --seeds 20 --preset fast --label my_change --deck path_seconds=4
   python -m benchmarks.runs compare benchmarks/results/A_runs_baseline.jsonl benchmarks/results/B_runs_my_change.jsonl
   python -m benchmarks.runs show benchmarks/results/A_runs_baseline.jsonl
 
   --agent my | base | package.module:Class     my = MyAgent (MCTS combat + the deck choosers), base = BaseAgent (plays the first action, picks at random out of combat)
   --preset full | fast                          full = the agent's own time caps and 0.5 s per combat decision; fast = 2 s caps and 0.1 s per combat decision, for quick looks
-  --set module.NAME=value                       override any module constant in the workers (the time caps, thresholds...); repeatable
+  --deck name=value                             set a field of the agent's DeckEvalConfig (agents/deck_eval/config.py: time caps, thresholds, walk scoring); repeatable
+  --set module.NAME=value                       override any other module constant in the workers; repeatable
   --log                                         keep what the choosers print for every run (results/<file>_logs/seed<N>.txt)
 
 What a run is scored by: `floor` (rooms entered over the whole run; a won run has the most), whether it was `won`, and `act` reached. The summary also gives where runs end (the encounter that killed
@@ -46,11 +47,9 @@ RESULTS_DIR = BENCH_DIR / "results"
 SEARCH_SEED_OFFSET = 1_000_000          # keeps the agent's own look-ahead apart from the world's seed
 FULL_BUDGET, FAST_BUDGET = 0.5, 0.1     # seconds per combat decision
 
-DECK_EVAL = "agents.deck_eval."
 PRESETS = {
-    "full": {"time_budget": FULL_BUDGET, "set": []},
-    "fast": {"time_budget": FAST_BUDGET, "set": [DECK_EVAL + "path_search.PATH_SECONDS=2", DECK_EVAL + "shop_chooser.SHOP_SECONDS=2", DECK_EVAL + "upgrade_chooser.UPGRADE_SECONDS=2",
-                                                 DECK_EVAL + "event_chooser.EVENT_SECONDS=2", DECK_EVAL + "ancient_chooser.ANCIENT_SECONDS=2"]},
+    "full": {"time_budget": FULL_BUDGET, "deck": []},
+    "fast": {"time_budget": FAST_BUDGET, "deck": ["path_seconds=2", "shop_seconds=2", "upgrade_seconds=2", "event_seconds=2", "ancient_seconds=2"]},
 }
 
 
@@ -64,10 +63,24 @@ def apply_overrides(settings : list[str]):
             raise SystemExit(f"--set wants module.NAME=value, not {item!r}")
         setattr(importlib.import_module(module), name, ast.literal_eval(value))
 
-def make_agent(spec : str, seed : int | None = None):
+def deck_config(deck : list[str]):
+    """The DeckEvalConfig with each `name=value` of `deck` set (the value is a Python literal); an unknown name stops the benchmark."""
+    from agents.deck_eval.config import DEFAULT
+    values = {}
+    for item in deck:
+        name, _, value = item.partition("=")
+        if not name or not value:
+            raise SystemExit(f"--deck wants name=value, not {item!r}")
+        values[name.strip()] = ast.literal_eval(value)
+    try:
+        return DEFAULT.tuned(**values)
+    except KeyError as e:
+        raise SystemExit(f"--deck: {e.args[0]}")
+
+def make_agent(spec : str, seed : int | None = None, deck : list[str] = ()):
     if spec == "my":
         from agents.my_agent import MyAgent
-        return MyAgent(seed)
+        return MyAgent(seed, deck_config(list(deck)))
     if spec == "base":
         from agents.base_agent import BaseAgent
         return BaseAgent()
@@ -80,14 +93,14 @@ def room_counts(history) -> dict:
     counts = Counter(v.room for v in history)
     return {room: counts.get(room, 0) for room in ("Monster", "Elite", "Boss", "RestSite", "Shop", "Treasure", "Event")}
 
-def play_run(agent_spec : str, seed : int, ascension : int, time_budget : float, settings : list[str], log_path : str | None = None) -> dict:
+def play_run(agent_spec : str, seed : int, ascension : int, time_budget : float, settings : list[str], deck : list[str], log_path : str | None = None) -> dict:
     """One whole run; the row of results/<file>.jsonl."""
     from sts2_lite.campaign import RunSimulator
     apply_overrides(settings)
     log, start = io.StringIO(), time.perf_counter()
     try:
         with contextlib.redirect_stdout(log):
-            result = RunSimulator(make_agent(agent_spec, SEARCH_SEED_OFFSET + seed), seed=seed, ascension=ascension, search_seed=SEARCH_SEED_OFFSET + seed, time_budget=time_budget).run()
+            result = RunSimulator(make_agent(agent_spec, SEARCH_SEED_OFFSET + seed, deck), seed=seed, ascension=ascension, search_seed=SEARCH_SEED_OFFSET + seed, time_budget=time_budget).run()
         error = None
     except Exception as e:           # a crash is a result too: it is counted and the run's log is kept
         import traceback
@@ -198,7 +211,8 @@ def main(argv : list[str] | None = None):
     r.add_argument("--ascension", type=int, default=0)
     r.add_argument("--preset", choices=PRESETS, default="full")
     r.add_argument("--time-budget", type=float, default=None, help="seconds per combat decision (default: the preset's)")
-    r.add_argument("--set", action="append", default=[], metavar="module.NAME=value", help="override a module constant in the workers (after the preset's)")
+    r.add_argument("--deck", action="append", default=[], metavar="name=value", help="set a DeckEvalConfig field of the agent (after the preset's)")
+    r.add_argument("--set", action="append", default=[], metavar="module.NAME=value", help="override any other module constant in the workers")
     r.add_argument("--workers", type=int, default=default_workers())
     r.add_argument("--label", default=None)
     r.add_argument("--log", action="store_true", help="keep what the choosers print, one file per run")
@@ -215,14 +229,15 @@ def main(argv : list[str] | None = None):
         print(show(args.file))
     else:
         preset = PRESETS[args.preset]
-        settings = preset["set"] + args.set
+        settings, deck = args.set, preset["deck"] + args.deck
+        deck_config(deck)           # an unknown field stops here, before any worker starts
         budget = args.time_budget if args.time_budget is not None else preset["time_budget"]
         label = args.label or f"{args.agent}_{args.preset}"
         stamp = f"{datetime.now():%Y%m%d_%H%M%S}_runs_{label}"
-        jobs = [(args.agent, seed, args.ascension, budget, settings, str(RESULTS_DIR / f"{stamp}_logs" / f"seed{seed}.txt") if args.log else None)
+        jobs = [(args.agent, seed, args.ascension, budget, settings, deck, str(RESULTS_DIR / f"{stamp}_logs" / f"seed{seed}.txt") if args.log else None)
                 for seed in range(args.first_seed, args.first_seed + args.seeds)]
         rows = map_jobs(_job, jobs, args.workers, "runs")
-        header = {"agent": args.agent, "preset": args.preset, "ascension": args.ascension, "time_budget": budget, "settings": settings, "seeds": [args.first_seed, args.first_seed + args.seeds], **run_meta(args)}
+        header = {"agent": args.agent, "preset": args.preset, "ascension": args.ascension, "time_budget": budget, "settings": settings, "deck": deck, "seeds": [args.first_seed, args.first_seed + args.seeds], **run_meta(args)}
         path = write_results(label, header, rows)
         if args.log:
             (RESULTS_DIR / f"{stamp}_logs").rename(RESULTS_DIR / f"{path.stem}_logs") if (RESULTS_DIR / f"{stamp}_logs").exists() and stamp != path.stem else None

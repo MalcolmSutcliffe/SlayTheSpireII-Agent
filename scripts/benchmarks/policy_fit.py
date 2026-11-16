@@ -64,20 +64,15 @@ def policy_job(job):
     from sts2_lite import rng
     from sts2_lite.combat import CombatSimulator
     from agents.sts2_MCTS.params import RolloutPolicy, SearchConfig
-    from agents.sts2_MCTS.rollout_policy import rollout_policy
+    from agents.deck_eval.playout import play_out
     cfg = SearchConfig().tuned(rollout=RolloutPolicy[spec.get("policy", "ClaudeHeuristic")], **{k: v for k, v in spec.items() if k != "policy"})
     sim, template, hp, act = build(seed, i)
     cs = sim.combat_state
     from agents.sts2_MCTS import outcome_score
     expected = outcome_score.expected_total_hp(cs)
     rng.seed(seed * 7919 + i * 31 + rep)
-    start_turn = cs.turn_number
-    while not sim.is_over and cs.turn_number < start_turn + 25:
-        actions = sim.get_available_actions()
-        if not actions:
-            break
-        sim.perform_action(rollout_policy(sim, actions, cfg.rollout, cfg.heuristic))
-    won = cs.player.current_hp > 0 and all(e.is_minion or e.current_hp <= 0 for e in cs.enemies)
+    play_out(sim, cfg, 25)
+    won = outcome_score.is_win(cs)
     left = outcome_score.enemy_progress_left(cs, expected)
     return {"i": i, "name": name, "won": won, "hp_lost": hp - max(0, cs.player.current_hp), "hp": hp, "left": 0.0 if won else left}
 
@@ -107,7 +102,6 @@ def parse_variant(text : str) -> tuple[str, dict]:
     return name, spec
 
 
-LEFT_EDGES = (0.35, 0.7)            # a lost fight's share of enemy HP left: close / half way / far
 
 
 def fit(cached : list[dict], args):
@@ -117,8 +111,9 @@ def fit(cached : list[dict], args):
     runs = map_jobs(policy_job, jobs, args.workers, "policy fights")
     by_case = {r["i"]: r for r in cached}
     groups = {"weak": ("weak", "normal"), "normal": ("weak", "normal"), "elite": ("elite",), "boss": ("boss",)}
+    from agents.deck_eval.route_sim import CORRECTION_FILE, LEFT_EDGES          # a lost fight's share of enemy HP left: close / half way / far
     print("# kind: KEEP, RESCUE by (left <= %.2f, <= %.2f, more), RESCUE_COST (n of won pairs / n of lost runs)" % LEFT_EDGES)
-    table = {}
+    table, kinds = {}, {}
     for kind, members in groups.items():
         rows = [(r, by_case[r["i"]]) for r in runs if by_case[r["i"]]["kind"] in members]
         both = [(r, m) for r, m in rows if r["won"] and m["won"]]
@@ -131,8 +126,15 @@ def fit(cached : list[dict], args):
         saved = [m["hp_lost"] / m["hp"] for r, m in lost if m["won"]]
         cost = round(statistics.fmean(saved), 2) if saved else 0.5
         table[kind] = (round(keep, 2), tuple(rescue), cost)
+        kinds[kind] = {"keep": round(keep, 2), "rescue": rescue, "rescue_cost": cost, "won_pairs": len(both), "lost_runs": len(lost)}
         print("%-7s keep %.2f  rescue %s  rescue_cost %.2f   (%d / %d)" % (kind, keep, rescue, cost, len(both), len(lost)))
-    print("CORRECTION = " + repr(table))
+    if args.write:
+        data = json.loads(CORRECTION_FILE.read_text())
+        data.update(left_edges=list(LEFT_EDGES), kinds=kinds, fitted={"seed": args.seed, "time_budget": args.time_budget, "reps": args.reps, "cases": len(cached)})
+        CORRECTION_FILE.write_text(json.dumps(data, indent=2) + "\n")
+        print(f"wrote {CORRECTION_FILE}")
+    else:
+        print("CORRECTION = " + repr(table) + "   (add --write to save it to %s)" % CORRECTION_FILE.name)
 
 
 def corrected(run : dict, case : dict, roll : float) -> dict:
@@ -194,6 +196,7 @@ def main():
     c.add_argument("--reps", type=int, default=8)
     c.add_argument("--workers", type=int, default=default_workers())
     f = sub.add_parser("fit", help="the numbers of route_sim.CORRECTION: how the shipped policy's fights are turned into the MCTS's")
+    f.add_argument("--write", action="store_true", help="save the fitted table to agents/deck_eval/policy_correction.json")
     f.add_argument("--seed", type=int, default=1)
     f.add_argument("--time-budget", type=float, default=0.1)
     f.add_argument("--reps", type=int, default=8)

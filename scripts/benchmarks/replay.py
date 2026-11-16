@@ -19,6 +19,7 @@ from benchmarks.bench import SEARCH_SEED_OFFSET
 from sts2_lite import rng
 from sts2_lite.combat import CombatSimulator, CombatState
 from sts2_lite.status import StatusId
+from agents.sts2_MCTS import outcome_score
 
 
 def card_name(card) -> str:
@@ -65,7 +66,7 @@ def play_traced(sim, choose, label : str, verbose : bool = True) -> dict:
         plays.append(describe(sim, action))
         sim.perform_action(action)
     flush()
-    won = cs.player.current_hp > 0 and all(e.is_minion or e.current_hp <= 0 for e in cs.enemies)
+    won = outcome_score.is_win(cs)
     result = {"won": won, "hp_lost": hp0 - max(0, cs.player.current_hp), "turns": cs.turn_number - turn0}
     print("  %-8s %s, %d HP lost, %d turns" % (label, "won" if won else "LOST", result["hp_lost"], result["turns"]))
     return result

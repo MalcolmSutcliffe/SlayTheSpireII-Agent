@@ -98,23 +98,3 @@ def pick_fights(pool : list[FightTemplate], mix : FightMix, n : int, seed : int,
         out.append(draw(templates, kind, ascension, r, nth))
     return out
 
-
-def fights_until_next_rest(pool : list[FightTemplate], route, act : int, ascension : int, r : random.Random) -> list[FightTemplate]:
-    """One draw of the fights on the planned route after the room in progress, up to the next rest site (or the end of the act with its boss).
-    The act's first combats are weak ones; "?" rooms count as nothing. No route known: two ordinary fights."""
-    mix = mix_ahead(act, route)
-    templates = kind_templates(pool, mix)
-    if route is None or not route.kinds:
-        return [draw(templates, "normal", ascension, r), draw(templates, "normal", ascension, r)]
-    weak_left = max(0, WEAK_FIGHTS.get(act, 2) - route.combats_before - (route.kinds[0] == "combat"))
-    out, elites = [], 0
-    for kind in route.kinds[1:]:
-        if kind == "rest":
-            break
-        if kind == "combat":
-            out.append(draw(templates, "weak" if weak_left > 0 else "normal", ascension, r))
-            weak_left -= 1
-        elif kind in ("elite", "boss"):
-            out.append(draw(templates, kind, ascension, r, elites))
-            elites += kind == "elite"
-    return out

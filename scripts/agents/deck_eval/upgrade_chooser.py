@@ -7,12 +7,10 @@ from __future__ import annotations
 import re
 
 from agents.decision import Decision, Option
-from agents.deck_eval.advisor import DeckAdvisor
-from agents.deck_eval.card_reward_chooser import paired_gain
+from agents.deck_eval.advisor import DeckAdvisor, paired_gain
 
 REST_HEAL_SHARE = 0.30      # a rest site heals this share of max HP when its option does not say how much
 PLAIN_PREFIXES = ("STRIKE", "DEFEND")
-UPGRADE_SECONDS = 10.0      # the most time one upgrade / rest analysis may take (every upgrade and the heal are tried on as many walks as fit)
 
 
 def _plain(card : dict) -> bool:
@@ -55,12 +53,13 @@ class UpgradeChooser:
             plays[card_id] = lambda walks, d=upgraded: ev.score_walks(d, player, walks).rewards
         if healed:
             plays["heal"] = lambda walks: ev.score_walks(deck, {**player, "hp": player["hp"] + healed}, walks).rewards
-        rewards, count, seconds = self.advisor.race(decision, plays, UPGRADE_SECONDS)
+        budget = self.advisor.config.upgrade_seconds
+        rewards, count, seconds = self.advisor.race(decision, plays, budget)
         gains = {card_id: paired_gain(rewards[card_id], rewards["base"])[0] for card_id in tried}
         heal_gain = paired_gain(rewards["heal"], rewards["base"])[0] if healed else 0.0
         self._gains[_signature(deck)] = gains
         ranked = ", ".join("%s %+.2f" % kv for kv in sorted(gains.items(), key=lambda kv: -kv[1])[:6])
-        self.advisor.log("upgrade gains (%d walks through the route ahead, %.1fs of %.0fs): %s%s" % (count, seconds, UPGRADE_SECONDS, ranked, " | heal %d HP %+.2f" % (healed, heal_gain) if healed else ""))
+        self.advisor.log("upgrade gains (%d walks through the route ahead, %.1fs of %.0fs): %s%s" % (count, seconds, budget, ranked, " | heal %d HP %+.2f" % (healed, heal_gain) if healed else ""))
         return gains, heal_gain
 
     def best_gains(self, decision : Decision) -> dict[str, float]:

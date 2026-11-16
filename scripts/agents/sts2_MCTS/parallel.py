@@ -1,3 +1,4 @@
+from __future__ import annotations
 """Replaying lines under scenarios on several processes, for the paired check and the order check.
 
 A replay (sts2_MCTS._paired_line_rollout) depends only on the state, the line and the seed, so the replays are independent and the
@@ -29,7 +30,7 @@ class Rollouts:
             _CONTEXT = (self.mcts, self.state)
             try:
                 self.pool = multiprocessing.get_context("fork").Pool(self.workers)
-            except OSError:
+            except (OSError, AssertionError):       # AssertionError: this process is a daemonic pool worker (a benchmark running on several processes), which may not have children: replay here
                 self.pool = None
         return self
 

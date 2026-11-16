@@ -1,0 +1,6 @@
+# Python packages the project needs (pip install -r requirements.txt, inside the .venv)
+# The game engine, the agents and the benchmarks run on the standard library alone; these are the exceptions.
+numpy>=2.3          # the deck model fit (agents/deck_eval/deck_model.py, benchmarks/deck_sweep.py)
+click>=8.1          # the cli-anything-sts2 command line
+pytest>=9.0         # the tests
+pytest-xdist>=3.6   # the tests in parallel (pytest -n)

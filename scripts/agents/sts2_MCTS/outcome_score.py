@@ -7,7 +7,8 @@ from __future__ import annotations
 
 from sts2_lite.combat import CombatState
 from sts2_lite.enemy import Enemy
-from sts2_lite.status import StatusId
+from sts2_lite.enemy_moves.spawns import SPAWN_HP
+from sts2_lite.status import INFESTED_SPAWNS, StatusId
 
 from agents.sts2_MCTS.params import RewardParams
 
@@ -48,6 +49,11 @@ def enemy_progress_left(state : CombatState, expected_total_hp : float) -> float
     remaining = sum(effective_hp(e) for e in state.enemies) + dormant_hp(state)
     return remaining / max(1, expected_total_hp)
 
+# A Phrog Parasite releases Wrigglers when it dies (Infested): its HP is not the end of the fight. They count at the mean of their base HP roll.
+_WRIGGLER_MIN, _WRIGGLER_MAX = SPAWN_HP["WRIGGLER"][:2]
+PHROG_RELEASE_HP = INFESTED_SPAWNS * (_WRIGGLER_MIN + _WRIGGLER_MAX) / 2
+
+
 def expected_total_hp(state : CombatState) -> float:
     """The enemy HP there is to remove in the fight at its start (what `enemy_progress_left` is a share of)."""
     total = 0
@@ -55,18 +61,16 @@ def expected_total_hp(state : CombatState) -> float:
         if e.is_minion:
             continue
         total += e.max_hp
-        # edge cases, should probably implement better way to do this in future
         if e.enemy_id.startswith("PHROG_PARASITE"):
-            total += 4*(17+21)/2
+            total += PHROG_RELEASE_HP
     return total
 
 def effective_hp(enemy : Enemy) -> float:
     if enemy.is_minion:
         return 0
     hp = enemy.current_hp
-    # edge cases
     if enemy.enemy_id.startswith("PHROG_PARASITE"):
-        hp += 4 * (17 + 21) / 2
+        hp += PHROG_RELEASE_HP
     return hp
 
 def dormant_hp(state : CombatState) -> float:

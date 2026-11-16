@@ -18,7 +18,7 @@ class PointType(Enum):
 
     @property
     def bridge_name(self) -> str:
-        """The name the bridge reports for the point (`agents.pathing._kind` reads it)."""
+        """The name the bridge reports for the point (`agents.route.node_kind` reads it)."""
         return {"REST_SITE": "RestSite"}.get(self.name, self.name.title())
 
 

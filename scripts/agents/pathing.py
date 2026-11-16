@@ -13,9 +13,11 @@ With an `advisor` set (agents/deck_eval), the route is instead the path whose wa
 paths to be walked, and stand in when there is nothing to walk with."""
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from agents.decision import Decision, Option
+from agents.deck_eval.path_search import PathSearch
+from agents.route import PlannedRoute, node_kind  # noqa: F401  (PlannedRoute: re-exported, the tests build routes from here)
 
 COMBAT_BONUS_COUNT = 3
 
@@ -34,28 +36,6 @@ class RouteWeights:
     shop_gold_scale : float = 100.0         # gold per point of score
 
 ROUTE_WEIGHTS = RouteWeights()
-
-
-def _kind(point_type : str | None) -> str:
-    t = (point_type or "").lower().replace("_", "")
-    for kind, names in (("combat", ("monster", "combat")), ("elite", ("elite",)), ("rest", ("restsite", "rest")),
-                        ("unknown", ("unknown", "question")), ("treasure", ("treasure",)), ("shop", ("shop", "merchant")), ("boss", ("boss",))):
-        if t in names:
-            return kind
-    return "other"
-
-
-@dataclass
-class PlannedRoute:
-    """The route the last map decision chose: kinds[0] is the node just chosen ("combat" | "elite" | "rest" | "unknown" | "treasure" |
-    "shop" | "boss" | "other"). `combats_before` is the combats of this act fought before it; the deck evaluator reads the fights ahead from it."""
-    kinds : list[str]
-    combats_before : int
-    act : int
-    boss : str | None = None        # the act's boss encounter id, once the map shows it (the bridge's map `boss.encounter`)
-    act_model : str | None = None   # "OVERGROWTH" | "UNDERDOCKS" | "HIVE" | "GLORY"
-    elites_seen : list = field(default_factory=list)    # the elite encounters fought in this act, in order (None: one that was not recognized); shared with the planner
-    elite_counted : bool = False        # the elite fight of kinds[0] is already in elites_seen
 
 
 class PathPlanner:
@@ -77,8 +57,8 @@ class PathPlanner:
         state, player = decision.state, decision.player
         nodes = {(n["col"], n["row"]): n for n in state.get("nodes") or ()}
         visited = state.get("visited") or []
-        combats_done = sum(_kind(v.get("type")) == "combat" for v in visited)
-        treasure_done = any(_kind(v.get("type")) == "treasure" for v in visited)
+        combats_done = sum(node_kind(v.get("type")) == "combat" for v in visited)
+        treasure_done = any(node_kind(v.get("type")) == "treasure" for v in visited)
         hurt = player.get("hp", 1) < self.w.low_hp_below * max(1, player.get("max_hp", 1))
         gold = player.get("gold", 0)
         here = (state.get("current_position") or {}).get("row")
@@ -101,7 +81,6 @@ class PathPlanner:
         chosen, kinds = best[1], best[2]
         if self.advisor is not None:
             try:
-                from agents.deck_eval.path_search import PathSearch
                 planned = PathSearch(self.advisor, self).plan(decision, nodes, combats_done, treasure_done, hurt, gold, here, act, boss, act_model, elites)
             except Exception as e:          # the walks failing must not stop the run: the node scores decide
                 self.advisor.log("path planning failed (%r) -> node scores" % (e,))
@@ -135,7 +114,7 @@ class PathPlanner:
     def best_route(self, nodes : dict, coord : tuple, point_type : str | None, combats : int, treasure : bool, hurt : bool, gold : float = 0, here : int = 0, shop_seen : bool = False) -> tuple[float, int, list[str]]:
         """(highest total score, rest sites, node kinds) of the best route that starts at `coord` and runs to the end of the map."""
         w = self.w
-        kind = _kind(point_type or (nodes.get(coord) or {}).get("type"))
+        kind = node_kind(point_type or (nodes.get(coord) or {}).get("type"))
         score, rests = 0.0, 0
         if kind == "combat":
             score = w.early_combat if combats < COMBAT_BONUS_COUNT else w.combat

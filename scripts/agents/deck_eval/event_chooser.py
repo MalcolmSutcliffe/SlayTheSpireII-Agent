@@ -8,15 +8,13 @@ agent's usual ones (a curse, Strike, Defend first for a removal or a transform; 
 Gold counts only through the shops a walk meets (it is spent there: route_sim), so an option that pays gold is worth nothing on a route without a shop.
 
 A page after the first is played by replaying the options chosen so far (the numbers the game rolled for this visit are redrawn, not known). An event the engine does not model,
-or whose option names are not the model's, is left to the caller (`choose` returns None). The analysis takes at most EVENT_SECONDS."""
+or whose option names are not the model's, is left to the caller (`choose` returns None). The analysis takes at most DeckEvalConfig.event_seconds."""
 from __future__ import annotations
 
 from agents.decision import Decision, Option
 from agents.deck_eval.advisor import DeckAdvisor
 from agents.deck_eval.route_sim import EventMismatch, EventPlan, event_option_key
 from sts2_lite.event import EVENTS
-
-EVENT_SECONDS = 10.0
 
 
 class EventChooser:
@@ -42,12 +40,12 @@ class EventChooser:
         ev = self.advisor.evaluator
         plays = {i: (lambda walks, key=event_option_key(o): ev.score_walks(deck, player, walks, EventPlan(event_id, list(self.path), key)).rewards) for i, o in enumerate(options)}
         try:
-            rewards, count, seconds = self.advisor.race(decision, plays, EVENT_SECONDS)
+            rewards, count, seconds = self.advisor.race(decision, plays, self.advisor.config.event_seconds)
         except EventMismatch as e:
             self.advisor.log("event %s: the options do not match the engine's model (%s) -> left to the default" % (event_id, e))
             return None
         means = {i: sum(r) / len(r) for i, r in rewards.items()}
         best = max(means, key=lambda i: (means[i], -i))
-        self.advisor.log("event %s (%d walks, %.1fs of %.0fs): " % (event_id, count, seconds, EVENT_SECONDS) +
+        self.advisor.log("event %s (%d walks, %.1fs of %.0fs): " % (event_id, count, seconds, self.advisor.config.event_seconds) +
                          ", ".join("%s %.2f" % (options[i].label, means[i]) for i in sorted(means, key=lambda i: -means[i])) + " -> " + options[best].label)
         return self._remember(event_id, options[best])

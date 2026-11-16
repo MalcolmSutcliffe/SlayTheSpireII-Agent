@@ -13,16 +13,18 @@ else a Defend), then cards, the rarest first, then potions; a card reward takes 
 model gives (future_cards.EXTRA_CARD_SHARE: 0.8 per fight in act 1, 0.5, 0.3) and skips otherwise; fights are played with the rollout policy.
 
 A walk is scored in rooms of progress, what the run gets through: each room survived is worth 1, a fight died in is worth the share of the enemies' HP the deck had taken off by then
-(under 1), rooms never reached are worth 0, so a death costs everything that was still ahead. A walk that clears its act goes on to play the first LOOKAHEAD_ROOMS rooms of the next
+(under 1), rooms never reached are worth 0, so a death costs everything that was still ahead. A walk that clears its act goes on to play the first `lookahead_rooms` rooms of the next
 act (healed as the ancient does; the same rooms are scored the same way), so a deck, relics, potions and max HP that carry forward show in how those go; a cleared last act is worth
-CLEAR_BONUS more. Potions held and max HP gained at the end count once (POTION_CREDIT, MAX_HP_CREDIT). HP, gold and the rest count only through what they do to the rooms that follow.
+`clear_bonus` more. Potions held and max HP gained at the end count once (`potion_credit`, `max_hp_credit`). These numbers are DeckEvalConfig's (config.py). HP, gold and the rest count only through what they do to the rooms that follow.
 
 Every deck of a decision plays the same walks, and each room reseeds every random stream of the run from the walk's seed, so what a deck meets (the monsters, their
 dice, the rewards) does not depend on what an earlier room did to the deck."""
 from __future__ import annotations
+import json
 import re
 import random
 from dataclasses import dataclass
+from pathlib import Path
 
 from sts2_lite.campaign.ancients import AncientOption
 from sts2_lite.campaign.combat import carry_back, start_fight
@@ -39,25 +41,29 @@ from sts2_lite.status import StatusId
 
 from agents.base_agent import BaseAgent
 from agents.deck_eval.boss_spawner import BOSS_ACTS, normalize_boss_id
+from agents.deck_eval.config import DEFAULT, DeckEvalConfig
+from agents.deck_eval.cards import RARITY_RANK, SHOP_RELIC_POSITION, removal_rank
 from agents.deck_eval.elite_odds import ACT_IDS, elite_sequence
 from agents.deck_eval.future_cards import EXTRA_CARD_SHARE, fight_act, route_steps
+from agents.deck_eval.playout import RolloutError, play_out
 from agents.sts2_MCTS import outcome_score
-from agents.sts2_MCTS.rollout_policy import rollout_policy
 
-MAX_TURNS = 25
-CORRECT = True              # turn the rollout policy's fights into what the MCTS would get (see CORRECTION)
-# The rollout policy plays worse than the MCTS (no lookahead: it blocks too much and kills too slowly), so a walk reads every deck as weaker than the agent plays it.
-# Fitted by `python -m benchmarks.policy_fit fit` on fights both played from the same start, per kind of fight:
-#   (keep, rescue, rescue_cost): a fight the policy wins costs `keep` times the HP it took (the MCTS loses about half as much); a fight the policy loses is won
-#   anyway with chance rescue[i] (i: how much of the enemy HP was left when it died: up to LEFT_EDGES[0], up to LEFT_EDGES[1], more), at the cost of `rescue_cost` of the HP the fight began with.
-# The chance is rolled from the walk's seed, so every deck of a decision meets the same roll; a deck's own result (how far it got) sets which chance applies.
-CORRECTION = {'weak': (0.48, (0.79, 0.46, 0.26), 0.52), 'normal': (0.48, (0.79, 0.46, 0.26), 0.52), 'elite': (0.61, (0.88, 0.39, 0.05), 0.61), 'boss': (1.0, (0.08, 0.07, 0.01), 0.85)}
-LEFT_EDGES = (0.35, 0.7)
-LOOKAHEAD_ROOMS = 3         # rooms of the next act a walk that clears its act goes on to play
-CLEAR_BONUS = 3.0           # a cleared last act: the run is won, worth as much as the lookahead's rooms
-POTION_CREDIT = 0.1         # rooms' worth of progress each potion held at the end of the walk (counted once, not at every fight)
-MAX_HP_CREDIT = 0.02        # rooms' worth for each point of max HP gained during the walk
-RARITY_RANK = {"Rare": 3, "Uncommon": 2, "Common": 1}
+CORRECTION_FILE = Path(__file__).with_name("policy_correction.json")
+
+
+def load_correction(path : Path = CORRECTION_FILE) -> tuple[dict[str, tuple], tuple[float, float]]:
+    """({kind: (keep, rescue, rescue_cost)}, left_edges) from the correction file.
+
+    The rollout policy plays worse than the MCTS (no lookahead: it blocks too much and kills too slowly), so a walk reads every deck as weaker than the agent plays it.
+    `python -m benchmarks.policy_fit fit --write` fits, per kind of fight, on fights both played from the same start: a fight the policy wins costs `keep` times the HP it took;
+    a fight the policy loses is won anyway with chance rescue[i] (i: how much of the enemy HP was left when it died: up to left_edges[0], up to left_edges[1], more), at the
+    cost of `rescue_cost` of the HP the fight began with. The chance is rolled from the walk's seed, so every deck of a decision meets the same roll."""
+    data = json.loads(path.read_text())
+    table = {kind: (k["keep"], tuple(k["rescue"]), k["rescue_cost"]) for kind, k in data["kinds"].items()}
+    return table, tuple(data["left_edges"])
+
+
+CORRECTION, LEFT_EDGES = load_correction()
 ROOM_OF_STEP = {"weak": "Monster", "normal": "Monster", "elite": "Elite", "boss": "Boss", "rest": "RestSite", "treasure": "Treasure", "shop": "Shop", "unknown": "Unknown"}
 
 
@@ -160,7 +166,6 @@ class PlanPicker(CardPicker):
     """The card choices inside an event option, as the agent would make them: a curse, a Strike, a Defend go first (removal, transform), the rarest card is upgraded or taken."""
     @staticmethod
     def _rank(card : dict) -> int:
-        from agents.deck_eval.shop_chooser import removal_rank
         r = removal_rank(card)
         return 9 if r is None else r
 
@@ -213,7 +218,6 @@ class WalkAgent(BaseAgent):
 
     def _get_shop_decision(self, decision):
         """Spend everything: the cheapest relic that can be paid, else the removal of a curse or a Strike, else the rarest card (the cheaper of equals), else a potion; then leave."""
-        from agents.deck_eval.shop_chooser import SHOP_RELIC_POSITION, removal_rank
         relic_items = [i for i in decision.state.get("items") or [] if i.get("category") == "relic"]
         shop_relic = relic_items[SHOP_RELIC_POSITION]["index"] if len(relic_items) > SHOP_RELIC_POSITION else None         # the shop's own relic (the 3rd listed) is never bought
         buys = [o for o in decision.options if o.name == "shop_purchase" and not ((o.data or {}).get("category") == "relic" and (o.data or {}).get("index") == shop_relic)]
@@ -232,7 +236,6 @@ class WalkAgent(BaseAgent):
 
     def _get_card_select_decision(self, decision):
         """A card to remove: a curse, else a Strike, else a Defend; any other card screen is BaseAgent's."""
-        from agents.deck_eval.shop_chooser import removal_rank
         picks = decision.options_named("select_card")
         confirm = decision.options_named("confirm_selection")
         if picks and not confirm and "remove" in str(decision.state.get("screen_type", "")).lower():
@@ -245,8 +248,9 @@ class WalkAgent(BaseAgent):
 class RouteSimulator(RunSimulator):
     """`RunSimulator`'s rooms for a run that is already under way, along a list of rooms instead of a map. Fights are played with the rollout policy."""
 
-    def __init__(self, run : RunState, walk : Walk, config, event : EventPlan | AncientPlan | None = None):
-        self.walk, self.config, self.opening, self.turn_limit = walk, config, event, None
+    def __init__(self, run : RunState, walk : Walk, config, event : EventPlan | AncientPlan | None = None, scoring : DeckEvalConfig = DEFAULT):
+        """`config`: the SearchConfig whose rollout policy plays the fights; `scoring`: how the walk is scored (deck_eval/config.py)."""
+        self.walk, self.config, self.opening, self.turn_limit, self.scoring = walk, config, event, None, scoring
         self.agent = WalkAgent(walk.take_rate, walk.seed)
         self.ascension, self.time_budget = run.ascension, None
         self.game, self.search = GameRng(walk.seed), SearchRng(walk.seed)
@@ -262,26 +266,15 @@ class RouteSimulator(RunSimulator):
             self.game.stream(name).seed(f"{self.walk.seed}/{name}/{label}")
 
     def play(self, sim):
-        """The fight to its end (or MAX_TURNS) with the rollout policy; every deck meets each turn with the same dice."""
-        cs, cfg = sim.combat_state, self.config
-        end_turn = cs.turn_number + (self.turn_limit or MAX_TURNS)
-        turn = cs.turn_number
-        while not sim.is_over and cs.turn_number < end_turn:
-            if cs.turn_number != turn:
-                turn = cs.turn_number
-                self.game.stream("combat").seed(f"{self.walk.seed}/turn/{self.fights}/{turn}")
-            action = None
-            try:
-                actions = sim.get_available_actions()
-                if not actions:
-                    break
-                with self.game.scope("combat"):
-                    action = rollout_policy(sim, actions, cfg.rollout, cfg.heuristic)
-                    sim.perform_action(action)
-            except Exception as error:         # an engine bug met by this rollout: the walk ends here, scored as a death in this room
-                note_engine_error(error, sim, action)
-                self.partial = 0.0
-                raise RunOver
+        """The fight to its end (or scoring.max_turns) with the rollout policy; every deck meets each turn with the same dice. An engine bug ends the walk there,
+        scored as a death in this room."""
+        reseed = lambda turn: self.game.stream("combat").seed(f"{self.walk.seed}/turn/{self.fights}/{turn}")
+        try:
+            play_out(sim, self.config, self.turn_limit or self.scoring.max_turns, new_turn=reseed, scope=lambda: self.game.scope("combat"))
+        except RolloutError as error:
+            note_engine_error(error.__cause__, sim, error.action)
+            self.partial = 0.0
+            raise RunOver
 
     def fight_room(self, room : str, encounter, first_of_two : bool = False, last_boss : bool = False):
         r = self.run_state
@@ -301,9 +294,9 @@ class RouteSimulator(RunSimulator):
         expected, hp0, max0 = outcome_score.expected_total_hp(cs), cs.player.current_hp, cs.player.max_hp
         self.turn_limit = turn_limit
         self.play(sim)
-        if CORRECT and turn_limit is None:
+        if self.scoring.correct and turn_limit is None:
             self.correct(sim, room, expected, hp0)
-        won = cs.player.current_hp > 0 and all(e.is_minion or e.current_hp <= 0 for e in cs.enemies)
+        won = outcome_score.is_win(cs)
         if not won:
             self.partial = max(0.0, min(0.99, 1.0 - outcome_score.enemy_progress_left(cs, expected)))         # how far the deck got before it died
         carry_back(r, sim)
@@ -321,7 +314,7 @@ class RouteSimulator(RunSimulator):
         cs = sim.combat_state
         keep, rescue, cost = CORRECTION.get("weak" if room == "Monster" else room.lower(), CORRECTION["normal"])
         player = cs.player
-        if player.current_hp > 0 and all(e.is_minion or e.current_hp <= 0 for e in cs.enemies):
+        if outcome_score.is_win(cs):
             lost = hp0 - player.current_hp
             if lost > 0:
                 player.current_hp = min(player.max_hp, hp0 - round(keep * lost))
@@ -440,7 +433,7 @@ class RouteSimulator(RunSimulator):
         r.hidden.unknown_odds.reset()
         r.hidden.events, r.hidden.events_visited = list(ACTS[act_id].events + SHARED_EVENTS), 0
         random.Random(walk.seed + 8).shuffle(r.hidden.events)
-        return route_steps(None, act)[:LOOKAHEAD_ROOMS]
+        return route_steps(None, act)[:self.scoring.lookahead_rooms]
 
     def walk_route(self) -> WalkResult:
         r, walk = self.run_state, self.walk
@@ -462,14 +455,14 @@ class RouteSimulator(RunSimulator):
                 for i, step in enumerate(self.next_act()):
                     self.play_room(step, "next%d" % i)
             else:
-                self.credits.append(CLEAR_BONUS)
+                self.credits.append(self.scoring.clear_bonus)
         except RunOver:
             if self.in_room:
                 self.credits.append(self.partial)
         reward = sum(self.credits)
         survived = r.hp > 0 and not r.dead
         if survived:
-            reward += POTION_CREDIT * len(r.potions) + MAX_HP_CREDIT * (r.max_hp - max_hp0)
+            reward += self.scoring.potion_credit * len(r.potions) + self.scoring.max_hp_credit * (r.max_hp - max_hp0)
         return WalkResult(reward, alive, max(0, r.hp), sum(c == 1.0 for c in self.credits))
 
 
@@ -478,9 +471,10 @@ def _normalized(deck : list[dict], target_types : dict[str, str]) -> list[dict]:
     return [c if c.get("target_type") else dict(c, target_type=target_types.get(c["id"])) for c in deck]
 
 
-def play_walk(walk : Walk, deck : list[dict], player : dict, config, target_types : dict[str, str], event : EventPlan | AncientPlan | None = None, simulator=None) -> WalkResult:
+def play_walk(walk : Walk, deck : list[dict], player : dict, config, target_types : dict[str, str], event : EventPlan | AncientPlan | None = None, simulator=None,
+              scoring : DeckEvalConfig = DEFAULT) -> WalkResult:
     """One walk with `deck`, from the run as `player` (hp, max hp, gold, relics, potions) has it; with `event`, that event option is played first.
-    `simulator`: a RouteSimulator subclass to play it with (benchmarks/calibrate.py)."""
+    `config`: the SearchConfig of the rollouts; `scoring`: how the walk is scored. `simulator`: a RouteSimulator subclass to play it with (benchmarks/calibrate.py)."""
     run = RunState.from_player(player, _normalized(deck, target_types), act=walk.act, floor=walk.floor, ascension=walk.ascension)
     run.act_id, run.boss = walk.act_id, walk.rooms.boss.id
     hidden = Hidden()
@@ -492,7 +486,7 @@ def play_walk(walk : Walk, deck : list[dict], player : dict, config, target_type
     hidden.events, hidden.events_visited = list(ACTS[walk.act_id].events + SHARED_EVENTS), 0         # the events a "?" can turn into, in the order the act deals them
     random.Random(walk.seed + 1).shuffle(hidden.events)
     run.hidden = hidden
-    return (simulator or RouteSimulator)(run, walk, config, event).walk_route()
+    return (simulator or RouteSimulator)(run, walk, config, event, scoring=scoring).walk_route()
 
 
 def sample_walks(route, act : int, ascension : int, n : int, seed : int, floor : int = 1) -> list[Walk]:

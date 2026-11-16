@@ -1,4 +1,4 @@
-"""What the shop chooser buys: relics whose Z-score clears Z, then (potions before an elite, then) the card or removal with the best Z-score over Z.
+"""What the shop chooser buys: relics whose Z-score clears shop_z, then (potions before an elite, then) the card or removal with the best Z-score over shop_z.
 The analysis itself (`ShopChooser._analyse`) is replaced by canned rows in the decision tests; the last tests run it on the engine."""
 from types import SimpleNamespace
 
@@ -6,6 +6,7 @@ import pytest
 
 from agents.decision import Decision, Option, SHOP
 from agents.deck_eval import shop_chooser
+from agents.deck_eval.config import DEFAULT
 from agents.deck_eval.shop_chooser import Row, ShopChooser, card_to_remove, removal_rank
 
 
@@ -23,7 +24,7 @@ def screen(items, deck=()):
 class Canned(ShopChooser):
     """A chooser whose analysis gives `scores`: item index -> (gain, z). It remembers which relics it was asked about."""
     def __init__(self, scores, kinds=()):
-        super().__init__(SimpleNamespace(route_provider=lambda: SimpleNamespace(kinds=list(kinds)), pool=[], log=lambda *_: None))
+        super().__init__(SimpleNamespace(route_provider=lambda: SimpleNamespace(kinds=list(kinds)), pool=[], log=lambda *_: None, config=DEFAULT))
         self.scores, self.asked = scores, None
 
     def _analyse(self, decision, relics, buys):
@@ -142,9 +143,9 @@ def test_a_walk_with_a_bought_relic_pairs_with_the_walk_without_it():
 
 @needs_pool
 def test_the_analysis_rates_every_candidate_and_the_choice_is_one_of_the_options(monkeypatch):
-    monkeypatch.setattr(shop_chooser, "SHOP_SECONDS", 0.2)
     logged = []
-    advisor = DeckAdvisor(pool=POOL, log=logged.append, route_provider=lambda: PlannedRoute(["combat", "shop", "combat", "boss"], 4, 1, None, "OVERGROWTH"))
+    advisor = DeckAdvisor(pool=POOL, log=logged.append, route_provider=lambda: PlannedRoute(["combat", "shop", "combat", "boss"], 4, 1, None, "OVERGROWTH"),
+                          config=DEFAULT.tuned(shop_seconds=0.2))
     p = {**_player(), "gold": 400}
     items = [relic(0, 150, "STRAWBERRY"), relic(1, 200, "ANCHOR"), relic(2, 100, "VAJRA"), item(3, "card", 60, card_id="BASH", card_name="Bash", card_type="Attack", card_rarity="Basic"),
              item(4, "card_removal", 75)]

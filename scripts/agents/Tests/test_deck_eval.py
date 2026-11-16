@@ -14,8 +14,8 @@ needs_pool = pytest.mark.skipif(not POOL, reason="the engine has no encounters")
 def test_skip_floor_does_not_depend_on_the_deck_size():
     import inspect
     assert "deck_size" not in inspect.signature(skip_floor).parameters
-    from agents.deck_eval.card_reward_chooser import FLOOR
-    assert skip_floor() == FLOOR
+    from agents.deck_eval.config import DEFAULT
+    assert skip_floor() == DEFAULT.card_floor
 
 
 def test_paired_gain():
@@ -85,7 +85,7 @@ def test_chooser_returns_one_of_the_options_and_skips_a_useless_card():
     logged = []
     chooser = CardRewardChooser(fights=20, pool=POOL, log=logged.append)
     assert chooser.choose(Decision(CARD_REWARD, state, options)) in options
-    assert len(logged) == 2 and "needs" in logged[0] and "cards to come" in logged[1]
+    assert len(logged) == 2 and "needs" in logged[0] and "walking the rest of the act" in logged[1]
 
 
 from agents.deck_eval.boss_spawner import BOSS_ACTS, bosses_of_act, normalize_boss_id
@@ -166,19 +166,6 @@ def test_the_last_elite_is_the_one_not_fought_yet():
     assert {f.encounter for f in pick_fights(POOL, fresh, 200, 3) if f.kind == "elite"} == set(fresh.elites)
 
 
-@needs_pool
-def test_only_the_next_elite_is_narrowed():
-    from agents.deck_eval.future_cards import sample_future
-    seen = ["ENTOMANCER_ELITE", "DECIMILLIPEDE_ELITE"]
-    route = PlannedRoute(["rest", "elite", "combat", "elite", "boss"], 4, 2, None, "HIVE", seen)
-    fights, _ = sample_future(POOL, route, 2, 0, 300, 1)
-    # the first elite on the route can only be the Prisms; the second one is open
-    assert {f.encounter for f in fights if f.kind == "elite"} > {"INFESTED_PRISMS_ELITE"}
-    one = PlannedRoute(["rest", "elite", "combat", "boss"], 4, 2, None, "HIVE", seen)
-    fights, _ = sample_future(POOL, one, 2, 0, 200, 1)
-    assert {f.encounter for f in fights if f.kind == "elite"} == {"INFESTED_PRISMS_ELITE"}
-
-
 def test_the_planner_counts_an_elite_room_once():
     from agents.pathing import PathPlanner
     planner = PathPlanner()
@@ -231,7 +218,6 @@ def test_upgrade_marker_upgrades_the_card_in_the_fight():
     assert [c.is_upgraded for c in cards if c.name.startswith("Bash")] == [True]
 
 
-from agents.deck_eval.fight_mix import fights_until_next_rest
 from agents.deck_eval.upgrade_chooser import full_heal
 import random
 
@@ -244,23 +230,6 @@ def test_full_heal_is_not_capped():
 def test_rule_one_upgrades_when_the_rest_would_be_cut_short():
     chooser = UpgradeChooser(DeckAdvisor(fights=10, pool=POOL, log=lambda *_: None))
     assert chooser.choose_rest(_rest_decision(70)).data["id"] == "SMITH"        # 10 HP missing, a rest heals 24
-
-
-@needs_pool
-def test_fights_until_next_rest_stop_at_the_rest_site():
-    route = PlannedRoute(["rest", "combat", "elite", "rest", "combat", "boss"], 3, 1)
-    fights = fights_until_next_rest(POOL, route, 1, 0, random.Random(1))
-    assert [f.kind for f in fights][0] in ("normal", "weak") and fights[1].kind in ("elite", "normal", "weak") and len(fights) == 2
-    last = fights_until_next_rest(POOL, PlannedRoute(["rest", "combat", "boss"], 3, 1), 1, 0, random.Random(1))
-    assert last[-1].kind == "boss"
-
-
-@needs_pool
-def test_a_chain_carries_hp_and_a_dead_deck_fails_it():
-    ev, p = DeckEvaluator(POOL, target_types(POOL)), _player()
-    fights = fights_until_next_rest(POOL, PlannedRoute(["rest", "combat", "elite", "boss"], 0, 1), 1, 0, random.Random(2))
-    alive, hp = ev.play_chain(p["deck"], {**p, "hp": 1}, fights, 5)
-    assert alive is False and hp == 0
 
 
 def test_the_route_steps_keep_every_room_but_the_fight_kinds_drop_the_others():
@@ -394,33 +363,33 @@ def test_early_floor_applies_to_the_first_three_rewards_of_a_run():
 
 
 def test_skip_floor_shrinks_with_a_weak_deck():
-    from agents.deck_eval.card_reward_chooser import FLOOR
+    from agents.deck_eval.config import DEFAULT
+    FLOOR = DEFAULT.card_floor
     assert skip_floor(win_rate=0.8) == skip_floor() == FLOOR
     assert abs(skip_floor(win_rate=0.4) - FLOOR / 2) < 1e-9
     assert abs(skip_floor(win_rate=0.3) - FLOOR * 0.375) < 1e-9
 
 
 def test_fights_fit_the_time_budget():
-    from agents.deck_eval.card_reward_chooser import fights_for, MIN_FIGHTS, MAX_FIGHTS
+    from agents.deck_eval.card_reward_chooser import fights_for
+    from agents.deck_eval.config import DEFAULT
     assert fights_for(15.0, 0.002, 4) == 1875
     assert fights_for(15.0, 0.002, 4) > fights_for(8.0, 0.002, 4)
-    assert fights_for(15.0, 1.0, 4) == MIN_FIGHTS and fights_for(15.0, 1e-9, 4) == MAX_FIGHTS
+    assert fights_for(15.0, 1.0, 4) == DEFAULT.min_fights and fights_for(15.0, 1e-9, 4) == DEFAULT.max_fights
 
 
 @needs_pool
 def test_pilot_sets_the_fight_count_and_big_decisions_get_the_longer_budget(monkeypatch):
     from types import SimpleNamespace
-    from agents.deck_eval import card_reward_chooser as crc
-    monkeypatch.setattr(crc, "BUDGET_SECONDS", 0.01)
-    monkeypatch.setattr(crc, "BIG_BUDGET_SECONDS", 0.02)
-    monkeypatch.setattr(crc, "MAX_FIGHTS", 400)
+    from agents.deck_eval.config import DEFAULT
+    quick = DEFAULT.tuned(card_seconds=0.01, card_big_seconds=0.02, max_fights=400)
     p = _player()
     state = lambda floor: {"type": "decision", "decision": "card_reward", "player": p, "context": {"act": 1, "floor": floor}}
     options = [Option("Bash", {"action": "select_card_reward", "card_index": 0}, {"index": 0, "id": "BASH", "name": "Bash", "type": "Attack", "cost": 2}),
                Option("skip", {"action": "skip_card_reward"})]
-    route = SimpleNamespace(kinds=["combat", "combat"], combats_before=0, act=1, boss=None, act_model=None)
+    route = SimpleNamespace(kinds=["combat", "combat"], combats_before=0, act=1, boss=None, act_model=None, elites_seen=[])
     logs = []
-    chooser = CardRewardChooser(pool=POOL, route_provider=lambda: route, log=logs.append)
+    chooser = CardRewardChooser(advisor=DeckAdvisor(pool=POOL, route_provider=lambda: route, log=logs.append, config=quick))
     fights = lambda: int([l for l in logs if l.startswith("card reward")][-1].split(" fights")[0].split()[-1])
     counts = []
     for floor in (2, 3, 4, 6):
@@ -450,28 +419,9 @@ def test_extra_cards_follow_the_reward_rarity_odds():
     assert abs(share("Common") - 0.60) < 0.05 and abs(share("Uncommon") - 0.25) < 0.05 and abs(share("Rare") - 0.15) < 0.05
 
 
-@needs_pool
-def test_future_sample_is_repeatable_and_a_deck_with_extras_plays_them():
+def test_a_boss_reward_looks_at_the_next_act():
+    from agents.deck_eval.future_cards import fight_act
     from types import SimpleNamespace
-    from agents.deck_eval.future_cards import sample_future
-    route = SimpleNamespace(kinds=["combat", "combat", "elite", "boss"], combats_before=0, boss=None, act_model=None)
-    a = sample_future(POOL, route, 1, 0, 30, 5)
-    b = sample_future(POOL, route, 1, 0, 30, 5)
-    assert [f.name for f in a[0]] == [f.name for f in b[0]] and a[1] == b[1]
-    assert {len(e) for e in a[1]} <= {0, 1, 2, 3}      # act 1: 0.8 cards per fight ahead, 3 fights ahead
-    ev, p = DeckEvaluator(POOL, target_types(POOL)), _player()
-    with_extras = ev.score(p["deck"], p, a[0][:5], 3, a[1][:5])
-    assert len(with_extras.rewards) == 5
-
-
-def test_extra_cards_scale_with_the_act():
-    from agents.deck_eval.future_cards import cards_gained, fight_act
-    from types import SimpleNamespace
-    import random
-    r = random.Random(3)
-    mean = lambda k, act: sum(cards_gained(k, act, r) for _ in range(4000)) / 4000
-    assert abs(mean(10, 1) - 8.0) < 0.01 and abs(mean(10, 2) - 5.0) < 0.01 and abs(mean(10, 3) - 3.0) < 0.01
-    assert abs(mean(3, 1) - 2.4) < 0.1 and abs(mean(1, 3) - 0.3) < 0.05
     assert fight_act(SimpleNamespace(kinds=["boss"]), 1) == 2 and fight_act(SimpleNamespace(kinds=["combat", "boss"]), 1) == 1
     assert fight_act(SimpleNamespace(kinds=["boss"]), 3) == 3
 
@@ -538,7 +488,8 @@ def test_an_event_option_is_played_by_the_engine_before_the_walk():
 
 @needs_pool
 def test_an_option_that_kills_scores_nothing_and_a_cleared_act_goes_on_into_the_next_one():
-    from agents.deck_eval.route_sim import EventPlan, LOOKAHEAD_ROOMS, sample_walks
+    from agents.deck_eval.route_sim import EventPlan, sample_walks
+    from agents.deck_eval.config import DEFAULT
     ev = DeckEvaluator(POOL, target_types(POOL))
     p = _player()
     dying = ev.score_walks(p["deck"], {**p, "hp": 1, "max_hp": 80}, [_event_walk()], EventPlan("ABYSSAL_BATHS", [], "immerse"))          # +2 HP, then 3 damage: dead
@@ -551,7 +502,7 @@ def test_an_option_that_kills_scores_nothing_and_a_cleared_act_goes_on_into_the_
     run = _walk_run(walks[0], hp=500, max_hp=500)
     sim = rs.RouteSimulator(run, walks[0], ev.config)
     result = sim.walk_route()
-    assert run.act == 2 and run.act_id == "HIVE" and result.fights >= len(walks[0].steps) and len(sim.credits) <= len(walks[0].steps) + LOOKAHEAD_ROOMS
+    assert run.act == 2 and run.act_id == "HIVE" and result.fights >= len(walks[0].steps) and len(sim.credits) <= len(walks[0].steps) + DEFAULT.lookahead_rooms
 
 
 @needs_pool
@@ -565,27 +516,28 @@ def test_dying_at_the_boss_costs_what_comes_after_it():
 
 @needs_pool
 def test_potions_held_and_max_hp_gained_count_once_at_the_end():
-    from agents.deck_eval.route_sim import POTION_CREDIT, sample_walks
+    from agents.deck_eval.route_sim import sample_walks
+    from agents.deck_eval.config import DEFAULT
     ev, p = DeckEvaluator(POOL, target_types(POOL)), _player()
     walks = sample_walks(PlannedRoute(["rest", "combat"], 4, 0, None, "OVERGROWTH"), 1, 0, 1, 3)
     plain = {**p, "hp": 500, "max_hp": 500, "potions": []}
     held = {**plain, "potions": [{"id": "FIRE_POTION", "name": "Fire Potion"}] * 2}
     gap = ev.score_walks(p["deck"], held, walks).rewards[0] - ev.score_walks(p["deck"], plain, walks).rewards[0]
-    assert 0 < gap <= 2 * POTION_CREDIT + 1e-6
+    assert 0 < gap <= 2 * DEFAULT.potion_credit + 1e-6
 
 
 @needs_pool
 def test_the_event_chooser_takes_the_better_option_and_leaves_what_it_cannot_play():
     from agents.deck_eval.event_chooser import EventChooser
-    advisor = DeckAdvisor(pool=POOL, log=lambda *_: None, route_provider=lambda: PlannedRoute(["combat", "rest", "combat", "boss"], 4, 1, None, "OVERGROWTH"))
+    from agents.deck_eval.config import DEFAULT
+    advisor = DeckAdvisor(pool=POOL, log=lambda *_: None, route_provider=lambda: PlannedRoute(["combat", "rest", "combat", "boss"], 4, 1, None, "OVERGROWTH"),
+                          config=DEFAULT.tuned(event_seconds=0.2))
     p = _player()
     p.update(hp=1, max_hp=80)
     def screen(event_id, keys):
         options = [Option(k, {"action": "choose_event_option", "index": i}, {"index": i, "title": k}) for i, k in enumerate(keys)]
         return Decision("event", {"event_id": event_id, "player": p, "context": {"act": 1, "floor": 5}}, options)
     chooser = EventChooser(advisor)
-    import agents.deck_eval.event_chooser as ec
-    ec.EVENT_SECONDS = 0.2
     assert chooser.choose(screen("ABYSSAL_BATHS", ["immerse", "abstain"])).label == "abstain"        # immersing at 1 HP is death, abstaining heals 10
     assert [k.rpartition(":")[2] for k in chooser.path] == ["abstain"]          # the key of an option told by its title (no text key from this bridge): its position, then its title
     assert chooser.choose(screen("ABYSSAL_BATHS", ["only"])).label == "only"
@@ -597,9 +549,9 @@ def test_the_event_chooser_takes_the_better_option_and_leaves_what_it_cannot_pla
 def test_the_event_chooser_plays_options_the_game_titles_differently():
     """THIS_OR_THAT: the game shows "This" and "That" for what the engine calls plain and ornate; the text key (sent by the bridge) tells them."""
     from agents.deck_eval.event_chooser import EventChooser
-    advisor = DeckAdvisor(pool=POOL, log=lambda *_: None, route_provider=lambda: PlannedRoute(["combat", "rest", "combat", "boss"], 4, 1, None, "OVERGROWTH"))
-    import agents.deck_eval.event_chooser as ec
-    ec.EVENT_SECONDS = 0.2
+    from agents.deck_eval.config import DEFAULT
+    advisor = DeckAdvisor(pool=POOL, log=lambda *_: None, route_provider=lambda: PlannedRoute(["combat", "rest", "combat", "boss"], 4, 1, None, "OVERGROWTH"),
+                          config=DEFAULT.tuned(event_seconds=0.2))
     p = _player()
     p.update(hp=40, max_hp=80)
     def screen(with_text_key):
@@ -640,13 +592,13 @@ def test_an_event_fight_is_not_a_room_and_leaves_the_dice_of_later_fights_alone(
 def test_the_ancient_chooser_reads_the_screen_and_takes_the_best_relic():
     import agents.deck_eval.ancient_chooser as ac
     from agents.deck_eval.route_sim import AncientPlan
-    chooser = ac.AncientChooser(DeckAdvisor(pool=POOL, log=lambda *_: None))
+    from agents.deck_eval.config import DEFAULT
+    chooser = ac.AncientChooser(DeckAdvisor(pool=POOL, log=lambda *_: None, config=DEFAULT.tuned(ancient_seconds=0.3)))
     assert chooser.names["seaglass"] == "SEA_GLASS" and chooser.names["paelsflesh"] == "PAELS_FLESH" and chooser.names["lostcoffer"] == "LOST_COFFER"
     for title, relic in (("Pael's Flesh", "PAELS_FLESH"), ("Pael's Tears", "PAELS_TEARS"), ("Tanx's Whistle", "TANXS_WHISTLE"), ("Lord's Parasol", "LORDS_PARASOL"), ("Neow's Bones", "NEOWS_BONES")):
         assert ac.resolve(title, "PAEL", chooser.names).relic == relic, title          # the game writes the apostrophe, the engine's names do not
     assert ac.resolve("Sea Glass (Silent)", "OROBAS", chooser.names) == AncientPlan("OROBAS", "SEA_GLASS", {"character": "SILENT"})
     assert ac.resolve("Dusty Tome", "DARV", chooser.names).setup == {"card": "CORRUPTION"} and ac.resolve("Not A Relic", "DARV", chooser.names) is None
-    ac.ANCIENT_SECONDS = 0.3
     p = _player()
     def screen(ancient, titles):
         options = [Option(t, {"action": "choose_event_option", "index": i}, {"index": i, "title": t}) for i, t in enumerate(titles)]
@@ -680,10 +632,10 @@ def _map(*rows):
 
 def test_paths_that_differ_only_in_where_the_question_marks_are_count_once():
     from agents.deck_eval.path_search import enumerate_paths, path_key
-    from agents.pathing import _kind
+    from agents.route import node_kind
     nodes = {(n["col"], n["row"]): n for n in _map((0, 1, "Monster", [(0, 2), (1, 2)]), (0, 2, "Unknown", [(0, 3)]), (1, 2, "Monster", [(1, 3)]),
                                                    (0, 3, "RestSite", [(0, 4)]), (1, 3, "RestSite", [(1, 4)]), (0, 4, "Boss", []), (1, 4, "Boss", []))}
-    paths = enumerate_paths(nodes, (0, 1), "Monster", _kind)
+    paths = enumerate_paths(nodes, (0, 1), "Monster", node_kind)
     assert sorted(paths) == [("combat", "combat", "rest", "boss"), ("combat", "unknown", "rest", "boss")]
     assert path_key(("combat", "unknown", "rest")) != path_key(("combat", "rest"))
 
@@ -701,11 +653,11 @@ def test_the_planner_walks_the_paths_and_keeps_the_best_as_the_planned_route():
     import agents.deck_eval.path_search as ps
     from agents.pathing import PathPlanner
     from agents.decision import MAP
-    ps.PATH_SECONDS = 1.0
     nodes = _map((0, 1, "Monster", [(0, 2)]), (1, 1, "RestSite", [(1, 2)]), (0, 2, "Elite", [(0, 3)]), (1, 2, "Monster", [(1, 3)]),
                  (0, 3, "RestSite", [(0, 4)]), (1, 3, "RestSite", [(1, 4)]), (0, 4, "Boss", []), (1, 4, "Boss", []))
     logs = []
-    advisor = DeckAdvisor(pool=POOL, log=logs.append)
+    from agents.deck_eval.config import DEFAULT
+    advisor = DeckAdvisor(pool=POOL, log=logs.append, config=DEFAULT.tuned(path_seconds=1.0))
     planner = PathPlanner()
     planner.advisor = advisor
     choices = [n for n in nodes if n["row"] == 1]
@@ -720,8 +672,8 @@ def test_the_planner_walks_the_paths_and_keeps_the_best_as_the_planned_route():
 
 
 def _kind_of(option):
-    from agents.pathing import _kind
-    return _kind(option.data["type"])
+    from agents.route import node_kind
+    return node_kind(option.data["type"])
 
 
 @needs_pool
@@ -812,12 +764,11 @@ def test_an_engine_error_in_a_rollout_ends_the_walk_instead_of_the_run(monkeypat
 def test_the_fight_correction_turns_some_of_the_policys_losses_into_wins_the_same_for_every_deck(monkeypatch):
     from agents.deck_eval import route_sim
     from agents.deck_eval.route_sim import sample_walks
+    from agents.deck_eval.config import DEFAULT
     ev, p = DeckEvaluator(POOL, target_types(POOL)), _player()
     walks = sample_walks(PlannedRoute(["combat", "elite", "combat", "boss"], 3, 1, None, "OVERGROWTH"), 1, 0, 4, 2)
     dying = {**p, "hp": 1}
-    monkeypatch.setattr(route_sim, "CORRECT", False)
-    raw = ev.score_walks(p["deck"], dying, walks)
-    monkeypatch.setattr(route_sim, "CORRECT", True)
+    raw = DeckEvaluator(POOL, target_types(POOL), config=DEFAULT.tuned(correct=False)).score_walks(p["deck"], dying, walks)
     monkeypatch.setattr(route_sim, "CORRECTION", {k: (0.5, (1.0, 1.0, 1.0), 0.5) for k in route_sim.CORRECTION})
     sure = ev.score_walks(p["deck"], dying, walks)
     assert sure.mean > raw.mean and sure.rewards == ev.score_walks(p["deck"], dying, walks).rewards          # rescued, and the rolls repeat
@@ -827,7 +778,8 @@ def test_the_fight_correction_turns_some_of_the_policys_losses_into_wins_the_sam
 
 def test_the_elite_bonus_grows_with_the_row_of_the_elite():
     import agents.deck_eval.path_search as ps
+    from agents.deck_eval.config import DEFAULT
     early = ps.elite_bonus(("combat", "elite", "rest"), 1, 14)
     late = ps.elite_bonus(("combat", "elite", "rest"), 9, 14)
-    assert 0 < early < late <= ps.ELITE_BONUS and ps.elite_bonus(("combat", "rest"), 1, 14) == 0
+    assert 0 < early < late <= DEFAULT.elite_bonus and ps.elite_bonus(("combat", "rest"), 1, 14) == 0
     assert ps.elite_bonus(("elite", "elite"), 1, 14) > ps.elite_bonus(("elite",), 1, 14)
