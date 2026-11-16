@@ -515,10 +515,12 @@ class CombatSimulator:
         handlers = STATUS_HANDLERS.by_event.get(event)
         if handlers is not None:
             for creature in [cs.player, *cs.enemies]:
-                for status_id, inst in list(creature.status.items()):  # copy: handlers add statuses
-                    handler = handlers.get(status_id)
-                    if handler is not None:
-                        handler(self, creature, inst.amount, *args)
+                status = creature.status
+                # most creatures hold no status this event concerns: one set test skips them. The statuses that do are listed first
+                # (a copy, as before: handlers add statuses), in the dict's order.
+                if status and not handlers.keys().isdisjoint(status.keys()):
+                    for status_id, inst in [item for item in status.items() if item[0] in handlers]:
+                        handlers[status_id](self, creature, inst.amount, *args)
         if cs.player.relics:
             fire_relics(self, event, *args)
 

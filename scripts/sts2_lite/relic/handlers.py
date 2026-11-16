@@ -106,10 +106,11 @@ def fire_relics(combat : CombatSimulator, event : HookType, *args):
     handlers = EVENT_HANDLERS.by_event.get(event)
     if handlers is None:
         return
-    for relic_id, relic in list(combat.combat_state.player.relics.items()):
-        handler = handlers.get(relic_id)
-        if handler is not None:
-            handler(combat, relic, *args)
+    relics = combat.combat_state.player.relics
+    if handlers.keys().isdisjoint(relics.keys()):           # none of the relics held reacts to this event
+        return
+    for relic_id, relic in [item for item in relics.items() if item[0] in handlers]:      # a copy, in the order the relics are held
+        handlers[relic_id](combat, relic, *args)
 
 # ---
 # A card play that fails is undone: the counters and the block go back.
