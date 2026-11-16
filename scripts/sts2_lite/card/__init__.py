@@ -61,6 +61,7 @@ from sts2_lite.card.constants import (
     CHANGED_ON_PLAY,
     _unknown_enchantments,
     _unknown_cards,
+    QUEST_CARDS,
     keyword_mask,
     CURSE_NAMES,
     _SCARF,

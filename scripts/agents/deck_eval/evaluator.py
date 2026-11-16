@@ -23,8 +23,13 @@ class DeckScore:
     rewards : list[float]       # one per fight, in the order of the fights: two decks on the same fights can be compared pair by pair
 
 
+# The walks' rollout policy: the heuristic with the dice taken out. It is closer to the MCTS's turns than the drawn one (benchmarks/policy_fit.py `tune`: 1.31 cards apart
+# per turn against 1.57; the MCTS against itself: 0.76) and its fights come out nearer to the MCTS's (win rate and HP lost). The MCTS's own rollouts keep ClaudeHeuristic.
+WALK_POLICY = RolloutPolicy.ClaudeHeuristicGreedy
+
+
 class DeckEvaluator:
-    def __init__(self, pool : list[FightTemplate], target_types : dict[str, str], policy = RolloutPolicy.ClaudeHeuristic, config : DeckEvalConfig = DEFAULT):
+    def __init__(self, pool : list[FightTemplate], target_types : dict[str, str], policy = WALK_POLICY, config : DeckEvalConfig = DEFAULT):
         """`config`: how walks are scored and how long a fight may last (deck_eval/config.py); the rollouts play with `policy`."""
         self.pool, self.target_types, self.deck_config = pool, target_types, config
         self.config = SearchConfig().tuned(rollout=policy)
