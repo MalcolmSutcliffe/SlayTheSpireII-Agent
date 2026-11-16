@@ -4,6 +4,10 @@ leaves out potions. The numbers they weigh cards by are HeuristicParams (params.
 `params.DEFAULT_HEURISTIC`."""
 from __future__ import annotations
 
+import json
+import math
+from pathlib import Path
+
 from sts2_lite import rng
 from sts2_lite.card import CARD_RARITY, CardId, CardRarity, CardType, MAX_HAND_SIZE, ETHEREAL_CARDS, UPGRADE_COST_CHANGE, UPGRADE_KEYWORD, UPGRADE_REMOVED_KEYWORD
 from sts2_lite.combat import CombatState, CombatSimulator
@@ -214,6 +218,187 @@ def claude_heuristic_greedy(c : CombatSimulator, actions : list[dict], p : Heuri
     """claude_heuristic, taking the heaviest play instead of drawing one, and without the random action."""
     return _claude_pick(c, actions, True, p)
 
+### WalkHeuristic: the walk's policy
+CARD_PROFILE_FILE = Path(__file__).resolve().parents[1] / "deck_eval" / "card_profile.json"
+_PROFILE : dict | None = None
+
+def card_profile() -> dict:
+    """What each card does when it is played (benchmarks/card_profile.py writes it from the engine)."""
+    global _PROFILE
+    if _PROFILE is None:
+        _PROFILE = json.loads(CARD_PROFILE_FILE.read_text()) if CARD_PROFILE_FILE.exists() else {}
+    return _PROFILE
+
+FALLBACK_WORTH = {CardType.Attack : 6.0, CardType.Skill : 4.0, CardType.Power : 10.0}        # a card the profile does not know
+
+def _walk_weight(c : CombatSimulator, actions : list[dict], p : HeuristicParams):
+    """weight(card, action) = the card's score: what the play does, in points of damage, for the energy it costs."""
+    cs = c.combat_state
+    unblocked, can_vuln, room = _situation(c, actions, p)
+    profile = card_profile()
+    alive = [e for e in cs.enemies if e.current_hp > 0]
+    def weight(card, a):
+        prof = profile.get(card.card_id.name + ("+" if card.is_upgraded else ""))
+        cost = cs.energy if card.energy_cost == "X" else card.energy_cost
+        if prof is None or not prof.get("playable"):
+            return (FALLBACK_WORTH.get(card.type, 1.0) + 0.5) / max(cost, 0.5) ** p.walk_cost_power
+        target = cs.enemies[a["target"]] if "target" in a and a["target"] < len(cs.enemies) else None
+        worth = 0.0
+        if card.card_id == CardId.BODY_SLAM:
+            worth += min(cs.player.block, target.current_hp + target.block) if target is not None else cs.player.block
+        elif prof["target"] == "AllEnemies":
+            worth += prof["damage"] * len(alive) * (1.5 if all(e.status_amount(StatusId.VULNERABLE) for e in alive) else 1.0)
+        elif prof["all"] > prof["damage"]:                       # hits random enemies
+            worth += prof["all"]
+        elif prof["damage"] or card.bonus_damage:
+            damage = (prof["damage"] + card.bonus_damage) * (1.5 if target is not None and target.status_amount(StatusId.VULNERABLE) else 1.0)
+            worth += min(damage, target.current_hp + target.block) if target is not None else damage
+        stops = min(prof["block"], unblocked)
+        worth += stops * p.walk_block_value + (prof["block"] - stops) * p.walk_spare_block
+        if room:
+            worth += prof["draw"] * p.walk_draw_value
+        worth += prof["energy"] * p.walk_energy_value + prof["strength"] * p.walk_strength_value - prof["hp"] * p.walk_hp_cost
+        if prof["vuln"] and any(e.status_amount(StatusId.VULNERABLE) == 0 for e in alive):
+            worth += p.walk_vuln_value
+        if prof["weak"]:
+            worth += p.walk_weak_value
+        if prof["power"]:
+            worth += p.walk_power_value
+        return (max(worth, 0.0) + 0.5) / max(cost, 0.5) ** p.walk_cost_power
+    return weight
+
+def walk_heuristic(c : CombatSimulator, actions : list[dict], p : HeuristicParams | None = None) -> dict:
+    """The walk's policy: the play with the best score (see _walk_weight), or a draw weighted by exp(score / walk_temperature); a pending card choice is the ClaudeHeuristic's."""
+    p = _params(p)
+    if c.combat_state.pending_choice is not None:
+        return _pick_for_choice(c, actions, p.walk_temperature == 0, p)
+    plays = [a for a in actions if a["action"] == "play_card"]
+    if not plays or rng.random_float() < p.p_random_action:
+        return rng.choice(actions)
+    plays = _focus_fire(c, plays, p)
+    hand = c.combat_state.player.hand
+    weight = _walk_weight(c, actions, p)
+    scores = [weight(hand[a["card_index"]], a) for a in plays]
+    if p.walk_temperature <= 0:
+        return plays[max(range(len(plays)), key=scores.__getitem__)]
+    top = max(scores)
+    return rng.choices(plays, weights=[math.exp((s - top) / p.walk_temperature) for s in scores])[0]
+
+### WalkPlanner: the walk's turn planner
+PLANNER_MAX_CARDS = 9           # the hand's best cards (by their score alone) the plans are made from
+
+def _phase(prof : dict | None, card) -> int:
+    """The order a plan's cards are played in: what draws or gives energy, then Powers and Strength, then Vulnerable / Weak, then attacks, then block, then the rest."""
+    if prof is None:
+        return 3 if card.type == CardType.Attack else 4
+    if prof["draw"] or prof["energy"]:
+        return 0
+    if prof["power"] or prof["strength"]:
+        return 1
+    if prof["vuln"] or prof["weak"]:
+        return 2
+    if card.card_id == CardId.BODY_SLAM:
+        return 5
+    return 3 if prof["damage"] or prof["all"] else 4
+
+def _plan(c : CombatSimulator, plays : list[dict], p : HeuristicParams) -> dict | None:
+    """The play that starts the best plan for the rest of the turn."""
+    cs = c.combat_state
+    hand = cs.player.hand
+    profile = card_profile()
+    enemies = cs.enemies
+    alive = [e for e in enemies if e.current_hp > 0]
+    unblocked, can_vuln, room = _situation(c, plays, p)
+    first = {}
+    for a in plays:
+        first.setdefault(a["card_index"], a)
+    focus_play = {}
+    cards = []
+    for index, a in first.items():
+        card = hand[index]
+        prof = profile.get(card.card_id.name + ("+" if card.is_upgraded else ""))
+        if prof is not None and not prof.get("playable"):
+            prof = None
+        cost = cs.energy if card.energy_cost == "X" else card.energy_cost
+        cards.append((_phase(prof, card), index, card, prof, cost))
+    cards.sort(key=lambda x: (x[0], x[1]))
+    if len(cards) > PLANNER_MAX_CARDS:
+        cards.sort(key=lambda x: -(FALLBACK_WORTH.get(x[2].type, 1.0) if x[3] is None else x[3]["damage"] + x[3]["block"] + 4) / max(x[4], 0.5))
+        cards = sorted(cards[:PLANNER_MAX_CARDS], key=lambda x: (x[0], x[1]))
+    # the enemy the single-target plays go at (_focus_fire has restricted the plays to one)
+    target = next((a["target"] for a in plays if "target_name" in a), None)
+    focus = enemies[target] if target is not None and target < len(enemies) else (alive[0] if alive else None)
+    focus_hp = (focus.current_hp + focus.block) if focus is not None else 0
+    focus_incoming = focus.attack_damage * focus.num_attacks if focus is not None and not focus.is_minion else 0
+    incoming = _incoming_damage(cs)
+    vulnerable = focus is not None and focus.status_amount(StatusId.VULNERABLE) > 0
+    any_unvulnerable = any(e.status_amount(StatusId.VULNERABLE) == 0 for e in alive)
+    player_block = cs.player.block
+
+    def value(chosen) -> float:
+        mult = 1.5 if vulnerable else 1.0
+        strength = dealt = block = worth = 0.0
+        for phase, index, card, prof, cost in chosen:
+            if prof is None:
+                worth += FALLBACK_WORTH.get(card.type, 1.0)
+                continue
+            if card.card_id == CardId.BODY_SLAM:
+                dealt += min(block + player_block, focus_hp)
+            elif prof["target"] == "AllEnemies":
+                dealt += (prof["damage"] + strength) * len(alive) * mult
+            elif prof["all"] > prof["damage"]:
+                dealt += prof["all"]
+            elif prof["damage"] or card.bonus_damage:
+                dealt += (prof["damage"] + card.bonus_damage + strength) * mult
+            if prof["vuln"] and any_unvulnerable:
+                mult = 1.5
+                worth += p.walk_vuln_value
+            block += prof["block"]
+            strength += prof["strength"]
+            worth += prof["energy"] * p.walk_energy_value + prof["strength"] * p.walk_strength_value - prof["hp"] * p.walk_hp_cost
+            worth += prof["weak"] * p.walk_weak_value + (p.walk_power_value if prof["power"] else 0.0)
+            if room:
+                worth += prof["draw"] * p.walk_draw_value
+        worth += min(dealt, focus_hp) if focus_hp else dealt
+        killed = focus_incoming if focus is not None and dealt >= focus_hp > 0 else 0
+        worth += killed * p.walk_kill_value
+        through = max(0, incoming - killed - player_block)
+        stops = min(block, through)
+        worth += stops * p.walk_block_value + (block - stops) * p.walk_spare_block
+        return worth + 0.01 * len(chosen)
+
+    best, best_value = None, -1.0
+    n = len(cards)
+    def search(i : int, left : int, chosen : list):
+        nonlocal best, best_value
+        if i == n:
+            if chosen:
+                v = value(chosen)
+                if v > best_value:
+                    best, best_value = list(chosen), v
+            return
+        card_cost = cards[i][4]
+        if card_cost <= left:
+            chosen.append(cards[i])
+            search(i + 1, left - card_cost + (cards[i][3]["energy"] if cards[i][3] else 0), chosen)
+            chosen.pop()
+        search(i + 1, left, chosen)
+    search(0, cs.energy, [])
+    if best is None:
+        return None
+    return first[best[0][1]]
+
+def walk_planner(c : CombatSimulator, actions : list[dict], p : HeuristicParams | None = None) -> dict:
+    """The walk's turn planner: the first play of the best plan for the turn (see _plan); a pending card choice is the ClaudeHeuristic's."""
+    p = _params(p)
+    if c.combat_state.pending_choice is not None:
+        return _pick_for_choice(c, actions, True, p)
+    plays = [a for a in actions if a["action"] == "play_card"]
+    if not plays or rng.random_float() < p.p_random_action:
+        return rng.choice(actions)
+    play = _plan(c, _focus_fire(c, plays, p), p)
+    return play if play is not None else rng.choice(actions)
+
 ROLLOUT_POLICY_DICT = {
     RolloutPolicy.FirstAction : first_action,
     RolloutPolicy.RandomAction : random_action,
@@ -222,4 +407,6 @@ ROLLOUT_POLICY_DICT = {
     RolloutPolicy.RarityPreference : rarity_preference,
     RolloutPolicy.ClaudeHeuristic : claude_heuristic,
     RolloutPolicy.ClaudeHeuristicGreedy : claude_heuristic_greedy,
+    RolloutPolicy.WalkHeuristic : walk_heuristic,
+    RolloutPolicy.WalkPlanner : walk_planner,
 }

@@ -36,6 +36,14 @@ class RolloutPolicy(Enum):
     # action. The same position plays out the same way every rollout, so moves are compared on the draws and not on the policy's luck.
     ClaudeHeuristicGreedy = auto()
 
+    # The walk's own policy (deck_eval): cards weighed by what a play does (the damage, block, draw ... measured on the engine, card_profile.json) for the energy it
+    # costs, so the energy goes where it does the most. The MCTS's rollouts keep ClaudeHeuristic.
+    WalkHeuristic = auto()
+
+    # The walk's other policy: plans the whole turn (the set of cards in the hand, within the energy, that does the most: damage, kills, block that stops damage,
+    # Vulnerable before attacks ...), plays its first card, and plans again.
+    WalkPlanner = auto()
+
 
 @dataclass(frozen=True)
 class RewardParams:
@@ -132,6 +140,19 @@ class HeuristicParams:
     attack_before_vuln : float = 0.1        # an attack on a non-vulnerable target while a Vulnerable card can be played
     power_first : float = 3.0               # Heuristic policy only
     upgrade_weight : float = 1.5            # Heuristic policy only: an upgraded card is worth about half as much again (Strike 6 -> 9), and was likely upgraded because the deck wants it played
+    # WalkHeuristic only: the worth of what a play does, in points of damage (a card's score is its worth for the energy it costs: worth / max(cost, 0.5) ** walk_cost_power)
+    walk_block_value : float = 0.8          # a point of block that stops damage still coming (block beyond that is worth walk_spare_block per point)
+    walk_spare_block : float = 0.1
+    walk_draw_value : float = 4.0           # a card drawn
+    walk_energy_value : float = 5.0         # a point of energy gained
+    walk_vuln_value : float = 6.0           # putting Vulnerable on a target that has none
+    walk_weak_value : float = 3.0
+    walk_strength_value : float = 8.0       # a point of Strength
+    walk_power_value : float = 10.0         # a Power (its own Strength, if any, is counted on top)
+    walk_hp_cost : float = 1.5              # a point of HP the card costs
+    walk_cost_power : float = 1.0           # 0: the energy a card costs does not matter, 1: its worth per energy
+    walk_kill_value : float = 1.0           # WalkPlanner: a kill is worth the damage the enemy's next move would have dealt, times this
+    walk_temperature : float = 0.0          # 0: always the best score; otherwise a play is drawn with weight exp(score / temperature)
     # Which enemy the targeted cards of the weighted policies go at, so damage is not spread over several:
     #   "none" any enemy | "first" the first living one | "lowest_hp" the lowest HP | "lowest_hp_block" the lowest HP + block (minions last)
     focus : str = "lowest_hp"

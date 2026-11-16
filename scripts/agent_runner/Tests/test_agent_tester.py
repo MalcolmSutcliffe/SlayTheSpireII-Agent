@@ -437,6 +437,10 @@ def test_unimplemented_cards_are_found_in_every_pile(runner):
     for pile in ("hand", "draw_pile", "discard_pile", "exhaust_pile"):
         assert combat_logs.unimplemented_cards(_with_unknown(pile=pile)) == {pile: ["MADE_UP_CARD"]}
 
+def test_a_quest_card_is_not_reported_as_unimplemented():
+    state = {"hand": [], "player": {"draw_pile": [{"id": "SPOILS_MAP"}, {"id": "LANTERN_KEY"}, {"id": "BYRDONIS_EGG"}, {"id": "MADE_UP_CARD"}]}}
+    assert combat_logs.unimplemented_cards(state) == {"draw_pile": ["MADE_UP_CARD"]}
+
 def test_an_unimplemented_card_is_logged_once_per_run(runner, monkeypatch, tmp_path):
     _, log = run(runner, monkeypatch, [_with_unknown(), _with_unknown()], tmp_path)
     records = [json.loads(line) for line in log.read_text().splitlines()]

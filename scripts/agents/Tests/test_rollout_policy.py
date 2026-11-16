@@ -472,3 +472,57 @@ def test_armaments_does_not_upgrade_an_unplayable_card_while_another_can_be():
     stuck = card_of_id(CardId.STRIKE_IRONCLAD, "Strike", CardType.Attack, target=TargetType.AnyEnemy, unplayable=True)
     sim = reaching_choice([stuck, defend()], armaments())
     assert picks_of(policy_module.claude_heuristic, sim, n=300) == Counter({CardId.DEFEND_IRONCLAD: 300})
+
+
+# ---------------------------------------------------------------- WalkHeuristic (the walk's policy; the MCTS keeps ClaudeHeuristic)
+def walk_pick(state, **values):
+    sim, actions = playing_sim(state)
+    config = SearchConfig().tuned(rollout=RolloutPolicy.WalkHeuristic, p_random_action=0.0, **values)
+    return sim.combat_state.player.hand[rollout_policy(sim, actions, config.rollout, config.heuristic)["card_index"]]
+
+def test_the_mcts_still_rolls_out_with_the_claude_heuristic():
+    assert DEFAULT_CONFIG.rollout == RolloutPolicy.ClaudeHeuristic
+
+def test_the_profile_knows_what_a_card_does():
+    from agents.sts2_MCTS.rollout_policy import card_profile
+    profile = card_profile()
+    assert profile["STRIKE_IRONCLAD"]["damage"] == 6 and profile["DEFEND_IRONCLAD"]["block"] == 5
+    assert profile["BASH"]["vuln"] == 2 and profile["BASH"]["cost"] == 2
+    assert profile["INFLAME"]["power"] and profile["INFLAME"]["strength"] == 2
+
+def test_the_walk_policy_plays_the_card_with_the_most_for_its_energy():
+    state = make_state([strike(), bash()])
+    assert walk_pick(state, walk_vuln_value=0.0).name == "Strike"          # 6 damage for 1 energy beats 8 for 2
+    assert walk_pick(state, walk_vuln_value=12.0).name == "Bash"           # ... until the Vulnerable it puts on is worth more
+
+def test_the_walk_policy_blocks_when_damage_is_coming_and_not_when_it_is_not():
+    state = make_state([strike(), defend()])
+    for e in state.enemies:
+        e.attack_damage, e.num_attacks = 12, 1
+    assert walk_pick(state, walk_block_value=3.0).name == "Defend"
+    for e in state.enemies:
+        e.attack_damage = 0
+    assert walk_pick(state, walk_block_value=3.0).name == "Strike"
+
+
+# ---------------------------------------------------------------- WalkPlanner
+def planner_pick(state, **values):
+    sim, actions = playing_sim(state)
+    config = SearchConfig().tuned(rollout=RolloutPolicy.WalkPlanner, p_random_action=0.0, **values)
+    return sim.combat_state.player.hand[rollout_policy(sim, actions, config.rollout, config.heuristic)["card_index"]]
+
+def test_the_planner_puts_vulnerable_on_before_the_attacks_it_pays_off_for():
+    assert planner_pick(make_state([strike(), strike(), bash()])).name == "Bash"          # 8 + 2 * 9 for the three energy, against 18
+
+def test_the_planner_kills_before_it_blocks_with_the_last_energy():
+    state = make_state([defend(), strike()])
+    state.enemies[0].current_hp = 6
+    state.enemies[0].attack_damage = 20
+    state.energy = 1
+    assert planner_pick(state).name == "Strike"
+
+def test_the_planner_blocks_with_the_last_energy_when_it_cannot_kill():
+    state = make_state([defend(), strike()])
+    state.enemies[0].attack_damage = 20
+    state.energy = 1
+    assert planner_pick(state, walk_block_value=3.0).name == "Defend"
