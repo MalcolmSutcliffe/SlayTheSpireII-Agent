@@ -30,7 +30,19 @@ MIN_KEEP = 4
 NODE_CAP = 600              # most distinct paths kept below one node
 WALK_KINDS = ("combat", "elite", "rest", "treasure", "shop", "unknown", "boss")
 LETTER = {"combat": "C", "elite": "E", "rest": "R", "unknown": "?", "treasure": "T", "shop": "$", "boss": "B", "other": "-"}
+ELITE_BONUS = 0.4           # rooms of progress added to a path for each elite on it at the end of the act (the walks see an elite's risk in full, its reward only in part)
+ELITE_EARLY = 0.25          # an elite at the start of the act gets this share of ELITE_BONUS; the share grows linearly with the row to 1 at the boss: the later the elite, the stronger the deck that meets it
 SURROGATE = {"combat": 1.0, "elite": 1.2, "rest": 1.5, "unknown": 1.5, "treasure": 0.5, "shop": 1.0, "boss": 0.0}
+
+
+def elite_bonus(kinds : tuple, first_row : int, last_row : int) -> float:
+    """The bonus of a path: ELITE_BONUS for each elite, scaled from ELITE_EARLY (the act's first row) to 1 (its last row) by where the elite is. `kinds` begins on row `first_row`."""
+    total = 0.0
+    for i, kind in enumerate(kinds):
+        if kind == "elite":
+            share = min(1.0, max(0.0, (first_row + i) / max(1, last_row)))
+            total += ELITE_BONUS * (ELITE_EARLY + (1.0 - ELITE_EARLY) * share)
+    return total
 
 
 def path_key(kinds : tuple) -> tuple:
@@ -67,6 +79,7 @@ class Candidate:
     option : Option
     kinds : tuple
     heuristic : float
+    bonus : float = 0.0         # see elite_bonus
     route : object = None
     rewards : list = field(default_factory=list)
     alive : int = 0
@@ -77,7 +90,7 @@ class Candidate:
 
     @property
     def value(self) -> float:
-        return self.mean
+        return self.mean + self.bonus
 
     def show(self) -> str:
         return "".join(LETTER.get(k, "-") for k in self.kinds)
@@ -90,6 +103,7 @@ class PathSearch:
     def candidates(self, decision, nodes, combats_done, treasure_done, hurt, gold, here, act, boss, act_model, elites) -> list[Candidate]:
         from agents.pathing import PlannedRoute, _kind
         planner, found = self.planner, []
+        last_row = max((r for _, r in nodes), default=1)
         for opt in decision.options:
             data = opt.data or {}
             first = (data.get("col"), data.get("row"))
@@ -100,7 +114,7 @@ class PathSearch:
                 if group not in by_group or score > by_group[group][0]:
                     by_group[group] = (score, kinds)
             for score, kinds in sorted(by_group.values(), key=lambda sk: -sk[0])[:PER_OPTION]:
-                found.append(Candidate(opt, kinds, score))
+                found.append(Candidate(opt, kinds, score, elite_bonus(kinds, first[1] or 0, last_row)))
         found.sort(key=lambda c: -c.heuristic)
         found = found[:MAX_CANDIDATES]
         for c in found:
@@ -142,6 +156,6 @@ class PathSearch:
             if id(c.option) not in per_option or c.value > per_option[id(c.option)].value:
                 per_option[id(c.option)] = c
         self.advisor.log("path (%d paths of %d kinds of path, %d walks, %.1fs of %.0fs): " % (len(cands), len({path_key(c.kinds) for c in cands}), played, time.perf_counter() - start, PATH_SECONDS) +
-                         ", ".join("%s %.2f (%d%% through, %d elites)" % (c.show(), c.value, 100 * c.alive / len(c.rewards), c.kinds.count("elite")) for c in sorted(per_option.values(), key=lambda c: -c.value)) +
+                         ", ".join("%s %.2f (%d%% through, %d elites%s)" % (c.show(), c.value, 100 * c.alive / len(c.rewards), c.kinds.count("elite"), ", +%.2f elite bonus" % c.bonus if c.bonus else "") for c in sorted(per_option.values(), key=lambda c: -c.value)) +
                          " -> " + best.show())
         return best.option, list(best.kinds)

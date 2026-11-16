@@ -1,4 +1,5 @@
 import random
+import re
 
 from sts2_lite.combat import CombatState, CombatSimulator
 
@@ -65,12 +66,46 @@ class BaseAgent:
     RARITY_FOR_UPGRADE = {"Rare": 3, "Uncommon": 2, "Common": 1, "Basic": 0}       # anything else (a curse, a status) ranks below Basic
 
     def _get_card_select_decision(self, decision : Decision) -> Option:
+        """A card screen that wants N cards ("Choose 3 cards to Enchant."): pick one card per call until N are picked, then confirm once.
+        The game's screen does not mark the cards picked so far (the engine's does: a `selected` list), so the picks are counted here."""
         confirm = decision.options_named("confirm_selection")
-        if confirm:
-            return confirm[0]
         picks = decision.options_named("select_card")
-        if not picks:
+        wanted = self._cards_wanted(decision.state.get("prompt"))
+        selected = decision.state.get("selected")
+        if selected is not None:        # the screen lists what is picked: its cards are the ones still on offer
+            done, left = len(selected), picks
+        else:
+            done, left = self._picked_so_far(decision, picks)
+        if confirm and (wanted is None or done >= wanted or not left):
+            self._screen_picks = None
+            return confirm[0]
+        if not left:
             return decision.options[0]
+        choice = self._card_to_select(decision, left)
+        if selected is None and self._screen_picks is not None:
+            self._screen_picks[1].append(choice.action["index"])
+        return choice
+
+    @staticmethod
+    def _cards_wanted(prompt) -> int | None:
+        """How many cards a screen asks for: "Choose 5 cards to Remove." -> 5, "Choose a card to Upgrade." -> 1, no such prompt -> None."""
+        match = re.search(r"Choose (\d+|an?) cards?", prompt or "")
+        if not match:
+            return None
+        return 1 if match.group(1) in ("a", "an") else int(match.group(1))
+
+    _screen_picks = None
+
+    def _picked_so_far(self, decision : Decision, picks : list[Option]) -> tuple[int, list[Option]]:
+        """(the number of cards picked on this screen, the cards still on offer): a screen is the same one while its prompt and cards are."""
+        key = (decision.state.get("prompt"), tuple(o.data.get("id") for o in picks))
+        if self._screen_picks is None or self._screen_picks[0] != key:
+            self._screen_picks = (key, [])
+        taken = self._screen_picks[1]
+        return len(taken), [o for o in picks if o.action["index"] not in taken]
+
+    def _card_to_select(self, decision : Decision, picks : list[Option]) -> Option:
+        """The card to pick among `picks`: an upgrade takes the best card to upgrade, anything else the first."""
         if decision.state.get("screen_type") == "upgrade":
             return self._card_to_upgrade(picks)
         return picks[0]

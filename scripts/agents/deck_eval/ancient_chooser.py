@@ -35,20 +35,25 @@ def _strings(x):
             yield from _strings(v)
 
 
+def plain(name : str) -> str:
+    """A relic's name as it is compared: the game writes "Pael's Tears" where the engine's table has "Paels Tears"."""
+    return re.sub(r"[^a-z0-9]", "", name.lower())
+
+
 def known_relics() -> dict[str, str]:
-    """{the name the screen shows: relic id} for every relic an ancient can offer."""
+    """{the name the screen shows, plain (see `plain`): relic id} for every relic an ancient can offer."""
     ids = set(EXTRA_RELICS) | set(_strings(NEOW_CURSES)) | set(_strings(NEOW_POSITIVE))
     for value in vars(ancients).values():
         if isinstance(value, (tuple, list, dict)):
             ids |= {x for x in _strings(value) if ID.match(x)}
-    return {relic_name(i): i for i in ids}
+    return {plain(relic_name(i)): i for i in ids}
 
 
 def resolve(title : str, ancient_id : str, names : dict[str, str]) -> AncientPlan | None:
     """The plan for an option's title ("Sea Glass (Silent)" -> Sea Glass with its character); None for a title that is not a known relic."""
     match = re.match(r"^(.*?)(?: \(([^)]+)\))?$", title)
     name, character = match.group(1), match.group(2)
-    relic = names.get(name)
+    relic = names.get(plain(name))
     if relic is None:
         return None
     setup = {"character": character.upper()} if character else {}

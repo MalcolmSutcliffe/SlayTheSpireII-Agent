@@ -641,7 +641,9 @@ def test_the_ancient_chooser_reads_the_screen_and_takes_the_best_relic():
     import agents.deck_eval.ancient_chooser as ac
     from agents.deck_eval.route_sim import AncientPlan
     chooser = ac.AncientChooser(DeckAdvisor(pool=POOL, log=lambda *_: None))
-    assert chooser.names["Sea Glass"] == "SEA_GLASS" and chooser.names["Paels Flesh"] == "PAELS_FLESH" and chooser.names["Lost Coffer"] == "LOST_COFFER"
+    assert chooser.names["seaglass"] == "SEA_GLASS" and chooser.names["paelsflesh"] == "PAELS_FLESH" and chooser.names["lostcoffer"] == "LOST_COFFER"
+    for title, relic in (("Pael's Flesh", "PAELS_FLESH"), ("Pael's Tears", "PAELS_TEARS"), ("Tanx's Whistle", "TANXS_WHISTLE"), ("Lord's Parasol", "LORDS_PARASOL"), ("Neow's Bones", "NEOWS_BONES")):
+        assert ac.resolve(title, "PAEL", chooser.names).relic == relic, title          # the game writes the apostrophe, the engine's names do not
     assert ac.resolve("Sea Glass (Silent)", "OROBAS", chooser.names) == AncientPlan("OROBAS", "SEA_GLASS", {"character": "SILENT"})
     assert ac.resolve("Dusty Tome", "DARV", chooser.names).setup == {"card": "CORRUPTION"} and ac.resolve("Not A Relic", "DARV", chooser.names) is None
     ac.ANCIENT_SECONDS = 0.3
@@ -821,3 +823,11 @@ def test_the_fight_correction_turns_some_of_the_policys_losses_into_wins_the_sam
     assert sure.mean > raw.mean and sure.rewards == ev.score_walks(p["deck"], dying, walks).rewards          # rescued, and the rolls repeat
     monkeypatch.setattr(route_sim, "CORRECTION", {k: (0.5, (0.0, 0.0, 0.0), 0.5) for k in route_sim.CORRECTION})
     assert ev.score_walks(p["deck"], dying, walks).rewards == raw.rewards           # no chance of a rescue: the policy's own losses
+
+
+def test_the_elite_bonus_grows_with_the_row_of_the_elite():
+    import agents.deck_eval.path_search as ps
+    early = ps.elite_bonus(("combat", "elite", "rest"), 1, 14)
+    late = ps.elite_bonus(("combat", "elite", "rest"), 9, 14)
+    assert 0 < early < late <= ps.ELITE_BONUS and ps.elite_bonus(("combat", "rest"), 1, 14) == 0
+    assert ps.elite_bonus(("elite", "elite"), 1, 14) > ps.elite_bonus(("elite",), 1, 14)

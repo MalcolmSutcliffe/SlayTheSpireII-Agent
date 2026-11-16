@@ -1,3 +1,5 @@
+import re
+
 from agents.base_agent import BaseAgent
 from agents.pathing import PathPlanner
 
@@ -16,6 +18,19 @@ PHASE_REST_SITE = "REST_SITE"
 PHASE_EVENT = "EVENT"
 PHASE_TREASURE = "TREASURE"
 PHASE_RUN_OVER = "RUN_OVER"
+
+def enchant_score(card : dict) -> float:
+    """How much an enchantment is worth on a card (Sharp, Adroit, Swift ... all pay per play): a card played often and cheaply, one that hits several times, a good card over a Basic one.
+    A card that is enchanted already ranks last."""
+    if card.get("enchantment") or card.get("enchanted"):
+        return -10.0
+    text = str(card.get("description", ""))
+    hits = 2 if re.search(r"twice|2 times", text, re.I) else int(m.group(1)) if (m := re.search(r"(\d+) times", text)) else 1
+    cost = str(card.get("cost", "1"))
+    cheap = 1.0 if cost in ("0", "1", "X") else 0.0
+    rarity = {"Rare": 1.5, "Uncommon": 1.0, "Common": 0.5}.get(card.get("rarity"), 0.0)
+    return hits + cheap + rarity + (0.25 if card.get("is_upgraded") else 0.0)
+
 
 ## MCTS for combat. Every screen outside of combat falls back to BaseAgent's get_decision handlers (override a _get_<screen>_decision to take one over).
 class MyAgent(BaseAgent):
@@ -95,18 +110,24 @@ class MyAgent(BaseAgent):
             self._eventer, self._ancient = EventChooser(self._deck_advisor()), AncientChooser(self._deck_advisor())
         return self._ancient.choose(decision) or self._eventer.choose(decision) or super()._get_event_decision(decision)
 
-    def _get_card_select_decision(self, decision):
-        picks = decision.options_named("select_card")
-        if picks and not decision.options_named("confirm_selection") and "remove" in str(decision.state.get("screen_type", "")).lower():
+    def _card_to_select(self, decision, picks):
+        """A card among `picks` (the ones not picked yet) by what the screen does with it: removals and transforms take the worst cards (a curse, a Strike, a Defend, then the lowest rarity),
+        an upgrade the card with the best gain on the walks, an enchantment the card that will use it most (see `enchant_score`)."""
+        screen = "%s %s" % (decision.state.get("screen_type", ""), decision.state.get("prompt", ""))
+        if re.search(r"remove|transform", screen, re.I):
             from agents.deck_eval.shop_chooser import removal_rank
-            ranked = [(removal_rank(o.data), -i, o) for i, o in enumerate(picks) if removal_rank(o.data) is not None]
-            if ranked:      # a curse, else a Strike, else a Defend
-                return min(ranked, key=lambda r: (r[0], -r[1]))[2]
-        if picks and not decision.options_named("confirm_selection") and decision.state.get("screen_type") == "upgrade":
+            def worst(item):
+                position, option = item
+                rank = removal_rank(option.data)
+                return (rank if rank is not None else 3, self.RARITY_FOR_UPGRADE.get(option.data.get("rarity"), -1), position)
+            return min(enumerate(picks), key=worst)[1]
+        if decision.state.get("screen_type") == "upgrade":
             chosen = self._upgrade_chooser().choose_card(decision, picks)
             if chosen is not None:
                 return chosen
-        return super()._get_card_select_decision(decision)
+        elif re.search(r"enchant", screen, re.I):
+            return max(enumerate(picks), key=lambda item: (enchant_score(item[1].data), -item[0]))[1]
+        return super()._card_to_select(decision, picks)
 
     def _get_map_decision(self, decision):
         """The path whose walks through the rest of the map do best (deck_eval/path_search.py); the node scores of agents/pathing.py rank the paths to walk."""

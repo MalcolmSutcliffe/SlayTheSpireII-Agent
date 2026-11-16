@@ -79,3 +79,38 @@ def test_event_option_is_random_among_all():
     options = [Option(str(i), {"action": "choose_event_option", "index": i}) for i in range(4)]
     seen = {agent.get_decision(Decision(EVENT, {}, options)).label for _ in range(200)}
     assert seen == {"0", "1", "2", "3"}
+
+
+def pick_screen(prompt, cards, can_confirm=False, **state):
+    options = [act("select_card", index=c["index"], **{k: v for k, v in c.items() if k != "index"}) for c in cards]
+    d = decision("card_select", options + ([act("confirm_selection")] if can_confirm else []))
+    d.state.update(screen_type="select", prompt=prompt, **state)
+    return d
+
+def test_a_screen_that_wants_several_cards_is_picked_one_by_one_then_confirmed_once():
+    agent = BaseAgent()
+    cards = [{"index": i, "id": "C%d" % i} for i in range(6)]
+    chosen = []
+    for _ in range(3):
+        option = agent.get_decision(pick_screen("Choose 3 cards to Enchant.", cards, can_confirm=True))      # the game offers confirm from the start: it is not taken early
+        assert option.name == "select_card"
+        chosen.append(option.action["index"])
+    assert len(set(chosen)) == 3
+    assert agent.get_decision(pick_screen("Choose 3 cards to Enchant.", cards, can_confirm=True)).name == "confirm_selection"
+    assert agent.get_decision(pick_screen("Choose 3 cards to Enchant.", cards, can_confirm=True)).name == "select_card"      # the next screen with the same cards starts again
+
+def test_a_screen_that_lists_its_selection_is_counted_by_it():
+    agent = BaseAgent()
+    cards = [{"index": 0, "id": "A"}, {"index": 1, "id": "B"}]
+    assert agent.get_decision(pick_screen("Choose 2 cards to Remove.", cards, can_confirm=True, selected=[{"index": 2}])).name == "select_card"
+    assert agent.get_decision(pick_screen("Choose 2 cards to Remove.", cards, can_confirm=True, selected=[{"index": 2}, {"index": 3}])).name == "confirm_selection"
+
+def test_fewer_cards_than_asked_for_confirms_when_none_are_left():
+    agent = BaseAgent()
+    cards = [{"index": 0, "id": "A"}, {"index": 1, "id": "B"}]
+    for _ in range(2):
+        assert agent.get_decision(pick_screen("Choose 5 cards to Remove.", cards, can_confirm=True)).name == "select_card"
+    assert agent.get_decision(pick_screen("Choose 5 cards to Remove.", cards, can_confirm=True)).name == "confirm_selection"
+
+def test_cards_wanted_reads_the_prompt():
+    assert BaseAgent._cards_wanted("Choose 5 cards to Remove.") == 5 and BaseAgent._cards_wanted("Choose a card to Enchant.") == 1 and BaseAgent._cards_wanted(None) is None

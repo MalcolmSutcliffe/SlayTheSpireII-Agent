@@ -11,6 +11,7 @@ import time
 
 from agents.decision import Decision, Option
 from agents.deck_eval.advisor import DeckAdvisor
+from agents.deck_eval import prospect
 
 Z = 1.5                     # standard errors the gain has to clear (a wrong skip costs about as much as a wrong take)
 FLOOR = 0.02                 # reward points (a win is ~20, so 0.3 is ~1.5% of one): the smallest gain worth a card
@@ -91,6 +92,8 @@ class CardRewardChooser:
             future_fights = max(1, int(count * FUTURE_SHARE)) if self.fights is not None else max(MIN_FUTURE_FIGHTS, int(count * FUTURE_SHARE))
         future = self.future_rows(decision, deck, player, route, skip, future_fights)
         deciding = future if USE_FUTURE else {"rows": rows, "base": base, "fights": fights}
+        bonuses = {id(r[2]): prospect.bonus(r[2].data or {}, deck, floor, deciding["base"].win_rate, r[0]) for r in deciding["rows"]}      # late pay-off the walks cannot see
+        deciding = {**deciding, "rows": [(g + bonuses[id(o)], se, o, n, sc) for g, se, o, n, sc in deciding["rows"]]}
         best = max(deciding["rows"], key=lambda r: r[0], default=None)
         if best is None:
             return skip or decision.options[0]
@@ -103,7 +106,8 @@ class CardRewardChooser:
                   needed, "take " + best[3] if take else "skip"))
         self.log("  walking the rest of the act (%d walks of %.1f fights, %.0f%% get through): " %
                  (future["walks"], len(future["fights"]) / max(1, future["walks"]), 100 * future["base"].win_rate) +
-                 ", ".join("%s %+.2f±%.2f (win %.0f%%)" % (n, g, se, 100 * s.win_rate) for g, se, o, n, s in future["rows"]))
+                 ", ".join("%s %+.2f±%.2f (win %.0f%%)" % (n, g, se, 100 * s.win_rate) for g, se, o, n, s in future["rows"]) +
+                 ("; prospect bonus " + ", ".join("%s %+.2f" % (n, bonuses.get(id(o), 0)) for g, se, o, n, s in future["rows"] if bonuses.get(id(o))) if any(bonuses.values()) else ""))
         return chosen
 
     def future_rows(self, decision : Decision, deck : list[dict], player : dict, route, skip, count : int) -> dict:
