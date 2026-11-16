@@ -37,8 +37,14 @@ ROOM_ODDS = {"Monster": (Source.ENCOUNTER, OddsType.REGULAR_ENCOUNTER), "Elite":
              "Boss": (Source.ENCOUNTER, OddsType.BOSS_ENCOUNTER), "Shop": (Source.SHOP, OddsType.SHOP)}      # CardCreationOptions.ForRoom
 
 
+_RARITY_OF : dict[CardId, Rarity] = {}        # rarity_of, filled as cards are asked about
+
+
 def rarity_of(card_id : CardId) -> Rarity:
-    return Rarity[CARD_RARITY[card_id].name.upper()]
+    rarity = _RARITY_OF.get(card_id)
+    if rarity is None:
+        rarity = _RARITY_OF[card_id] = Rarity[CARD_RARITY[card_id].name.upper()]
+    return rarity
 
 
 def next_allowed_rarity(rarity : Rarity, is_allowed : Callable[[Rarity], bool]) -> Rarity:
@@ -83,11 +89,16 @@ def create_card_reward(rng, odds : CardRarityOdds, act_index : int, count : int 
         if odds_type == OddsType.UNIFORM:
             items = [cid for cid in options if CARD_RARITY[cid].name not in ("Basic", "Ancient")]
         else:
-            allowed = {rarity_of(cid) for cid in options}
+            rarities = [_RARITY_OF.get(cid) or rarity_of(cid) for cid in options]
+            distinct = []              # the few rarities among the options (a list: compared by identity, no enum hashing per card)
+            for r in rarities:
+                if r not in distinct:
+                    distinct.append(r)
+            allowed = set(distinct)
             rarity = roll_for_rarity(odds, odds_type, source, allowed, force_odds_change)
             if rarity == Rarity.NONE:
                 raise ValueError("no valid rarity for this card pool")
-            items = [cid for cid in options if rarity_of(cid) == rarity]
+            items = [cid for cid, r in zip(options, rarities) if r is rarity]
         if not items:
             raise ValueError("no card left to offer")
         card_id = rng.choice(items)
