@@ -6,7 +6,7 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-from sts2_lite.card import CardId
+from sts2_lite.card import CardId, QUEST_CARDS
 from sts2_lite.combat import CombatState
 from agents.verify import snapshot
 
@@ -239,7 +239,7 @@ def unimplemented_cards(game_state : dict) -> dict[str, list[str]]:
         piles[name] = player.get(name) or []
     found = {}
     for name, cards in piles.items():
-        ids = [c.get("id") for c in cards if c.get("id") not in CardId.__members__ or c.get("id") == "NOT_IMPLEMENTED"]
+        ids = [c.get("id") for c in cards if (c.get("id") not in CardId.__members__ or c.get("id") == "NOT_IMPLEMENTED") and c.get("id") not in QUEST_CARDS]
         if ids:
             found[name] = ids
     return found

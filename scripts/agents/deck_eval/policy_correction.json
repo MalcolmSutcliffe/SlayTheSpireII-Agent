@@ -1,10 +1,59 @@
 {
   "about": "How a rollout-policy fight is turned into what the MCTS would get (route_sim.correct). Written by `python -m benchmarks.policy_fit fit --write`. Per kind of fight: keep = share of the HP a won fight costs that the MCTS also loses; rescue = chance the MCTS wins a fight the policy lost, by how much enemy HP was left (<= left_edges[0], <= left_edges[1], more); rescue_cost = HP that rescue costs, as a share of the HP the fight began with; won_pairs / lost_runs = the fights the numbers were fitted on (null: not recorded).",
-  "left_edges": [0.35, 0.7],
+  "left_edges": [
+    0.35,
+    0.7
+  ],
   "kinds": {
-    "weak":   {"keep": 0.48, "rescue": [0.79, 0.46, 0.26], "rescue_cost": 0.52, "won_pairs": null, "lost_runs": null},
-    "normal": {"keep": 0.48, "rescue": [0.79, 0.46, 0.26], "rescue_cost": 0.52, "won_pairs": null, "lost_runs": null},
-    "elite":  {"keep": 0.61, "rescue": [0.88, 0.39, 0.05], "rescue_cost": 0.61, "won_pairs": null, "lost_runs": null},
-    "boss":   {"keep": 1.0,  "rescue": [0.08, 0.07, 0.01], "rescue_cost": 0.85, "won_pairs": null, "lost_runs": null}
+    "weak": {
+      "keep": 0.39,
+      "rescue": [
+        1.0,
+        1.0,
+        0.0
+      ],
+      "rescue_cost": 0.16,
+      "won_pairs": 472,
+      "lost_runs": 8
+    },
+    "normal": {
+      "keep": 0.39,
+      "rescue": [
+        1.0,
+        1.0,
+        0.0
+      ],
+      "rescue_cost": 0.16,
+      "won_pairs": 472,
+      "lost_runs": 8
+    },
+    "elite": {
+      "keep": 0.8,
+      "rescue": [
+        0.81,
+        0.88,
+        0.0
+      ],
+      "rescue_cost": 0.61,
+      "won_pairs": 174,
+      "lost_runs": 61
+    },
+    "boss": {
+      "keep": 0.76,
+      "rescue": [
+        0.55,
+        0.33,
+        0.0
+      ],
+      "rescue_cost": 0.62,
+      "won_pairs": 89,
+      "lost_runs": 147
+    }
+  },
+  "fitted": {
+    "seed": 1,
+    "time_budget": 1.0,
+    "reps": 8,
+    "cases": 120
   }
 }

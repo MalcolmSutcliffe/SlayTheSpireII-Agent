@@ -244,3 +244,11 @@ def test_unknown_offered_card_keeps_its_place_on_the_screen():
     cs.pending_choice = PendingChoice("discover", [0, 1, 2], "offer", hidden=True, offers=[])
     cs.adopt_offer([{"id": "HEADBUTT", "is_upgraded": False}, {"id": "FAKE_NEW_CARD", "name": "Fake", "is_upgraded": False}])
     assert [c.card_id for c in cs.pending_choice.offers] == [CardId.HEADBUTT, CardId.NOT_IMPLEMENTED] and cs.pending_choice.indices == [0, 1]
+
+import pytest
+
+@pytest.mark.parametrize("card_id,name", [("SPOILS_MAP", "Spoils Map"), ("LANTERN_KEY", "Lantern Key"), ("BYRDONIS_EGG", "Byrdonis Egg")])
+def test_a_quest_card_is_a_dead_card_that_is_not_reported_as_missing(capsys, card_id, name):
+    c = Card.from_dict(dict(RAW, id=card_id, name=name, type="Quest", is_upgraded=False))
+    assert c.name == name and c.type == CardType.Status and c.unplayable and c.energy_cost == 0
+    assert "not implemented" not in capsys.readouterr().out

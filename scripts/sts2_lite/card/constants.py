@@ -277,6 +277,9 @@ _unknown_enchantments : set[str] = set()
 
 _unknown_cards : set[str] = set()
 
+# Quest cards: unplayable like a Wound and nothing else in combat (Spoils Map, Lantern Key and Byrdonis Egg act on the map and at rest sites, which the campaign simulator models), so the combat engine loads them as the dead stand-in without calling them missing
+QUEST_CARDS = frozenset({"SPOILS_MAP", "LANTERN_KEY", "BYRDONIS_EGG"})
+
 # Mad Science: the riders Tinker Time offers for each card type, and (damage / block, rider numbers) the sim plays them with
 MAD_SCIENCE_RIDERS = {"Attack": ("SAPPING", "VIOLENCE", "CHOKING"), "Skill": ("ENERGIZED", "WISDOM", "CHAOS"), "Power": ("EXPERTISE", "CURIOUS", "IMPROVEMENT")}
 MAD_SCIENCE_DAMAGE, MAD_SCIENCE_BLOCK = 12, 8

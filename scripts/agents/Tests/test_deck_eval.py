@@ -310,8 +310,10 @@ def test_the_engine_pays_an_elite_a_relic_a_rest_site_heals_and_a_treasure_room_
 
 
 @needs_pool
-def test_a_walk_is_repeatable_and_a_deck_that_dies_early_scores_only_what_it_got_through():
+def test_a_walk_is_repeatable_and_a_deck_that_dies_early_scores_only_what_it_got_through(monkeypatch):
+    from agents.deck_eval import route_sim
     from agents.deck_eval.route_sim import sample_walks
+    monkeypatch.setattr(route_sim, "CORRECTION", {kind: (1.0, (0.0, 0.0, 0.0), 0.5) for kind in ("weak", "normal", "elite", "boss")})       # (the MCTS's rescues of lost fights are not the point here)
     ev, p = DeckEvaluator(POOL, target_types(POOL)), _player()
     walks = sample_walks(PlannedRoute(["combat", "elite", "combat", "boss"], 3, 1, None, "OVERGROWTH"), 1, 0, 4, 2)       # the first fight ahead is an elite
     healthy, again = ev.score_walks(p["deck"], p, walks), ev.score_walks(p["deck"], p, walks)
