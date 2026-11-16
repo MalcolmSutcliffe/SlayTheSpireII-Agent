@@ -489,6 +489,7 @@ class CombatSimulator:
         self.auto_playing = False       # CardPlay.IsAutoPlay of the play being resolved
         self.card_x = 0                 # the X of the X-cost card last played
         combat_state.player.draw_hook = self._card_drawn
+        combat_state.player.draw_pause_hook = self._pause_draw
         combat_state.player.shuffle_hook = self._shuffled
         combat_state.player.block_cleared_hook = self._block_cleared
         self._check_is_over()
@@ -801,6 +802,15 @@ class CombatSimulator:
                 and any(c is card for c in player.hand):
             self.auto_play(card)
 
+    def _pause_draw(self, left : int, from_hand_draw : bool) -> bool:
+        """A card drawn played itself and asked for a card choice (Hellraiser's Seeker Strike): the cards still to draw wait for the answer, as the game's do, because
+        drawing them now would change the pile the choice points into."""
+        cs = self.combat_state
+        if left <= 0 or cs.pending_choice is None:
+            return False
+        cs.continuations = cs.continuations + [("draw", left, from_hand_draw)]
+        return True
+
     def card_played_hooks(self, card : Card):
         """Everything that follows one play of a card (a card played twice runs it twice)."""
         player = self.combat_state.player
@@ -957,6 +967,10 @@ class CombatSimulator:
                 args[0]._enchantment_on_play(self)
             elif kind == "random":
                 self.play_random_from_draw_pile(args[0])
+            elif kind == "draw":
+                cs.player.draw_cards(*args)
+            elif kind == "turn_start":
+                self._finish_player_turn_start(*args)
             elif kind == "replay":
                 card, *rest_args = args
                 card.run_extra_plays(self, *rest_args)
@@ -1166,10 +1180,28 @@ class CombatSimulator:
         if unannounced > 0:
             self.fire(HookType.BLOCK_GAINED, player, unannounced)
         self._after_hp_loss(hp_loss_mark)
-        self.fire(HookType.PLAYER_TURN_START)
-        self._check_is_over()           # Mercury Hourglass can end the fight
-        if not self.is_over:
-            self.fire(HookType.AUTO_PRE_PLAY)
+        self._finish_player_turn_start(enemies_start, 0)
+
+    def _finish_player_turn_start(self, enemies_start : bool, stage : int):
+        """What follows the hand draw. A card choice asked for on the way (a drawn Seeker Strike that Hellraiser plays) holds the rest back until it is answered:
+        a relic that draws (Pendulum) would change the pile the choice points into."""
+        cs = self.combat_state
+        if stage == 0:
+            if cs.pending_choice is not None:
+                cs.continuations = cs.continuations + [("turn_start", enemies_start, 0)]
+                return
+            self.fire(HookType.PLAYER_TURN_START)
+            stage = 1
+        if stage == 1:
+            if cs.pending_choice is not None:
+                cs.continuations = cs.continuations + [("turn_start", enemies_start, 1)]
+                return
+            self._check_is_over()           # Mercury Hourglass can end the fight
+            if not self.is_over:
+                self.fire(HookType.AUTO_PRE_PLAY)
+        if cs.pending_choice is not None:
+            cs.continuations = cs.continuations + [("turn_start", enemies_start, 2)]
+            return
         if enemies_start:
             for enemy in self.combat_state.enemies:
                 enemy.turn_start()

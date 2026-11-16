@@ -1,4 +1,5 @@
 import copy
+import dataclasses
 import json
 import math
 import time
@@ -8,11 +9,11 @@ from sts2_lite import rng
 from sts2_lite.combat import CombatState, CombatSimulator
 
 from agents.sts2_MCTS.state_key import state_key
-from agents.sts2_MCTS.stats import Z_SCORE, TIE_MARGIN
+from agents.sts2_MCTS.stats import Z_SCORE, TIE_MARGIN, expected_excess
 from agents.sts2_MCTS.order_check import OrderCheck
 from agents.sts2_MCTS.paired_check import PairedCheck
 from agents.sts2_MCTS import outcome_score
-from agents.sts2_MCTS.params import DEFAULT_CONFIG, SearchConfig
+from agents.sts2_MCTS.params import DEFAULT_CONFIG, RewardParams, SearchConfig, PotionParams
 from agents.sts2_MCTS.rollout_policy import rollout_policy
 
 CULLABLE_PILES = ("hand", "discard") # draw pile is not neccessarily cullable because of known_top cards
@@ -23,6 +24,8 @@ class sts2_Node:
     visits : int
     total_reward: float
     total_reward_squared : float
+    wins : int                  # rollouts through this node that won the fight, and the HP they ended with (a loss adds none): what the potion gate reads
+    hp_sum : float
     depth :int = 0
     is_chance_node : bool
 
@@ -32,6 +35,8 @@ class sts2_Node:
         self.visits = 0
         self.total_reward = 0.0
         self.total_reward_squared = 0.0
+        self.wins = 0
+        self.hp_sum = 0.0
         if parent:
             self.depth = parent.depth + 1
 
@@ -75,6 +80,13 @@ class sts2_MCTS:
     _start_time : float
     _reward_lo : float = math.inf       # the lowest and highest rollout reward of this fight's tree: they size the exploration term
     _reward_hi : float = -math.inf
+    _potions_on : bool = True           # potion moves are part of the tree being searched
+    _tree_potions : bool | None = None  # whether the tree under _root_node was built with potion moves (a tree is only reused for the same setting)
+    _latch : frozenset | None = None    # the potions held when the gate opened: potions stay allowed until one of them has been used
+    _reward : RewardParams | None = None        # the reward of the search config in `_reward_source`, as the search uses it (see _reward_params)
+    _reward_source : SearchConfig | None = None
+    _last_won : bool = False            # how the latest rollout ended, for backpropagation
+    _last_hp : float = 0.0
 
     def __init__(self):
         pass
@@ -83,9 +95,22 @@ class sts2_MCTS:
                                 combat_state : CombatState, 
                                 config : SearchConfig = SearchConfig()
                                 ) -> tuple[dict, dict]:
+        """Searches for the move to play in `combat_state`.
 
-        # check if can reroot tree at a saved state
-        reused = config.reuse_tree and self._reroot(combat_state)
+        Potions (PotionParams): a search first runs without potion moves. When its best line looks bad (see _gate_verdict) the search is
+        run again with the potions allowed at every turn, and they stay allowed from then on until one of the potions held then has been
+        used. Without `config.potions.gated` every search allows them."""
+        search_started = time.perf_counter()
+        gate = config.potions
+        self._search_config = config
+
+        # a new fight starts with the gate closed
+        if self._is_new_fight(combat_state):
+            self._latch = None
+        self._potions_on = self._potions_allowed(combat_state, gate)
+
+        # check if can reroot tree at a saved state (a tree built with the other potion setting is not kept: its moves differ)
+        reused = config.reuse_tree and self._tree_potions == self._potions_on and self._reroot(combat_state)
 
         # new tree, reset table
         if not reused:
@@ -96,31 +121,29 @@ class sts2_MCTS:
             self._starting_hp = combat_state.player.current_hp
             self._starting_max_hp = combat_state.player.max_hp
             self._reward_lo, self._reward_hi = math.inf, -math.inf
+        self._tree_potions = self._potions_on
 
         inherited = self._root_node.visits
 
         # largest bonus in reward units: `info_bonus` HP, and a win's reward is linear in HP (1 / starting HP a point)
         self._info_cap = config.info_bonus / max(1, self._starting_hp)
 
-        self._num_sims = 0
-        self._search_config = config
-        self._start_time = time.perf_counter()
+        exit_reason = self._run_search()
 
-        exit_reason = None
-
-        # tree search loop
-        while True:
-            # check exit conditions
-            do_exit, reason = self._check_exit()
-            if do_exit:
-                exit_reason = reason
-                break
-            # traverse and sim
-            path = self.traverse_node(self._root_node) # root to the leaf to simulate from (a shared node has several parents, so the path is tracked)
-            sim_result = self._simulate_combat_rollout(path[-1]) # simulate
-            self._reward_lo = min(self._reward_lo, sim_result)
-            self._reward_hi = max(self._reward_hi, sim_result)
-            backpropagate(path, sim_result, self._information_bonuses(path))
+        # the gate: potions were left out of that search, and some are held. If its best line is bad enough, search again with them.
+        gate_info = None
+        if gate.gated and not self._potions_on and combat_state.player.potions:
+            gate_info = self._gate_verdict(gate)
+            gate_info["first_search_sims"] = self._num_sims
+            gate_info["first_search_time"] = time.perf_counter() - search_started
+            if gate_info["open"]:
+                self._latch = frozenset((p.slot, p.potion_id) for p in combat_state.player.potions)
+                self._potions_on = self._tree_potions = True
+                # a fresh tree: the nodes of the first search have no potion moves. The fight's reward scale (starting HP, expected enemy HP, reward range) stays
+                self._table = {}
+                self._root_node = sts2_DeterministicNode(None, CombatState.deepcopy(combat_state), None)
+                reused, inherited = False, 0
+                exit_reason = self._run_search()
 
         best_child = self._pick_root_child()
         paired = self._paired_check(best_child) if config.paired_scenarios > 0 else None
@@ -139,15 +162,83 @@ class sts2_MCTS:
         stats = { 
             "children": [{"action": c.action, "visits": c.visits, "q": c.total_reward / c.visits} for c in self._root_node.children],
             "num_sims" : self._num_sims,
-            "time_taken" : time.perf_counter() - self._start_time,
+            "time_taken" : time.perf_counter() - search_started,
             "exit_reason" : exit_reason,
             "reused" : reused,
             "inherited_visits" : inherited,       # visits the root already had from earlier searches
             "paired" : None if paired is None else {k: v for k, v in paired.items() if k != "child"},
             "order" : None if order is None else {k: v for k, v in order.items() if k != "action"},
+            "potions_allowed" : self._potions_on,
+            "gate" : gate_info,         # None when the gate was not tested (potions already allowed, or none held)
                 }
-        stats["time_taken"] = time.perf_counter() - self._start_time
+        stats["time_taken"] = time.perf_counter() - search_started
         return move, stats
+
+    def _run_search(self) -> str | None:
+        """The tree search loop on the current root, until an exit condition holds; returns the reason it stopped. The simulation count and
+        the time budget are those of this run alone."""
+        self._num_sims = 0
+        self._start_time = time.perf_counter()
+        while True:
+            # check exit conditions
+            do_exit, reason = self._check_exit()
+            if do_exit:
+                return reason
+            # traverse and sim
+            path = self.traverse_node(self._root_node) # root to the leaf to simulate from (a shared node has several parents, so the path is tracked)
+            sim_result = self._simulate_combat_rollout(path[-1]) # simulate
+            self._reward_lo = min(self._reward_lo, sim_result)
+            self._reward_hi = max(self._reward_hi, sim_result)
+            backpropagate(path, sim_result, self._information_bonuses(path), self._last_won, self._last_hp)
+
+    ### The potion gate
+    ### Potions are not priced in HP. A search leaves them out, and only when the fight looks bad (it is lost too often, or costs too much of the max HP)
+    ### are the potions allowed, for every turn of the tree. They stay allowed until one has been used, so the choice is not made again each action.
+
+    def _is_new_fight(self, state : CombatState) -> bool:
+        """This state is not part of the fight of the last search: the turn count went back, or none of the enemies is the same kind."""
+        root = self._root_node
+        if root is None:
+            return True
+        old = root.state
+        if state.turn_number < old.turn_number:
+            return True
+        return not ({e.enemy_id for e in state.enemies} & {e.enemy_id for e in old.enemies})
+
+    def _potions_allowed(self, state : CombatState, gate : PotionParams) -> bool:
+        """Whether this search starts with potion moves in its tree: always without the gate and in the last fight (a kept potion is of no
+        use later), and while the gate is open. A used potion closes it."""
+        if not gate.gated or state.final_fight:
+            return True
+        potions = state.player.potions
+        if not potions:
+            self._latch = None
+            return bool(self._tree_potions)       # no potion move to include: any tree will do, so keep the one we have
+        if self._latch is not None:
+            if self._latch <= {(p.slot, p.potion_id) for p in potions}:
+                return True
+            self._latch = None                    # one of the potions held when it opened is gone: used, so the gate closes
+        return False
+
+    def _gate_verdict(self, gate : PotionParams) -> dict:
+        """Whether the search without potions found a fight bad enough to look at them: its best line wins less often than
+        `win_threshold`, or is expected to lose more than `hp_loss_fraction` of the max HP (HP at the end of the fight, a loss counting as 0,
+        against the HP the fight started with)."""
+        top = self._pick_root_child()
+        visits = max(1, top.visits)
+        p_win = top.wins / visits
+        hp_loss = self._starting_hp - top.hp_sum / visits
+        limit = gate.hp_loss_fraction * self._root_node.state.player.max_hp
+        return {"open" : p_win < gate.win_threshold or hp_loss > limit, "p_win" : p_win, "hp_loss" : hp_loss, "hp_loss_limit" : limit, "visits" : top.visits}
+
+    def _reward_params(self) -> RewardParams:
+        """The reward of the config being searched. Gated, a potion is no longer priced in HP: each one kept is worth `kept_potion_bonus`."""
+        config = self._search_config
+        if config is not self._reward_source:
+            gate = config.potions
+            self._reward = dataclasses.replace(config.reward, potion_bonus={}, default_potion_bonus=gate.kept_potion_bonus, loss_potion_bonus=gate.kept_potion_loss_bonus) if gate.gated else config.reward
+            self._reward_source = config
+        return self._reward
 
     ### Tree reuse
     ### The agent searches again after every action. The state it is given is one the last search already looked at (the node the
@@ -178,8 +269,9 @@ class sts2_MCTS:
             return False
         root = sts2_DeterministicNode(None, CombatState.deepcopy(observed), None)
         root.visits, root.total_reward, root.total_reward_squared = match.visits, match.total_reward, match.total_reward_squared
+        root.wins, root.hp_sum = match.wins, match.hp_sum
         root.is_terminal = match.is_terminal
-        expand_node(root)       # the moves in the observed state's own card positions: these are what the agent returns
+        expand_node(root, None, self._potions_on)       # the moves in the observed state's own card positions: these are what the agent returns
         if match.is_expanded:
             # A move that leads to a fixed state is found by that state: a shared child keeps the action (card position) of the
             # parent that created it, which is wrong for any other. A random move is a node of its own, so its action is right.
@@ -304,8 +396,13 @@ class sts2_MCTS:
             actions = c.get_available_actions()
             if len(actions) == 0:
                 break
-            c.perform_action(rollout_policy(c, actions, self._search_config.rollout, self._search_config.heuristic))
+            c.perform_action(rollout_policy(c, actions, self._search_config.rollout, self._search_config.heuristic, self._rollout_danger()))
         return self._rate_outcome(cs)
+
+    def _rollout_danger(self) -> float | None:
+        """The danger share at which the rollouts drink a potion, or None when they never do (potions out of the tree, or switched off)."""
+        gate = self._search_config.potions
+        return gate.rollout_danger if gate.rollout_use and self._potions_on else None
 
     def _paired_check(self, picked : sts2_Node) -> dict | None:
         """See paired_check.py."""
@@ -379,7 +476,7 @@ class sts2_MCTS:
                     return path
                 # if node has not yet been expanded, expand it
                 if not node.is_expanded:
-                    expand_node(node, self._table)
+                    expand_node(node, self._table, self._potions_on)
                 # if node has unvisited child, return that
                 leaf = get_unvisited_child(node)
                 if leaf is not None:
@@ -410,7 +507,8 @@ class sts2_MCTS:
                 child = sts2_DeterministicNode(node, state, node.action)
                 child.is_terminal = sim.is_over
                 if self._info_cap > 0.0:
-                    child.actionable = not sim.is_over and any(a["action"] != "end_turn" for a in sim.get_available_actions())
+                    child.actionable = not sim.is_over and any(a["action"] != "end_turn" and (self._potions_on or a["action"] != "use_potion")
+                                                               for a in sim.get_available_actions())
                 node.outcomes[key] = child
                 node.outcome_counts[key] = 1
                 return child, True
@@ -436,17 +534,19 @@ class sts2_MCTS:
             if len(actions) == 0:
                 break
 
-            action = rollout_policy(c, actions, self._search_config.rollout, self._search_config.heuristic)
+            action = rollout_policy(c, actions, self._search_config.rollout, self._search_config.heuristic, self._rollout_danger())
             
             c.perform_action(action)
 
         self._num_sims += 1
+        self._last_won = outcome_score.is_win(c.combat_state)
+        self._last_hp = c.combat_state.player.current_hp if self._last_won else 0.0
         outcome = self._rate_outcome(c.combat_state)
         return outcome
 
     def _rate_outcome(self, combat_state : CombatState) -> float:
         """See outcome_score.py."""
-        return outcome_score.rate_outcome(combat_state, self._search_config.reward, self._starting_hp, self._starting_max_hp, self._expected_total_hp)
+        return outcome_score.rate_outcome(combat_state, self._reward_params(), self._starting_hp, self._starting_max_hp, self._expected_total_hp)
 
     def _enemy_progress_left(self, combat_state : CombatState) -> float:
         return outcome_score.enemy_progress_left(combat_state, self._expected_total_hp)
@@ -519,8 +619,31 @@ class sts2_MCTS:
         if Z_SCORE*SE_diff < self._search_config.confidence.epsilon:
             best_mean = max(node_a.total_reward/node_a.visits, node_b.total_reward/node_b.visits)
             return "TIE" if best_mean > 0.0 else None # only return TIE if winning line
-        
+
+        # if nothing is left to gain: the expected cost of playing the leader is under the allowed regret (only in a winning line, as for a tie)
+        limit = self._search_config.confidence.max_regret_hp
+        if limit > 0.0 and S_a / n_a > 0.0 and n_a >= self._search_config.confidence.regret_min_visits and self._expected_regret(node_a) <= limit / max(1, self._starting_hp):
+            return "REGRET"
+
         return None
+
+    def _expected_regret(self, leader : sts2_Node) -> float:
+        """What picking `leader` is expected to cost, in reward units: for each other root move, the expected amount by which its true
+        value exceeds the leader's, E[max(0, X)] with X normal around the observed gap and the standard error of that gap, summed.
+        A move with few visits is given the leader's variance (it has no estimate of its own). Moves that differ by a point of win
+        probability cost ~0.2 here, however long the search takes to tell them apart: the sims it takes grow with the variance of a
+        rollout (a rare loss is worth ~21 points), not with what is at stake."""
+        var = lambda n: max(0.0, (n.total_reward_squared - n.total_reward**2/n.visits) / (n.visits - 1)) if n.visits > 1 else 0.0
+        lead_mean, lead_var = leader.total_reward/leader.visits, var(leader)
+        regret = 0.0
+        for rival in self._root_node.children:
+            if rival is leader:
+                continue
+            rival_var = var(rival) if rival.visits > 30 else lead_var
+            se = math.sqrt(lead_var/leader.visits + rival_var/max(1, rival.visits))
+            gap = (rival.total_reward/rival.visits if rival.visits else lead_mean) - lead_mean       # > 0: the rival looks better
+            regret += expected_excess(gap, se)
+        return regret
 
     def _check_exit(self) -> tuple[bool, str]:
         # check min sims
@@ -546,9 +669,12 @@ def get_unvisited_child(node : sts2_Node):
             return child
     return None
 
-def expand_node(node : sts2_Node, table : dict | None = None):
+def expand_node(node : sts2_Node, table : dict | None = None, allow_potions : bool = True):
+    """Gives `node` a child for every move (identical ones once). Without `allow_potions` the potion moves are left out."""
     c = CombatSimulator(node.state)
     actions = c.get_available_actions()
+    if not allow_potions:
+        actions = [a for a in actions if a["action"] != "use_potion"] or actions
     actions = cull_identical_actions(c, actions)
 
     # expand node
@@ -574,13 +700,17 @@ def expand_node(node : sts2_Node, table : dict | None = None):
 
     node.is_expanded = True
 
-def backpropagate(path : list[sts2_Node], result : float, bonuses : list[float] | None = None):
-    """Adds the result to every node on the path from the root to the simulated leaf (plus its bonus, if there are any)."""
+def backpropagate(path : list[sts2_Node], result : float, bonuses : list[float] | None = None, won : bool | None = None, final_hp : float = 0.0):
+    """Adds the result to every node on the path from the root to the simulated leaf (plus its bonus, if there are any).
+    `won` and `final_hp` (0 in a loss) are how the fight ended, kept for the potion gate; left out, the win statistics stay as they are."""
     for i, node in enumerate(path):
         r = result if bonuses is None else result + bonuses[i]
         node.total_reward += r
         node.total_reward_squared += r*r
         node.visits += 1
+        if won is not None:
+            node.wins += won
+            node.hp_sum += final_hp
 
 def _action_key(c : CombatSimulator, action : dict) -> tuple:
     if action["action"] == "play_card":

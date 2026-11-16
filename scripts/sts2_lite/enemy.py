@@ -12,7 +12,7 @@ from sts2_lite.card import Card, CardId
 from sts2_lite.creature import Creature
 from sts2_lite.enemy_moves import MOVE_TABLES, rat_counter, table_move_id, SPAWN_HP, SPAWN_MOVE, SPAWN_STATUS, TOUGH_ASCENSION, MoveTable
 from sts2_lite.damage import modify_damage
-from sts2_lite.status import StatusInstance, StatusId
+from sts2_lite.status import StatusInstance, StatusId, status_id_of
 
 log = logging.getLogger("sts2_lite")
 REATTACH_HEAL = 25
@@ -70,10 +70,12 @@ class Enemy(Creature):
 
         e.status = {}
         for s in enemy["status"]:
-            e.status[StatusId[s["id"][:-6]]] = StatusInstance.from_dict(s)
+            e.status[status_id_of(s["id"])] = StatusInstance.from_dict(s)
 
         if StatusId.MINION in e.status:
             e.is_minion = True
+        if StatusId.SKITTISH in e.status and e.block > 0:
+            e.has_been_attacked_this_turn = True        # the capture does not say; the block it shows on the player's turn is the one its first hit gave it
         # The Lost / The Forgotten: the game does not show what they took; every Smog or Miasma gave them what it took
         for possess, stat in ((StatusId.POSSESS_STRENGTH, StatusId.STRENGTH), (StatusId.POSSESS_SPEED, StatusId.DEXTERITY)):
             if possess in e.status and not e.status[possess].records:

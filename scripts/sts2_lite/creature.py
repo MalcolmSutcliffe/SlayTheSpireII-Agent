@@ -211,8 +211,11 @@ class Creature:
             self.lose_plow()
 
     def lose_max_hp(self, amount : int):
+        before = self.current_hp
         self.max_hp = max(1, self.max_hp - amount)
         self.current_hp = min(self.current_hp, self.max_hp)
+        if self.current_hp < before and self.relics:
+            self.hp_lost_log.append(before - self.current_hp)       # the hit points this took off count as lost for Centennial Puzzle (the game drew its cards)
 
     def lose_plow(self):
         """Plow breaks the first time hit points reach its amount: Strength is lost and the creature is stunned."""

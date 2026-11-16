@@ -1,9 +1,10 @@
 """Everything that tunes the search, in one place.
 
-`SearchConfig` is what a search is given. Besides its own fields it holds four groups of numbers, each a frozen dataclass:
+`SearchConfig` is what a search is given. Besides its own fields it holds five groups of numbers, each a frozen dataclass:
   reward      how a finished rollout is scored            (RewardParams)
   uct         the exploration term and the information bonus (UctParams)
   confidence  when the search may stop and when moves count as tied (ConfidenceParams)
+  potions     when the search may drink a potion          (PotionParams)
   heuristic   how the rollout policies weigh cards         (HeuristicParams)
 Nothing here is changed at runtime: to try another value make another config, e.g. `SearchConfig().tuned(p_random_action=0.0)`
 (`tuned` takes the name of any field of the config or of its groups). The sweeps and tests do this instead of patching modules.
@@ -44,7 +45,8 @@ class RewardParams:
     turn_cost : float = 0.1                 # a win loses this much HP of score per turn it took
     loss_turn_bonus : float = 0.02          # a loss gains this much (a share of the enemies' HP) per turn lasted: dying later leaves more chances to find a win
     max_hp_scaling : float = 2.0
-    default_potion_bonus : int = 16
+    loss_potion_bonus : float = 0.0         # a line that is not won and has the player alive gains this for each potion held (set from PotionParams.kept_potion_loss_bonus when gated)
+    default_potion_bonus : int = 16         # the potion prices below apply only when PotionParams.gated is off
     potion_bonus : dict[PotionId, int] = field(default_factory=lambda: {
         PotionId.BLOOD_POTION : 18,
         PotionId.FORTIFIER : 15,
@@ -79,8 +81,30 @@ class UctParams:
 class ConfidenceParams:
     """When the search may stop on its own (MCTS._check_statistical_exit) and when the top moves count as tied (MCTS._pick_root_child)."""
     epsilon : float = 0.005
+    max_regret_hp : float = 1.0             # stop when picking the most visited move is expected to cost no more than this many HP against the other moves, whatever the sampling noise (0 = off; 1.0 chosen by benchmarking 22 captured fights, see the regret table); see MCTS._expected_regret
+    regret_min_visits : int = 150           # ... but not before the most visited move has this many visits: a rare loss that no rollout has met yet would make the estimates look surer than they are
     tie_min_visits : int = 30               # the top move needs this many visits before a tie is considered
     tie_visit_fraction : float = 0.5        # a tied move needs this share of the top move's visits: a thin estimate is within the margin by luck
+
+
+@dataclass(frozen=True)
+class PotionParams:
+    """When the search may drink a potion (MCTS.monte_carlo_tree_search).
+
+    With `gated`, a search first runs without any potion move. When the best line of that search looks bad enough (it wins less often
+    than `win_threshold`, or it is expected to cost more than `hp_loss_fraction` of the max HP over the fight), the search is run again
+    with the potions allowed at every turn of the tree, and they stay allowed until one has been drunk; then the gate closes again.
+    Potions are then not priced in HP: a kept one is worth only `kept_potion_bonus` (so equal lines still keep it), and
+    RewardParams.potion_bonus / default_potion_bonus are not used. Without `gated` every search may drink and those prices apply."""
+    gated : bool = True
+    win_threshold : float = 0.9             # the gate opens when the best line wins less often than this ...
+    hp_loss_fraction : float = 0.35         # ... or is expected to lose more than this share of the max HP in the fight (a loss counts as losing all the HP the fight started with)
+    kept_potion_bonus : float = 0.5         # HP a won fight is worth more for each potion still held (gated search only): a tie-break, not a price
+    kept_potion_loss_bonus : float = 0.02   # reward an unfinished or lost line (player still alive) gains for each potion still held (gated search only), so holding is not worth nothing when the line looks bad
+    rollout_use : bool = True               # while potions are allowed, the rollouts drink one when the turn would otherwise end with this much danger (below), so "hold it" lines are credited with a later use
+    rollout_danger : float = 0.3            # ... the damage still to come through the block, as a share of the current HP
+    potion_z : float = 2.0                  # a potion move is only played when the paired check finds it ahead of every non-potion line by this many standard errors ...
+    potion_min_gain_hp : float = 2.0        # ... and by at least this many HP (a share of the starting HP in reward units)
 
 
 @dataclass(frozen=True)
@@ -132,9 +156,12 @@ class SearchConfig:
     reuse_tree : bool = True             # keep the part of the previous search the game actually went into (needs the same sts2_MCTS object)
     paired_scenarios : int = 300         # after the search, replay the picked move and its close rivals under the same random scenarios and keep the picked move unless a rival is significantly ahead (0 = off)
     order_check : bool = True            # after the search, try the turn's plain plays (no random outcome) in every order under the same scenarios and play first what the best order starts with (needs paired_scenarios > 0)
+    paired_batch : int = 50              # the paired and order checks replay their scenarios in batches of this size and stop replaying a line once it is settled (stats.settled); 0 = always all of them
+    check_workers : int = 6              # processes the paired and order checks replay their scenarios on (1 = in this process); the result does not depend on it, see parallel.py
     reward : RewardParams = field(default_factory=RewardParams)
     uct : UctParams = field(default_factory=UctParams)
     confidence : ConfidenceParams = field(default_factory=ConfidenceParams)
+    potions : PotionParams = field(default_factory=PotionParams)
     heuristic : HeuristicParams = field(default_factory=HeuristicParams)
 
     def tuned(self, **values) -> SearchConfig:
@@ -181,7 +208,7 @@ class SearchConfig:
 
 
 DEFAULT_CONFIG = SearchConfig()           # the shipped defaults, for reading (tests compare against them)
-GROUPS = {"reward" : RewardParams, "uct" : UctParams, "confidence" : ConfidenceParams, "heuristic" : HeuristicParams}
+GROUPS = {"reward" : RewardParams, "uct" : UctParams, "confidence" : ConfidenceParams, "heuristic" : HeuristicParams, "potions" : PotionParams}
 _OWN_FIELDS = {f.name for f in dataclasses.fields(SearchConfig)} - set(GROUPS)
 _FIELD_GROUP = {f.name : group for group, cls in GROUPS.items() for f in dataclasses.fields(cls)}
 

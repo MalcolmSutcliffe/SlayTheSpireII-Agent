@@ -1,10 +1,16 @@
-"""A fresh round-1 fight of a template with the player's own deck, hp and relics (combat-start relics and Innate cards: sts2_lite/relic/combat_start.py)."""
+"""A fresh round-1 fight with the player's own deck, hp and relics (combat-start relics and Innate cards: sts2_lite/relic/combat_start.py).
+
+A template of an engine encounter is built the way the campaign simulator builds a fight (sts2_lite/campaign/combat.py): `build_combat` rolls the
+monsters from the encounter id, the run's ascension and the template's seed. A template with a captured `state` (the live game's own fight) is
+built from that state."""
 from __future__ import annotations
 import copy
+import random
 
-from sts2_lite import rng
 from sts2_lite.combat import CombatState, CombatSimulator
-from sts2_lite.relic.combat_start import Opening, undo_enemy_effects
+from sts2_lite.encounters import build_combat
+from sts2_lite.player import Player
+from sts2_lite.relic.combat_start import Opening, undo_enemy_effects, undo_rampart_block
 
 from agents.deck_eval.fight_pool import FightTemplate
 
@@ -23,9 +29,27 @@ def card_dict(card : dict, target_types : dict[str, str]) -> dict:
 
 def build_fight(template : FightTemplate, deck : list[dict], player : dict, target_types : dict[str, str]) -> CombatSimulator:
     """Round 1, player turn started: `deck` (card dicts) shuffled into the draw pile and the opening hand drawn."""
+    if template.encounter is None:
+        return _build_captured(template, deck, player, target_types)
+    cards = [card_dict(c, target_types) for c in deck]
+    relics = copy.deepcopy(player.get("relics", []))
+    opening = Opening(relics, template.room_type, template.kind == "boss")
+    energy = BASE_ENERGY + opening.energy_bonus()
+    me = {"hp": player["hp"], "max_hp": player["max_hp"], "block": 0, "gold": player.get("gold", 0), "status": [], "hand": [], "draw_pile": cards,
+          "discard_pile": [], "exhaust_pile": [], "relics": relics, "potions": [], "potion_slots": player.get("potion_slots", 3), "energy": energy, "max_energy": energy}
+    me = Player.from_dict(me)
+    _upgrade_marked(me, cards)
+    me.shuffle_draw_pile()
+    cs = build_combat(template.encounter, template.ascension, me, random.Random(template.seed), max_energy=energy)
+    return _open(cs, opening)
+
+
+def _build_captured(template : FightTemplate, deck : list[dict], player : dict, target_types : dict[str, str]) -> CombatSimulator:
+    """The fight of a captured round-1 state: its enemies are kept, its player is replaced by the deck being rated."""
     state = copy.deepcopy(template.state)
     me = state["player"]
-    undo_enemy_effects(state["enemies"], me.get("relics", []))       # the captured player's relics are on its enemies: the deck's own are applied below
+    undo_enemy_effects(state["enemies"], me.get("relics", []))
+    undo_rampart_block(state["enemies"])       # the captured player's relics are on its enemies: the deck's own are applied below
     cards = [card_dict(c, target_types) for c in deck]
     relics = copy.deepcopy(player.get("relics", []))
     for relic in relics:
@@ -39,10 +63,19 @@ def build_fight(template : FightTemplate, deck : list[dict], player : dict, targ
     state["energy"], state["max_energy"] = energy, energy
     state.pop("battle", None)
     cs = CombatState.from_dict(state, check_bridge=False)       # the intents shown in the capture were for the captured player, not this one
-    for i, raw in enumerate(cards):     # a card marked "_upgrade" is the upgraded one: the sim's own upgrade (cost, keywords, name)
-        if raw["_upgrade"] and cs.player.draw_pile[i].is_upgradable:
-            cs.player.draw_pile[i] = cs.player.draw_pile[i].upgraded_copy()
+    _upgrade_marked(cs.player, cards)
     cs.player.shuffle_draw_pile()
+    return _open(cs, opening)
+
+
+def _upgrade_marked(player, cards : list[dict]):
+    """A card marked "_upgrade" is the upgraded one: the sim's own upgrade (cost, keywords, name)."""
+    for i, raw in enumerate(cards):
+        if raw["_upgrade"] and player.draw_pile[i].is_upgradable:
+            player.draw_pile[i] = player.draw_pile[i].upgraded_copy()
+
+
+def _open(cs : CombatState, opening : Opening) -> CombatSimulator:
     opening.before_combat(cs)
     opening.before_turn(cs)
     cs.player.opening_hook = opening.before_draw

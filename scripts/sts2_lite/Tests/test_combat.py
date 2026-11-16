@@ -568,3 +568,92 @@ def test_vicious_draws_nothing_for_a_dead_target():
     cs.player.apply_status(StatusId.VICIOUS, 1)
     CombatSimulator(cs).play_card(0, 0)
     assert cs.player.hand == []
+
+
+def test_a_draw_waits_for_the_card_choice_of_a_card_it_played_itself():
+    """Hellraiser plays a drawn Seeker Strike, which asks for a pick from the draw pile: the draws still to make wait for the answer
+    (they used to go on, so the pick pointed past the end of a smaller pile)."""
+    from sts2_lite.card import CardId, CardType, TargetType
+    from sts2_lite.status import StatusId
+    from sts2_lite.Tests.card.test_card import make_card, make_state
+    seeker = make_card(CardId.SEEKER_STRIKE, "Seeker Strike", CardType.Attack, 1, TargetType.AnyEnemy)
+    cs = make_state([], enemy_count=1, enemy_hp=500)
+    cs.player.draw_pile = [make_card(CardId.DEFEND_IRONCLAD, "Defend", CardType.Skill, i, TargetType.Self) for i in range(10)] + [seeker]          # different costs, so the pick is a real choice; the end of the list is the top
+    cs.player.apply_status(StatusId.HELLRAISER, 1)
+    sim = CombatSimulator(cs)
+    cs.player.draw_cards(4)
+    assert cs.pending_choice is not None and len(cs.player.hand) == 0 and len(cs.player.draw_pile) == 10
+    assert all(i < len(cs.player.draw_pile) for i in cs.pending_choice.indices)
+    sim.perform_action([a for a in sim.get_available_actions() if a["action"] == "choose_card"][0])
+    assert cs.pending_choice is None and len(cs.player.hand) == 4           # the picked card and the three draws that had waited
+
+
+def test_the_turn_start_effects_wait_for_a_card_choice_the_hand_draw_asked_for():
+    """The fifth card of the hand is a Seeker Strike that Hellraiser plays. Pendulum's draw (a turn-start effect) must not shrink the pile under its pick."""
+    from sts2_lite.card import CardId, CardType, TargetType
+    from sts2_lite.relic import RelicId, RelicInstance
+    from sts2_lite.status import StatusId
+    from sts2_lite.Tests.card.test_card import make_card, make_state
+    defend = lambda cost: make_card(CardId.DEFEND_IRONCLAD, "Defend", CardType.Skill, cost, TargetType.Self)
+    seeker = make_card(CardId.SEEKER_STRIKE, "Seeker Strike", CardType.Attack, 1, TargetType.AnyEnemy)
+    cs = make_state([], enemy_count=1, enemy_hp=500)
+    cs.player.draw_pile = [defend(i % 4) for i in range(7)] + [seeker] + [defend(0) for _ in range(4)]           # the end of the list is the top: four Defends, then the Seeker Strike
+    cs.player.relics[RelicId.PENDULUM] = RelicInstance(RelicId.PENDULUM, counter=2)          # draws a card at this turn's start
+    cs.player.apply_status(StatusId.HELLRAISER, 1)
+    sim = CombatSimulator(cs)
+    sim._start_player_turn(False)
+    pending = cs.pending_choice
+    assert pending is not None and all(i < len(cs.player.draw_pile) for i in pending.indices)
+    size = len(cs.player.hand)
+    sim.perform_action([a for a in sim.get_available_actions() if a["action"] == "choose_card"][0])
+    assert cs.pending_choice is None and len(cs.player.hand) == size + 2          # the picked card and Pendulum's draw, which had waited
+
+
+def test_radiance_is_the_games_name_for_radiant_tincture():
+    """The game sends the potion's status as RADIANCE_POWER: read on the player, it is the sim's RADIANT_TINCTURE and gives its energy."""
+    from sts2_lite.status import StatusInstance, status_id_of
+    assert status_id_of("RADIANCE_POWER") == StatusId.RADIANT_TINCTURE and status_id_of("SKITTISH_POWER") == StatusId.SKITTISH
+    instance = StatusInstance.from_dict({"id": "RADIANCE_POWER", "amount": 2})
+    assert instance.status_id == StatusId.RADIANT_TINCTURE and instance.amount == 2
+    cs = CombatState()
+    cs.player = Player()
+    cs.player.max_hp = cs.player.current_hp = 50
+    cs.player.status[StatusId.RADIANT_TINCTURE] = instance
+    cs.enemies = [Enemy()]
+    cs.energy = cs.max_energy = 3
+    sim = CombatSimulator(cs)
+    sim._start_player_turn(False)
+    assert cs.energy == 4 and cs.player.status[StatusId.RADIANT_TINCTURE].amount == 1
+
+
+def test_an_enemy_that_shows_skittish_block_has_been_hit_this_turn():
+    """The capture does not say whether Skittish has paid out this turn; the block it shows on the player's turn is the answer."""
+    def gardener(block):
+        return Enemy.from_dict({"entity_id": "PHANTASMAL_GARDENER_0", "max_hp": 28, "hp": 21, "block": block, "intents": [],
+                                "status": [{"id": "SKITTISH_POWER", "name": "Skittish", "amount": 6}]})
+    fresh, hit = gardener(0), gardener(6)
+    assert not fresh.has_been_attacked_this_turn and hit.has_been_attacked_this_turn
+    player = Player()
+    hit.apply_attack_damage(10, player)
+    assert hit.block == 0          # the 6 block took the first of the damage and Skittish did not pay out again
+    fresh.apply_attack_damage(3, player)
+    assert fresh.block == 6
+
+
+def test_pen_nib_flashes_its_full_count_after_the_tenth_attack():
+    from sts2_lite.relic import RelicId, RelicInstance
+    assert RelicInstance.from_dict({"id": "PEN_NIB", "counter": 10}).counter == 0
+    assert RelicInstance.from_dict({"id": "PEN_NIB", "counter": 9}).counter == 9
+
+
+def test_losing_max_hp_at_full_hp_is_hp_lost_for_centennial_puzzle():
+    """Brightest Flame at full HP: the game drew Centennial Puzzle's 3 cards."""
+    from sts2_lite.card.ids import CardId, CardType, TargetType
+    from sts2_lite.relic import RelicId, RelicInstance
+    from sts2_lite.Tests.card.test_card import make_card, make_state
+    flame = make_card(CardId.BRIGHTEST_FLAME, "Brightest Flame", CardType.Skill, 0, TargetType.Self)
+    cs = make_state([flame], enemy_count=1)
+    cs.player.draw_pile = [make_card(CardId.DEFEND_IRONCLAD, "Defend", CardType.Skill, i % 3, TargetType.Self) for i in range(10)]
+    cs.player.relics[RelicId.CENTENNIAL_PUZZLE] = RelicInstance(RelicId.CENTENNIAL_PUZZLE)
+    CombatSimulator(cs).play_card(0, 0)
+    assert cs.player.max_hp == 49 and len(cs.player.hand) == 2 + 3 and cs.player.relics[RelicId.CENTENNIAL_PUZZLE].used

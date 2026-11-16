@@ -5,17 +5,17 @@ from agents.deck_eval.fight_builder import build_fight
 from agents.deck_eval.fight_pool import load_pool, target_types
 from sts2_lite import rng
 from sts2_lite.card.ids import CardId
+from sts2_lite.run import new_run
 from sts2_lite.status import StatusId
 
 POOL = load_pool()
-pytestmark = pytest.mark.skipif(not POOL, reason="no captures")
+pytestmark = pytest.mark.skipif(not POOL, reason="the engine has no encounters")
 
 
 def _fight(relics, kind="weak", deck=None, hp=70, seed=1):
     rng.seed(seed)
     template = next(t for t in POOL if t.kind == kind)
-    base = next(t for t in POOL if t.kind == "weak").state["player"]
-    deck = deck if deck is not None else [dict(c, _upgrade=False) for c in base["deck"]]
+    deck = deck if deck is not None else [dict(c, _upgrade=False) for c in new_run().deck]
     player = {"hp": hp, "max_hp": 80, "relics": [{"id": r} if isinstance(r, str) else r for r in relics], "deck": deck}
     return build_fight(template, deck, player, target_types(POOL))
 

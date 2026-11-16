@@ -66,8 +66,9 @@ def shop_options(state : dict) -> list[Option]:
 def event_options(state : dict) -> list[Option]:
     if state.get("in_dialogue"):
         return [Option("continue dialogue", {"action": "advance_dialogue"})]
-    return [Option(o.get("title") or "option", {"action": "choose_event_option", "index": o["index"]}, o)
-            for o in state.get("options") or [] if not o.get("is_locked")]
+    page = state.get("options") or []
+    return [Option(o.get("title") or "option", {"action": "choose_event_option", "index": o["index"]}, {**o, "page_size": len(page)})      # page_size: for an option told by its position (route_sim.event_option_key)
+            for o in page if not o.get("is_locked")]
 
 def card_select_options(state : dict) -> list[Option]:
     options = [Option(c.get("name") or c.get("id") or "card", {"action": "select_card", "index": c["index"]}, c) for c in state.get("cards") or []]

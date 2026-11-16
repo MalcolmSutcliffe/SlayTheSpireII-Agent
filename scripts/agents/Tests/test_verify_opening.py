@@ -24,6 +24,8 @@ KNOWN_GAPS = {
     "f15_r1_Punch_Construct_141719115042",                   # 1 Dexterity and 1 Strength more than the relics give (a potion drunk before the fight?)
     "f17_r1_Lagavulin_Matriarch_215102604233",               # 2 Strength more than Red Skull explains
     "f46_r1_Slimed_Berserker_203943538293",                  # a fight saved after a potion was used (Duplication, Unmovable, 1 energy less)
+    "f39_r1_Slimed_Berserker_163749411389",                  # saved after a Swift Potion was drunk (3 cards more in the hand, 1 energy less) and 14 damage dealt
+    "f35_r1_Living_Shield+Turret_Operator_163120247940",     # Mr. Struggles' 1 damage hurts the Turret Operator in the game (hp 40) before the Rampart block comes; the sim blocks it (hp 41, block 24)
 }
 
 

@@ -7,16 +7,21 @@ from __future__ import annotations
 
 from sts2_lite.combat import CombatState
 from sts2_lite.enemy import Enemy
-from sts2_lite.status import StatusId
+from sts2_lite.enemy_moves.spawns import SPAWN_HP
+from sts2_lite.status import INFESTED_SPAWNS, StatusId
 
 from agents.sts2_MCTS.params import RewardParams
 
+
+def is_win(state : CombatState) -> bool:
+    """The player is alive and every enemy that counts (minions do not) is dead."""
+    return state.player.current_hp > 0 and all(e.is_minion or e.current_hp <= 0 for e in state.enemies)
 
 def rate_outcome(state : CombatState, reward : RewardParams, starting_hp : int, starting_max_hp : int, expected_total_hp : float) -> float:
     """The reward of the fight as it stands in `state`. `starting_hp`, `starting_max_hp` and `expected_total_hp` describe the fight's start."""
     current_hp = state.player.current_hp
     num_turns = state.turn_number
-    won = current_hp > 0 and all(e.is_minion or e.current_hp <= 0 for e in state.enemies)
+    won = is_win(state)
     max_hp_delta = state.player.max_hp - starting_max_hp
     # if won fight: outcome is best max hp with slight bias towards less turns
     if won:
@@ -29,9 +34,12 @@ def rate_outcome(state : CombatState, reward : RewardParams, starting_hp : int, 
 
     # lost or unfinished: minimize the enemy HP that is left, with a small preference for lasting longer
     progress_left = enemy_progress_left(state, expected_total_hp)
+    held = 0.0
+    if current_hp > 0 and not state.final_fight:      # a potion still held is worth something in a line that is not (yet) won
+        held = reward.loss_potion_bonus * len(state.player.potions)
     if progress_left == 0:     # every enemy died and so did the player: no better than a plain loss
         return -1.0
-    return -progress_left + reward.loss_turn_bonus * num_turns
+    return -progress_left + reward.loss_turn_bonus * num_turns + held
 
 def enemy_progress_left(state : CombatState, expected_total_hp : float) -> float:
     """The share of the fight's enemy HP that is still to be removed: 1.0 at the start of the fight, 0.0 when nothing is left.
@@ -41,6 +49,11 @@ def enemy_progress_left(state : CombatState, expected_total_hp : float) -> float
     remaining = sum(effective_hp(e) for e in state.enemies) + dormant_hp(state)
     return remaining / max(1, expected_total_hp)
 
+# A Phrog Parasite releases Wrigglers when it dies (Infested): its HP is not the end of the fight. They count at the mean of their base HP roll.
+_WRIGGLER_MIN, _WRIGGLER_MAX = SPAWN_HP["WRIGGLER"][:2]
+PHROG_RELEASE_HP = INFESTED_SPAWNS * (_WRIGGLER_MIN + _WRIGGLER_MAX) / 2
+
+
 def expected_total_hp(state : CombatState) -> float:
     """The enemy HP there is to remove in the fight at its start (what `enemy_progress_left` is a share of)."""
     total = 0
@@ -48,18 +61,16 @@ def expected_total_hp(state : CombatState) -> float:
         if e.is_minion:
             continue
         total += e.max_hp
-        # edge cases, should probably implement better way to do this in future
         if e.enemy_id.startswith("PHROG_PARASITE"):
-            total += 4*(17+21)/2
+            total += PHROG_RELEASE_HP
     return total
 
 def effective_hp(enemy : Enemy) -> float:
     if enemy.is_minion:
         return 0
     hp = enemy.current_hp
-    # edge cases
     if enemy.enemy_id.startswith("PHROG_PARASITE"):
-        hp += 4 * (17 + 21) / 2
+        hp += PHROG_RELEASE_HP
     return hp
 
 def dormant_hp(state : CombatState) -> float:

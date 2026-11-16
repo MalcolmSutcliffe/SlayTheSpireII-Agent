@@ -240,6 +240,17 @@ def undo_enemy_effects(enemies : list[dict], relics : list[dict]):
             else:
                 if status is not StatusId.STRENGTH:       # the debuff was not there: Artifact took it, and a charge with it
                     _give_artifact(enemy)
-        healed = (POPPER_DAMAGE if opening.has("FESTIVE_POPPER") else 0) + (MERCURY_HOURGLASS_DAMAGE if opening.has("MERCURY_HOURGLASS") else 0)
+        healed = (POPPER_DAMAGE if opening.has("FESTIVE_POPPER") else 0) + (MERCURY_HOURGLASS_DAMAGE if opening.has("MERCURY_HOURGLASS") else 0) \
+            + (1 if opening.has("MR_STRUGGLES") else 0)         # Mr. Struggles hurts every enemy for the turn number as the fight's first turn starts: 1 (the sim's own turn start does it again)
         if healed:
             enemy["hp"] = min(enemy.get("max_hp", enemy["hp"]), enemy["hp"] + healed)
+
+
+def undo_rampart_block(enemies : list[dict]):
+    """The block a Living Shield's Rampart gave the Turret Operators as the captured turn started (status.py: _rampart_on_before_player_turn does it again when the fight is opened)."""
+    amount = sum(entry.get("amount", 0) for enemy in enemies if enemy.get("hp", 0) > 0 and str(enemy.get("entity_id", "")).startswith("LIVING_SHIELD")
+                 for entry in enemy.get("status") or [] if entry.get("id") == "RAMPART_POWER")
+    if amount:
+        for enemy in enemies:
+            if enemy.get("hp", 0) > 0 and str(enemy.get("entity_id", "")).startswith("TURRET_OPERATOR"):
+                enemy["block"] = max(0, enemy.get("block", 0) - amount)

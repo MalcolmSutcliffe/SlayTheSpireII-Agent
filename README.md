@@ -32,9 +32,18 @@ https://simthespire.wordpress.com/ -> Massive dataset of fights (expected damage
 - On a loss, the outcoume is scored based on how close the enemy was to dying.
 - All enemy attack patterns modeled in engine.
 
-(Out of combat)
+(Out of combat) — `scripts/agents/deck_eval/`
 
-No functionality
+Every out-of-combat choice is made by playing the candidates on the same simulated "walks" through the rest of the act (`route_sim.py`: the engine's
+run simulator, fights played by the rollout policy, rewards / rest sites / shops / events as the engine does them) and comparing them walk by walk.
+
+- Map: walks the candidate paths and keeps the best (`path_search.py`, ranked first by the node scores in `agents/pathing.py`).
+- Card rewards: each card vs skipping (`card_reward_chooser.py`).
+- Rest sites and upgrades (`upgrade_chooser.py`), shops (`shop_chooser.py`), events (`event_chooser.py`), ancients' relics (`ancient_chooser.py`).
+- All tuning knobs (time budgets, thresholds, walk scoring) live in `DeckEvalConfig` (`config.py`): `MyAgent(deck_config=DeckEvalConfig().tuned(path_seconds=4))`,
+  or `--deck path_seconds=4` on `python -m benchmarks.runs run`.
+- The rollout policy's fights are corrected towards what the MCTS would get with a table fitted by `python -m benchmarks.policy_fit fit --write`
+  (`policy_correction.json`).
 
 ## known issues:
 
@@ -93,4 +102,6 @@ Other features:
  - [ ] end of act healing. Not strictly neccesarry. Most hp is still best
 
  ## Out of combat actions
- - Needs to be addressed
+ - [x] Map, card rewards, rest sites, shops, events, ancients (walk-based, see above)
+ - [x] Value boss survival in the walk score: a walk that survives is credited with a share of the rooms still ahead (`continuation_share`, `act_rooms`), so a boss death forfeits them. The share is hand-set: calibrate it against real run outcomes.
+ - [ ] Look further than one act (a learned run-value estimate at the end of a walk)

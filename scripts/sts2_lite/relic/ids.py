@@ -176,4 +176,4 @@ LETTER_OPENER_EVERY, LETTER_OPENER_DAMAGE = 3, 5
 
 HAPPY_FLOWER_TURNS = {RelicId.HAPPY_FLOWER : 3, RelicId.FAKE_HAPPY_FLOWER : 5}
 
-FLASHES_AT_FULL_COUNT = {**HAPPY_FLOWER_TURNS, RelicId.LETTER_OPENER : LETTER_OPENER_EVERY, RelicId.PENDULUM : 3, RelicId.NUNCHAKU : NUNCHAKU_EVERY}    # Pendulum: DisplayAmount is Turns while it activates; Nunchaku shows 10 after the tenth Attack, which has already paid out
+FLASHES_AT_FULL_COUNT = {**HAPPY_FLOWER_TURNS, RelicId.LETTER_OPENER : LETTER_OPENER_EVERY, RelicId.PENDULUM : 3, RelicId.NUNCHAKU : NUNCHAKU_EVERY, RelicId.PEN_NIB : 10}    # Pendulum: DisplayAmount is Turns while it activates; Nunchaku and Pen Nib show 10 after the tenth Attack, which has already paid out

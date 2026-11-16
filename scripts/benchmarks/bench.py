@@ -38,6 +38,7 @@ from data_paths import BENCHMARKS
 from sts2_lite import rng
 from sts2_lite.combat import CombatState, CombatSimulator
 from agents.sts2_MCTS.MCTS import sts2_MCTS
+from agents.sts2_MCTS import outcome_score
 from agents.sts2_MCTS.params import GROUPS, SearchConfig, RolloutPolicy
 
 BENCH_DIR = Path(__file__).resolve().parent            # results/ lives here; the suites and reference files are in data/benchmarks/
@@ -285,7 +286,7 @@ def puzzle_table(rows: list[dict]) -> str:
 
 # ---------------------------------------------------------------- fight suite
 def is_won(state: CombatState) -> bool:
-    return state.player.current_hp > 0 and all(e.is_minion or e.current_hp <= 0 for e in state.enemies)
+    return outcome_score.is_win(state)
 
 def play_fight(start: CombatState, config: SearchConfig, world_seed: int, search_seed: int,
                turn_cap: int = FIGHT_TURN_CAP) -> dict:
