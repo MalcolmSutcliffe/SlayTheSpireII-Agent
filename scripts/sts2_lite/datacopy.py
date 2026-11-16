@@ -1,9 +1,14 @@
 """`copy.deepcopy` for the run's plain data (the deck, relics and potions: dicts and lists of strings and numbers), without its per-object dispatch.
 
 The result is the same as copy.deepcopy's: a dict or a list met twice is copied once (the memo), keys are copied too, and anything that is not
-a plain dict, list or atomic value (a tuple, an enum, a dict subclass, an object) is handed to copy.deepcopy with the same memo."""
+a plain dict, list or atomic value (a tuple, an enum, a dict subclass, an object) is handed to copy.deepcopy with the same memo.
+
+The fast path is `marshal`, which copies dicts, lists, strings and numbers in C, keeps the order of every dict, keeps floats bit for bit and
+keeps a container that is met twice shared (marshal references any object it meets more than once). It refuses anything else (an enum, an
+object, a dict or list subclass): that data goes the slower way below."""
 from __future__ import annotations
 import copy
+import marshal
 
 _ATOMIC = frozenset((str, int, float, bool, type(None)))
 
@@ -46,4 +51,9 @@ def deepcopy_data(x):
     cls = type(x)
     if cls in _ATOMIC:
         return x
+    if cls is list or cls is dict:
+        try:
+            return marshal.loads(marshal.dumps(x))
+        except ValueError:          # something marshal does not know: copy it the slower way
+            pass
     return _copy(x, {})
