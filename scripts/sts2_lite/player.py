@@ -15,6 +15,11 @@ from sts2_lite.potion import Potion, PotionId, DEFAULT_POTION_SLOTS, FAIRY_HEAL
 
 GHOST_SEED_CARDS = frozenset({CardId.STRIKE_IRONCLAD, CardId.DEFEND_IRONCLAD})     # Basic rarity, Strike or Defend tag
 
+from operator import attrgetter
+_CARD_ID, _RESTORE_COST, _BOUND = attrgetter("card_id"), attrgetter("restore_cost"), attrgetter("bound")
+_STOMP = CardId.STOMP
+
+
 class Player(Creature):
     plating_at_turn_start = False
     hand : list[Card]
@@ -250,6 +255,8 @@ class Player(Creature):
         """ChainsOfBindingPower.BeforeSideTurnEnd: the affliction goes wherever the cards are."""
         self.binding, self.bound_cards, self.bound_played = False, 0, False
         for pile in (self.hand, self.draw_pile, self.discard_pile):
+            if not any(map(_BOUND, pile)):
+                continue
             for i, c in enumerate(pile):
                 if c.bound:
                     pile[i] = c.bound_copy(False)
@@ -407,6 +414,8 @@ class Player(Creature):
     def reduce_stomp_costs(self):
         """Every Stomp, wherever it is, costs 1 less this turn each time an Attack is played."""
         for pile in (self.hand, self.draw_pile, self.discard_pile, self.exhaust_pile):
+            if _STOMP not in map(_CARD_ID, pile):          # a C-level scan; most piles hold no Stomp
+                continue
             for i, c in enumerate(pile):
                 if c.card_id == CardId.STOMP and c.energy_cost != 0:
                     pile[i] = c.cheaper_this_turn(1)
@@ -414,6 +423,8 @@ class Player(Creature):
     def restore_free_cards(self):
         """At the end of the turn cards made free for this turn (Infernal Blade) get their cost back."""
         for pile in (self.hand, self.draw_pile, self.discard_pile, self.exhaust_pile):
+            if list(map(_RESTORE_COST, pile)).count(None) == len(pile):        # no card of the pile has a cost to get back
+                continue
             for i, c in enumerate(pile):
                 if c.restore_cost is not None:
                     restored = Card.create_copy(c)

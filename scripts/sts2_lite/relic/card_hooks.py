@@ -129,7 +129,10 @@ BEFORE_CARD_PLAYED : dict[RelicId, Callable] = {
 }
 
 def before_card_played(combat : CombatSimulator, card : Card, energy_spent : int):
-    for relic_id, relic in list(combat.combat_state.player.relics.items()):
+    relics = combat.combat_state.player.relics
+    if BEFORE_CARD_PLAYED.keys().isdisjoint(relics.keys()):          # no relic held reacts
+        return
+    for relic_id, relic in list(relics.items()):
         if relic_id in BEFORE_CARD_PLAYED:
             BEFORE_CARD_PLAYED[relic_id](combat, relic, card, energy_spent)
 

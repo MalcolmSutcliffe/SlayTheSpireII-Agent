@@ -452,6 +452,8 @@ class CombatState:
         new_cs.won = combat_state.won
         return new_cs
 
+_TEMPORARY_STRENGTH = frozenset((StatusId.SETUP_STRIKE, StatusId.MANGLE, StatusId.DARK_SHACKLES, StatusId.FLEX_POTION, StatusId.REPTILE_TRINKET,
+                                 StatusId.FEEDING_FRENZY, StatusId.SPEED_POTION))      # what _return_temporary_strength gives back
 _UNTARGETED = (TargetType.Self, TargetType.AllEnemies, TargetType.RandomEnemy, TargetType.NONE)
 
 
@@ -1106,6 +1108,8 @@ class CombatSimulator:
     @staticmethod
     def _return_temporary_strength(creature : Creature):
         """Setup Strike, Mangle and Dark Shackles: the Strength they gave or took is returned when the creature's turn ends."""
+        if _TEMPORARY_STRENGTH.isdisjoint(creature.status):     # none of the markers: nothing below would happen
+            return
         for marker, sign in ((StatusId.SETUP_STRIKE, 1), (StatusId.MANGLE, -1), (StatusId.DARK_SHACKLES, -1), (StatusId.FLEX_POTION, 1), (StatusId.REPTILE_TRINKET, 1), (StatusId.FEEDING_FRENZY, 1)):
             amount = creature.status.pop(marker, None)
             if amount is not None:
