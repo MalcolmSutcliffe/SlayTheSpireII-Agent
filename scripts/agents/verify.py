@@ -35,7 +35,8 @@ def snapshot(cs : CombatState) -> dict:
         "energy": cs.energy,
         "player": {"hp": p.current_hp, "max_hp": p.max_hp, "block": p.block, "status": _statuses(p)},
         "relics": {r.name: {"counter": inst.counter, "used": inst.used} for r, inst in p.relics.items()},
-        "hand": sorted((c.card_id.name, c.is_upgraded, c.energy_cost, c.enchantment.name if c.enchantment else None) for c in p.hand),
+        "hand": sorted(((c.card_id.name, c.is_upgraded, c.energy_cost, c.enchantment.name if c.enchantment else None) for c in p.hand),
+                       key=lambda t : (t[0], t[1], str(t[2]), t[3] or "")),          # identical cards differ in cost "X" or in an enchantment: None and a name do not compare
         "draw": sorted(f"{i}{'+' if u else ''}" for (i, u) in _cards(p.draw_pile).elements()),
         "discard": sorted(f"{i}{'+' if u else ''}" for (i, u) in _cards(p.discard_pile).elements()),
         "exhaust": sorted(f"{i}{'+' if u else ''}" for (i, u) in _cards(p.exhaust_pile).elements()),

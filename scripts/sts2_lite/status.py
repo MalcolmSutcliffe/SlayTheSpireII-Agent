@@ -194,6 +194,15 @@ INSTANCED_TEXT = {StatusId.TORIC_TOUGHNESS : r"(\d+)\D{0,20}?Block"}
 AUTOMATION_CARDS, PANACHE_CARDS = 10, 5
 ROLLING_BOULDER_STEP = 5
 
+GAME_NAMES = {"RADIANCE" : StatusId.RADIANT_TINCTURE}       # statuses the game names differently from the sim (the id the game sends, without "_POWER")
+
+
+def status_id_of(game_id : str) -> StatusId:
+    """The StatusId of a status as the game sends it ("SKITTISH_POWER")."""
+    name = game_id[:-6]
+    return GAME_NAMES.get(name) or StatusId[name]
+
+
 class StatusInstance:
     status_id : StatusId
     amount : int
@@ -206,7 +215,7 @@ class StatusInstance:
 
     @classmethod
     def from_dict(cls, status : dict):
-        status_id = StatusId[status["id"][:-6]]
+        status_id = status_id_of(status["id"])
         amount = status["amount"]
         if status_id in INSTANCED:      # what the copy remembers beyond its shown amount is read from the text
             damage = re.search(INSTANCED_TEXT.get(status_id, r"(\d+)\s+damage"), status.get("description") or "")

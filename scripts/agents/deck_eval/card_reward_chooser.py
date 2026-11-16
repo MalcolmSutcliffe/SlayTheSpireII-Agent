@@ -57,12 +57,12 @@ class CardRewardChooser:
         take = best[0] > needed
         chosen = best[2] if take else (skip or best[2])
         mix = mix_ahead(ctx.get("act", 1), route)
-        self.log("card reward act %d (weak %.0f normal %.0f elite %.0f%s boss %.1f%s, %d fights, %.1fs, base win %.0f%%) | needs > %.2f -> %s" %
+        self.log("card reward act %d (weak %.0f normal %.0f elite %.0f%s boss %.1f%s, %d fights, %.1fs, base %.1f rooms, %.0f%% clear the act) | needs > %.2f rooms -> %s" %
                  (mix.act, mix.weak, mix.normal, mix.elite, " [" + "/".join(mix.elites) + "]" if mix.elites else "", mix.boss, " [" + mix.boss_id + "]" if mix.boss_id else "",
-                  len(future["fights"]), time.perf_counter() - start, 100 * base.win_rate, needed, "take " + best[3] if take else "skip"))
-        self.log("  walking the rest of the act (%d walks of %.1f fights, %.0f%% get through): " %
+                  len(future["fights"]), time.perf_counter() - start, base.mean, 100 * base.win_rate, needed, "take " + best[3] if take else "skip"))
+        self.log("  walking the rest of the act (%d walks of %.1f fights, %.0f%% clear the act): " %
                  (future["walks"], len(future["fights"]) / max(1, future["walks"]), 100 * base.win_rate) +
-                 ", ".join("%s %+.2f±%.2f (win %.0f%%)" % (n, g, se, 100 * s.win_rate) for g, se, o, n, s in rows))
+                 ", ".join("%s %+.2f±%.2f rooms (%.0f%% clear the act)" % (n, g, se, 100 * s.win_rate) for g, se, o, n, s in rows))
         return chosen
 
     def _fights_in_budget(self, decision : Decision, deck : list[dict], player : dict, big : bool) -> int:
