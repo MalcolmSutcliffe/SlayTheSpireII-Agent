@@ -31,14 +31,6 @@ class DeckEvalConfig:
     min_fights : int = 400              # bounds on the fights a card reward is decided on
     max_fights : int = 12000
 
-    # ---- prospect bonus: the late pay-off of engine cards that a walk through one act cannot see (prospect.py; prospect_scale = 0 turns it off)
-    prospect_scale : float = 0.10       # reward points of a value-1 card at the start of a winning run (a good short-term pick gains about 0.03 to 0.1)
-    prospect_end : float = 0.8          # share of the run (floors / run_floors) at which the bonus reaches 0
-    run_floors : int = 48
-    prospect_win_low : float = 0.5      # no bonus while the deck wins fewer walks than this ...
-    prospect_win_high : float = 0.85    # ... the full bonus from this win rate on
-    prospect_veto : float = 0.03        # a card whose walk gain is below -veto gets no bonus at all
-
     # ---- shops (shop_chooser)
     shop_z : float = 1.5                # the Z-score a purchase has to clear
     potion_lookahead : int = 3          # an elite or the boss within this many rooms of the planned route is a reason to buy potions
@@ -59,7 +51,9 @@ class DeckEvalConfig:
     default_fights : int = 400          # fights a decision is played on when its chooser does not say
     max_turns : int = 25                # a rollout fight that lasts longer is stopped there
     lookahead_rooms : int = 3           # rooms of the next act a walk that clears its act goes on to play
-    clear_bonus : float = 3.0           # a cleared last act: the run is won, worth as much as the lookahead's rooms
+    clear_bonus : float = 8.0           # a cleared last act: the run is won (the same share of an act as a surviving walk gets for the acts still ahead)
+    act_rooms : int = 16                # rooms in an act, for what a walk that survives has still ahead of it
+    continuation_share : float = 0.5    # the share of the rooms still ahead (after the lookahead) a walk that survives is credited with: dying before the end of the walk forfeits them (0: a death costs only the act)
     potion_credit : float = 0.1         # rooms' worth of progress each potion held at the end of the walk
     max_hp_credit : float = 0.02        # rooms' worth for each point of max HP gained during the walk
     correct : bool = True               # turn the rollout policy's fights into what the MCTS would get (route_sim.CORRECTION)

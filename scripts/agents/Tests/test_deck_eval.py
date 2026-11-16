@@ -515,6 +515,18 @@ def test_dying_at_the_boss_costs_what_comes_after_it():
 
 
 @needs_pool
+def test_a_walk_that_survives_is_credited_with_a_share_of_the_run_still_ahead():
+    from agents.deck_eval.route_sim import sample_walks
+    from agents.deck_eval.config import DEFAULT
+    ev, p = DeckEvaluator(POOL, target_types(POOL)), _player()
+    walks = sample_walks(PlannedRoute(["combat", "rest", "boss"], 4, 1, None, "OVERGROWTH"), 1, 0, 2, 3)
+    strong = {**p, "hp": 500, "max_hp": 500}
+    flat = DeckEvaluator(POOL, target_types(POOL), config=DEFAULT.tuned(continuation_share=0.0))
+    gap = ev.score_walks(p["deck"], strong, walks).mean - flat.score_walks(p["deck"], strong, walks).mean
+    assert abs(gap - DEFAULT.continuation_share * (DEFAULT.act_rooms + DEFAULT.act_rooms - DEFAULT.lookahead_rooms)) < 1e-6          # act 1: all of act 3 and the act 2 rooms beyond the lookahead
+
+
+@needs_pool
 def test_potions_held_and_max_hp_gained_count_once_at_the_end():
     from agents.deck_eval.route_sim import sample_walks
     from agents.deck_eval.config import DEFAULT

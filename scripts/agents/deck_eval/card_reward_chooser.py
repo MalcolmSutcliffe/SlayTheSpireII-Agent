@@ -3,13 +3,12 @@
 The walks are played on the engine's run simulator (route_sim: the cards, relics and potions the deck gains on the way come from the engine's own
 rewards); every option plays the same walks with the same dice, so the gains pair walk by walk. A card is taken only when it clearly beats skipping:
 its mean gain must exceed `card_z` standard errors of that gain plus a floor. The floor falls as the deck's win rate falls (a weak deck needs the help).
-A prospect bonus (prospect.py) adds the late pay-off of engine cards, which a walk through one act cannot see. The numbers are DeckEvalConfig's (config.py)."""
+The numbers are DeckEvalConfig's (config.py)."""
 from __future__ import annotations
 import time
 
 from agents.decision import Decision, Option
 from agents.deck_eval.advisor import DeckAdvisor, paired_gain  # noqa: F401  (paired_gain: re-exported for the tests)
-from agents.deck_eval import prospect
 from agents.deck_eval.config import DEFAULT, DeckEvalConfig
 from agents.deck_eval.fight_mix import mix_ahead
 
@@ -50,8 +49,7 @@ class CardRewardChooser:
         start = time.perf_counter()
         future = self.future_rows(decision, deck, player, route, skip, count)
         base = future["base"]
-        bonuses = {id(r[2]): prospect.bonus(r[2].data or {}, deck, floor, base.win_rate, r[0], cfg) for r in future["rows"]}      # late pay-off the walks cannot see
-        rows = [(g + bonuses[id(o)], se, o, n, sc) for g, se, o, n, sc in future["rows"]]
+        rows = future["rows"]
         best = max(rows, key=lambda r: r[0], default=None)
         if best is None:
             return skip or decision.options[0]
@@ -64,8 +62,7 @@ class CardRewardChooser:
                   len(future["fights"]), time.perf_counter() - start, 100 * base.win_rate, needed, "take " + best[3] if take else "skip"))
         self.log("  walking the rest of the act (%d walks of %.1f fights, %.0f%% get through): " %
                  (future["walks"], len(future["fights"]) / max(1, future["walks"]), 100 * base.win_rate) +
-                 ", ".join("%s %+.2f±%.2f (win %.0f%%)" % (n, g, se, 100 * s.win_rate) for g, se, o, n, s in future["rows"]) +
-                 ("; prospect bonus " + ", ".join("%s %+.2f" % (n, bonuses.get(id(o), 0)) for g, se, o, n, s in future["rows"] if bonuses.get(id(o))) if any(bonuses.values()) else ""))
+                 ", ".join("%s %+.2f±%.2f (win %.0f%%)" % (n, g, se, 100 * s.win_rate) for g, se, o, n, s in rows))
         return chosen
 
     def _fights_in_budget(self, decision : Decision, deck : list[dict], player : dict, big : bool) -> int:

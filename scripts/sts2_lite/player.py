@@ -27,6 +27,7 @@ class Player(Creature):
     inferno_plays : int      # times Inferno has been played this combat: its HP loss each turn
     shuffle_hook = None      # called when the discard pile is shuffled into the draw pile (set by the simulator)
     draw_hook = None         # called with each card drawn into the hand (set by the simulator for Hellraiser)
+    draw_pause_hook = None   # called after each card drawn with the draws still to make: True when a card choice is waiting, so the rest of the draw waits for it (set by the simulator)
     block_cleared_hook = None    # called after block is cleared, before the hand draw (AfterBlockCleared)
     known_top : int         # how many cards at the end of draw_pile (the top) the agent knows the identity and order of
     cards_exhausted_this_turn : int
@@ -338,6 +339,8 @@ class Player(Creature):
     def draw_cards(self, num_cards : int, from_hand_draw : bool = False):
         for i in range(num_cards):
             self.draw_card(from_hand_draw)
+            if self.draw_pause_hook is not None and self.draw_pause_hook(num_cards - i - 1, from_hand_draw):
+                return
 
     def draw_card(self, from_hand_draw : bool = False) -> Card | None:
         """Draw one card and return it (None if nothing was drawn). Battle Trance and Fiddle stop every draw except the start-of-turn hand."""

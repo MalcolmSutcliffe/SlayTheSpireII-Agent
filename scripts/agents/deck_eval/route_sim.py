@@ -15,7 +15,8 @@ model gives (future_cards.EXTRA_CARD_SHARE: 0.8 per fight in act 1, 0.5, 0.3) an
 A walk is scored in rooms of progress, what the run gets through: each room survived is worth 1, a fight died in is worth the share of the enemies' HP the deck had taken off by then
 (under 1), rooms never reached are worth 0, so a death costs everything that was still ahead. A walk that clears its act goes on to play the first `lookahead_rooms` rooms of the next
 act (healed as the ancient does; the same rooms are scored the same way), so a deck, relics, potions and max HP that carry forward show in how those go; a cleared last act is worth
-`clear_bonus` more. Potions held and max HP gained at the end count once (`potion_credit`, `max_hp_credit`). These numbers are DeckEvalConfig's (config.py). HP, gold and the rest count only through what they do to the rooms that follow.
+`clear_bonus` more. A walk that survives to the end of its rooms is also credited with a share (`continuation_share`) of the rooms of the run still beyond them (`act_rooms` an act), so
+a death at the act's boss costs what the rest of the run was worth, not just the act and the lookahead. Potions held and max HP gained at the end count once (`potion_credit`, `max_hp_credit`). These numbers are DeckEvalConfig's (config.py). HP, gold and the rest count only through what they do to the rooms that follow.
 
 Every deck of a decision plays the same walks, and each room reseeds every random stream of the run from the walk's seed, so what a deck meets (the monsters, their
 dice, the rewards) does not depend on what an earlier room did to the deck."""
@@ -259,6 +260,11 @@ class RouteSimulator(RunSimulator):
         self.shared_ancients, self.cause, self.won, self.visited = {}, None, False, []
         self.credits : list[float] = []         # the progress of each room cleared
         self.partial, self.in_room = 0.0, False
+        self.continuation = 0.0                 # what the rooms of the run beyond the walk are worth, once the walk has survived to its end
+
+    def rooms_ahead(self, act : int) -> int:
+        """The rooms of the run beyond a walk that began in `act` and played `lookahead_rooms` rooms of the next one."""
+        return max(0, (2 - act) * self.scoring.act_rooms + self.scoring.act_rooms - self.scoring.lookahead_rooms)
 
     def reseed(self, label):
         """Every stream of the run starts again from the walk's seed and `label`: a room does not depend on how many draws an earlier one made."""
@@ -437,7 +443,7 @@ class RouteSimulator(RunSimulator):
 
     def walk_route(self) -> WalkResult:
         r, walk = self.run_state, self.walk
-        max_hp0, alive = r.max_hp, False
+        max_hp0, act0, alive = r.max_hp, r.act, False
         try:
             if isinstance(self.opening, AncientPlan):
                 self.reseed("ancient")
@@ -454,12 +460,13 @@ class RouteSimulator(RunSimulator):
             if r.act < 3:
                 for i, step in enumerate(self.next_act()):
                     self.play_room(step, "next%d" % i)
+                self.continuation = self.scoring.continuation_share * self.rooms_ahead(act0)
             else:
                 self.credits.append(self.scoring.clear_bonus)
         except RunOver:
             if self.in_room:
                 self.credits.append(self.partial)
-        reward = sum(self.credits)
+        reward = sum(self.credits) + self.continuation
         survived = r.hp > 0 and not r.dead
         if survived:
             reward += self.scoring.potion_credit * len(r.potions) + self.scoring.max_hp_credit * (r.max_hp - max_hp0)

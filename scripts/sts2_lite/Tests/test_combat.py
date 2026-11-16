@@ -568,3 +568,42 @@ def test_vicious_draws_nothing_for_a_dead_target():
     cs.player.apply_status(StatusId.VICIOUS, 1)
     CombatSimulator(cs).play_card(0, 0)
     assert cs.player.hand == []
+
+
+def test_a_draw_waits_for_the_card_choice_of_a_card_it_played_itself():
+    """Hellraiser plays a drawn Seeker Strike, which asks for a pick from the draw pile: the draws still to make wait for the answer
+    (they used to go on, so the pick pointed past the end of a smaller pile)."""
+    from sts2_lite.card import CardId, CardType, TargetType
+    from sts2_lite.status import StatusId
+    from sts2_lite.Tests.card.test_card import make_card, make_state
+    seeker = make_card(CardId.SEEKER_STRIKE, "Seeker Strike", CardType.Attack, 1, TargetType.AnyEnemy)
+    cs = make_state([], enemy_count=1, enemy_hp=500)
+    cs.player.draw_pile = [make_card(CardId.DEFEND_IRONCLAD, "Defend", CardType.Skill, i, TargetType.Self) for i in range(10)] + [seeker]          # different costs, so the pick is a real choice; the end of the list is the top
+    cs.player.apply_status(StatusId.HELLRAISER, 1)
+    sim = CombatSimulator(cs)
+    cs.player.draw_cards(4)
+    assert cs.pending_choice is not None and len(cs.player.hand) == 0 and len(cs.player.draw_pile) == 10
+    assert all(i < len(cs.player.draw_pile) for i in cs.pending_choice.indices)
+    sim.perform_action([a for a in sim.get_available_actions() if a["action"] == "choose_card"][0])
+    assert cs.pending_choice is None and len(cs.player.hand) == 4           # the picked card and the three draws that had waited
+
+
+def test_the_turn_start_effects_wait_for_a_card_choice_the_hand_draw_asked_for():
+    """The fifth card of the hand is a Seeker Strike that Hellraiser plays. Pendulum's draw (a turn-start effect) must not shrink the pile under its pick."""
+    from sts2_lite.card import CardId, CardType, TargetType
+    from sts2_lite.relic import RelicId, RelicInstance
+    from sts2_lite.status import StatusId
+    from sts2_lite.Tests.card.test_card import make_card, make_state
+    defend = lambda cost: make_card(CardId.DEFEND_IRONCLAD, "Defend", CardType.Skill, cost, TargetType.Self)
+    seeker = make_card(CardId.SEEKER_STRIKE, "Seeker Strike", CardType.Attack, 1, TargetType.AnyEnemy)
+    cs = make_state([], enemy_count=1, enemy_hp=500)
+    cs.player.draw_pile = [defend(i % 4) for i in range(7)] + [seeker] + [defend(0) for _ in range(4)]           # the end of the list is the top: four Defends, then the Seeker Strike
+    cs.player.relics[RelicId.PENDULUM] = RelicInstance(RelicId.PENDULUM, counter=2)          # draws a card at this turn's start
+    cs.player.apply_status(StatusId.HELLRAISER, 1)
+    sim = CombatSimulator(cs)
+    sim._start_player_turn(False)
+    pending = cs.pending_choice
+    assert pending is not None and all(i < len(cs.player.draw_pile) for i in pending.indices)
+    size = len(cs.player.hand)
+    sim.perform_action([a for a in sim.get_available_actions() if a["action"] == "choose_card"][0])
+    assert cs.pending_choice is None and len(cs.player.hand) == size + 2          # the picked card and Pendulum's draw, which had waited

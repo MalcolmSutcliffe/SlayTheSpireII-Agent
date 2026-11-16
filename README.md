@@ -38,7 +38,7 @@ Every out-of-combat choice is made by playing the candidates on the same simulat
 run simulator, fights played by the rollout policy, rewards / rest sites / shops / events as the engine does them) and comparing them walk by walk.
 
 - Map: walks the candidate paths and keeps the best (`path_search.py`, ranked first by the node scores in `agents/pathing.py`).
-- Card rewards: each card vs skipping (`card_reward_chooser.py`), plus a hand-set bonus for late-paying engine cards (`prospect.py`, `prospective_cards.csv`).
+- Card rewards: each card vs skipping (`card_reward_chooser.py`).
 - Rest sites and upgrades (`upgrade_chooser.py`), shops (`shop_chooser.py`), events (`event_chooser.py`), ancients' relics (`ancient_chooser.py`).
 - All tuning knobs (time budgets, thresholds, walk scoring) live in `DeckEvalConfig` (`config.py`): `MyAgent(deck_config=DeckEvalConfig().tuned(path_seconds=4))`,
   or `--deck path_seconds=4` on `python -m benchmarks.runs run`.
@@ -103,5 +103,5 @@ Other features:
 
  ## Out of combat actions
  - [x] Map, card rewards, rest sites, shops, events, ancients (walk-based, see above)
- - [ ] Value boss survival properly in the walk score (a boss death currently costs only the rooms left in the act + 3 lookahead rooms)
+ - [x] Value boss survival in the walk score: a walk that survives is credited with a share of the rooms still ahead (`continuation_share`, `act_rooms`), so a boss death forfeits them. The share is hand-set: calibrate it against real run outcomes.
  - [ ] Look further than one act (a learned run-value estimate at the end of a walk)
