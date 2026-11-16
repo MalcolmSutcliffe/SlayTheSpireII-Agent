@@ -452,6 +452,9 @@ class CombatState:
         new_cs.won = combat_state.won
         return new_cs
 
+_UNTARGETED = (TargetType.Self, TargetType.AllEnemies, TargetType.RandomEnemy, TargetType.NONE)
+
+
 class IllegalActionError(ValueError):
     """Raised when an action is not legal in the current state."""
 
@@ -1367,12 +1370,13 @@ class CombatSimulator:
             return output
 
         for c_i, c in enumerate(self.combat_state.player.hand):
-            if c.target_type in (TargetType.Self, TargetType.AllEnemies, TargetType.RandomEnemy, TargetType.NONE):
+            if c.target_type in _UNTARGETED:
                 if c.can_play_card(self, 0):
                     output.append({"action" : "play_card", "card_index" : c_i, "target" : 0})
-            elif c.target_type == TargetType.AnyEnemy:
-                for e_i, e in enumerate(self.combat_state.enemies):
-                    if c.can_play_card(self, e_i):
+            elif c.target_type is TargetType.AnyEnemy:
+                # can_play_card does not read the target: one check for the card, then a move per enemy
+                if self.combat_state.enemies and c.can_play_card(self, 0):
+                    for e_i, e in enumerate(self.combat_state.enemies):
                         output.append({"action" : "play_card", "card_index" : c_i, "target" : e_i, "target_name" : e.enemy_id})
 
         output.extend(usable_potion_actions(self))

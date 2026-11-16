@@ -13,6 +13,12 @@ from sts2_lite.card.tables import ANCIENT_CARDS, COLORLESS_CARDS, EVENT_CARDS, G
 if TYPE_CHECKING:
     from sts2_lite.combat import CombatSimulator
 
+# hot-path aliases (enum members are singletons: `is` is their equality)
+_ATTACK, _SKILL = CardType.Attack, CardType.Skill
+_CLASH, _NORMALITY = CardId.CLASH, CardId.NORMALITY
+_CORRUPTION, _FREE_ATTACK, _TANGLED, _RINGING, _SLOTH = StatusId.CORRUPTION, StatusId.FREE_ATTACK, StatusId.TANGLED, StatusId.RINGING, StatusId.SLOTH
+
+
 class Card:
     card_id : CardId
     name : str
@@ -453,13 +459,20 @@ class Card:
 
     def current_cost(self, player) -> int | str:
         """Energy cost now: the base cost plus Tangled on attacks."""
-        if self.energy_cost == "X":
-            return self.energy_cost
-        if self.type == CardType.Skill and StatusId.CORRUPTION in player.status:
+        energy_cost = self.energy_cost
+        if energy_cost == "X":
+            return energy_cost
+        ctype, status = self.type, player.status
+        if ctype is _SKILL and _CORRUPTION in status:
             return 0
-        if self.type == CardType.Attack and StatusId.FREE_ATTACK in player.status and player.status[StatusId.FREE_ATTACK].amount > 0:
-            return 0                # FreeAttackPower.TryModifyEnergyCostInCombatLate: the game shows these at 0
-        cost = self.energy_cost if self.type != CardType.Attack else self.energy_cost + player.status_amount(StatusId.TANGLED)
+        if ctype is _ATTACK:
+            free_attack = status.get(_FREE_ATTACK)
+            if free_attack is not None and free_attack.amount > 0:
+                return 0            # FreeAttackPower.TryModifyEnergyCostInCombatLate: the game shows these at 0
+            tangled = status.get(_TANGLED)
+            cost = energy_cost + (tangled.amount if tangled is not None else 0)
+        else:
+            cost = energy_cost
         if player.relics and _SCARF in player.relics and free_by_relic(player):
             return 0                # Brilliant Scarf (TryModifyEnergyCostInCombatLate)
         return cost
@@ -604,28 +617,32 @@ class Card:
         self._enchantment_on_play(combat)
 
     def can_play_card(self, combat : CombatSimulator, target_index):
-        if self.is_unplayable or self.unplayable:
+        """Whether the card can be played now. The target is not read: a card is playable at every enemy or at none."""
+        if self.is_unplayable or (self._keywords if self._keywords is not None else self.card_id.keyword_mask) & _UNPLAYABLE:
             return False
-        if self.card_id == CardId.CLASH and any(c.type != CardType.Attack for c in combat.combat_state.player.hand):
+        cs = combat.combat_state
+        player = cs.player
+        ctype = self.type
+        if self.card_id is _CLASH and any(c.type is not _ATTACK for c in player.hand):
             return False            # Clash: only while the hand holds nothing but Attacks
-        if self.type == CardType.Skill and combat.combat_state.player.smogged:
+        if ctype is _SKILL and player.smogged:
             return False            # Smoggy: afflicted with Smog
-        if self.bound and combat.combat_state.player.bound_played:
+        if self.bound and player.bound_played:
             return False            # Chains of Binding: one Bound card a turn
-        if StatusId.RINGING in combat.combat_state.player.status and combat.combat_state.cards_played >= 1:
+        status = player.status
+        if _RINGING in status and cs.cards_played >= 1:
             return False
-        sloth = combat.combat_state.player.status.get(StatusId.SLOTH)
-        if sloth is not None and combat.combat_state.sloth_played >= sloth.amount:
+        sloth = status.get(_SLOTH)
+        if sloth is not None and cs.sloth_played >= sloth.amount:
             return False            # Sloth: at most this many cards a turn
-        if combat.combat_state.cards_played >= NORMALITY_CARD_LIMIT and any(c.card_id == CardId.NORMALITY for c in combat.combat_state.player.hand):
+        if cs.cards_played >= NORMALITY_CARD_LIMIT and any(c.card_id is _NORMALITY for c in player.hand):
             return False            # Normality: at most 3 cards a turn while it is in hand
-        if combat.combat_state.player.relics and _CHOKER in combat.combat_state.player.relics and blocks_play(combat.combat_state.player):
+        if player.relics and _CHOKER in player.relics and blocks_play(player):
             return False            # Velvet Choker
         if type(self.energy_cost) is str and self.energy_cost == "X":
             return True
-        if self.type == CardType.Attack and StatusId.FREE_ATTACK in combat.combat_state.player.status:
-            if combat.combat_state.player.status[StatusId.FREE_ATTACK].amount > 0:
+        if ctype is _ATTACK:
+            free_attack = status.get(_FREE_ATTACK)
+            if free_attack is not None and free_attack.amount > 0:
                 return True
-        if self.current_cost(combat.combat_state.player) <= combat.combat_state.energy:
-            return True
-        return False
+        return self.current_cost(player) <= cs.energy
