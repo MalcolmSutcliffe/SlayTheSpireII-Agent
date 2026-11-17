@@ -303,3 +303,24 @@ def test_the_second_form_is_read_off_its_powers():
     second = _subject(150, status=(StatusId.PAINFUL_STABS,))
     start = _subject_fight(_subject(111))
     assert progress(_subject_fight(second), root=start) == pytest.approx((150 + 313) / (111 + 212 + 313))
+
+
+# ---------------------------------------------------------------- the Axebot: Stock brings it back
+def _axebot(hp, lives):
+    e = enemy(hp, 82, "AXEBOT_0")
+    e.status = {StatusId.STOCK: StatusInstance(StatusId.STOCK, lives)} if lives else {}
+    return e
+
+def test_an_axebot_counts_the_lives_it_has_still_to_come_in_the_fight_total():
+    from agents.sts2_MCTS.outcome_score import expected_total_hp
+    assert expected_total_hp(fight(_axebot(82, 2), player_hp=40)) == 82 * 3
+
+def test_killing_an_axebot_that_comes_back_is_progress_not_a_worse_state():
+    start = fight(_axebot(82, 2), player_hp=40)
+    wounded = fight(_axebot(20, 2), player_hp=40)
+    killed = fight(_axebot(82, 1), player_hp=40)              # the Stock power summons the next one at once
+    assert progress(start, root=start) == 1.0
+    assert progress(killed, root=start) == pytest.approx(164 / 246)
+    assert progress(wounded, root=start) == pytest.approx((20 + 164) / 246)
+    assert progress(killed, root=start) < progress(wounded, root=start)      # less of the fight left
+    assert rate(killed, root=start) > rate(start, root=start)

@@ -4,7 +4,7 @@ from sts2_lite.combat import CombatState, CombatSimulator
 
 from agents.base_agent import BaseAgent
 from agents.pathing import PathPlanner
-from agents.potion_cycle import cycle as cycle_potions
+from agents.potion_cycle import FoulPotions, cycle as cycle_potions
 from agents.deck_eval.advisor import DeckAdvisor
 from agents.deck_eval.ancient_chooser import AncientChooser
 from agents.deck_eval.boss_spawner import BOSS_ACTS, normalize_boss_id
@@ -45,6 +45,7 @@ class MyAgent(BaseAgent):
         self._card_chooser = None
         self._upgrader = None
         self._shopper = None
+        self._fouls = FoulPotions()
         self._eventer = None
         self._ancient = None
         self._mcts = sts2_MCTS()        # kept between calls: the next search reuses the part of this tree the game went into
@@ -97,6 +98,9 @@ class MyAgent(BaseAgent):
 
     def _get_shop_decision(self, decision):
         """Every relic, card and the removal rated by the deck evaluator (a Z-score over deck_config.shop_z to buy): relics first, then potions before an elite, then the best card or removal: see agents/deck_eval/shop_chooser.py."""
+        used = self._fouls.choose(decision)          # a Foul Potion thrown at the merchant is 100 gold
+        if used is not None:
+            return used
         if self._shopper is None:
             self._shopper = ShopChooser(self._deck_advisor())
         return self._shopper.choose(decision)

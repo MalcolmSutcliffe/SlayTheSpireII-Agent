@@ -44,8 +44,8 @@ def cycle(decision : Decision) -> Option | None:
     if decision.player.get("open_potion_slots") != 0 or not belt:
         return None                                  # room for it: the potion is simply claimed
     offered = [item for item in decision.state.get("items") or [] if item.get("type") == "potion"]
-    if not offered:
-        return None
+    if not offered or any(r.get("id") == "SOZU" for r in decision.player.get("relics") or [] if isinstance(r, dict)):
+        return None                                  # Sozu: the potion on offer never arrives, so nothing is thrown away for it
     best = max(offered, key=value)
     for p in belt:
         if potion_of(p) in DRINK_FIRST:

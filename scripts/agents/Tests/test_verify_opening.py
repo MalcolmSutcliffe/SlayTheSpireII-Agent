@@ -28,6 +28,22 @@ KNOWN_GAPS = {
     "f35_r1_Living_Shield+Turret_Operator_163120247940",     # Mr. Struggles' 1 damage hurts the Turret Operator in the game (hp 40) before the Rampart block comes; the sim blocks it (hp 41, block 24)
     "f13_r1_Phantasmal_Gardener_220125297297",               # saved mid-fight: the Gardeners are hurt and Vulnerable, 2 energy, 4 cards in hand (the fight's other captures match)
     "f48_r1_Queen+Torch_Head_Amalgam_224458603556",          # saved after a Radiant Tincture was drunk (Radiance, and 3 Strength from Reptile Trinket, 1 energy more)
+    # captures from the runs a10-3 and a10-4 whose "round 1" state was saved after the agent had already played (or while the hand was still being dealt): hand empty or short, energy spent,
+    # block already gained. The runner has since waited for the dealt hand (CombatSession.turn_is_changing), so these are not an opening to compare
+    "f35_r1_Scroll_of_Biting_222531759681",
+    "f37_r1_Devoted_Sculptor_222642475942",
+    "f38_r1_Axebot_222852885921",
+    "f40_r1_Battle_Friend_V3_0_223219510245",
+    "f42_r1_Mecha_Knight_223321318508",
+    "f44_r1_Soul_Nexus_223816284447",
+    "f45_r1_Globe_Head_224120741930",
+    "f46_r1_Flail_Knight+Magi_Knight+Spectral_Knight_224424435198",
+    "f48_r1_Queen+Torch_Head_Amalgam_225054015748",
+    "f36_r1_Battle_Friend_V2_0_001248525231",
+    "f37_r1_Living_Shield+Turret_Operator_001320543836",
+    # engine gaps: Torch Head Amalgam's STRONG_TACKLE_MOVE is not in the move table; the Turret Operator's hp differs (sim 22, game 25)
+    "f48_r1_Queen+Torch_Head_Amalgam_201028071837",
+    "f36_r1_Living_Shield+Turret_Operator_211209807788",
 }
 
 

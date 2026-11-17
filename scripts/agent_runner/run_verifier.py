@@ -74,6 +74,11 @@ def deck_counter(deck : list[dict]) -> Counter:
     return Counter((c.get("id"), bool(c.get("is_upgraded"))) for c in deck or [])
 
 
+def sozu(player : dict) -> bool:
+    """Sozu: no potions can be gained (a potion reward is claimed and nothing arrives)."""
+    return "SOZU" in relic_ids(player)
+
+
 def relic_ids(player : dict) -> list[str]:
     return [r.get("id") for r in player.get("relics") or [] if isinstance(r, dict)]
 
@@ -480,8 +485,9 @@ class RunVerifier:
         hp, max_hp = expect.get("hp", before.get("hp")), expect.get("max_hp", before.get("max_hp"))
         if hp is None or max_hp is None:
             return
-        missing = max_hp - hp
-        expect["hp"] = hp + (int(missing * WEARY_TRAVELER_SHARE) if (_context(end)[2] or 0) >= WEARY_TRAVELER_ASCENSION else missing)
+        tired = (_context(end)[2] or 0) >= WEARY_TRAVELER_ASCENSION
+        healed = {h + (int((m - h) * WEARY_TRAVELER_SHARE) if tired else m - h) for h in (hp if isinstance(hp, frozenset) else {hp}) for m in (max_hp if isinstance(max_hp, frozenset) else {max_hp})}
+        expect["hp"] = frozenset(healed) if len(healed) > 1 else next(iter(healed))          # a hp the episode could not pin down stays a set of the values it may be
 
     def compare(self, anchor : dict, end : dict, action : dict, expect : dict):
         """Every number the episode did not account for stays as it was."""
@@ -606,7 +612,7 @@ class RunVerifier:
             run_hooks.gain_gold(run, amount)
             expect.update(gold=run.gold, hp=run.hp, max_hp=run.max_hp)
         elif kind == "potion":
-            expect["potions"] = len([p for p in _player(anchor).get("potions") or [] if p]) + (1 if _player(anchor).get("open_potion_slots", 1) > 0 else 0)
+            expect["potions"] = len([p for p in _player(anchor).get("potions") or [] if p]) + (1 if _player(anchor).get("open_potion_slots", 1) > 0 and not sozu(_player(anchor)) else 0)
         elif kind == "relic":
             self.expect_relic(anchor, end, expect)
         elif kind == "card":
@@ -659,7 +665,7 @@ class RunVerifier:
             if player.get("open_potion_slots", 1) == 0:
                 expect["skip"] = True
                 return
-            expect["potions"] = len([p for p in player.get("potions") or [] if p]) + 1
+            expect["potions"] = len([p for p in player.get("potions") or [] if p]) + (0 if sozu(player) else 1)
         elif category == "relic":
             self.expect_relic(anchor, end, expect, item.get("relic_id"), gold=expect["gold"])
         elif category == "card_removal":

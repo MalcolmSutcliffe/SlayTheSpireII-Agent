@@ -73,8 +73,11 @@ def expected_total_hp(state : CombatState) -> float:
     return total
 
 def later_forms_hp(enemy : Enemy, ascension : int) -> float:
-    """The HP of the forms a Test Subject still has to come back as (212 and 313 at the tougher ascensions): killing one is not the end of the fight, it respawns.
+    """The HP of the lives an Axebot (Stock) or the forms a Test Subject still has to come back as (212 and 313 at the tougher ascensions): killing one is not the end of the fight, it respawns.
     The form is read off its powers (`subject_respawns`: a dead one keeps the powers that tell which it was)."""
+    stock = enemy.status.get(StatusId.STOCK)
+    if stock is not None and stock.amount > 0:
+        return stock.amount * enemy.max_hp      # an Axebot with Stock left comes back in full as often as the power says
     if not enemy.enemy_id.startswith("TEST_SUBJECT"):
         return 0
     forms = (tough(ascension, 200, 212), tough(ascension, 300, 313))

@@ -79,7 +79,8 @@ class ShopChooser:
             return best(worth).option
 
         if route is not None and any(kind in DANGEROUS_ROOMS for kind in route.kinds[1:1 + cfg.potion_lookahead]):
-            potions = [o for o in buys if o.data.get("category") == "potion"]
+            sozu = any(r.get("id") == "SOZU" for r in decision.player.get("relics") or [] if isinstance(r, dict))
+            potions = [] if sozu else [o for o in buys if o.data.get("category") == "potion"]      # Sozu: a bought potion never arrives
             if potions:
                 return max(potions, key=lambda o: (potion_value(o.data), -o.data.get("cost", 0)))
 
