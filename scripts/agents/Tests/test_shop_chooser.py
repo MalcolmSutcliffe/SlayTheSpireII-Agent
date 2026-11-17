@@ -1,4 +1,4 @@
-"""What the shop chooser buys: relics whose Z-score clears shop_z, then (potions before an elite, then) the card or removal with the best Z-score over shop_z.
+"""What the shop chooser buys: the relic, card or removal over shop_z with the most gain per gold, then (potions before an elite).
 The analysis itself (`ShopChooser._analyse`) is replaced by canned rows in the decision tests; the last tests run it on the engine."""
 from types import SimpleNamespace
 
@@ -38,10 +38,10 @@ def decide(items, scores, kinds=()):
     return chooser.choose(screen(items)), chooser
 
 
-def test_a_relic_over_the_z_score_is_bought_the_best_first():
-    items = [relic(0, 250), relic(1, 200), relic(3, 100)]
-    picked, _ = decide(items, {0: (0.9, 1.6), 1: (0.5, 2.4), 3: (0.3, 1.0)})
-    assert picked.data["index"] == 1
+def test_the_relic_with_the_most_gain_per_gold_over_the_z_score_is_bought():
+    items = [relic(0, 250), relic(1, 100), relic(3, 100)]
+    picked, _ = decide(items, {0: (0.9, 1.6), 1: (0.5, 2.4), 3: (0.6, 1.0)})
+    assert picked.data["index"] == 1          # 0.005 a gold beats 0.0036; the third is under the z-score
 
 def test_a_relic_under_the_z_score_is_not_bought():
     items = [relic(0, 250), relic(1, 200)]
@@ -57,33 +57,34 @@ def test_a_relic_without_an_id_cannot_be_played_and_is_left():
     items = [item(0, "relic", 100)]
     assert decide(items, {0: (9.0, 9.0)})[1].asked == []
 
-def test_a_relic_comes_before_a_better_scoring_card():
+def test_the_item_with_the_most_gain_per_gold_is_bought_whatever_its_kind():
     items = [relic(0, 150), item(1, "card", 60, card_id="BASH")]
-    assert decide(items, {0: (0.4, 1.6), 1: (2.0, 5.0)})[0].data["index"] == 0
+    assert decide(items, {0: (0.4, 1.6), 1: (2.0, 5.0)})[0].data["index"] == 1
+    assert decide(items, {0: (3.0, 1.6), 1: (0.5, 5.0)})[0].data["index"] == 0
 
-def test_the_card_or_removal_with_the_best_z_score_is_bought():
+def test_the_card_or_removal_with_the_best_gain_per_gold_is_bought():
     items = [item(0, "card", 60, card_id="BASH"), item(1, "card", 50, card_id="ANGER"), item(2, "card_removal", 75)]
-    assert decide(items, {0: (1.5, 2.0), 1: (0.6, 3.2), 2: (0.4, 2.5)})[0].data["index"] == 1
-    assert decide(items, {0: (1.5, 2.0), 1: (0.6, 1.2), 2: (0.4, 2.5)})[0].data["index"] == 2
+    assert decide(items, {0: (1.5, 2.0), 1: (0.6, 3.2), 2: (0.4, 2.5)})[0].data["index"] == 0          # 0.025, 0.012, 0.005 a gold
+    assert decide(items, {0: (1.5, 1.2), 1: (0.6, 1.2), 2: (0.4, 2.5)})[0].data["index"] == 2          # the others are under the z-score
 
 def test_a_card_under_the_z_score_is_not_bought():
     items = [item(0, "card", 60, card_id="BASH"), item(1, "card_removal", 75)]
     assert decide(items, {0: (1.5, 1.2), 1: (0.4, 1.5)})[0].name == "proceed"
 
-def test_the_best_z_score_beats_the_biggest_gain():
-    items = [item(0, "card", 60, card_id="BASH"), item(1, "card", 60, card_id="ANGER")]
-    assert decide(items, {0: (3.0, 1.8), 1: (0.5, 4.0)})[0].data["index"] == 1
+def test_a_cheap_small_gain_beats_a_dear_big_one():
+    items = [item(0, "card", 100, card_id="BASH"), item(1, "card", 40, card_id="ANGER")]
+    assert decide(items, {0: (2.0, 3.0), 1: (1.2, 2.0)})[0].data["index"] == 1
 
-def test_a_sure_gain_scores_over_any_z():
+def test_equal_gain_per_gold_goes_to_the_best_z_score_and_a_sure_gain_scores_over_any_z():
     items = [item(0, "card", 60, card_id="BASH"), item(1, "card", 60, card_id="ANGER")]
-    assert decide(items, {0: (0.5, 40.0), 1: (0.4, float("inf"))})[0].data["index"] == 1
+    assert decide(items, {0: (0.5, 40.0), 1: (0.5, float("inf"))})[0].data["index"] == 1
 
-def test_potions_come_after_the_relics_and_before_the_cards_when_an_elite_is_near():
+def test_potions_come_after_the_items_over_the_z_score_when_an_elite_is_near():
     items = [item(0, "potion", 50, potion_id="FIRE_POTION"), item(1, "card", 60, card_id="BASH"), relic(2, 150)]
     kinds = ["x", "combat", "elite"]
-    assert decide(items, {1: (2.0, 5.0)}, kinds)[0].data["index"] == 0
-    assert decide(items, {1: (2.0, 5.0), 2: (0.5, 2.0)}, kinds)[0].data["index"] == 2
-    assert decide(items, {1: (2.0, 5.0)}, ["x", "combat", "combat", "combat", "elite"])[0].data["index"] == 1
+    assert decide(items, {1: (2.0, 5.0)}, kinds)[0].data["index"] == 1
+    assert decide(items, {1: (2.0, 1.0)}, kinds)[0].data["index"] == 0          # nothing over the z-score: the potion
+    assert decide(items, {1: (2.0, 1.0)}, ["x", "combat", "combat", "combat", "elite"])[0].name == "proceed"
 
 def test_potions_are_bought_when_the_boss_is_near_too():
     items = [item(0, "potion", 50, potion_id="FIRE_POTION")]
@@ -155,3 +156,14 @@ def test_the_analysis_rates_every_candidate_and_the_choice_is_one_of_the_options
     assert logged and "needs z over" in logged[0]
     chosen = ShopChooser(advisor).choose(decision)
     assert chosen in decision.options
+
+
+def test_the_last_shop_of_act_3_asks_for_a_z_score_of_0_1_only():
+    items = [item(0, "card", 60, card_id="BASH")]
+    def decide_in(act, kinds):
+        chooser = Canned({0: (0.4, 0.5)})
+        chooser.advisor.route_provider = lambda: SimpleNamespace(kinds=kinds, act=act)
+        return chooser.choose(screen(items))
+    assert decide_in(3, ["shop", "combat", "boss"]).name == "shop_purchase"          # the last shop of act 3: z 0.5 clears 0.1
+    assert decide_in(3, ["shop", "combat", "shop", "boss"]).name == "proceed"       # another shop ahead
+    assert decide_in(2, ["shop", "combat", "boss"]).name == "proceed"               # not act 3

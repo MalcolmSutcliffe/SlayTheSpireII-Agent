@@ -223,3 +223,10 @@ def test_toy_box_wax_melts_every_three_fights_and_silver_crucible_upgrades_three
         out = run_hooks.modify_card_offers(c.run, [card_entry("ANGER")], random.Random(i), True)
         assert out[0].get("is_upgraded") == (i < 3)
     assert not run_hooks.treasure_gives_relic(c.run) and run_hooks.treasure_gives_relic(c.run)
+
+
+def test_neows_sacrifice_gives_an_ambergris_and_a_guilty():
+    c = ctx_with_bag()
+    obtain_relic(c, "NEOWS_SACRIFICE")
+    assert "GUILTY" in ids(c)
+    assert [p["id"] for p in c.run.potions] == ["AMBERGRIS"]

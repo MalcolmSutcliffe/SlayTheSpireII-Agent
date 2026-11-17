@@ -1,0 +1,167 @@
+ancient NEOW (54 walks, 2.1s of 2s): Silver Crucible 7.08, Phial Holster 6.49, Kaleidoscope 6.49 -> Silver Crucible
+path (10 paths of 10 kinds of path, 108 walks, 2.0s of 2s): CC???CECTER?ECRB 28.02 (50% through, 3 elites, +6.00 bonus (elites, shops)), CCCCCRCCTER?ECRB 18.29 (16% through, 2 elites, +4.00 bonus (elites, shops)) -> CC???CECTER?ECRB
+  kind bonus Dismantle: +1.50 (walk gain +2.68)
+  kind bonus Pillage: +1.50 (walk gain +1.71)
+  kind bonus Spite: +1.50 (walk gain +4.11)
+card reward act 1 (weak 2 normal 2 elite 3 [PHANTASMAL_GARDENERS_ELITE/SKULKING_COLONY_ELITE/TERROR_EEL_ELITE] boss 1.0 [LAGAVULIN_MATRIARCH_BOSS], 2296 fights, 17.6s, base 13.2 rooms, 17% clear the act) | needs > 0.93 rooms -> take Spite
+  walking the rest of the act (287 walks of 8.0 fights, 17% clear the act): Dismantle +4.18±0.54 rooms (24% clear the act), Pillage +3.21±0.58 rooms (21% clear the act), Spite +5.61±0.62 rooms (30% clear the act)
+path (8 paths of 8 kinds of path, 124 walks, 2.0s of 2s): C???CR$TER?ECRB 24.90 (38% through, 2 elites, +5.02 bonus (elites, shops)), ?C??CRETRE?C?RB 23.40 (41% through, 2 elites, +4.00 bonus (elites, shops)) -> C???CR$TER?ECRB
+  kind bonus Iron Wave: +0.50 (walk gain +2.19)
+  kind bonus Shrug It Off: +1.50 (walk gain +1.56)
+  kind bonus Armaments: +1.50 (walk gain +1.44)
+card reward act 1 (weak 1 normal 1 elite 2 [PHANTASMAL_GARDENERS_ELITE/SKULKING_COLONY_ELITE/TERROR_EEL_ELITE] boss 1.0 [LAGAVULIN_MATRIARCH_BOSS], 2285 fights, 30.7s, base 19.4 rooms, 40% clear the act) | needs > 0.58 rooms -> take Shrug It Off
+  walking the rest of the act (457 walks of 5.0 fights, 40% clear the act): Iron Wave +2.69±0.40 rooms (49% clear the act), Shrug It Off +3.06±0.38 rooms (47% clear the act), Armaments +2.94±0.38 rooms (46% clear the act)
+path (8 paths of 8 kinds of path, 110 walks, 2.0s of 2s): ???CCCTER?ECRB 24.98 (45% through, 2 elites, +4.00 bonus (elites, shops)), $?C??CTCE?C?RB 24.40 (54% through, 1 elites, +2.00 bonus (elites, shops)) -> ???CCCTER?ECRB
+event SUNKEN_STATUE (48 walks, 2.0s of 2s): grab_sword 22.64, dive 22.02 -> grab_sword
+path (10 paths of 10 kinds of path, 118 walks, 2.0s of 2s): ??CCCTER?ECRB 24.71 (50% through, 2 elites, +4.00 bonus (elites, shops)), C?CR$TER?ECRB 24.19 (50% through, 2 elites, +4.00 bonus (elites, shops)) -> ??CCCTER?ECRB
+event THIS_OR_THAT (56 walks, 2.0s of 2s): ornate 18.56, plain 16.36 -> ornate
+  kind bonus Second Wind: +1.12 (walk gain +0.80)
+  kind bonus True Grit: +0.75 (walk gain -0.50)
+  kind bonus Forgotten Ritual: +1.12 (walk gain -1.63)
+card reward act 1 (weak 1 normal 1 elite 2 [PHANTASMAL_GARDENERS_ELITE/SKULKING_COLONY_ELITE/TERROR_EEL_ELITE] boss 1.0 [LAGAVULIN_MATRIARCH_BOSS], 2095 fights, 28.0s, base 18.9 rooms, 48% clear the act) | needs > 0.60 rooms -> take Second Wind
+  walking the rest of the act (419 walks of 5.0 fights, 48% clear the act): Second Wind +1.92±0.39 rooms (52% clear the act), True Grit +0.25±0.37 rooms (45% clear the act), Forgotten Ritual -0.50±0.39 rooms (40% clear the act)
+path (7 paths of 7 kinds of path, 118 walks, 2.0s of 2s): CR$TER?ECRB 25.89 (65% through, 2 elites, +4.00 bonus (elites, shops)), CRETRE?C?RB 22.13 (50% through, 2 elites, +4.00 bonus (elites, shops)) -> CR$TER?ECRB
+  kind bonus Cinder: +0.50 (walk gain +1.66)
+  kind bonus Juggling: +3.00 (walk gain -0.80)
+  kind bonus Feed: +1.00 (walk gain +0.39)
+card reward act 1 (weak 0 normal 1 elite 2 [PHANTASMAL_GARDENERS_ELITE/SKULKING_COLONY_ELITE/TERROR_EEL_ELITE] boss 1.0 [LAGAVULIN_MATRIARCH_BOSS], 1052 fights, 15.6s, base 16.9 rooms, 42% clear the act) | needs > 0.69 rooms -> take Juggling
+  walking the rest of the act (263 walks of 4.0 fights, 42% clear the act): Cinder +2.16±0.46 rooms (51% clear the act), Juggling +2.20±0.45 rooms (39% clear the act), Feed +1.39±0.45 rooms (44% clear the act)
+path (6 paths of 6 kinds of path, 136 walks, 2.0s of 2s): CCTER?ECRB 23.79 (59% through, 2 elites, +4.00 bonus (elites, shops)), ECTER?ECRB 22.11 (46% through, 3 elites, +6.00 bonus (elites, shops)), R$TR?CC?RB 18.19 (50% through, 0 elites) -> CCTER?ECRB
+  kind bonus Inflame: +1.50 (walk gain +1.57)
+  kind bonus Colossus: +0.56 (walk gain -0.29)
+  kind bonus Bloodletting: +0.38 (walk gain +1.01)
+card reward act 1 (weak 0 normal 2 elite 2 [PHANTASMAL_GARDENERS_ELITE/SKULKING_COLONY_ELITE/TERROR_EEL_ELITE] boss 1.0 [LAGAVULIN_MATRIARCH_BOSS], 1080 fights, 13.2s, base 15.1 rooms, 40% clear the act) | needs > 0.68 rooms -> take Inflame
+  walking the rest of the act (216 walks of 5.0 fights, 40% clear the act): Inflame +3.07±0.45 rooms (46% clear the act), Colossus +0.27±0.46 rooms (37% clear the act), Bloodletting +1.39±0.48 rooms (44% clear the act)
+  kind bonus Thunderclap: +0.50 (walk gain +0.27)
+  kind bonus Rupture: +0.75 (walk gain -1.43)
+  kind bonus Bloodletting: +0.38 (walk gain +1.50)
+card reward act 1 (weak 0 normal 1 elite 2 [PHANTASMAL_GARDENERS_ELITE/SKULKING_COLONY_ELITE/TERROR_EEL_ELITE] boss 1.0 [LAGAVULIN_MATRIARCH_BOSS], 1104 fights, 14.4s, base 15.1 rooms, 45% clear the act) | needs > 0.74 rooms -> take Bloodletting
+  walking the rest of the act (276 walks of 4.0 fights, 45% clear the act): Thunderclap +0.77±0.48 rooms (46% clear the act), Rupture -0.68±0.46 rooms (38% clear the act), Bloodletting +1.88±0.48 rooms (52% clear the act)
+path (3 paths of 3 kinds of path, 146 walks, 2.0s of 2s): TER?ECRB 21.70 (58% through, 2 elites, +4.00 bonus (elites, shops)), TCRC?CRB 20.42 (72% through, 0 elites) -> TER?ECRB
+path (2 paths of 2 kinds of path, 150 walks, 2.0s of 2s): ER?ECRB 21.98 (64% through, 2 elites, +4.00 bonus (elites, shops)), R?CC?RB 16.37 (55% through, 0 elites) -> ER?ECRB
+  kind bonus Perfected Strike: +0.50 (walk gain +0.13)
+  kind bonus Infernal Blade: +0.28 (walk gain -0.70)
+  kind bonus Stone Armor: +0.75 (walk gain -0.92)
+card reward act 1 (weak 0 normal 1 elite 1 [PHANTASMAL_GARDENERS_ELITE/TERROR_EEL_ELITE] boss 1.0 [LAGAVULIN_MATRIARCH_BOSS], 1188 fights, 16.9s, base 13.4 rooms, 45% clear the act) | needs > 0.63 rooms -> take Perfected Strike
+  walking the rest of the act (396 walks of 3.0 fights, 45% clear the act): Perfected Strike +0.63±0.41 rooms (46% clear the act), Infernal Blade -0.42±0.41 rooms (41% clear the act), Stone Armor -0.17±0.40 rooms (40% clear the act)
+upgrade gains (28 walks through the route ahead, 2.1s of 2s): PERFECTED_STRIKE +1.31, BASH +1.30, BLOODLETTING +0.65, INFLAME +0.03, JUGGLING -0.54 | heal 24 HP +0.75
+rest site: upgrading PERFECTED_STRIKE +1.31 vs healing 24 HP +0.75 -> smith
+event SLIPPERY_BRIDGE (88 walks, 2.0s of 2s): overcome 11.35, hold_on 11.30 -> overcome
+  kind bonus Inferno: +1.50 (walk gain +3.54)
+  kind bonus Tremble: +0.19 (walk gain +0.36)
+  kind bonus Thunderclap: +0.25 (walk gain +0.64)
+card reward act 1 (weak 0 normal 1 elite 0 boss 1.0 [LAGAVULIN_MATRIARCH_BOSS], 1298 fights, 23.4s, base 8.4 rooms, 40% clear the act) | needs > 0.48 rooms -> take Inferno
+  walking the rest of the act (649 walks of 2.0 fights, 40% clear the act): Inferno +5.04±0.31 rooms (56% clear the act), Tremble +0.55±0.27 rooms (45% clear the act), Thunderclap +0.89±0.26 rooms (41% clear the act)
+  kind bonus Howl from Beyond: +0.38 (walk gain -2.80)
+  kind bonus Breakthrough: +0.25 (walk gain -1.28)
+  kind bonus Havoc: +0.19 (walk gain -2.45)
+card reward act 1 (weak 0 normal 0 elite 0 boss 1.0 [LAGAVULIN_MATRIARCH_BOSS], 1054 fights, 37.9s, base 10.8 rooms, 67% clear the act) | needs > 0.43 rooms -> skip
+  walking the rest of the act (1054 walks of 1.0 fights, 67% clear the act): Howl from Beyond -2.42±0.26 rooms (54% clear the act), Breakthrough -1.03±0.28 rooms (59% clear the act), Havoc -2.26±0.28 rooms (56% clear the act)
+rest site: 20 HP missing, a rest heals 24 -> smith
+upgrade gains (44 walks through the route ahead, 2.0s of 2s): INFERNO +3.81, BASH +2.37, BLOODLETTING +0.63, JUGGLING -0.77
+  kind bonus Thrash: +0.50 (walk gain -0.06)
+  kind bonus Impervious: +0.38 (walk gain +0.02)
+  kind bonus One-Two Punch: +0.38 (walk gain -0.21)
+card reward act 2 (weak 2 normal 3 elite 2 boss 1.0, 3160 fights, 12.4s, base 4.6 rooms, 1% clear the act) | needs > 0.13 rooms -> take Thrash
+  walking the rest of the act (395 walks of 8.0 fights, 1% clear the act): Thrash +0.44±0.09 rooms (1% clear the act), Impervious +0.40±0.11 rooms (0% clear the act), One-Two Punch +0.16±0.09 rooms (0% clear the act)
+ancient PAEL (54 walks, 2.0s of 2s): Paels Legion 7.12, Paels Flesh 6.66, Paels Claw 6.45 -> Paels Legion
+path (11 paths of 11 kinds of path, 100 walks, 2.0s of 2s): CCCC?RCTR?E$ERB 27.00 (66% through, 2 elites, +5.95 bonus (elites, shops)), C?CC?CCTR?E$ERB 25.44 (58% through, 2 elites, +5.95 bonus (elites, shops)), CC?C?$?T?EC?CRB 20.19 (16% through, 1 elites, +4.00 bonus (elites, shops)) -> CCCC?RCTR?E$ERB
+  kind bonus Molten Fist: +0.12 (walk gain -0.01)
+  kind bonus Twin Strike: +0.12 (walk gain -0.04)
+  kind bonus Headbutt: +0.12 (walk gain -0.26)
+card reward act 2 (weak 1 normal 3 elite 2 [DECIMILLIPEDE_ELITE/ENTOMANCER_ELITE/INFESTED_PRISMS_ELITE] boss 1.0 [THE_INSATIABLE_BOSS], 1358 fights, 14.1s, base 15.3 rooms, 29% clear the act) | needs > 0.50 rooms -> skip
+  walking the rest of the act (194 walks of 7.0 fights, 29% clear the act): Molten Fist +0.11±0.33 rooms (28% clear the act), Twin Strike +0.08±0.34 rooms (28% clear the act), Headbutt -0.14±0.33 rooms (27% clear the act)
+  kind bonus True Grit: +0.19 (walk gain -0.73)
+  kind bonus Whirlwind: +0.19 (walk gain -0.53)
+  kind bonus Iron Wave: +0.12 (walk gain -0.58)
+card reward act 2 (weak 0 normal 3 elite 2 [DECIMILLIPEDE_ELITE/ENTOMANCER_ELITE/INFESTED_PRISMS_ELITE] boss 1.0 [THE_INSATIABLE_BOSS], 1302 fights, 14.9s, base 15.2 rooms, 33% clear the act) | needs > 0.56 rooms -> skip
+  walking the rest of the act (217 walks of 6.0 fights, 33% clear the act): True Grit -0.54±0.37 rooms (28% clear the act), Whirlwind -0.34±0.37 rooms (28% clear the act), Iron Wave -0.45±0.37 rooms (29% clear the act)
+  kind bonus Perfected Strike: +0.12 (walk gain +0.72)
+  kind bonus Armaments: +0.19 (walk gain +0.11)
+  kind bonus Twin Strike: +0.12 (walk gain +0.30)
+card reward act 2 (weak 0 normal 2 elite 2 [DECIMILLIPEDE_ELITE/ENTOMANCER_ELITE/INFESTED_PRISMS_ELITE] boss 1.0 [THE_INSATIABLE_BOSS], 1255 fights, 15.1s, base 13.3 rooms, 26% clear the act) | needs > 0.46 rooms -> take Perfected Strike
+  walking the rest of the act (251 walks of 5.0 fights, 26% clear the act): Perfected Strike +0.85±0.30 rooms (31% clear the act), Armaments +0.29±0.31 rooms (26% clear the act), Twin Strike +0.43±0.31 rooms (27% clear the act)
+  kind bonus Vicious: +0.75 (walk gain -0.70)
+  kind bonus Sword Boomerang: +0.06 (walk gain -0.34)
+  kind bonus Twin Strike: +0.06 (walk gain +0.07)
+card reward act 2 (weak 0 normal 1 elite 2 [DECIMILLIPEDE_ELITE/ENTOMANCER_ELITE/INFESTED_PRISMS_ELITE] boss 1.0 [THE_INSATIABLE_BOSS], 1204 fights, 15.3s, base 12.4 rooms, 26% clear the act) | needs > 0.40 rooms -> skip
+  walking the rest of the act (301 walks of 4.0 fights, 26% clear the act): Vicious +0.05±0.28 rooms (22% clear the act), Sword Boomerang -0.28±0.26 rooms (25% clear the act), Twin Strike +0.13±0.26 rooms (27% clear the act)
+path (10 paths of 10 kinds of path, 144 walks, 2.0s of 2s): ?RCTR?E$ERB 18.50 (26% through, 2 elites, +5.90 bonus (elites, shops)), CRCTR?E$ERB 18.29 (26% through, 2 elites, +5.90 bonus (elites, shops)) -> ?RCTR?E$ERB
+event ZEN_WEAVER (50 walks, 2.0s of 2s): arachnid_acupuncture 12.51, emotional_awareness 12.23, breathing_techniques 12.06 -> arachnid_acupuncture
+path (8 paths of 8 kinds of path, 158 walks, 2.0s of 2s): RCTR?E$ERB 17.15 (35% through, 2 elites, +4.58 bonus (elites, shops)), CCTR?E$ERB 14.02 (0% through, 2 elites, +4.58 bonus (elites, shops)) -> RCTR?E$ERB
+rest site: 16 HP missing, a rest heals 24 -> smith
+upgrade gains (26 walks through the route ahead, 2.1s of 2s): BLOODLETTING +1.11, BASH +0.22, PERFECTED_STRIKE +0.18, THRASH -0.42, JUGGLING -1.83
+path (7 paths of 7 kinds of path, 154 walks, 2.0s of 2s): CTR?E$ERB 16.64 (38% through, 2 elites, +4.50 bonus (elites, shops)), CTER??ERB 15.62 (44% through, 2 elites, +3.00 bonus (elites, shops)) -> CTR?E$ERB
+  kind bonus Cinder: +0.06 (walk gain -0.10)
+  kind bonus Breakthrough: +0.06 (walk gain +0.44)
+  kind bonus True Grit: +0.19 (walk gain -0.07)
+card reward act 2 (weak 0 normal 0 elite 2 [DECIMILLIPEDE_ELITE/ENTOMANCER_ELITE/INFESTED_PRISMS_ELITE] boss 1.0 [THE_INSATIABLE_BOSS], 1338 fights, 17.6s, base 9.5 rooms, 26% clear the act) | needs > 0.31 rooms -> take Breakthrough
+  walking the rest of the act (446 walks of 3.0 fights, 26% clear the act): Cinder -0.03±0.20 rooms (26% clear the act), Breakthrough +0.51±0.20 rooms (29% clear the act), True Grit +0.12±0.22 rooms (27% clear the act)
+upgrade gains (30 walks through the route ahead, 2.1s of 2s): BREAKTHROUGH +1.58, PERFECTED_STRIKE +1.52, BASH +0.84, THRASH +0.06, JUGGLING -0.26 | heal 24 HP +2.97
+rest site: upgrading BREAKTHROUGH +1.58 vs healing 24 HP +2.97 -> heal
+path (6 paths of 6 kinds of path, 174 walks, 2.0s of 2s): ?E$ERB 13.70 (37% through, 2 elites, +4.61 bonus (elites, shops)), CE$ERB 13.38 (35% through, 2 elites, +4.61 bonus (elites, shops)) -> ?E$ERB
+event POTION_COURIER (94 walks, 2.0s of 2s): grab_potions 8.14, ransack 8.14 -> grab_potions
+path (5 paths of 5 kinds of path, 204 walks, 2.0s of 2s): E$ERB 13.18 (44% through, 2 elites, +4.54 bonus (elites, shops)), C?ERB 9.74 (38% through, 1 elites, +1.50 bonus (elites, shops)), RCCRB 9.15 (45% through, 0 elites) -> E$ERB
+  kind bonus Stomp: +0.05 (walk gain -0.16)
+  kind bonus Bloodletting: +0.19 (walk gain +0.19)
+  kind bonus Evil Eye: +0.28 (walk gain -0.14)
+card reward act 2 (weak 0 normal 0 elite 1 [ENTOMANCER_ELITE/INFESTED_PRISMS_ELITE] boss 1.0 [THE_INSATIABLE_BOSS], 1356 fights, 24.5s, base 6.3 rooms, 35% clear the act) | needs > 0.23 rooms -> take Bloodletting
+  walking the rest of the act (678 walks of 2.0 fights, 35% clear the act): Stomp -0.12±0.14 rooms (35% clear the act), Bloodletting +0.38±0.15 rooms (37% clear the act), Evil Eye +0.15±0.14 rooms (34% clear the act)
+path (2 paths of 2 kinds of path, 212 walks, 2.0s of 2s): $ERB 10.04 (38% through, 1 elites, +3.13 bonus (elites, shops)), CCRB 6.58 (36% through, 0 elites) -> $ERB
+shop (327 gold, 28 walks through the route ahead, 2.1s of 2s): buy Secret Weapon (171g) +1.68 (z 2.4), buy Unmovable (76g) +1.60 (z 2.2), buy Fisticuffs (86g) +1.50 (z 1.9), buy Burning Pact (73g) +1.32 (z 1.7), buy Card Removal (75g) +1.26 (z 1.7), buy Perfected Strike (52g) +1.22 (z 1.7), buy Eternal Feather (235g) +0.19 (z 1.5), buy Taunt (52g) +0.97 (z 1.3), buy Ashen Strike (76g) +0.52 (z 0.9), buy Juzu Bracelet (186g) +0.00 (z 0.0), buy Lava Lamp (190g) +0.00 (z 0.0); needs z over 1.5
+shop (275 gold, 26 walks through the route ahead, 2.1s of 2s): buy Eternal Feather (235g) +0.64 (z 1.4), buy Fisticuffs (86g) +0.36 (z 0.5), buy Unmovable (76g) +0.34 (z 0.4), buy Ashen Strike (76g) +0.01 (z 0.0), buy Juzu Bracelet (186g) +0.00 (z 0.0), buy Lava Lamp (190g) +0.00 (z 0.0), buy Card Removal (75g) -0.01 (z -0.0), buy Taunt (52g) -0.11 (z -0.2), buy Secret Weapon (171g) -0.21 (z -0.3), buy Burning Pact (73g) -0.97 (z -1.5); needs z over 1.5
+shop (225 gold, 24 walks through the route ahead, 2.0s of 2s): buy Taunt (52g) +1.09 (z 1.8), buy Unmovable (76g) +1.35 (z 1.4), buy Ashen Strike (76g) +0.36 (z 0.7), buy Fisticuffs (86g) +0.36 (z 0.7), buy Secret Weapon (171g) +0.13 (z 0.3), buy Juzu Bracelet (186g) +0.00 (z 0.0), buy Lava Lamp (190g) +0.00 (z 0.0), buy Burning Pact (73g) -0.31 (z -0.6), buy Card Removal (75g) -0.47 (z -0.9); needs z over 1.5
+shop (173 gold, 42 walks through the route ahead, 2.1s of 2s): buy Ashen Strike (76g) +0.63 (z 1.1), buy Secret Weapon (171g) +0.47 (z 0.8), buy Unmovable (76g) +0.31 (z 0.6), buy Fisticuffs (86g) +0.30 (z 0.6), buy Card Removal (75g) +0.27 (z 0.4), buy Burning Pact (73g) -0.51 (z -1.1); needs z over 1.5
+shop (123 gold, 42 walks through the route ahead, 2.1s of 2s): buy Unmovable (76g) -0.81 (z -1.2), buy Burning Pact (73g) -1.08 (z -1.5), buy Card Removal (75g) -1.05 (z -1.6), buy Fisticuffs (86g) -1.25 (z -2.0), buy Ashen Strike (76g) -1.45 (z -2.2); needs z over 1.5
+  kind bonus Demon Form: +1.00 (walk gain -0.15)
+  kind bonus Molten Fist: +0.02 (walk gain -0.11)
+  kind bonus Stampede: +0.75 (walk gain +0.17)
+card reward act 2 (weak 0 normal 0 elite 0 boss 1.0 [THE_INSATIABLE_BOSS], 1537 fights, 39.9s, base 3.9 rooms, 40% clear the act) | needs > 0.12 rooms -> take Stampede
+  walking the rest of the act (1537 walks of 1.0 fights, 40% clear the act): Demon Form +0.85±0.07 rooms (40% clear the act), Molten Fist -0.09±0.07 rooms (39% clear the act), Stampede +0.92±0.07 rooms (43% clear the act)
+upgrade gains (38 walks through the route ahead, 2.1s of 2s): PERFECTED_STRIKE +0.38, STAMPEDE +0.37, TAUNT +0.35, BREAKTHROUGH +0.28, JUGGLING +0.14, BLOODLETTING +0.09 | heal 24 HP +1.08
+rest site: upgrading PERFECTED_STRIKE +0.38 vs healing 24 HP +1.08 -> heal
+
+Traceback (most recent call last):
+  File "/home/malcolmsutcliffe/Documents/Malcolm_Stuff/Projects/SlayTheSpireII-Agent/scripts/benchmarks/runs.py", line 103, in play_run
+    result = RunSimulator(make_agent(agent_spec, SEARCH_SEED_OFFSET + seed, deck), seed=seed, ascension=ascension, search_seed=SEARCH_SEED_OFFSET + seed, time_budget=time_budget).run()
+  File "/home/malcolmsutcliffe/Documents/Malcolm_Stuff/Projects/SlayTheSpireII-Agent/scripts/sts2_lite/campaign/simulator.py", line 91, in run
+    self.travel()
+    ~~~~~~~~~~~^^
+  File "/home/malcolmsutcliffe/Documents/Malcolm_Stuff/Projects/SlayTheSpireII-Agent/scripts/sts2_lite/campaign/simulator.py", line 186, in travel
+    self.enter(point)
+    ~~~~~~~~~~^^^^^^^
+  File "/home/malcolmsutcliffe/Documents/Malcolm_Stuff/Projects/SlayTheSpireII-Agent/scripts/sts2_lite/campaign/simulator.py", line 208, in enter
+    {"Monster": lambda: self.fight_room("Monster", self.next_fight("Monster")),
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     "Elite": lambda: self.fight_room("Elite", self.next_fight("Elite")),
+     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     "Boss": lambda: self.fight_room("Boss", r.hidden.rooms.boss),
+     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     "RestSite": self.rest_site, "Shop": self.shop, "Treasure": self.treasure, "Event": self.event}[kind]()
+     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/home/malcolmsutcliffe/Documents/Malcolm_Stuff/Projects/SlayTheSpireII-Agent/scripts/sts2_lite/campaign/simulator.py", line 210, in <lambda>
+    "Boss": lambda: self.fight_room("Boss", r.hidden.rooms.boss),
+                    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/malcolmsutcliffe/Documents/Malcolm_Stuff/Projects/SlayTheSpireII-Agent/scripts/sts2_lite/campaign/simulator.py", line 228, in fight_room
+    self.fight(encounter, room, final)
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/malcolmsutcliffe/Documents/Malcolm_Stuff/Projects/SlayTheSpireII-Agent/scripts/sts2_lite/campaign/simulator.py", line 240, in fight
+    play_fight(sim, self.agent, self.game, self.search, self.time_budget, turn_limit)
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/malcolmsutcliffe/Documents/Malcolm_Stuff/Projects/SlayTheSpireII-Agent/scripts/sts2_lite/campaign/combat.py", line 119, in play_fight
+    action = agent.get_combat_action(agent_view(cs, search), time_budget)
+  File "/home/malcolmsutcliffe/Documents/Malcolm_Stuff/Projects/SlayTheSpireII-Agent/scripts/agents/my_agent.py", line 60, in get_combat_action
+    action, stats = mcts.monte_carlo_tree_search(combat_state, search_config)
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/malcolmsutcliffe/Documents/Malcolm_Stuff/Projects/SlayTheSpireII-Agent/scripts/agents/sts2_MCTS/MCTS.py", line 149, in monte_carlo_tree_search
+    paired = self._paired_check(best_child) if config.paired_scenarios > 0 else None
+             ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "/home/malcolmsutcliffe/Documents/Malcolm_Stuff/Projects/SlayTheSpireII-Agent/scripts/agents/sts2_MCTS/MCTS.py", line 441, in _paired_check
+    return PairedCheck(self).run(picked)
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "/home/malcolmsutcliffe/Documents/Malcolm_Stuff/Projects/SlayTheSpireII-Agent/scripts/agents/sts2_MCTS/paired_check.py", line 87, in run
+    best = self._fallback(plain, results, diffs, rivals, picked)
+  File "/home/malcolmsutcliffe/Documents/Malcolm_Stuff/Projects/SlayTheSpireII-Agent/scripts/agents/sts2_MCTS/paired_check.py", line 114, in _fallback
+    d = [a - b for a, b in zip(diffs[index[id(r[0])]], diffs[fav_i])]
+                                     ~~~~~^^^^^^^^^^
+KeyError: 135548150583152

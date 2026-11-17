@@ -1,0 +1,165 @@
+ancient NEOW (52 walks, 2.0s of 2s): Fishing Rod 7.13, Cursed Pearl 7.07, Kaleidoscope 6.73 -> Fishing Rod
+path (10 paths of 10 kinds of path, 98 walks, 2.0s of 2s): CCCC?R?RTCC$??RB 27.52 (64% through, 0 elites, +1.32 bonus (elites, shops)), C??C?R?RTCC$??RB 25.14 (50% through, 0 elites, +1.32 bonus (elites, shops)) -> CCCC?R?RTCC$??RB
+  kind bonus Flame Barrier: +2.25 (walk gain +1.65)
+  kind bonus Pommel Strike: +1.00 (walk gain +0.46)
+  kind bonus Shrug It Off: +1.50 (walk gain +0.33)
+card reward act 1 (weak 2 normal 3 elite 0 boss 1.0 [THE_KIN_BOSS], 2490 fights, 31.7s, base 20.6 rooms, 37% clear the act) | needs > 0.52 rooms -> take Flame Barrier
+  walking the rest of the act (415 walks of 6.0 fights, 37% clear the act): Flame Barrier +3.90±0.34 rooms (45% clear the act), Pommel Strike +1.46±0.35 rooms (38% clear the act), Shrug It Off +1.83±0.36 rooms (40% clear the act)
+path (9 paths of 9 kinds of path, 102 walks, 2.0s of 2s): C?C$?RETCRCE$RB 26.63 (37% through, 2 elites, +5.45 bonus (elites, shops)), CCCCC??TCER?$RB 24.07 (37% through, 1 elites, +3.45 bonus (elites, shops)) -> C?C$?RETCRCE$RB
+  kind bonus Havoc: +0.75 (walk gain -2.06)
+  kind bonus Taunt: +0.75 (walk gain +0.03)
+  kind bonus Body Slam: +1.00 (walk gain -2.04)
+card reward act 1 (weak 1 normal 2 elite 2 [BYGONE_EFFIGY_ELITE/BYRDONIS_ELITE/PHROG_PARASITE_ELITE] boss 1.0 [THE_KIN_BOSS], 2358 fights, 28.2s, base 18.6 rooms, 34% clear the act) | needs > 0.61 rooms -> take Taunt
+  walking the rest of the act (393 walks of 6.0 fights, 34% clear the act): Havoc -1.31±0.40 rooms (25% clear the act), Taunt +0.78±0.40 rooms (34% clear the act), Body Slam -1.04±0.37 rooms (25% clear the act)
+event JUNGLE_MAZE_ADVENTURE (62 walks, 2.1s of 2s): join_forces 18.42, solo_quest 17.82 -> join_forces
+  kind bonus Inflame: +3.00 (walk gain -0.52)
+  kind bonus Forgotten Ritual: +0.56 (walk gain -3.15)
+  kind bonus Stampede: +3.00 (walk gain -1.12)
+card reward act 1 (weak 0 normal 3 elite 1 [BYGONE_EFFIGY_ELITE/BYRDONIS_ELITE/PHROG_PARASITE_ELITE] boss 1.0 [THE_KIN_BOSS], 2190 fights, 28.1s, base 18.7 rooms, 42% clear the act) | needs > 0.56 rooms -> take Inflame
+  walking the rest of the act (438 walks of 5.0 fights, 42% clear the act): Inflame +2.48±0.37 rooms (41% clear the act), Forgotten Ritual -2.59±0.41 rooms (30% clear the act), Stampede +1.88±0.42 rooms (38% clear the act)
+shop (195 gold, 14 walks through the route ahead, 2.4s of 2s): buy Bronze Scales (190g) +0.03 (z 1.0), buy Dominate (73g) -0.01 (z -0.5), buy Dramatic Entrance (83g) -0.02 (z -0.9), buy Inflame (74g) -1.16 (z -1.0), buy Uppercut (73g) -1.58 (z -1.2), buy Master of Strategy (172g) -1.62 (z -1.2), buy Pendulum (194g) -1.64 (z -1.3), buy Spite (39g) -2.39 (z -1.5), buy Tremble (52g) -2.51 (z -1.5), buy Card Removal (75g) -3.40 (z -1.6); needs z over 1.5
+shop (145 gold, 18 walks through the route ahead, 2.2s of 2s): buy Spite (39g) +2.09 (z 1.5), buy Card Removal (75g) -0.47 (z -0.2), buy Inflame (74g) -0.89 (z -0.4), buy Uppercut (73g) -1.90 (z -1.0), buy Dominate (73g) -2.01 (z -1.0), buy Dramatic Entrance (83g) -2.45 (z -1.7), buy Tremble (52g) -4.18 (z -2.4); needs z over 1.5
+event THE_FUTURE_OF_POTIONS (42 walks, 2.1s of 2s): potion_1 19.10, potion_0 17.27, potion_2 16.77 -> potion_1
+  kind bonus Fiend Fire: +2.00 (walk gain +0.91)
+  kind bonus Feed: +2.00 (walk gain +0.65)
+  kind bonus Mangle: +2.00 (walk gain -0.74)
+card reward act 1 (weak 0 normal 2 elite 2 [BYGONE_EFFIGY_ELITE/BYRDONIS_ELITE/PHROG_PARASITE_ELITE] boss 1.0 [THE_KIN_BOSS], 1170 fights, 13.3s, base 14.7 rooms, 34% clear the act) | needs > 0.83 rooms -> take Fiend Fire
+  walking the rest of the act (234 walks of 5.0 fights, 34% clear the act): Fiend Fire +2.91±0.55 rooms (38% clear the act), Feed +2.65±0.57 rooms (35% clear the act), Mangle +1.26±0.56 rooms (30% clear the act)
+rest site: 0 HP missing, a rest heals 24 -> smith
+upgrade gains (28 walks through the route ahead, 2.0s of 2s): INFLAME +3.53, FLAME_BARRIER +3.52, TAUNT +3.31, BASH +2.23
+  kind bonus Tremble: +0.38 (walk gain -1.19)
+  kind bonus Pyre: +2.00 (walk gain +1.91)
+  kind bonus Unrelenting: +0.75 (walk gain -0.47)
+card reward act 1 (weak 0 normal 2 elite 1 [BYRDONIS_ELITE/PHROG_PARASITE_ELITE] boss 1.0 [THE_KIN_BOSS], 1276 fights, 16.8s, base 16.1 rooms, 48% clear the act) | needs > 0.73 rooms -> take Pyre
+  walking the rest of the act (319 walks of 4.0 fights, 48% clear the act): Tremble -0.81±0.43 rooms (44% clear the act), Pyre +3.91±0.48 rooms (59% clear the act), Unrelenting +0.28±0.46 rooms (46% clear the act)
+  kind bonus Breakthrough: +0.50 (walk gain -1.29)
+  kind bonus Dismantle: +0.75 (walk gain -0.73)
+  kind bonus Shrug It Off: +0.38 (walk gain -0.58)
+card reward act 1 (weak 0 normal 1 elite 1 [BYRDONIS_ELITE/PHROG_PARASITE_ELITE] boss 1.0 [THE_KIN_BOSS], 1272 fights, 20.3s, base 17.2 rooms, 64% clear the act) | needs > 0.72 rooms -> skip
+  walking the rest of the act (424 walks of 3.0 fights, 64% clear the act): Breakthrough -0.79±0.45 rooms (57% clear the act), Dismantle +0.02±0.47 rooms (60% clear the act), Shrug It Off -0.20±0.48 rooms (61% clear the act)
+path (4 paths of 4 kinds of path, 166 walks, 2.0s of 2s): RCE$RB 21.05 (66% through, 1 elites, +3.42 bonus (elites, shops)), CCE$RB 17.63 (47% through, 1 elites, +3.42 bonus (elites, shops)) -> RCE$RB
+rest site: 6 HP missing, a rest heals 24 -> smith
+upgrade gains (34 walks through the route ahead, 2.1s of 2s): PYRE +3.14, TAUNT +2.70, FLAME_BARRIER +2.63, BASH +0.01
+  kind bonus Feel No Pain: +0.75 (walk gain -1.48)
+  kind bonus Havoc: +0.38 (walk gain -0.45)
+  kind bonus Colossus: +0.56 (walk gain -0.27)
+card reward act 1 (weak 0 normal 0 elite 1 [BYRDONIS_ELITE/PHROG_PARASITE_ELITE] boss 1.0 [THE_KIN_BOSS], 1160 fights, 26.4s, base 13.5 rooms, 62% clear the act) | needs > 0.62 rooms -> skip
+  walking the rest of the act (580 walks of 2.0 fights, 62% clear the act): Feel No Pain -0.73±0.39 rooms (59% clear the act), Havoc -0.07±0.39 rooms (61% clear the act), Colossus +0.29±0.40 rooms (62% clear the act)
+path (2 paths of 2 kinds of path, 176 walks, 2.0s of 2s): E$RB 18.82 (75% through, 1 elites, +3.33 bonus (elites, shops)), ?$RB 17.85 (77% through, 0 elites, +1.33 bonus (elites, shops)) -> E$RB
+  kind bonus Shrug It Off: +0.38 (walk gain +0.50)
+  kind bonus Cinder: +0.50 (walk gain -1.36)
+  kind bonus Inflame: +0.75 (walk gain -2.20)
+card reward act 1 (weak 0 normal 0 elite 0 boss 1.0 [THE_KIN_BOSS], 1062 fights, 49.3s, base 14.1 rooms, 76% clear the act) | needs > 0.48 rooms -> take Shrug It Off
+  walking the rest of the act (1062 walks of 1.0 fights, 76% clear the act): Shrug It Off +0.87±0.31 rooms (85% clear the act), Cinder -0.86±0.30 rooms (74% clear the act), Inflame -1.45±0.29 rooms (75% clear the act)
+shop (289 gold, 14 walks through the route ahead, 2.1s of 2s): buy Intimidating Helmet (273g) +4.26 (z 2.4), buy Gorget (176g) +3.26 (z 2.0), buy Card Removal (75g) +3.77 (z 1.1), buy Tremble (49g) +2.02 (z 0.7), buy Headbutt (24g) +1.02 (z 0.4), buy Conflagration (147g) +0.31 (z 0.1), buy Blood Wall (52g) -1.83 (z -0.7), buy Burning Sticks (173g) -0.38 (z -1.0), buy Impatience (85g) -4.30 (z -1.4), buy Hidden Gem (173g) -5.27 (z -1.9), buy Vicious (76g) -5.95 (z -3.0); needs z over 1.5
+shop (113 gold, 24 walks through the route ahead, 2.2s of 2s): buy Card Removal (75g) -0.51 (z -0.3), buy Tremble (49g) -1.76 (z -1.2), buy Headbutt (24g) -2.62 (z -1.6), buy Blood Wall (52g) -4.60 (z -2.4), buy Impatience (85g) -6.11 (z -3.8), buy Vicious (76g) -7.88 (z -4.7); needs z over 1.5
+shop (61 gold, 38 walks through the route ahead, 2.1s of 2s): buy Headbutt (24g) -0.78 (z -0.6), buy Tremble (49g) -1.51 (z -1.0), buy Blood Wall (52g) -2.70 (z -2.1); needs z over 1.5
+rest site: 12 HP missing, a rest heals 24 -> smith
+upgrade gains (30 walks through the route ahead, 2.1s of 2s): FLAME_BARRIER +3.85, TAUNT +1.64, BASH +0.80, SHRUG_IT_OFF -0.17
+  kind bonus Offering: +0.38 (walk gain +0.29)
+  kind bonus Cascade: +0.38 (walk gain -0.12)
+  kind bonus Dark Embrace: +1.00 (walk gain -0.81)
+card reward act 2 (weak 2 normal 3 elite 2 boss 1.0, 2528 fights, 14.0s, base 5.6 rooms, 3% clear the act) | needs > 0.25 rooms -> take Offering
+  walking the rest of the act (316 walks of 8.0 fights, 3% clear the act): Offering +0.67±0.17 rooms (3% clear the act), Cascade +0.25±0.17 rooms (3% clear the act), Dark Embrace +0.19±0.15 rooms (0% clear the act)
+ancient OROBAS (40 walks, 2.0s of 2s): Sand Castle 10.12, Touch of Orobas 9.37, Driftwood 7.92 -> Sand Castle
+path (15 paths of 15 kinds of path, 84 walks, 2.0s of 2s): C?$?CCETRE??ERB 25.31 (83% through, 3 elites, +4.50 bonus (elites, shops)), CC$CCCETRE??ERB 23.77 (66% through, 3 elites, +4.50 bonus (elites, shops)), CCC?CRCTC$?ECRB 22.36 (66% through, 1 elites, +2.98 bonus (elites, shops)) -> C?$?CCETRE??ERB
+  kind bonus Cinder: +0.50 (walk gain -0.17)
+  kind bonus Anger: +0.50 (walk gain +0.58)
+  kind bonus Molten Fist: +0.50 (walk gain +0.13)
+card reward act 2 (weak 1 normal 1 elite 3 [DECIMILLIPEDE_ELITE/ENTOMANCER_ELITE/INFESTED_PRISMS_ELITE] boss 1.0 [THE_INSATIABLE_BOSS], 1254 fights, 17.9s, base 19.2 rooms, 65% clear the act) | needs > 0.55 rooms -> take Anger
+  walking the rest of the act (209 walks of 6.0 fights, 65% clear the act): Cinder +0.33±0.38 rooms (63% clear the act), Anger +1.08±0.36 rooms (69% clear the act), Molten Fist +0.63±0.36 rooms (65% clear the act)
+event DOLL_ROOM (32 walks, 2.0s of 2s): take_some_time 18.94, examine 18.94, random 18.33 -> take_some_time
+event DOLL_ROOM (48 walks, 2.1s of 2s): daughter_of_the_wind 19.73, bing_bong 18.50 -> daughter_of_the_wind
+shop (180 gold, 10 walks through the route ahead, 2.3s of 2s): buy Card Removal (75g) +2.09 (z 1.5), buy Seeker Strike (88g) +2.07 (z 1.5), buy War Paint (169g) +0.04 (z 1.3), buy Infernal Blade (77g) +1.05 (z 1.0), buy Chemical X (171g) +0.03 (z 1.0), buy Secret Weapon (178g) +1.06 (z 0.6), buy Sword Boomerang (51g) +0.02 (z 0.0), buy Headbutt (25g) +0.01 (z 0.0), buy Blood Wall (49g) -0.00 (z -0.0), buy Inflame (74g) -0.01 (z -0.0); needs z over 1.5
+shop (105 gold, 14 walks through the route ahead, 2.2s of 2s): buy Sword Boomerang (51g) +0.00 (z 0.0), buy Inflame (74g) -0.00 (z -0.0), buy Seeker Strike (88g) -0.00 (z -0.0), buy Infernal Blade (77g) -0.00 (z -0.0), buy Headbutt (25g) -0.72 (z -0.6), buy Blood Wall (49g) -2.00 (z -1.1); needs z over 1.5
+  kind bonus Tremble: +0.09 (walk gain -0.62)
+  kind bonus Blood Wall: +0.09 (walk gain -0.82)
+  kind bonus Rampage: +0.38 (walk gain -0.50)
+card reward act 2 (weak 1 normal 3 elite 1 [DECIMILLIPEDE_ELITE/ENTOMANCER_ELITE/INFESTED_PRISMS_ELITE] boss 1.0 [THE_INSATIABLE_BOSS], 1290 fights, 17.9s, base 18.5 rooms, 78% clear the act) | needs > 0.50 rooms -> skip
+  walking the rest of the act (215 walks of 6.0 fights, 78% clear the act): Tremble -0.52±0.33 rooms (72% clear the act), Blood Wall -0.72±0.34 rooms (70% clear the act), Rampage -0.13±0.32 rooms (73% clear the act)
+  kind bonus Colossus: +0.14 (walk gain -0.53)
+  kind bonus Setup Strike: +0.25 (walk gain -0.15)
+  kind bonus Infernal Blade: +0.14 (walk gain -0.31)
+card reward act 2 (weak 0 normal 3 elite 1 [DECIMILLIPEDE_ELITE/ENTOMANCER_ELITE/INFESTED_PRISMS_ELITE] boss 1.0 [THE_INSATIABLE_BOSS], 1170 fights, 18.1s, base 17.3 rooms, 76% clear the act) | needs > 0.47 rooms -> skip
+  walking the rest of the act (234 walks of 5.0 fights, 76% clear the act): Colossus -0.39±0.33 rooms (72% clear the act), Setup Strike +0.10±0.30 rooms (75% clear the act), Infernal Blade -0.17±0.32 rooms (74% clear the act)
+path (9 paths of 9 kinds of path, 110 walks, 2.0s of 2s): CETRE??ERB 21.00 (70% through, 3 elites, +4.50 bonus (elites, shops)), RCTC$?ECRB 17.88 (66% through, 1 elites, +1.50 bonus (elites, shops)) -> CETRE??ERB
+  kind bonus Juggling: +0.75 (walk gain -0.17)
+  kind bonus Battle Trance: +0.14 (walk gain +0.30)
+  kind bonus Iron Wave: +0.25 (walk gain +0.19)
+card reward act 2 (weak 0 normal 0 elite 3 [DECIMILLIPEDE_ELITE/ENTOMANCER_ELITE/INFESTED_PRISMS_ELITE] boss 1.0 [THE_INSATIABLE_BOSS], 1080 fights, 18.3s, base 16.3 rooms, 77% clear the act) | needs > 0.45 rooms -> take Juggling
+  walking the rest of the act (270 walks of 4.0 fights, 77% clear the act): Juggling +0.58±0.29 rooms (75% clear the act), Battle Trance +0.44±0.25 rooms (80% clear the act), Iron Wave +0.44±0.28 rooms (79% clear the act)
+path (6 paths of 6 kinds of path, 108 walks, 2.0s of 2s): ETRE??ERB 22.02 (87% through, 3 elites, +4.50 bonus (elites, shops)), CTC$?ECRB 18.19 (79% through, 1 elites, +1.50 bonus (elites, shops)) -> ETRE??ERB
+  kind bonus Thunderclap: +0.25 (walk gain -0.61)
+  kind bonus Bully: +0.38 (walk gain -0.26)
+  kind bonus Shrug It Off: +0.09 (walk gain -0.36)
+card reward act 2 (weak 0 normal 0 elite 2 [DECIMILLIPEDE_ELITE/ENTOMANCER_ELITE] boss 1.0 [THE_INSATIABLE_BOSS], 1038 fights, 20.6s, base 15.5 rooms, 79% clear the act) | needs > 0.38 rooms -> skip
+  walking the rest of the act (346 walks of 3.0 fights, 79% clear the act): Thunderclap -0.36±0.25 rooms (73% clear the act), Bully +0.11±0.24 rooms (77% clear the act), Shrug It Off -0.27±0.24 rooms (75% clear the act)
+path (2 paths of 2 kinds of path, 136 walks, 2.0s of 2s): TRE??ERB 19.15 (85% through, 2 elites, +3.00 bonus (elites, shops)), TRCR?CRB 15.17 (75% through, 0 elites) -> TRE??ERB
+rest site: 8 HP missing, a rest heals 24 -> smith
+upgrade gains (44 walks through the route ahead, 2.0s of 2s): OFFERING +0.46, JUGGLING -0.19
+  kind bonus Stomp: +0.38 (walk gain -0.44)
+  kind bonus Body Slam: +0.25 (walk gain -0.17)
+  kind bonus Armaments: +0.09 (walk gain -0.51)
+card reward act 2 (weak 0 normal 0 elite 1 [ENTOMANCER_ELITE] boss 1.0 [THE_INSATIABLE_BOSS], 1050 fights, 25.0s, base 12.3 rooms, 77% clear the act) | needs > 0.32 rooms -> skip
+  walking the rest of the act (525 walks of 2.0 fights, 77% clear the act): Stomp -0.07±0.19 rooms (73% clear the act), Body Slam +0.08±0.20 rooms (75% clear the act), Armaments -0.42±0.21 rooms (72% clear the act)
+event WELCOME_TO_WONGOS (46 walks, 2.0s of 2s): bargain_bin 12.54, featured_item 11.93, leave 11.50 -> bargain_bin
+event SLIPPERY_BRIDGE (64 walks, 2.0s of 2s): overcome 11.55, hold_on 11.38 -> overcome
+  kind bonus Thrash: +1.00 (walk gain +0.53)
+  kind bonus Dark Embrace: +0.50 (walk gain -1.15)
+  kind bonus Shrug It Off: +0.09 (walk gain +0.09)
+card reward act 2 (weak 0 normal 0 elite 0 boss 1.0 [THE_INSATIABLE_BOSS], 726 fights, 49.0s, base 9.6 rooms, 82% clear the act) | needs > 0.34 rooms -> take Thrash
+  walking the rest of the act (726 walks of 1.0 fights, 82% clear the act): Thrash +1.53±0.21 rooms (86% clear the act), Dark Embrace -0.65±0.21 rooms (76% clear the act), Shrug It Off +0.18±0.21 rooms (83% clear the act)
+rest site: 8 HP missing, a rest heals 24 -> smith
+upgrade gains (38 walks through the route ahead, 2.1s of 2s): JUGGLING +0.77, THRASH +0.54
+  kind bonus Fiend Fire: +0.50 (walk gain -0.07)
+  kind bonus Conflagration: +0.50 (walk gain -0.05)
+  kind bonus Mangle: +0.50 (walk gain -0.14)
+card reward act 3 (weak 2 normal 3 elite 2 boss 1.0, 2216 fights, 10.3s, base 3.7 rooms, 0% clear the act) | needs > 0.14 rooms -> take Conflagration
+  walking the rest of the act (277 walks of 8.0 fights, 0% clear the act): Fiend Fire +0.43±0.09 rooms (0% clear the act), Conflagration +0.45±0.09 rooms (0% clear the act), Mangle +0.36±0.09 rooms (0% clear the act)
+ancient NONUPEIPE (38 walks, 2.1s of 2s): Beautiful Bracelet 7.34, Delicate Frond 6.76, Signet Ring 6.76 -> Beautiful Bracelet
+path (11 paths of 11 kinds of path, 84 walks, 2.0s of 2s): C?$C?ETRE??ERB 20.89 (40% through, 3 elites, +4.74 bonus (elites, shops)), C??CCET?RCCCRB 19.33 (70% through, 1 elites, +1.00 bonus (elites, shops)), CCC?$ET?RCCCRB 18.53 (40% through, 1 elites, +2.88 bonus (elites, shops)) -> C?$C?ETRE??ERB
+  kind bonus Armaments: +0.09 (walk gain -0.13)
+  kind bonus Drum of Battle: +0.14 (walk gain -0.54)
+  kind bonus Anger: +0.12 (walk gain +0.39)
+card reward act 3 (weak 1 normal 0 elite 3 [KNIGHTS_ELITE/MECHA_KNIGHT_ELITE/SOUL_NEXUS_ELITE] boss 1.0 [QUEEN_BOSS], 885 fights, 12.7s, base 12.9 rooms, 25% clear the act) | needs > 0.46 rooms -> take Anger
+  walking the rest of the act (177 walks of 5.0 fights, 25% clear the act): Armaments -0.04±0.36 rooms (23% clear the act), Drum of Battle -0.40±0.39 rooms (21% clear the act), Anger +0.52±0.30 rooms (24% clear the act)
+  kind bonus Setup Strike: +0.06 (walk gain -0.66)
+  kind bonus Headbutt: +0.06 (walk gain -0.78)
+  kind bonus Inflame: +0.38 (walk gain -0.32)
+card reward act 3 (weak 1 normal 0 elite 3 [KNIGHTS_ELITE/MECHA_KNIGHT_ELITE/SOUL_NEXUS_ELITE] boss 1.0 [QUEEN_BOSS], 895 fights, 12.8s, base 14.4 rooms, 36% clear the act) | needs > 0.54 rooms -> skip
+  walking the rest of the act (179 walks of 5.0 fights, 36% clear the act): Setup Strike -0.59±0.36 rooms (32% clear the act), Headbutt -0.72±0.36 rooms (31% clear the act), Inflame +0.06±0.35 rooms (34% clear the act)
+event REFLECTIONS (58 walks, 2.0s of 2s): touch_a_mirror 12.54, shatter 11.62 -> touch_a_mirror
+shop (329 gold, 12 walks through the route ahead, 2.2s of 2s): buy Bolas (174g) +0.03 (z 1.6), buy Fight Me (74g) +0.01 (z 1.3), buy Happy Flower (185g) +0.01 (z 0.8), buy Card Removal (100g) -0.01 (z -0.0), buy Pillage (78g) -0.71 (z -1.0), buy Vajra (189g) -0.73 (z -1.0), buy Impervious (151g) -1.39 (z -1.0), buy Orrery (182g) -2.07 (z -1.4), buy Inflame (36g) -1.46 (z -1.5), buy Automation (89g) -2.85 (z -1.8), buy Forgotten Ritual (76g) -2.89 (z -1.8); needs z over 0.1
+shop (155 gold, 14 walks through the route ahead, 2.0s of 2s): buy Fight Me (74g) +0.02 (z 0.0), buy Forgotten Ritual (76g) -0.17 (z -0.2), buy Automation (89g) -0.24 (z -0.3), buy Pillage (78g) -0.75 (z -0.6), buy Card Removal (100g) -0.65 (z -1.0), buy Inflame (36g) -0.67 (z -1.1), buy Impervious (151g) -1.36 (z -1.5); needs z over 0.1
+  kind bonus Bloodletting: +0.09 (walk gain +0.43)
+  kind bonus Rampage: +0.05 (walk gain +0.27)
+  kind bonus Fiend Fire: +0.06 (walk gain +0.23)
+card reward act 3 (weak 0 normal 0 elite 3 [KNIGHTS_ELITE/MECHA_KNIGHT_ELITE/SOUL_NEXUS_ELITE] boss 1.0 [QUEEN_BOSS], 716 fights, 10.5s, base 10.8 rooms, 26% clear the act) | needs > 0.35 rooms -> take Bloodletting
+  walking the rest of the act (179 walks of 4.0 fights, 26% clear the act): Bloodletting +0.53±0.23 rooms (29% clear the act), Rampage +0.32±0.28 rooms (28% clear the act), Fiend Fire +0.29±0.31 rooms (28% clear the act)
+  kind bonus Breakthrough: +0.03 (walk gain -0.24)
+  kind bonus Anger: +0.03 (walk gain -0.16)
+  kind bonus Blood Wall: +0.05 (walk gain -0.53)
+card reward act 3 (weak 0 normal 0 elite 3 [KNIGHTS_ELITE/MECHA_KNIGHT_ELITE/SOUL_NEXUS_ELITE] boss 1.0 [QUEEN_BOSS], 748 fights, 10.7s, base 11.6 rooms, 36% clear the act) | needs > 0.34 rooms -> skip
+  walking the rest of the act (187 walks of 4.0 fights, 36% clear the act): Breakthrough -0.21±0.25 rooms (33% clear the act), Anger -0.12±0.22 rooms (33% clear the act), Blood Wall -0.49±0.28 rooms (31% clear the act)
+event SELF_HELP_BOOK (46 walks, 2.0s of 2s): read_entire_book 11.40, read_the_back 11.25, read_passage 11.18 -> read_entire_book
+  kind bonus Dismantle: +0.05 (walk gain +0.06)
+  kind bonus Stoke: +0.09 (walk gain +0.21)
+  kind bonus Juggling: +0.38 (walk gain -0.05)
+card reward act 3 (weak 0 normal 0 elite 2 [MECHA_KNIGHT_ELITE/SOUL_NEXUS_ELITE] boss 1.0 [QUEEN_BOSS], 735 fights, 11.2s, base 10.3 rooms, 34% clear the act) | needs > 0.35 rooms -> skip
+  walking the rest of the act (245 walks of 3.0 fights, 34% clear the act): Dismantle +0.11±0.21 rooms (35% clear the act), Stoke +0.30±0.26 rooms (37% clear the act), Juggling +0.32±0.23 rooms (34% clear the act)
+rest site: 6 HP missing, a rest heals 24 -> smith
+upgrade gains (30 walks through the route ahead, 2.1s of 2s): JUGGLING +0.42, INFLAME +0.31, CONFLAGRATION +0.29, THRASH +0.29, BOLAS +0.02
+  kind bonus Blood Wall: +0.05 (walk gain -0.12)
+  kind bonus Vicious: +0.38 (walk gain +0.15)
+  kind bonus Thunderclap: +0.03 (walk gain -0.21)
+card reward act 3 (weak 0 normal 0 elite 1 [SOUL_NEXUS_ELITE] boss 1.0 [QUEEN_BOSS], 754 fights, 12.3s, base 7.7 rooms, 40% clear the act) | needs > 0.30 rooms -> take Vicious
+  walking the rest of the act (377 walks of 2.0 fights, 40% clear the act): Blood Wall -0.07±0.17 rooms (39% clear the act), Vicious +0.52±0.20 rooms (42% clear the act), Thunderclap -0.17±0.18 rooms (38% clear the act)
+event THIS_OR_THAT (134 walks, 2.0s of 2s): plain 7.04, ornate 6.83 -> plain
+path (3 paths of 3 kinds of path, 216 walks, 2.0s of 2s): ?ERB 8.87 (50% through, 1 elites, +1.00 bonus (elites, shops)), ECRB 8.56 (45% through, 1 elites, +1.00 bonus (elites, shops)), CCRB 7.57 (45% through, 0 elites) -> ?ERB
+  kind bonus Colossus: +0.07 (walk gain -0.45)
+  kind bonus Setup Strike: +0.03 (walk gain -0.04)
+  kind bonus Bloodletting: +0.05 (walk gain -0.27)
+card reward act 3 (weak 0 normal 0 elite 0 boss 1.0 [QUEEN_BOSS], 636 fights, 11.0s, base 6.3 rooms, 54% clear the act) | needs > 0.23 rooms -> skip
+  walking the rest of the act (636 walks of 1.0 fights, 54% clear the act): Colossus -0.38±0.15 rooms (49% clear the act), Setup Strike -0.01±0.15 rooms (53% clear the act), Bloodletting -0.22±0.15 rooms (51% clear the act)
+upgrade gains (100 walks through the route ahead, 2.0s of 2s): INFLAME +0.62, VICIOUS +0.55, CONFLAGRATION +0.44 | heal 24 HP +0.62
+rest site: upgrading INFLAME +0.62 vs healing 24 HP +0.62 -> heal

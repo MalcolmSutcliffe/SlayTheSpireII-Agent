@@ -273,7 +273,7 @@ class RunVerifier:
                 self.report("unknown.card", "warn", state, f"card {cid} is not modelled", once=cid)
         for potion in player.get("potions") or []:
             pid = (potion or {}).get("id")
-            if pid and pid not in PotionId.__members__ and pid != "RANDOM_POTION":
+            if pid and PotionId.from_game_id(pid) is None and pid != "RANDOM_POTION":
                 self.report("unknown.potion", "warn", state, f"potion {pid} is not modelled", once=pid)
 
     def check_map(self, state : dict):
@@ -432,7 +432,7 @@ class RunVerifier:
             elif category == "potion":
                 pid = item.get("potion_id")
                 try:
-                    rarity = POTION_INFO[PotionId[pid]].rarity
+                    rarity = POTION_INFO[PotionId.from_game_id(pid)].rarity
                 except KeyError:
                     self.report("unknown.potion", "warn", state, f"potion {pid} is not modelled", once=pid)
                     continue

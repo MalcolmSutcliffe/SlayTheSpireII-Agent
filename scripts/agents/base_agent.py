@@ -47,10 +47,12 @@ class BaseAgent:
         claims = decision.options_named("claim_reward")
         return claims[0] if claims else decision.options[0]
 
+    rest_heal_below = REST_HEAL_BELOW
+
     def _get_rest_decision(self, decision : Decision) -> Option:
         by_id = {o.data.get("id"): o for o in decision.options_named("choose_rest_option")}
         player = decision.player
-        hurt = player.get("hp", 0) < REST_HEAL_BELOW * player.get("max_hp", 1)
+        hurt = player.get("hp", 0) < self.rest_heal_below * player.get("max_hp", 1)
         for wanted in (("HEAL", "SMITH") if hurt else ("SMITH", "HEAL")):
             if wanted in by_id:
                 return by_id[wanted]

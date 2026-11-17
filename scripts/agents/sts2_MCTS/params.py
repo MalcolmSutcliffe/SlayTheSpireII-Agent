@@ -53,12 +53,14 @@ class RewardParams:
     turn_cost : float = 0.1                 # a win loses this much HP of score per turn it took
     loss_turn_bonus : float = 0.02          # a loss gains this much (a share of the enemies' HP) per turn lasted: dying later leaves more chances to find a win
     max_hp_scaling : float = 2.0
+    lizard_tail_share : float = 0.5          # a Lizard Tail still unused at the end of a won fight counts this share of the max HP as HP (what it would revive the player with), so the search does not die to spend it
     loss_potion_bonus : float = 0.0         # a line that is not won and has the player alive gains this for each potion held (set from PotionParams.kept_potion_loss_bonus when gated)
     default_potion_bonus : int = 16         # the potion prices below apply only when PotionParams.gated is off
     potion_bonus : dict[PotionId, int] = field(default_factory=lambda: {
         PotionId.BLOOD_POTION : 18,
         PotionId.FORTIFIER : 15,
-        PotionId.HEART_OF_IRON : 15,
+        PotionId.HEART_OF_IRON : 18,
+        PotionId.SWIFT_POTION : 12,
         PotionId.FRUIT_JUICE : 16,
         PotionId.LUCKY_TONIC : 18,
         PotionId.OROBIC_ACID : 20,

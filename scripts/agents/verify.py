@@ -75,12 +75,15 @@ def is_unpredictable_step(before : CombatState, actions : list[dict]) -> bool:
 def some_target_roll_matches(before : CombatState, actions : list[dict], actual : CombatState, random_step : bool, tries : int = 300) -> bool:
     """Random targets change how much damage is done when the enemies differ (Vulnerable on one of them), so the totals alone are not
     enough: replay the actions with fresh random targets until one outcome matches the game exactly."""
-    from sts2_lite.combat import CombatState, CombatSimulator
+    from sts2_lite.combat import CombatState, CombatSimulator, IllegalActionError
     for _ in range(tries):
         replay = CombatState.deepcopy(before)
         simulator = CombatSimulator(replay)
-        for action in actions:
-            simulator.perform_action(action)
+        try:
+            for action in actions:
+                simulator.perform_action(action)
+        except IllegalActionError:
+            return False        # the actions cannot be replayed here (a card choice made in between is not among them): nothing to match against
         if not compare(replay, actual, random_step=random_step):
             return True
     return False
@@ -89,7 +92,7 @@ def game_order_matches(before : CombatState, actions : list[dict], before_game :
     """A step that draws, shuffles or plays from the draw pile depends on the draw order the sim does not know. The game's draw_pile list is in
     draw order (first card = top), so replay the actions with the sim's pile in that order: when the outcome then matches the game exactly,
     the engine was right and the difference was only the order."""
-    from sts2_lite.combat import CombatState, CombatSimulator
+    from sts2_lite.combat import CombatState, CombatSimulator, IllegalActionError
     listed = (before_game.get("player") or {}).get("draw_pile") or []
     if not listed:
         return False
@@ -104,8 +107,11 @@ def game_order_matches(before : CombatState, actions : list[dict], before_game :
                 ordered.append(match)
         pile[:] = pile + ordered[::-1]          # the top of the pile is the end of the list
         simulator = CombatSimulator(replay)
-        for action in actions:
-            simulator.perform_action(action)
+        try:
+            for action in actions:
+                simulator.perform_action(action)
+        except IllegalActionError:
+            return False
         if not compare(replay, actual, random_step=False):
             return True
     return False
@@ -152,6 +158,9 @@ def _fresh_spawn_hp_is_random(pe, ae, ascension : int = 0) -> bool:
     # (a Wriggler hit by the rest of a Whirlwind on the turn it appeared)
     return all(low <= e.max_hp <= high for e in (pe, ae)) and pe.max_hp - pe.current_hp == ae.max_hp - ae.current_hp
 
+# Relics whose counter is only what the game shows on the relic (the turn it is on): the sim does not keep it, and what the relic does is compared in the HP it takes
+COUNTER_NOT_COMPARED = frozenset({"STONE_CALENDAR"})
+
 def compare(predicted : CombatState, actual : CombatState, random_step : bool = False, random_target : bool = False) -> list[str]:
     """Differences between the simulated state and the game's. With `random_step` only what no draw
     or shuffle can change is checked as exact: the cards the player owns in total and the exhaust pile
@@ -184,7 +193,7 @@ def compare(predicted : CombatState, actual : CombatState, random_step : bool = 
         other = ap.relics.get(relic)
         if other is None:
             diffs.append(f"relic {relic.name}: in the sim but not loaded from the game")
-        elif inst.counter != other.counter or inst.used != other.used:
+        elif (inst.counter != other.counter and relic.name not in COUNTER_NOT_COMPARED) or inst.used != other.used:
             diffs.append(f"relic {relic.name}: sim counter {inst.counter} used {inst.used}, game counter {other.counter} used {other.used}")
 
     everything = lambda p: _cards(p.hand) + _cards(p.draw_pile) + _cards(p.discard_pile)

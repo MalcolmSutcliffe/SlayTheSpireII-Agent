@@ -17,6 +17,11 @@ def use_potion(slot: int, target: str | None = None) -> JsonDict:
     return payload
 
 
+def discard_potion(slot: int) -> JsonDict:
+    """Throw a potion away (out of combat too): to make room for a better one."""
+    return {"action": "discard_potion", "slot": slot}
+
+
 def end_turn() -> JsonDict:
     return {"action": "end_turn"}
 
@@ -114,6 +119,7 @@ def from_name(name: str, **kwargs: object) -> JsonDict:
     factories = {
         "play_card": play_card,
         "use_potion": use_potion,
+        "discard_potion": discard_potion,
         "end_turn": end_turn,
         "choose_map_node": choose_map_node,
         "choose_event_option": choose_event_option,

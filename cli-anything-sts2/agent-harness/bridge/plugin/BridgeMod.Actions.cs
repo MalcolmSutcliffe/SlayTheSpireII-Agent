@@ -55,6 +55,7 @@ public static partial class BridgeMod
         {
             "play_card" => ExecutePlayCard(player, data),
             "use_potion" => ExecuteUsePotion(player, data),
+            "discard_potion" => ExecuteDiscardPotion(player, data),
             "end_turn" => ExecuteEndTurn(player),
             "choose_map_node" => ExecuteChooseMapNode(data),
             "choose_event_option" => ExecuteChooseEventOption(data),
@@ -436,6 +437,31 @@ public static partial class BridgeMod
         {
             ["status"] = "ok",
             ["message"] = $"Using potion '{SafeGetText(() => potion.Title)}' from slot {slot}{targetMsg}"
+        };
+    }
+
+    private static Dictionary<string, object?> ExecuteDiscardPotion(Player player, Dictionary<string, JsonElement> data)
+    {
+        if (!data.TryGetValue("slot", out var slotElem))
+            return Error("Missing 'slot' (potion slot index)");
+
+        int slot = slotElem.GetInt32();
+        if (slot < 0 || slot >= player.PotionSlots.Count)
+            return Error($"Potion slot {slot} out of range (player has {player.PotionSlots.Count} slots)");
+
+        var potion = player.GetPotionAtSlotIndex(slot);
+        if (potion == null)
+            return Error($"No potion in slot {slot}");
+        if (potion.IsQueued)
+            return Error($"Potion '{SafeGetText(() => potion.Title)}' is queued for use");
+
+        string title = SafeGetText(() => potion.Title) ?? "potion";
+        _ = MegaCrit.Sts2.Core.Commands.PotionCmd.Discard(potion);
+
+        return new Dictionary<string, object?>
+        {
+            ["status"] = "ok",
+            ["message"] = $"Discarding potion '{title}' from slot {slot}"
         };
     }
 

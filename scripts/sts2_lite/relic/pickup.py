@@ -88,6 +88,12 @@ def _large_capsule(c):
     c.add_card("DEFEND_IRONCLAD")
 
 
+def _neows_sacrifice(c):
+    """Neow's curse option: an Ambergris potion (heals half the max HP) and a Guilty (unplayable, gone after 5 combats)."""
+    c.gain_potion("AMBERGRIS")
+    c.add_card("GUILTY")
+
+
 def _cursed_pearl(c):
     c.add_card("GREED")
     c.gain_gold(333)
@@ -327,7 +333,7 @@ def _lost_coffer(c):
 
 
 EFFECTS : dict[str, Callable] = {
-    "NEOWS_TORMENT": lambda c: c.add_card("NEOWS_FURY"), "LOST_COFFER": _lost_coffer, "NEW_LEAF": lambda c: c.transform(1),
+    "NEOWS_TORMENT": lambda c: c.add_card("NEOWS_FURY"), "NEOWS_SACRIFICE": _neows_sacrifice, "LOST_COFFER": _lost_coffer, "NEW_LEAF": lambda c: c.transform(1),
     "PHIAL_HOLSTER": _phial_holster, "PRECISE_SCISSORS": lambda c: c.remove_cards(1), "LEAD_PAPERWEIGHT": _lead_paperweight, "NEOWS_TALISMAN": _upgrade_last_basic,
     "NUTRITIOUS_OYSTER": lambda c: c.gain_max_hp(11), "POMANDER": lambda c: c.upgrade_picked(1), "SMALL_CAPSULE": lambda c: c.run.offers.append({"kind": "relic"}),
     "HEFTY_TABLET": _hefty_tablet, "LEAFY_POULTICE": _leafy_poultice, "NEOWS_BONES": _neows_bones, "PRECARIOUS_SHEARS": _precarious_shears,
@@ -380,7 +386,7 @@ def obtain_relic(ctx, relic_id : str | None = None, name : str | None = None, **
 # RelicModel.IsTradable (Relic Trader, Ranwid the Elder): not a Starter / Event / Ancient relic, not used up, no pickup effect, no pet
 HAS_PICKUP_EFFECT = frozenset("""ALCHEMICAL_COFFER ASTROLABE BYRDPIP CALLING_BELL CAULDRON DISTINGUISHED_CAPE DOLLYS_MIRROR ELECTRIC_SHRYMP EMPTY_CAGE FAKE_LEES_WAFFLE FAKE_MANGO
 FRAGRANT_MUSHROOM GNARLED_HAMMER GOLDEN_COMPASS GOLDEN_PEARL HEFTY_TABLET JEWELRY_BOX KALEIDOSCOPE KIFUDA LEES_WAFFLE LOOMING_FRUIT LOST_COFFER MANGO
-NEOWS_TALISMAN NEOWS_TORMENT NEW_LEAF NUTRITIOUS_OYSTER OLD_COIN ORRERY PAELS_TOOTH PANDORAS_BOX PEAR PHIAL_HOLSTER POTION_BELT PRECARIOUS_SHEARS
+NEOWS_SACRIFICE NEOWS_TALISMAN NEOWS_TORMENT NEW_LEAF NUTRITIOUS_OYSTER OLD_COIN ORRERY PAELS_TOOTH PANDORAS_BOX PEAR PHIAL_HOLSTER POTION_BELT PRECARIOUS_SHEARS
 PRECISE_SCISSORS PUNCH_DAGGER ROYAL_STAMP SAND_CASTLE SEA_GLASS SERE_TALON STRAWBERRY TOY_BOX WAR_PAINT WHETSTONE YUMMY_COOKIE BOUND_PHYLACTERY PHYLACTERY_UNBOUND""".split())
 TRADABLE_RARITIES = frozenset({"Common", "Uncommon", "Rare", "Shop"})
 

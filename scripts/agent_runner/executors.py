@@ -19,6 +19,8 @@ COMMANDS = {
     "select_relic": ("select-relic", ("index",)),
     "skip_relic_selection": ("skip-relic-selection", ()),
     "claim_treasure_relic": ("claim-treasure-relic", ("index",)),
+    "use_potion": ("use-potion", ("slot",)),            # out of combat: a potion the game lets be drunk any time (Blood Potion, Fruit Juice); in a fight game_client.act sends it with its target
+    "discard_potion": ("discard-potion", ("slot",)),
 }
 
 def command_for(action : dict) -> list[str]:

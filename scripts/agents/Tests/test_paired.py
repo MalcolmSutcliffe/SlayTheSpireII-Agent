@@ -105,3 +105,53 @@ def test_identical_moves_are_not_replaced():
     first = child_for(root, "play_card", 0)
     result = mcts._paired_check(first)
     assert result is None or not result["replaced"]
+
+
+def test_a_refused_potion_falls_back_to_the_trees_favourite_not_the_best_noisy_mean():
+    from types import SimpleNamespace as N
+    from agents.sts2_MCTS.paired_check import PairedCheck
+    potion = N(action={"action": "use_potion"}, visits=3000)
+    favourite = N(action={"action": "play_card"}, visits=2500)
+    end = N(action={"action": "end_turn"}, visits=240)
+    mcts = N(_root_node=N(children=[potion, favourite, end]))
+    noise = [(-1) ** i * 0.5 for i in range(40)]
+    # end_turn is a hair ahead of the favourite on average, but the paired difference is all noise
+    diffs = [[-0.30 + x for x in noise], [-0.29 + x for x in noise][::-1]]
+    results = [(favourite, -0.30, 0.1, 40), (end, -0.29, 0.1, 40)]
+    check = PairedCheck(mcts)
+    best = check._fallback(results, results, diffs, [favourite, end], potion)
+    assert best[0] is favourite
+
+def test_a_refused_potion_gives_way_to_a_plain_line_clearly_ahead_of_the_favourite():
+    from types import SimpleNamespace as N
+    from agents.sts2_MCTS.paired_check import PairedCheck
+    potion = N(action={"action": "use_potion"}, visits=3000)
+    favourite = N(action={"action": "play_card"}, visits=2500)
+    other = N(action={"action": "play_card"}, visits=900)
+    mcts = N(_root_node=N(children=[potion, favourite, other]))
+    diffs = [[-1.0 + 0.01 * (i % 3) for i in range(40)], [-0.5 + 0.01 * (i % 3) for i in range(40)]]
+    results = [(favourite, -1.0, 0.0, 40), (other, -0.5, 0.0, 40)]
+    best = PairedCheck(mcts)._fallback(results, results, diffs, [favourite, other], potion)
+    assert best[0] is other
+
+
+def test_a_refused_potion_beats_nothing_when_the_picked_plain_move_is_clearly_ahead_of_the_favourite():
+    from types import SimpleNamespace as N
+    from agents.sts2_MCTS.paired_check import PairedCheck
+    potion = N(action={"action": "use_potion"}, visits=300)
+    picked = N(action={"action": "play_card"}, visits=900)
+    favourite = N(action={"action": "play_card"}, visits=2500)          # the tree's favourite is not the move the check began with
+    mcts = N(_root_node=N(children=[potion, picked, favourite]))
+    diffs = [[-1.0 + 0.01 * (i % 3) for i in range(40)], [0.5 for _ in range(40)]]          # rivals: the favourite (below the picked move), the potion
+    results = [(favourite, -1.0, 0.0, 40), (potion, 0.5, 0.0, 40)]
+    plain = [(picked, 0.0, 0.0, 40), results[0]]
+    best = PairedCheck(mcts)._fallback(plain, results, diffs, [favourite, potion], picked)
+    assert best[0] is picked
+
+
+def test_a_card_choice_whose_cards_are_gone_does_not_crash_the_action_list():
+    from sts2_lite.combat import CombatSimulator, PendingChoice
+    cs = make_state([strike()])
+    cs.pending_choice = PendingChoice("upgrade", [3], "hand")
+    actions = CombatSimulator(cs).get_available_actions()
+    assert cs.pending_choice is None and all(a["action"] != "choose_card" for a in actions) and actions

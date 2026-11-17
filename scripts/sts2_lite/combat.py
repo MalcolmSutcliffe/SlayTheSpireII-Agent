@@ -452,11 +452,6 @@ class CombatState:
         new_cs.won = combat_state.won
         return new_cs
 
-_TEMPORARY_STRENGTH = frozenset((StatusId.SETUP_STRIKE, StatusId.MANGLE, StatusId.DARK_SHACKLES, StatusId.FLEX_POTION, StatusId.REPTILE_TRINKET,
-                                 StatusId.FEEDING_FRENZY, StatusId.SPEED_POTION))      # what _return_temporary_strength gives back
-_UNTARGETED = (TargetType.Self, TargetType.AllEnemies, TargetType.RandomEnemy, TargetType.NONE)
-
-
 class IllegalActionError(ValueError):
     """Raised when an action is not legal in the current state."""
 
@@ -517,12 +512,10 @@ class CombatSimulator:
         handlers = STATUS_HANDLERS.by_event.get(event)
         if handlers is not None:
             for creature in [cs.player, *cs.enemies]:
-                status = creature.status
-                # most creatures hold no status this event concerns: one set test skips them. The statuses that do are listed first
-                # (a copy, as before: handlers add statuses), in the dict's order.
-                if status and not handlers.keys().isdisjoint(status.keys()):
-                    for status_id, inst in [item for item in status.items() if item[0] in handlers]:
-                        handlers[status_id](self, creature, inst.amount, *args)
+                for status_id, inst in list(creature.status.items()):  # copy: handlers add statuses
+                    handler = handlers.get(status_id)
+                    if handler is not None:
+                        handler(self, creature, inst.amount, *args)
         if cs.player.relics:
             fire_relics(self, event, *args)
 
@@ -1108,8 +1101,6 @@ class CombatSimulator:
     @staticmethod
     def _return_temporary_strength(creature : Creature):
         """Setup Strike, Mangle and Dark Shackles: the Strength they gave or took is returned when the creature's turn ends."""
-        if _TEMPORARY_STRENGTH.isdisjoint(creature.status):     # none of the markers: nothing below would happen
-            return
         for marker, sign in ((StatusId.SETUP_STRIKE, 1), (StatusId.MANGLE, -1), (StatusId.DARK_SHACKLES, -1), (StatusId.FLEX_POTION, 1), (StatusId.REPTILE_TRINKET, 1), (StatusId.FEEDING_FRENZY, 1)):
             amount = creature.status.pop(marker, None)
             if amount is not None:
@@ -1368,6 +1359,13 @@ class CombatSimulator:
         pending = self.combat_state.pending_choice
         if pending is not None:
             cards = self._pile(pending.pile)
+            stale = [i for i in pending.indices if i >= len(cards)]
+            if stale:                           # a pile that shrank under the choice (an engine corner case seen in rollouts): the cards that are gone are not offered
+                pending.indices = [i for i in pending.indices if i < len(cards)]
+                if not pending.indices and not pending.optional:
+                    self.combat_state.pending_choice = None         # nothing left to pick: play on
+                    pending = None
+        if pending is not None:
             output = [{"action" : "choose_card", "card_index" : i, "pile" : pending.pile,
                        "card_id" : cards[i].card_id.name, "is_upgraded" : cards[i].is_upgraded}
                       for i in pending.indices]
@@ -1376,13 +1374,12 @@ class CombatSimulator:
             return output
 
         for c_i, c in enumerate(self.combat_state.player.hand):
-            if c.target_type in _UNTARGETED:
+            if c.target_type in (TargetType.Self, TargetType.AllEnemies, TargetType.RandomEnemy, TargetType.NONE):
                 if c.can_play_card(self, 0):
                     output.append({"action" : "play_card", "card_index" : c_i, "target" : 0})
-            elif c.target_type is TargetType.AnyEnemy:
-                # can_play_card does not read the target: one check for the card, then a move per enemy
-                if self.combat_state.enemies and c.can_play_card(self, 0):
-                    for e_i, e in enumerate(self.combat_state.enemies):
+            elif c.target_type == TargetType.AnyEnemy:
+                for e_i, e in enumerate(self.combat_state.enemies):
+                    if c.can_play_card(self, e_i):
                         output.append({"action" : "play_card", "card_index" : c_i, "target" : e_i, "target_name" : e.enemy_id})
 
         output.extend(usable_potion_actions(self))

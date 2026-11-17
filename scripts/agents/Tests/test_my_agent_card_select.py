@@ -26,6 +26,13 @@ def test_a_five_card_removal_takes_curses_then_strikes_then_defends_then_the_rar
     assert [a["action"] for a in actions] == ["select_card"] * 5 + ["confirm_selection"]
     assert [a["index"] for a in actions[:5]] == [6, 1, 3, 2, 5]
 
+def test_a_transform_takes_strikes_then_defends_then_the_lowest_rarity_and_curses_last():
+    cards = [card(0, "Omnislice", "OMNISLICE", "Uncommon"), card(1, "Strike", "STRIKE_IRONCLAD", "Basic"), card(2, "Defend", "DEFEND_IRONCLAD", "Basic"),
+             card(3, "Rampage", "RAMPAGE", "Rare"), card(4, "Anger", "ANGER", "Common"), card(5, "Doubt", "DOUBT", "Curse", type="Curse")]
+    actions = run(MyAgent(seed=1), "Choose 5 cards to Transform.", "select", cards, 6)
+    assert [a["index"] for a in actions[:5]] == [1, 2, 4, 0, 3]
+    assert [a["index"] for a in run(MyAgent(seed=1), "Choose a card to Transform.", "select", [cards[5], cards[3]], 1)] == [3]
+
 def test_an_enchantment_goes_to_three_different_good_cards():
     cards = [card(0, "Strike", "STRIKE_IRONCLAD", "Basic"), card(1, "Whirlwind", "WHIRLWIND", "Uncommon", cost="X"), card(2, "Rampage", "RAMPAGE", "Uncommon"),
              card(3, "Twin Strike", "TWIN_STRIKE", "Common", description="Deal 5 damage twice."), card(4, "Anger", "ANGER", "Common", cost="0", enchantment="SHARP")]

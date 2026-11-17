@@ -159,7 +159,14 @@ class sts2_MCTS:
             if order is not None and order["replaced"]:
                 move = order["action"]
 
+        plain_check = None
+        if gate.gated and move.get("action") == "use_potion":
+            plain_check = self._plain_check(combat_state, move)
+            if plain_check is not None and plain_check["replaced"]:
+                move = plain_check["action"]
+
         stats = { 
+            "plain_check" : None if plain_check is None else {k: v for k, v in plain_check.items() if k != "action"},
             "children": [{"action": c.action, "visits": c.visits, "q": c.total_reward / c.visits} for c in self._root_node.children],
             "num_sims" : self._num_sims,
             "time_taken" : time.perf_counter() - search_started,
@@ -173,6 +180,31 @@ class sts2_MCTS:
                 }
         stats["time_taken"] = time.perf_counter() - search_started
         return move, stats
+
+    def _plain_check(self, combat_state : CombatState, move : dict) -> dict | None:
+        """A potion pick is checked against a proper search without potions. The tree that drinks has looked deeply along the potion's line, while the
+        plain moves beside it were barely visited and are rated by one rollout each, so they look far worse than they are. Here the plain moves get a search of
+        their own (a fresh tree, potions out, the same budget), and the potion is drunk only when its line is ahead of the best plain line by
+        PotionParams.potion_min_gain_hp (a share of the starting HP in reward units); otherwise the best plain move is played. The tree is put back afterwards."""
+        gate = self._search_config.potions
+        child = next((c for c in self._root_node.children if c.action == move), None)
+        if child is None or child.visits == 0:
+            return None
+        potion_q = child.total_reward / child.visits
+        saved = (self._root_node, self._table, self._tree_potions, self._potions_on, self._reward_lo, self._reward_hi, self._num_sims, getattr(self, "_start_time", 0.0))
+        try:
+            self._potions_on = self._tree_potions = False
+            self._table = {}
+            self._root_node = sts2_DeterministicNode(None, CombatState.deepcopy(combat_state), None)
+            self._reward_lo, self._reward_hi = math.inf, -math.inf
+            self._run_search()
+            plain = self._pick_root_child()
+            plain_q = plain.total_reward / max(1, plain.visits)
+            action, visits = plain.action, plain.visits
+        finally:
+            (self._root_node, self._table, self._tree_potions, self._potions_on, self._reward_lo, self._reward_hi, self._num_sims, self._start_time) = saved
+        needed = gate.potion_min_gain_hp / max(1, self._starting_hp)
+        return {"replaced" : potion_q - plain_q < needed, "action" : action, "potion_q" : potion_q, "plain_q" : plain_q, "plain_visits" : visits, "needed" : needed}
 
     def _run_search(self) -> str | None:
         """The tree search loop on the current root, until an exit condition holds; returns the reason it stopped. The simulation count and

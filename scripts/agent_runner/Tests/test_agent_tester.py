@@ -25,6 +25,7 @@ def runner(monkeypatch):
     sys.modules.pop("agent_runner.runner", None)        # only the runner takes the stubbed agents; the other modules are shared with this file
     runner = importlib.import_module("agent_runner.runner")
     monkeypatch.setattr(run_manager.time, "sleep", lambda s: None)
+    monkeypatch.setattr(combat_session, "PARTIAL_HAND_TIMEOUT", 0.0)        # the captured states are taken as dealt: no waiting for a short hand to fill
     yield runner
     sys.modules.pop("agent_runner.runner", None)
 

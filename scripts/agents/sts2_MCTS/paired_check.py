@@ -84,9 +84,7 @@ class PairedCheck:
             plain = [(picked, 0.0, 0.0, n)] * (not _is_potion(picked)) + [r for r in results if not _is_potion(r[0])]
             gain, se = (best[1], best[2]) if best else (0.0, 0.0)
             if plain and not all(gain - p[1] > self._bar(picked, final, max(se, p[2])) for p in plain):
-                best = max(plain, key=lambda r: r[1])
-                if best[0] is picked:
-                    best = None
+                best = self._fallback(plain, results, diffs, rivals, picked)
         return {
             "replaced" : best is not None,
             "child" : best[0] if best else picked,
@@ -94,6 +92,33 @@ class PairedCheck:
             "scenarios_run" : ran,
             "compared" : [{"action" : r[0].action, "visits" : r[0].visits, "gain" : r[1], "se" : r[2], "n" : r[3]} for r in results],
         }
+
+    def _fallback(self, plain, results, diffs, rivals, picked):
+        """The non-potion move played when the potion is not justified: the tree's own favourite (most visited), unless another plain
+        line is ahead of it by PAIRED_Z standard errors of their paired difference. Taking the best mean alone let a line the tree
+        had barely visited (end_turn) replace the move it rated best, on noise."""
+        plain_nodes = {id(p[0]) for p in plain}
+        favourite = max((c for c in self.mcts._root_node.children if id(c) in plain_nodes or c is picked and not _is_potion(c)),
+                        key=lambda c: c.visits, default=None)
+        if favourite is None or favourite is picked:
+            return None if favourite is picked else max(plain, key=lambda r: r[1])
+        index = {id(r): i for i, r in enumerate(rivals)}
+        fav_i = index.get(id(favourite))
+        if fav_i is None:
+            return next((r for r in plain if r[0] is favourite), max(plain, key=lambda r: r[1]))
+        fav_result = next(r for r in results if r[0] is favourite)
+        best = fav_result
+        for r in plain:
+            if r[0] is favourite:
+                continue
+            if r[0] is picked:          # the picked move is not a rival: the diffs are measured from it
+                d = [-b for b in diffs[fav_i]]
+            else:
+                d = [a - b for a, b in zip(diffs[index[id(r[0])]], diffs[fav_i])]
+            mean, se = spread(d)
+            if mean > 0 and mean > PAIRED_Z * se and mean > best[1] - fav_result[1]:
+                best = (r[0], r[1], r[2], r[3])
+        return best
 
     def _bar(self, picked, move, se : float) -> float:
         """How far ahead of the reference a move has to be: PAIRED_Z standard errors, and for a potion move potion_z of them plus a

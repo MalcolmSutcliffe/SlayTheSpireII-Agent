@@ -7,9 +7,34 @@ from .run_manager import DEFAULT_LOG, RunManager
 
 import argparse
 import re
+import sys
 from pathlib import Path
 
 RUNS_DIR = RUNS
+
+class Tee:
+    """Copies what the agent prints (card scores, paths, shops, events) into a file next to the run's other logs, line by line."""
+    def __init__(self, stream, path):
+        self.stream, self.file = stream, open(path, "a", buffering=1, encoding="utf-8")
+
+    def write(self, text):
+        self.stream.write(text)
+        try:
+            self.file.write(text)
+        except ValueError:
+            pass
+        return len(text)
+
+    def flush(self):
+        self.stream.flush()
+        try:
+            self.file.flush()
+        except ValueError:
+            pass
+
+    def __getattr__(self, name):
+        return getattr(self.stream, name)
+
 
 def run_paths(run : str, decisions : bool = False, fights : bool = False, states : bool = False, captures : bool = False,
               append : bool = False, runs_dir : Path | None = None) -> dict:
@@ -68,7 +93,8 @@ def main(argv : list[str] | None = None):
             kwargs = run_paths(args.run, append=args.append, **wanted)
         except (ValueError, FileExistsError) as error:
             parser.error(str(error))
-        print(f"saving to {RUNS_DIR / args.run}: mismatches" + "".join(f", {name}" for name, on in wanted.items() if on))
+        sys.stdout = Tee(sys.stdout, RUNS_DIR / args.run / "console.log")
+        print(f"saving to {RUNS_DIR / args.run}: console.log (everything the agent prints: picks, paths, shops), mismatches" + "".join(f", {name}" for name, on in wanted.items() if on))
     agent = MyAgent()
     run_agent(agent, step=args.step, verify=not args.no_verify, **kwargs)
 

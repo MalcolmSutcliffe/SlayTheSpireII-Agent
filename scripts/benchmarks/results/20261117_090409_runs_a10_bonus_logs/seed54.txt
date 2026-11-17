@@ -1,0 +1,58 @@
+ancient NEOW (50 walks, 2.0s of 2s): Large Capsule 7.77, Fishing Rod 6.62, Kaleidoscope 6.59 -> Large Capsule
+path (19 paths of 19 kinds of path, 94 walks, 2.0s of 2s): CCCC??ERTCECC$RB 29.33 (50% through, 2 elites, +5.47 bonus (elites, shops)), C$?$C?CRTCRCECRB 25.85 (50% through, 1 elites, +2.00 bonus (elites, shops)), C??C?R?RTCRCC$RB 25.68 (50% through, 0 elites, +1.47 bonus (elites, shops)), CCC??R?RTCECC$RB 17.87 (16% through, 1 elites, +3.47 bonus (elites, shops)) -> CCCC??ERTCECC$RB
+  kind bonus Perfected Strike: +1.00 (walk gain +1.32)
+  kind bonus Cinder: +1.00 (walk gain +1.52)
+  kind bonus Bully: +1.50 (walk gain +4.18)
+card reward act 1 (weak 2 normal 4 elite 2 [PHANTASMAL_GARDENERS_ELITE/SKULKING_COLONY_ELITE/TERROR_EEL_ELITE] boss 1.0 [WATERFALL_GIANT_BOSS], 2196 fights, 17.9s, base 14.4 rooms, 26% clear the act) | needs > 1.06 rooms -> take Bully
+  walking the rest of the act (244 walks of 9.0 fights, 26% clear the act): Perfected Strike +2.32±0.60 rooms (30% clear the act), Cinder +2.52±0.60 rooms (31% clear the act), Bully +5.68±0.70 rooms (38% clear the act)
+  kind bonus Pommel Strike: +0.50 (walk gain +1.75)
+  kind bonus Body Slam: +0.50 (walk gain -0.68)
+  kind bonus Setup Strike: +0.50 (walk gain +1.37)
+card reward act 1 (weak 1 normal 5 elite 1 [PHANTASMAL_GARDENERS_ELITE/SKULKING_COLONY_ELITE/TERROR_EEL_ELITE] boss 1.0 [WATERFALL_GIANT_BOSS], 2184 fights, 21.8s, base 18.4 rooms, 39% clear the act) | needs > 0.85 rooms -> take Pommel Strike
+  walking the rest of the act (273 walks of 8.0 fights, 39% clear the act): Pommel Strike +2.25±0.57 rooms (44% clear the act), Body Slam -0.18±0.54 rooms (34% clear the act), Setup Strike +1.87±0.57 rooms (43% clear the act)
+  kind bonus Sword Boomerang: +0.25 (walk gain +0.85)
+  kind bonus Perfected Strike: +0.25 (walk gain +0.54)
+  kind bonus Whirlwind: +0.38 (walk gain +0.91)
+card reward act 1 (weak 0 normal 5 elite 1 [PHANTASMAL_GARDENERS_ELITE/SKULKING_COLONY_ELITE/TERROR_EEL_ELITE] boss 1.0 [WATERFALL_GIANT_BOSS], 2352 fights, 25.7s, base 18.1 rooms, 37% clear the act) | needs > 0.68 rooms -> take Whirlwind
+  walking the rest of the act (336 walks of 7.0 fights, 37% clear the act): Sword Boomerang +1.10±0.48 rooms (41% clear the act), Perfected Strike +0.79±0.48 rooms (40% clear the act), Whirlwind +1.28±0.45 rooms (40% clear the act)
+  kind bonus Pommel Strike: +0.12 (walk gain +0.19)
+  kind bonus Sword Boomerang: +0.12 (walk gain +0.08)
+  kind bonus Body Slam: +0.12 (walk gain -1.02)
+card reward act 1 (weak 0 normal 4 elite 1 [PHANTASMAL_GARDENERS_ELITE/SKULKING_COLONY_ELITE/TERROR_EEL_ELITE] boss 1.0 [WATERFALL_GIANT_BOSS], 1206 fights, 15.0s, base 19.8 rooms, 51% clear the act) | needs > 0.88 rooms -> skip
+  walking the rest of the act (201 walks of 6.0 fights, 51% clear the act): Pommel Strike +0.31±0.58 rooms (51% clear the act), Sword Boomerang +0.21±0.58 rooms (51% clear the act), Body Slam -0.90±0.58 rooms (45% clear the act)
+event ENDLESS_CONVEYOR (54 walks, 2.0s of 2s): observe_chef 18.02, caviar 17.74 -> observe_chef
+event DROWNING_BEACON (58 walks, 2.0s of 2s): bottle 16.49, climb 16.14 -> bottle
+path (8 paths of 8 kinds of path, 112 walks, 2.0s of 2s): CRTCECC$RB 26.53 (72% through, 1 elites, +3.63 bonus (elites, shops)), ERTCRCECRB 26.09 (72% through, 2 elites, +4.00 bonus (elites, shops)) -> CRTCECC$RB
+  kind bonus Stomp: +0.19 (walk gain -0.76)
+  kind bonus Flame Barrier: +2.25 (walk gain +1.74)
+  kind bonus Cascade: +3.00 (walk gain +0.90)
+card reward act 1 (weak 0 normal 3 elite 1 [PHANTASMAL_GARDENERS_ELITE/SKULKING_COLONY_ELITE/TERROR_EEL_ELITE] boss 1.0 [WATERFALL_GIANT_BOSS], 1205 fights, 16.0s, base 17.7 rooms, 53% clear the act) | needs > 0.68 rooms -> take Flame Barrier
+  walking the rest of the act (241 walks of 5.0 fights, 53% clear the act): Stomp -0.57±0.38 rooms (49% clear the act), Flame Barrier +3.99±0.45 rooms (60% clear the act), Cascade +3.90±0.45 rooms (58% clear the act)
+upgrade gains (20 walks through the route ahead, 2.1s of 2s): FLAME_BARRIER +4.29, WHIRLWIND +1.54, POMMEL_STRIKE +1.40, BULLY +0.00 | heal 24 HP +0.27
+rest site: upgrading FLAME_BARRIER +4.29 vs healing 24 HP +0.27 -> smith
+path (5 paths of 5 kinds of path, 136 walks, 2.0s of 2s): TCECC$RB 19.59 (46% through, 1 elites, +3.62 bonus (elites, shops)), T?RC?CRB 18.89 (62% through, 0 elites) -> TCECC$RB
+  kind bonus Blood Wall: +0.75 (walk gain -0.74)
+  kind bonus Tremble: +0.75 (walk gain +1.23)
+  kind bonus Thunderclap: +0.12 (walk gain +0.21)
+card reward act 1 (weak 0 normal 2 elite 1 [PHANTASMAL_GARDENERS_ELITE/SKULKING_COLONY_ELITE/TERROR_EEL_ELITE] boss 1.0 [WATERFALL_GIANT_BOSS], 1220 fights, 18.5s, base 14.9 rooms, 52% clear the act) | needs > 0.57 rooms -> take Tremble
+  walking the rest of the act (305 walks of 4.0 fights, 52% clear the act): Blood Wall +0.01±0.36 rooms (49% clear the act), Tremble +1.98±0.37 rooms (58% clear the act), Thunderclap +0.34±0.40 rooms (53% clear the act)
+path (3 paths of 3 kinds of path, 134 walks, 2.0s of 2s): ECC$RB 23.25 (76% through, 1 elites, +3.85 bonus (elites, shops)), RCECRB 20.12 (68% through, 1 elites, +2.00 bonus (elites, shops)) -> ECC$RB
+  kind bonus Pillage: +0.19 (walk gain +0.09)
+  kind bonus Howl from Beyond: +0.19 (walk gain +0.09)
+  kind bonus Thunderclap: +0.12 (walk gain +0.23)
+card reward act 1 (weak 0 normal 2 elite 0 boss 1.0 [WATERFALL_GIANT_BOSS], 1284 fights, 22.5s, base 15.2 rooms, 58% clear the act) | needs > 0.33 rooms -> take Thunderclap
+  walking the rest of the act (428 walks of 3.0 fights, 58% clear the act): Pillage +0.28±0.25 rooms (58% clear the act), Howl from Beyond +0.28±0.23 rooms (58% clear the act), Thunderclap +0.35±0.21 rooms (59% clear the act)
+  kind bonus Thrash: +0.12 (walk gain +0.55)
+  kind bonus Molten Fist: +0.06 (walk gain +0.48)
+  kind bonus Setup Strike: +0.06 (walk gain +0.16)
+card reward act 1 (weak 0 normal 1 elite 0 boss 1.0 [WATERFALL_GIANT_BOSS], 1114 fights, 27.7s, base 14.1 rooms, 60% clear the act) | needs > 0.39 rooms -> take Thrash
+  walking the rest of the act (557 walks of 2.0 fights, 60% clear the act): Thrash +0.67±0.25 rooms (63% clear the act), Molten Fist +0.54±0.24 rooms (62% clear the act), Setup Strike +0.22±0.23 rooms (61% clear the act)
+  kind bonus Rupture: +3.00 (walk gain -2.03)
+  kind bonus Burning Pact: +0.56 (walk gain -3.06)
+  kind bonus Hemokinesis: +0.05 (walk gain -1.01)
+card reward act 1 (weak 0 normal 0 elite 0 boss 1.0 [WATERFALL_GIANT_BOSS], 818 fights, 36.4s, base 13.3 rooms, 61% clear the act) | needs > 0.36 rooms -> take Rupture
+  walking the rest of the act (818 walks of 1.0 fights, 61% clear the act): Rupture +0.97±0.23 rooms (52% clear the act), Burning Pact -2.50±0.25 rooms (49% clear the act), Hemokinesis -0.96±0.25 rooms (55% clear the act)
+shop (443 gold, 16 walks through the route ahead, 2.0s of 2s): buy Card Removal (75g) +1.83 (z 1.5), buy War Paint (157g) +1.84 (z 1.5), buy Ashen Strike (78g) +2.11 (z 1.2), buy Ultimate Strike (85g) +2.11 (z 1.2), buy Howl from Beyond (75g) +2.10 (z 1.2), buy The Abacus (220g) +0.90 (z 1.0), buy Kusarigama (221g) +0.89 (z 1.0), buy Hidden Gem (178g) +1.28 (z 0.8), buy Armaments (26g) +0.96 (z 0.6), buy Burning Pact (78g) -1.86 (z -1.0), buy Vicious (72g) -0.89 (z -1.0); needs z over 1.5
+shop (368 gold, 20 walks through the route ahead, 2.1s of 2s): buy Kusarigama (221g) +0.21 (z 1.0), buy Hidden Gem (178g) +0.94 (z 0.7), buy War Paint (157g) +0.92 (z 0.6), buy The Abacus (220g) +0.00 (z 0.0), buy Ultimate Strike (85g) -0.02 (z -0.0), buy Ashen Strike (78g) -0.02 (z -0.0), buy Howl from Beyond (75g) -0.02 (z -0.0), buy Armaments (26g) -0.03 (z -0.0), buy Vicious (72g) -0.06 (z -0.1), buy Burning Pact (78g) -0.56 (z -0.7); needs z over 1.5
+upgrade gains (26 walks through the route ahead, 2.0s of 2s): THRASH +1.65, WHIRLWIND +0.64, POMMEL_STRIKE +0.61, THUNDERCLAP +0.56, TREMBLE +0.09, BULLY +0.04 | heal 24 HP +0.03
+rest site: upgrading THRASH +1.65 vs healing 24 HP +0.03 -> smith

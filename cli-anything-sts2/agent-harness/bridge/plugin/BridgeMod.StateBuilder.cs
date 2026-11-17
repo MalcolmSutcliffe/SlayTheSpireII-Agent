@@ -202,6 +202,18 @@ public static partial class BridgeMod
                 result["state_type"] = "map";
                 result["map"] = BuildMapState(runState);
             }
+            else if (topOverlay is NCardRewardSelectionScreen restCardScreen)
+            {
+                // Dream Catcher: the card reward the rest offers (RestSiteOption heal -> ModifyRestSiteHealRewards) is chosen over the rest site
+                result["state_type"] = "card_reward";
+                result["card_reward"] = BuildCardRewardState(restCardScreen);
+            }
+            else if (topOverlay is NRewardsScreen restRewardsScreen)
+            {
+                // Tiny Mailbox's potions and Dream Catcher's card: claimed like a combat's, over the rest site (the rest option waits for them)
+                result["state_type"] = "combat_rewards";
+                result["rewards"] = BuildRewardsState(restRewardsScreen, runState);
+            }
             else
             {
                 result["state_type"] = "rest_site";

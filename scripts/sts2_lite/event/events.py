@@ -767,7 +767,7 @@ def stone_of_all_time(c : Ctx) -> Page:
 def _potion_rarity(potion : dict) -> str:
     """The card rarity The Future of Potions pays for a potion (Rare / Event: rare, Uncommon: uncommon, Common / Token: common)."""
     from sts2_lite.potion import POTION_INFO, PotionId, PotionRarity
-    pid = PotionId.__members__.get(potion.get("id"))
+    pid = PotionId.from_game_id(potion.get("id"))
     rarity = POTION_INFO[pid].rarity if pid in POTION_INFO else PotionRarity.COMMON
     if potion.get("id") == "FOUL_POTION":
         return "Rare"        # an Event potion (assumed: the potion classes are not in the decompile)

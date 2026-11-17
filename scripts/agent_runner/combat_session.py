@@ -13,6 +13,8 @@ from sts2_lite import rng
 from sts2_lite.card import CardType
 from sts2_lite.combat import CombatState, CombatSimulator
 
+BASE_HAND = 5                   # cards drawn at the start of a turn
+PARTIAL_HAND_TIMEOUT = 5.0      # seconds a hand that is short of its deal is waited for after End Turn / the fight showing, before it is taken as it is
 TURN_CHANGE_TIMEOUT = 10.0      # seconds to wait for the round number to advance after End Turn
 LOCKED_READS = 8                # reads of locked-looking cards (about 3 s) before the agent acts anyway
 NEW_FIGHT_TIMEOUT = 30.0        # seconds a new fight may show no hand before the agent acts anyway (a fight that starts with no cards drawn)
@@ -66,21 +68,35 @@ def floor_of(game_state : dict) -> int | None:
     context = game_state.get("context") or game_state.get("run") or {}
     return context.get("floor")
 
-def first_state_ready(game_state : dict) -> bool:
+def hand_dealt(game_state : dict) -> bool:
+    """The turn's hand has been drawn in full: the game deals the cards one at a time, and a state read in between shows a part of the hand with the rest of the
+    draw pile still to come (the agent played from 2 cards of 5). The hand is at least what the draw is (5) or, with fewer cards than that, all there are.
+    A deal that stays short (a draw reduced by an enemy) is given up on after PARTIAL_HAND_TIMEOUT."""
+    hand = len(game_state.get("hand") or [])
+    cards = hand + (game_state.get("draw_pile_count") or 0) + (game_state.get("discard_pile_count") or 0)
+    return hand >= min(BASE_HAND, cards)
+
+def first_state_ready(game_state : dict, waited : float = 0.0) -> bool:
     """The first turn of a fight has been set up: the hand is drawn and the energy given (before that the game reports an empty hand,
-    and the only thing to do is End Turn)."""
-    return bool(game_state.get("hand")) and (game_state.get("energy") or 0) > 0
+    and the only thing to do is End Turn). `waited`: seconds since the fight showed; a hand that stays short is played after PARTIAL_HAND_TIMEOUT."""
+    if not game_state.get("hand") or (game_state.get("energy") or 0) <= 0:
+        return False
+    return hand_dealt(game_state) or waited >= PARTIAL_HAND_TIMEOUT
 
 def turn_is_changing(game_state : dict, ended : dict | None) -> bool:
     """The bridge never reports the play phase. After End Turn it still says "player" while the enemies act, then the
-    round number advances before the next hand is drawn and the energy refilled (hand empty, energy 0).
+    round number advances before the next hand is drawn and the energy refilled, and the cards are dealt one at a time
+    (hand empty, energy 0; or energy already back with the hand empty or only partly dealt).
     `ended`: the round the agent ended (and when). Wait for a started turn, but not forever: an extra turn
     (Pael's Eye) keeps the round number."""
     if ended is None or time.time() - ended["time"] >= TURN_CHANGE_TIMEOUT:
         return False
     if game_state.get("round") == ended["round"]:
         return True
-    return not game_state.get("hand") and game_state.get("energy") == 0
+    if not game_state.get("hand"):
+        # the energy is refilled before the hand is drawn: an empty hand with energy and cards still to draw is a turn being dealt, not one to end
+        return game_state.get("energy") == 0 or (game_state.get("draw_pile_count") or 0) + (game_state.get("discard_pile_count") or 0) > 0
+    return not hand_dealt(game_state) and time.time() - ended["time"] < PARTIAL_HAND_TIMEOUT
 
 def cards_look_locked(combat_state : CombatState) -> bool:
     """Affordable cards that the game shows as unplayable although nothing in the rules explains it: the game is not
@@ -103,11 +119,15 @@ def verify_step(batch : dict, game_state : dict, actual : CombatState, log_path 
     if batch.get("unpredictable"):
         print("a card played a random card from the draw pile that the agent could not see (Havoc): not compared")
         return True
-    diffs = compare(batch["predicted"], actual, random_step=batch["random_step"], random_target=batch.get("random_target", False))
-    if diffs and batch.get("random_target") and some_target_roll_matches(batch["before_sim"], batch["actions"], actual, batch["random_step"]):
-        diffs = []          # the game hit other enemies than the sim did, and the damage differs because the enemies do
-    if diffs and game_order_matches(batch["before_sim"], batch["actions"], batch["before"], actual):
-        diffs = []          # the sim does not know the draw order; with the game's order the outcome is exactly the game's
+    try:
+        diffs = compare(batch["predicted"], actual, random_step=batch["random_step"], random_target=batch.get("random_target", False))
+        if diffs and batch.get("random_target") and some_target_roll_matches(batch["before_sim"], batch["actions"], actual, batch["random_step"]):
+            diffs = []          # the game hit other enemies than the sim did, and the damage differs because the enemies do
+        if diffs and game_order_matches(batch["before_sim"], batch["actions"], batch["before"], actual):
+            diffs = []          # the sim does not know the draw order; with the game's order the outcome is exactly the game's
+    except Exception as error:  # noqa: BLE001  the check only watches: one that cannot run must never stop the run
+        print(f"the step could not be checked: {type(error).__name__}: {error}")
+        return True
     if diffs:
         log_mismatch(log_path, batch, game_state, diffs, batch["predicted"], actual)
     return not diffs
@@ -200,7 +220,7 @@ class CombatSession:
             return False
         if self.arrived is None:
             self.arrived = time.time()
-        if first_state_ready(game_state):
+        if first_state_ready(game_state, time.time() - self.arrived):
             pass
         elif time.time() - self.arrived < NEW_FIGHT_TIMEOUT:
             return True

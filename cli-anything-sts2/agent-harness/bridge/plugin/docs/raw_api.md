@@ -137,6 +137,13 @@ Every state with a run in progress carries a top-level `player` object, built on
 ```
 - `slot`: potion slot index (from GET response)
 - `target`: entity_id of the target (required for `AnyEnemy` potions, omit otherwise)
+- Out of combat only potions the game lets be used at any time work (Blood Potion, Fruit Juice).
+
+**Discard a potion** (works anywhere, in combat too):
+```json
+{ "action": "discard_potion", "slot": 0 }
+```
+- `slot`: potion slot index (from GET response). The bridge calls the game's `PotionCmd.Discard`.
 
 **End turn:**
 ```json
