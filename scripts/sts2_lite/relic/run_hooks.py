@@ -106,7 +106,7 @@ def combat_finished(run, room : str = "Monster", rng=None, won : bool = True):
     if run.has_relic("TOY_BOX"):
         s = state(run, "TOY_BOX")
         s["combats"] = s.get("combats", 0) + 1
-        if s["combats"] % 3 == 0 and s["combats"] <= 12:
+        if s["combats"] % 3 == 0 and s["combats"] <= 15:       # 5 wax relics, one melts every 3 combats
             for relic in run.relics:
                 if relic.get("wax") and not relic.get("melted"):
                     relic["melted"] = True

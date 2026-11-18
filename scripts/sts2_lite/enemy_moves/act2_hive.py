@@ -137,7 +137,7 @@ def louse_progenitor(ascension : int) -> MoveTable:
         "WEB_CANNON": Move(frozenset({"attack", "debuff"}), "CURL_AND_GROW", damage=deadly(ascension, 9, 10), hits=1,
                            player_status=((StatusId.FRAIL, 2),)),
         "CURL_AND_GROW": Move(frozenset({"defend", "buff"}), "POUNCE",
-                              block=tough(ascension, 14, 18), self_status=((StatusId.STRENGTH, 5),)),
+                              block=tough(ascension, 14, 18), self_status=((StatusId.STRENGTH, deadly(ascension, 5, 7)),)),
         "POUNCE": Move(frozenset({"attack"}), "WEB_CANNON", damage=deadly(ascension, 14, 16), hits=1),
     }
 

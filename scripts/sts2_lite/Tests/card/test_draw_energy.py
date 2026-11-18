@@ -38,7 +38,7 @@ def cascade(up=False):
     return card(CardId.CASCADE, "X", CardType.Skill, TargetType.Self, up)
 
 def expect(up=False):
-    return card(CardId.EXPECT_A_FIGHT, 1 if up else 2, CardType.Skill, TargetType.Self, up)
+    return card(CardId.EXPECT_A_FIGHT, 3, CardType.Skill, TargetType.Self, up)
 
 def drum(up=False):
     return card(CardId.DRUM_OF_BATTLE, 1, CardType.Skill, TargetType.Self, up)
@@ -311,10 +311,10 @@ def test_forgotten_ritual_upgraded_gives_four():
     play(cs)
     assert cs.energy == 2 + 4
 
-def test_forgotten_ritual_without_an_exhaust_does_nothing_but_still_exhausts():
+def test_forgotten_ritual_needs_no_exhaust_and_still_exhausts():
     cs = state([ritual()])
     play(cs)
-    assert cs.energy == 2 and ids(cs.player.exhaust_pile) == [CardId.FORGOTTEN_RITUAL]
+    assert cs.energy == 2 + 3 and ids(cs.player.exhaust_pile) == [CardId.FORGOTTEN_RITUAL]
 
 def test_forgotten_ritual_after_an_earlier_card_exhausted():
     cs = state([offering(), ritual()])
@@ -323,11 +323,11 @@ def test_forgotten_ritual_after_an_earlier_card_exhausted():
     sim.play_card(next(i for i, c in enumerate(cs.player.hand) if c.card_id == CardId.FORGOTTEN_RITUAL), 0)
     assert cs.energy == 3 + 2 - 1 + 3
 
-def test_forgotten_ritual_does_not_count_its_own_exhaust():
+def test_two_forgotten_rituals_both_pay_out():
     cs = state([ritual(), ritual()])
     sim = play(cs)
     sim.play_card(0, 0)
-    assert cs.energy == 3 - 1 - 1 + 3        # the first one exhausted itself, so the second pays out
+    assert cs.energy == 3 - 1 + 3 - 1 + 3
 
 def test_forgotten_ritual_energy_is_blocked_by_no_energy_gain():
     cs = state([ritual()]); cs.player.cards_exhausted_this_turn = 1
@@ -425,44 +425,31 @@ def test_cascade_can_win_the_fight_and_stop():
 
 
 # ---------------------------------------------------------------- Expect a Fight
-def test_expect_a_fight_gives_energy_for_each_attack_in_hand():
-    cs = state([expect(), strike(), strike(), defend(), bash()])
+def test_expect_a_fight_gains_15_block_and_5_for_each_strength():
+    cs = state([expect()]); cs.energy = 3
+    cs.player.apply_status(StatusId.STRENGTH, 2)
     play(cs)
-    assert cs.energy == 1 + 3
+    assert cs.player.block == 15 + 5 * 2 and cs.energy == 0 and StatusId.NO_ENERGY_GAIN not in cs.player.status
 
-def test_expect_a_fight_with_no_attacks_gives_nothing():
-    cs = state([expect(), defend()])
+def test_expect_a_fight_upgraded_gains_16_and_8_for_each_strength_and_still_costs_three():
+    cs = state([expect(True)]); cs.energy = 3
+    cs.player.apply_status(StatusId.STRENGTH, 1)
     play(cs)
-    assert cs.energy == 1 and st(cs.player, StatusId.NO_ENERGY_GAIN) == 1
+    assert cs.player.block == 16 + 8 and cs.energy == 0
 
-def test_expect_a_fight_upgraded_costs_one():
-    cs = state([expect(True), strike()])
+def test_expect_a_fight_ignores_negative_strength_and_uses_dexterity():
+    cs = state([expect()]); cs.energy = 3
+    cs.player.apply_status(StatusId.STRENGTH, -3); cs.player.apply_status(StatusId.DEXTERITY, 1)
     play(cs)
-    assert cs.energy == 2 + 1
-
-def test_expect_a_fight_stops_later_energy_gain_this_turn():
-    cs = state([expect(), strike(), card(CardId.BLOODLETTING, 0, CardType.Skill, TargetType.Self)])
-    sim = play(cs)
-    before = cs.energy
-    sim.play_card(next(i for i, c in enumerate(cs.player.hand) if c.card_id == CardId.BLOODLETTING), 0)
-    assert cs.energy == before
+    assert cs.player.block == 15 + 1
 
 def test_no_energy_gain_ends_with_the_turn_and_energy_refills():
-    cs = state([expect(), strike()]); cs.player.draw_pile = fresh(10)
+    cs = state([strike()]); cs.player.draw_pile = fresh(10)
+    cs.player.apply_status(StatusId.NO_ENERGY_GAIN, 1)
     cs.enemies[0].attack_damage, cs.enemies[0].num_attacks = 1, 1
     sim = play(cs)
     sim.end_turn()
     assert StatusId.NO_ENERGY_GAIN not in cs.player.status and cs.energy == cs.max_energy
-
-def test_expect_a_fight_does_not_count_itself_or_other_skills():
-    cs = state([expect(), card(CardId.OFFERING, 0, CardType.Skill, TargetType.Self)])
-    play(cs)
-    assert cs.energy == 1
-
-def test_artifact_stops_the_no_energy_gain_debuff():
-    cs = state([expect(), strike()]); cs.player.apply_status(StatusId.ARTIFACT, 1)
-    play(cs)
-    assert StatusId.NO_ENERGY_GAIN not in cs.player.status
 
 
 # ---------------------------------------------------------------- Drum of Battle
@@ -716,15 +703,8 @@ def test_cascade_stops_playing_once_the_fight_is_won():
     sim = play(cs)
     assert sim.is_over and cs.player.block == 0
 
-def test_a_second_expect_a_fight_gains_no_energy():
-    cs = state([expect(), expect(), strike()])
-    cs.energy = 5
-    sim = play(cs)
-    sim.play_card(0, 0)
-    assert cs.energy == 5 - 2 + 1 - 2        # the first gained one for the Strike, the second gained nothing
-
-def test_expect_a_fight_and_infernal_blade_cost_one_less_when_upgraded():
-    assert expect().upgraded_copy().energy_cost == 1
+def test_expect_a_fight_keeps_its_cost_and_infernal_blade_costs_one_less_when_upgraded():
+    assert expect().upgraded_copy().energy_cost == 3
     assert infernal_blade().upgraded_copy().energy_cost == 0
 
 def test_the_start_of_turn_hand_is_drawn_even_under_no_draw():

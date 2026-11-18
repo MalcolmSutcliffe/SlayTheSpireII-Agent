@@ -284,7 +284,7 @@ def lagavulin_matriarch(ascension : int) -> MoveTable:
 def soul_fysh(ascension : int) -> MoveTable:
     return {
         "BECKON": Move(frozenset({"statuscard"}), "DE_GAS", draw_cards=((CardId.BECKON, 1),), cards=((CardId.BECKON, 1),)),
-        "DE_GAS": Move(frozenset({"attack"}), "GAZE", damage=deadly(ascension, 16, 17), hits=1),
+        "DE_GAS": Move(frozenset({"attack"}), "GAZE", damage=deadly(ascension, 16, 18), hits=1),
         "GAZE": Move(frozenset({"attack", "statuscard"}), "FADE", damage=deadly(ascension, 7, 8), hits=1, cards=((CardId.BECKON, 1),)),
         "FADE": Move(frozenset({"buff"}), "SCREAM", self_status=((StatusId.INTANGIBLE, 2),)),
         "SCREAM": Move(frozenset({"attack", "debuff"}), "BECKON", damage=deadly(ascension, 13, 15), hits=1,

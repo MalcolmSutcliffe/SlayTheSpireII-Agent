@@ -113,17 +113,15 @@ TOASTY_MITTENS_STRENGTH = 1
 PHILOSOPHERS_STONE_STRENGTH = 1
 
 def _toasty_mittens(combat, relic):
-    """ToastyMittens.BeforeHandDraw: exhaust the top card of the draw pile (reshuffling first), +1 Strength."""
+    """ToastyMittens.AfterPlayerTurnStart: after the draw, the player picks 1 card of the hand to Exhaust, then +1 Strength.
+    The Strength comes before the pick is answered here; nothing in between reads it."""
     player = player_of(combat)
-    top = player.take_top()
-    if top is not None:
-        player.exhaust_card(top)
-        combat.fire(HookType.CARD_EXHAUSTED, top)
+    combat.request_choice("exhaust", list(range(len(player.hand))))
     player.apply_status(StatusId.STRENGTH, TOASTY_MITTENS_STRENGTH)
 
 def _history_course_record(combat, relic, card):
-    """Remember the last Attack or Skill of the turn; `used` is set while History Course's own dupe plays."""
-    if not relic.used and card.type in _card_types()[:2]:
+    """Remember the last Attack of the turn (Skills no longer count); `used` is set while History Course's own dupe plays."""
+    if not relic.used and card.type == _card_types()[0]:
         relic.triggering = card
         relic.value = combat.card_x if card.energy_cost == "X" else 0
 
@@ -155,10 +153,10 @@ def _paels_tears(combat, relic):
 
 SEAL_OF_GOLD_ENERGY = 1
 
-SEAL_OF_GOLD_GOLD = 5
+SEAL_OF_GOLD_GOLD = 3
 
 def _seal_of_gold(combat, relic):
-    """SealOfGold.AfterSideTurnStart: Gold >= 5 -> GainEnergy(1), then LoseGold(5)."""
+    """SealOfGold.AfterSideTurnStart: Gold >= 3 -> GainEnergy(1), then LoseGold(3)."""
     player = player_of(combat)
     if player.gold >= SEAL_OF_GOLD_GOLD:
         combat.gain_energy(SEAL_OF_GOLD_ENERGY)

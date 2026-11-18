@@ -68,8 +68,8 @@ class Creature:
             self.die()
 
     def block_kept_at_turn_start(self) -> int:
-        """The block this creature keeps when its turn starts: all of it with Barricade, up to 10 with Sturdy Clamp."""
-        if StatusId.BARRICADE in self.status:
+        """The block this creature keeps when its turn starts: all of it with Barricade or Blur, up to 10 with Sturdy Clamp."""
+        if StatusId.BARRICADE in self.status or StatusId.BLUR in self.status:
             return self.block
         if self.relics and RelicId.STURDY_CLAMP in self.relics:
             return min(self.block, STURDY_CLAMP_BLOCK)
@@ -77,6 +77,11 @@ class Creature:
 
     def turn_start(self):
         self.block = self.block_kept_at_turn_start()
+        blur = self.status.get(StatusId.BLUR)
+        if blur is not None:        # BlurPower.AfterSideTurnStart: Decrement, once the block has been kept
+            blur.amount -= 1
+            if blur.amount <= 0:
+                del self.status[StatusId.BLUR]
         self.has_been_attacked_this_turn = False
         self.lost_hp_this_turn = False
         if StatusId.PLATING in self.status and self.plating_at_turn_start:

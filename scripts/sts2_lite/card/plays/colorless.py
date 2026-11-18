@@ -188,7 +188,7 @@ def play_gold_axe(card: Card, combat : CombatSimulator, target_index=0, is_upgra
 def play_rend(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     target = enemy_at(combat, target_index)
     debuffs = sum(1 for status_id, inst in target.status.items() if is_debuff(status_id, inst.amount) and status_id not in (StatusId.MANGLE, StatusId.DARK_SHACKLES))
-    _attack(combat, (18 if is_upgraded else 15) + (8 if is_upgraded else 5) * debuffs, target)    # temporary debuffs do not count
+    _attack(combat, (12 if is_upgraded else 10) + (8 if is_upgraded else 5) * debuffs, target)    # temporary debuffs do not count
 
 def play_omnislice(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     target = enemy_at(combat, target_index)

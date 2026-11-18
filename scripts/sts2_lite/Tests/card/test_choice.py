@@ -655,7 +655,7 @@ def test_havoc_power_is_played_and_gone():
     cs = state([havoc()])
     cs.player.draw_pile = [make_card(CardId.DEMON_FORM, "Demon Form", CardType.Power, 3, TargetType.Self)]
     play(cs)
-    assert cs.player.status_amount(StatusId.DEMON_FORM) == 2
+    assert cs.player.status_amount(StatusId.DEMON_FORM) == 3
     assert cs.player.exhaust_pile == [] and cs.player.discard_pile[0].card_id == CardId.HAVOC
 
 def test_havoc_counts_as_a_chance_event():

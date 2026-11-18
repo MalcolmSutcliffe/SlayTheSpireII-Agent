@@ -41,9 +41,20 @@ KNOWN_GAPS = {
     "f48_r1_Queen+Torch_Head_Amalgam_225054015748",
     "f36_r1_Battle_Friend_V2_0_001248525231",
     "f37_r1_Living_Shield+Turret_Operator_001320543836",
-    # engine gaps: Torch Head Amalgam's STRONG_TACKLE_MOVE is not in the move table; the Turret Operator's hp differs (sim 22, game 25)
-    "f48_r1_Queen+Torch_Head_Amalgam_201028071837",
+    # engine gap: the Turret Operator's hp differs (sim 22, game 25)
     "f36_r1_Living_Shield+Turret_Operator_211209807788",
+    # captured before v0.111: Torch Head Amalgam opened with TACKLE_MOVE (now STRONG_TACKLE_MOVE)
+    "f48_r1_Queen+Torch_Head_Amalgam_164431063539",
+    "f48_r1_Queen+Torch_Head_Amalgam_224118728330",
+    "f48_r1_Queen+Torch_Head_Amalgam_193343216333",
+    # captured before v0.111 with the old Diamond Diadem (half damage after a quiet turn); it now starts the fight with 20 Block and Blur
+    "f46_r1_Mecha_Knight_132256953481",
+    "f48_r1_Aeonglass_132820454315",
+    "f35_r1_Devoted_Sculptor_130837280283",
+    "f37_r1_Scroll_of_Biting_131003211585",
+    "f38_r1_Cubex_Construct+Punch_Construct_131131344152",
+    "f42_r1_Flail_Knight+Magi_Knight+Spectral_Knight_131407821199",
+    "f43_r1_Frog_Knight_131812130017",
 }
 
 

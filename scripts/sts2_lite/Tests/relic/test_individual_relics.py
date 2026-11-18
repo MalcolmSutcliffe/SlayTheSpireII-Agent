@@ -389,22 +389,22 @@ def gold_state(gold, *relic_ids):
     cs.player.gold = gold
     return cs
 
-def test_seal_of_gold_trades_5_gold_for_1_energy_each_turn():
+def test_seal_of_gold_trades_3_gold_for_1_energy_each_turn():
     cs = gold_state(99)
     next_turn(cs)
-    assert (cs.energy, cs.player.gold) == (cs.max_energy + 1, 94)
+    assert (cs.energy, cs.player.gold) == (cs.max_energy + 1, 96)
 
-def test_seal_of_gold_needs_at_least_5_gold():
-    cs = gold_state(5)
+def test_seal_of_gold_needs_at_least_3_gold():
+    cs = gold_state(3)
     sim = next_turn(cs)
     assert (cs.energy, cs.player.gold) == (cs.max_energy + 1, 0)
     sim.end_turn()
     assert (cs.energy, cs.player.gold) == (cs.max_energy, 0)
 
-def test_seal_of_gold_does_nothing_below_5_gold():
-    cs = gold_state(4)
+def test_seal_of_gold_does_nothing_below_3_gold():
+    cs = gold_state(2)
     next_turn(cs)
-    assert (cs.energy, cs.player.gold) == (cs.max_energy, 4)
+    assert (cs.energy, cs.player.gold) == (cs.max_energy, 2)
 
 def test_seal_of_gold_energy_comes_after_the_refill():
     """The energy is added after the turn's refill, so it stacks with Ice Cream's carried energy."""
@@ -837,12 +837,15 @@ def test_without_runic_pyramid_the_hand_is_discarded():
 
 
 # ---------------------------------------------------------------- Toasty Mittens (BeforeHandDraw)
-def test_toasty_mittens_exhausts_the_top_card_and_gives_strength():
+def test_toasty_mittens_exhausts_a_picked_card_of_the_hand_and_gives_strength():
     cs = draw_pile(state([], RelicId.TOASTY_MITTENS), 10)
-    cs.player.draw_pile[-1] = strike()                  # the top of the pile
-    CombatSimulator(cs).end_turn()
+    cs.player.draw_pile[-1] = strike()                  # the top of the pile: drawn into the hand
+    sim = CombatSimulator(cs)
+    sim.end_turn()
+    assert cs.pending_choice is not None and cs.pending_choice.kind == "exhaust" and len(cs.player.hand) == 5
+    sim.choose_card(next(i for i, c in enumerate(cs.player.hand) if c.card_id == CardId.STRIKE_IRONCLAD))
     assert names(cs.player.exhaust_pile) == ["STRIKE_IRONCLAD"] and cs.player.status_amount(StatusId.STRENGTH) == 1
-    assert len(cs.player.hand) == 5 and len(cs.player.draw_pile) == 4
+    assert len(cs.player.hand) == 4 and len(cs.player.draw_pile) == 5
 
 def test_toasty_mittens_every_turn():
     cs = draw_pile(state([], RelicId.TOASTY_MITTENS))
@@ -850,12 +853,12 @@ def test_toasty_mittens_every_turn():
     sim.end_turn(); sim.end_turn()
     assert len(cs.player.exhaust_pile) == 2 and cs.player.status_amount(StatusId.STRENGTH) == 2
 
-def test_toasty_mittens_reshuffles_an_empty_draw_pile_first():
+def test_toasty_mittens_takes_from_the_drawn_hand_not_the_draw_pile():
     cs = state([], RelicId.TOASTY_MITTENS)
     cs.player.draw_pile = []
     cs.player.discard_pile = [defend() for _ in range(8)]
-    CombatSimulator(cs).end_turn()
-    assert len(cs.player.exhaust_pile) == 1 and len(cs.player.hand) == 5
+    CombatSimulator(cs).end_turn()          # five identical Defends: the lone option is taken without asking
+    assert len(cs.player.exhaust_pile) == 1 and len(cs.player.hand) == 4 and len(cs.player.draw_pile) == 3
 
 def test_toasty_mittens_fires_exhaust_triggers():
     cs = draw_pile(state([], RelicId.TOASTY_MITTENS, RelicId.FORGOTTEN_SOUL))
@@ -894,7 +897,7 @@ def test_history_course_replays_only_the_last_one():
     cs = draw_pile(state([strike(), defend()], RelicId.HISTORY_COURSE))
     sim = plays(cs, (0, 0), (0, 0))
     sim.end_turn()
-    assert hps(cs) == [94] and cs.player.block == 5
+    assert hps(cs) == [100 - 6 - 6] and cs.player.block == 0       # the Strike: Skills are no longer repeated
 
 def test_history_course_ignores_powers():
     cs = draw_pile(state([strike(), inflame()], RelicId.HISTORY_COURSE))

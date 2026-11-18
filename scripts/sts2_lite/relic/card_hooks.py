@@ -15,7 +15,6 @@ if TYPE_CHECKING:
 
 VELVET_CHOKER_CARDS = 6
 
-DIAMOND_DIADEM_CARDS = 2
 
 def free_by_relic(owner : Creature) -> bool:
     """BrilliantScarf: the 5th card played (not auto-played) this turn costs 0."""
@@ -400,11 +399,6 @@ def _count_manual_card(combat, relic, card):
 def _count_scarf(combat, relic, card):
     if not combat.auto_playing:
         relic.counter = min(_count(relic) + 1, BRILLIANT_SCARF_CARDS)      # the game stops counting at 5: the counter is hidden from then on
-
-def _diamond_diadem(combat, relic):
-    if _count(relic) <= DIAMOND_DIADEM_CARDS and StatusId.DIAMOND_DIADEM not in player_of(combat).status:
-        player_of(combat).apply_status(StatusId.DIAMOND_DIADEM, 1)
-    relic.counter = 0
 
 def _reset_counter(combat, relic):
     relic.counter = 0

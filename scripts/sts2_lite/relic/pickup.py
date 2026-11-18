@@ -62,6 +62,16 @@ def _enchant_n(enchantment : str, amount : int, count : int) -> Callable:
     return lambda c: c.enchant(enchantment, amount, count=count)
 
 
+def _enchant_random(enchantment : str, amount : int, count : int) -> Callable:
+    """`count` random enchantable cards of the deck (no choice: Beautiful Bracelet)."""
+    def effect(c):
+        from sts2_lite.event.run import enchanted
+        allowed = c.enchantable(enchantment, None)
+        for i in c.rng.sample(allowed, min(count, len(allowed))):
+            c.run.deck[i] = enchanted(c.run.deck[i], enchantment, amount)
+    return effect
+
+
 def _fragrant_mushroom(c):
     c.lose_hp(15)
     allowed = [i for i, x in enumerate(c.run.deck) if can_upgrade(x)]
@@ -94,13 +104,23 @@ def _neows_sacrifice(c):
     c.add_card("GUILTY")
 
 
+def _dowsing_rod(c):
+    """Neow's curse option: a Dowsing (Quest, Unplayable) that turns into Abundance after 5 more ? rooms (campaign.simulator.enter)."""
+    c.add_placeholder("DOWSING", "Dowsing", "Quest")
+
+
 def _cursed_pearl(c):
     c.add_card("GREED")
     c.gain_gold(333)
 
 
 def _distinguished_cape(c):
-    c.lose_max_hp(9)
+    """Two different random curses (CanBeGeneratedByModifiers) and three Apparitions (the downside it took from Sere Talon)."""
+    pool = list(MODIFIER_CURSES)
+    for _ in range(2):
+        curse = c.rng.choice(pool)
+        pool.remove(curse)
+        c.add_card(curse)
     for _ in range(3):
         c.add_card("APPARITION")
 
@@ -289,11 +309,8 @@ def _preserved_fog(c):
 
 
 def _sere_talon(c):
-    pool = list(MODIFIER_CURSES)
-    for _ in range(2):
-        curse = c.rng.choice(pool)
-        pool.remove(curse)
-        c.add_card(curse)
+    """9 Max HP and three Wishes (the downside it took from Distinguished Cape)."""
+    c.lose_max_hp(9)
     for _ in range(3):
         c.add_card("WISH")
 
@@ -308,7 +325,7 @@ def _golden_compass(c):
 
 
 def _fur_coat(c):
-    """Seven random fight points (Monster or Elite) of this act's map are marked: the enemies there start with 1 hit point."""
+    """Eight random fight points (Monster or Elite) of this act's map are marked: the enemies there start with 1 hit point."""
     from sts2_lite.map import PointType
     from sts2_lite.relic.run_hooks import state
     s = state(c.run, "FUR_COAT")
@@ -317,13 +334,15 @@ def _fur_coat(c):
     if act_map is not None:
         points = [p for p in act_map.points() if p.type in (PointType.MONSTER, PointType.ELITE)]
         c.rng.shuffle(points)
-        s["marked"] = sorted(p.coord for p in points[:7])
+        s["marked"] = sorted(p.coord for p in points[:8])
 
+
+TOY_BOX_RELICS, TOY_BOX_COMBATS = 5, 3
 
 def _toy_box(c):
-    """Four relics come from the front of the bag and are taken as wax: one melts away (stops working) every 3 fights."""
+    """Five relics come from the front of the bag and are taken as wax: one melts away (stops working) every 3 fights."""
     from sts2_lite.relic.bag import pull_relic
-    for _ in range(4):
+    for _ in range(TOY_BOX_RELICS):
         c.run.offers.append({"kind": "relic", "relic": pull_relic(c.run), "wax": True})
 
 
@@ -333,7 +352,7 @@ def _lost_coffer(c):
 
 
 EFFECTS : dict[str, Callable] = {
-    "NEOWS_TORMENT": lambda c: c.add_card("NEOWS_FURY"), "NEOWS_SACRIFICE": _neows_sacrifice, "LOST_COFFER": _lost_coffer, "NEW_LEAF": lambda c: c.transform(1),
+    "NEOWS_TORMENT": lambda c: c.add_card("NEOWS_FURY"), "NEOWS_SACRIFICE": _neows_sacrifice, "DOWSING_ROD": _dowsing_rod, "LOST_COFFER": _lost_coffer, "NEW_LEAF": lambda c: c.transform(1),
     "PHIAL_HOLSTER": _phial_holster, "PRECISE_SCISSORS": lambda c: c.remove_cards(1), "LEAD_PAPERWEIGHT": _lead_paperweight, "NEOWS_TALISMAN": _upgrade_last_basic,
     "NUTRITIOUS_OYSTER": lambda c: c.gain_max_hp(11), "POMANDER": lambda c: c.upgrade_picked(1), "SMALL_CAPSULE": lambda c: c.run.offers.append({"kind": "relic"}),
     "HEFTY_TABLET": _hefty_tablet, "LEAFY_POULTICE": _leafy_poultice, "NEOWS_BONES": _neows_bones, "PRECARIOUS_SHEARS": _precarious_shears,
@@ -344,7 +363,7 @@ EFFECTS : dict[str, Callable] = {
     "PAELS_TOOTH": _paels_tooth,
     "GOLDEN_COMPASS": _golden_compass, "FUR_COAT": _fur_coat, "TOY_BOX": _toy_box,
     "ASTROLABE": _astrolabe, "PANDORAS_BOX": _pandoras_box, "PRESERVED_FOG": _preserved_fog, "SERE_TALON": _sere_talon,
-    "LOOMING_FRUIT": lambda c: c.gain_max_hp(31), "SIGNET_RING": lambda c: c.gain_gold(999), "TANXS_WHISTLE": lambda c: c.add_card("WHISTLE"),
+    "LOOMING_FRUIT": lambda c: c.gain_max_hp(31), "SIGNET_RING": lambda c: c.gain_gold(888), "TANXS_WHISTLE": lambda c: c.add_card("WHISTLE"),
     "CLAWS": _claws, "TRI_BOOMERANG": lambda c: c.enchant("INSTINCT", 1, count=3),
     "STRAWBERRY": _max_hp(7), "MANGO": _max_hp(14), "PEAR": _max_hp(10), "LEES_WAFFLE": _max_hp(7, heal_full=True), "FAKE_MANGO": _max_hp(3),
     "FAKE_LEES_WAFFLE": lambda c: c.heal(int(c.run.max_hp * 0.10)),
@@ -352,7 +371,7 @@ EFFECTS : dict[str, Callable] = {
     "POTION_BELT": _potion_belt, "ALCHEMICAL_COFFER": _alchemical_coffer,
     "WAR_PAINT": _upgrade_type("Skill"), "WHETSTONE": _upgrade_type("Attack"), "FRAGRANT_MUSHROOM": _fragrant_mushroom,
     "KIFUDA": _enchant_n("ADROIT", 3, 3), "GNARLED_HAMMER": _enchant_n("SHARP", 3, 3), "PUNCH_DAGGER": _enchant_n("MOMENTUM", 5, 1), "ROYAL_STAMP": _enchant_n("ROYALLY_APPROVED", 1, 1),
-    "BEAUTIFUL_BRACELET": _enchant_n("SWIFT", 3, 3), "ELECTRIC_SHRYMP": _enchant_n("IMBUED", 1, 1),
+    "BEAUTIFUL_BRACELET": _enchant_random("SWIFT", 2, 4), "ELECTRIC_SHRYMP": _enchant_n("IMBUED", 1, 1),
     "DOLLYS_MIRROR": _dollys_mirror, "EMPTY_CAGE": _empty_cage, "LARGE_CAPSULE": _large_capsule,
     "DISTINGUISHED_CAPE": _distinguished_cape, "JEWELRY_BOX": lambda c: c.add_card("APOTHEOSIS"),
     "ORRERY": lambda c: offer_cards(c, 3, n_screens=5), "CAULDRON": lambda c: offer_potions(c, 5),
@@ -386,7 +405,7 @@ def obtain_relic(ctx, relic_id : str | None = None, name : str | None = None, **
 # RelicModel.IsTradable (Relic Trader, Ranwid the Elder): not a Starter / Event / Ancient relic, not used up, no pickup effect, no pet
 HAS_PICKUP_EFFECT = frozenset("""ALCHEMICAL_COFFER ASTROLABE BYRDPIP CALLING_BELL CAULDRON DISTINGUISHED_CAPE DOLLYS_MIRROR ELECTRIC_SHRYMP EMPTY_CAGE FAKE_LEES_WAFFLE FAKE_MANGO
 FRAGRANT_MUSHROOM GNARLED_HAMMER GOLDEN_COMPASS GOLDEN_PEARL HEFTY_TABLET JEWELRY_BOX KALEIDOSCOPE KIFUDA LEES_WAFFLE LOOMING_FRUIT LOST_COFFER MANGO
-NEOWS_SACRIFICE NEOWS_TALISMAN NEOWS_TORMENT NEW_LEAF NUTRITIOUS_OYSTER OLD_COIN ORRERY PAELS_TOOTH PANDORAS_BOX PEAR PHIAL_HOLSTER POTION_BELT PRECARIOUS_SHEARS
+DOWSING_ROD NEOWS_SACRIFICE NEOWS_TALISMAN NEOWS_TORMENT NEW_LEAF NUTRITIOUS_OYSTER OLD_COIN ORRERY PAELS_TOOTH PANDORAS_BOX PEAR PHIAL_HOLSTER POTION_BELT PRECARIOUS_SHEARS
 PRECISE_SCISSORS PUNCH_DAGGER ROYAL_STAMP SAND_CASTLE SEA_GLASS SERE_TALON STRAWBERRY TOY_BOX WAR_PAINT WHETSTONE YUMMY_COOKIE BOUND_PHYLACTERY PHYLACTERY_UNBOUND""".split())
 TRADABLE_RARITIES = frozenset({"Common", "Uncommon", "Rare", "Shop"})
 

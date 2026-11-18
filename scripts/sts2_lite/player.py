@@ -189,8 +189,8 @@ class Player(Creature):
                 if momentum:     # the text carries the accumulated bonus; the enchantment's X is only the per-play step
                     card.enchant_bonus = max(0, shown - PLAIN_DAMAGE[card.card_id][card.is_upgraded])
                 elif card.card_id == CardId.RAMPAGE:
-                    step = 9 if card.is_upgraded else 5
-                    card.bonus_damage = max(0, round((shown - 9) / step)) * step
+                    step = 10 if card.is_upgraded else 5
+                    card.bonus_damage = max(0, round((shown - 10) / step)) * step
                 elif card.card_id == CardId.MAUL:
                     card.bonus_damage = max(0, shown - (6 if card.is_upgraded else 5))
                 else:

@@ -70,7 +70,6 @@ from sts2_lite.relic.modifiers import (
 
 from sts2_lite.relic.card_hooks import (
     VELVET_CHOKER_CARDS,
-    DIAMOND_DIADEM_CARDS,
     free_by_relic,
     blocks_play,
     extra_plays,
@@ -159,7 +158,6 @@ from sts2_lite.relic.card_hooks import (
     _count_card,
     _count_manual_card,
     _count_scarf,
-    _diamond_diadem,
     _reset_counter,
     _new_turn_rainbow,
     _new_turn_flag,

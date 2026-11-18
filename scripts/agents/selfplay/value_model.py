@@ -194,13 +194,15 @@ class Ridge:
     def __init__(self, lam : float = 10.0):
         self.lam = lam
 
-    def fit(self, X, y, Xval=None, yval=None):
+    def fit(self, X, y, Xval=None, yval=None, w=None, wval=None):
+        """`w`: a weight per row (weighted least squares; default all 1). Xval, yval, wval are unused (the MLP's early stopping takes them)."""
         self.mu, self.sd = X.mean(0), np.maximum(X.std(0), MIN_SD)
         Z = np.clip((X - self.mu) / self.sd, -CLIP, CLIP)
         Z1 = np.hstack([Z, np.ones((len(Z), 1), dtype=Z.dtype)])
-        A = Z1.T @ Z1 + self.lam * np.eye(Z1.shape[1])
+        Zw = Z1 if w is None else Z1 * (np.asarray(w, dtype=Z1.dtype) / np.mean(w))[:, None]
+        A = Zw.T @ Z1 + self.lam * np.eye(Z1.shape[1])
         A[-1, -1] -= self.lam
-        self.w = np.linalg.solve(A.astype(np.float64), (Z1.T @ y).astype(np.float64)).astype(np.float32)
+        self.w = np.linalg.solve(A.astype(np.float64), (Zw.T @ y).astype(np.float64)).astype(np.float32)
         return self
 
     def predict(self, X):
@@ -240,9 +242,12 @@ class MLP:
             acts.append(Z)
         return acts
 
-    def fit(self, X, y, Xval=None, yval=None):
+    def fit(self, X, y, Xval=None, yval=None, w=None, wval=None):
+        """`w`, `wval`: a weight per row of the training and validation sets (a weighted MSE; default all 1)."""
         self.mu, self.sd = X.mean(0), np.maximum(X.std(0), MIN_SD)
-        self.ymu = float(y.mean())
+        w = np.ones(len(X), dtype=np.float32) if w is None else (np.asarray(w, dtype=np.float32) / np.mean(w))
+        wval = None if yval is None else np.ones(len(yval)) if wval is None else np.asarray(wval) / np.mean(wval)
+        self.ymu = float(np.average(y, weights=w))
         Z, t = self._scale(X), (y - self.ymu).astype(np.float32)
         Zv = None if Xval is None else self._scale(Xval)
         self._init(Z.shape[1])
@@ -254,7 +259,7 @@ class MLP:
             for s in range(0, len(Z), self.batch):
                 idx = order[s:s + self.batch]
                 acts = self._forward(Z[idx])
-                grad = (2.0 / len(idx)) * (acts[-1][:, 0] - t[idx])[:, None]
+                grad = (2.0 / len(idx)) * (w[idx] * (acts[-1][:, 0] - t[idx]))[:, None]
                 step += 1
                 for k in range(len(self.W) - 1, -1, -1):
                     gW = acts[k].T @ grad + self.wd * self.W[k]
@@ -266,7 +271,7 @@ class MLP:
                         v[k] = 0.999 * v[k] + 0.001 * g * g
                         p[k] -= self.lr * (m[k] / (1 - 0.9 ** step)) / (np.sqrt(v[k] / (1 - 0.999 ** step)) + 1e-8)
             if Zv is not None:
-                loss = float(np.mean((self._forward(Zv)[-1][:, 0] + self.ymu - yval) ** 2))
+                loss = float(np.mean(wval * (self._forward(Zv)[-1][:, 0] + self.ymu - yval) ** 2))
                 if self.verbose:
                     print(f"  epoch {epoch + 1}: val mse {loss:.3f}", flush=True)
                 if loss < best - 1e-4:

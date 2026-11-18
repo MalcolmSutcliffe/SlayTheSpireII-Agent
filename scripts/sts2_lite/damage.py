@@ -12,7 +12,6 @@ WEAK_MULTIPLIER = 0.75
 VULNERABLE_MULTIPLIER = 1.5
 SHRINK_MULTIPLIER = 0.7
 COLOSSUS_MULTIPLIER = 0.5
-DIAMOND_DIADEM_MULTIPLIER = 0.5
 FLUTTER_MULTIPLIER = 0.5
 SOAR_MULTIPLIER = 0.5
 SURROUND_MULTIPLIER = 1.5
@@ -54,8 +53,6 @@ def modify_damage(base : int, attacker : Creature, target : Creature, card : Car
         damage *= damage_multiplier(attacker, card, in_play)        # Pen Nib
     if StatusId.COLOSSUS in target.status and StatusId.VULNERABLE in attacker.status:
         damage *= COLOSSUS_MULTIPLIER
-    if StatusId.DIAMOND_DIADEM in target.status:
-        damage *= DIAMOND_DIADEM_MULTIPLIER
     if StatusId.FLUTTER in target.status:
         damage *= FLUTTER_MULTIPLIER
     if StatusId.SOAR in target.status:

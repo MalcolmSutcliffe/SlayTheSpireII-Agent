@@ -98,11 +98,11 @@ PLAIN_DAMAGE = {        # id : (damage, damage upgraded) of the cards that print
     CardId.ANGER : (6, 8), CardId.BASH : (8, 10), CardId.BLUDGEON : (32, 42), CardId.BREAK : (20, 30),
     CardId.BREAKTHROUGH : (9, 13), CardId.CINDER : (18, 24), CardId.CONFLAGRATION : (2, 2),
     CardId.DISMANTLE : (8, 10), CardId.FEED : (10, 12), CardId.FIEND_FIRE : (7, 10), CardId.FIGHT_ME : (5, 6),
-    CardId.GIANT_ROCK : (16, 20), CardId.HEADBUTT : (9, 12), CardId.HEMOKINESIS : (15, 20),
-    CardId.HOWL_FROM_BEYOND : (16, 21), CardId.IRON_WAVE : (5, 7), CardId.MANGLE : (15, 20),
+    CardId.GIANT_ROCK : (20, 24), CardId.HEADBUTT : (9, 12), CardId.HEMOKINESIS : (15, 20),
+    CardId.HOWL_FROM_BEYOND : (18, 24), CardId.IRON_WAVE : (5, 7), CardId.MANGLE : (20, 26),
     CardId.FISTICUFFS : (7, 9), CardId.FLASH_OF_STEEL : (5, 8), CardId.HAND_OF_GREED : (20, 25), CardId.OMNISLICE : (8, 11),
     CardId.ULTIMATE_STRIKE : (14, 20), CardId.SEEKER_STRIKE : (9, 12), CardId.VOLLEY : (10, 14), CardId.DRAMATIC_ENTRANCE : (11, 15),
-    CardId.MAUL : (5, 6), CardId.WHISTLE : (33, 44), CardId.MOLTEN_FIST : (10, 14), CardId.NEOWS_FURY : (10, 14), CardId.PACTS_END : (17, 23), CardId.PILLAGE : (6, 9), CardId.POMMEL_STRIKE : (9, 10),
+    CardId.MAUL : (5, 6), CardId.WHISTLE : (33, 44), CardId.MOLTEN_FIST : (10, 14), CardId.NEOWS_FURY : (10, 14), CardId.PACTS_END : (18, 24), CardId.PILLAGE : (6, 9), CardId.POMMEL_STRIKE : (9, 10),
     CardId.BOLAS : (3, 4), CardId.SALVO : (12, 16), CardId.THRUMMING_HATCHET : (11, 14), CardId.JACKPOT : (25, 30),
     CardId.SETUP_STRIKE : (7, 9), CardId.SPITE : (5, 5), CardId.STOMP : (12, 15), CardId.STRIKE_IRONCLAD : (6, 9),
     CardId.SWORD_BOOMERANG : (3, 3), CardId.TEAR_ASUNDER : (5, 7), CardId.THUNDERCLAP : (4, 7),
@@ -128,7 +128,7 @@ def _printed_damage(card : Card, combat : CombatSimulator) -> int:
     if card.card_id == CardId.PERFECTED_STRIKE:
         return 6 + (3 if up else 2) * _strikes(player)
     if card.card_id == CardId.RAMPAGE:
-        return 9 + card.bonus_damage
+        return 10 + card.bonus_damage
     if card.card_id == CardId.MAUL:
         return (6 if up else 5) + card.bonus_damage
     if card.card_id == CardId.THRASH:
@@ -138,7 +138,7 @@ def _printed_damage(card : Card, combat : CombatSimulator) -> int:
     if card.card_id == CardId.GOLD_AXE:
         return player.cards_played_total
     if card.card_id == CardId.REND:      # no target in the hand: the printed damage, without the bonus for the debuffs on a target
-        return 18 if up else 15
+        return 12 if up else 10
     if card.card_id == CardId.MAD_SCIENCE:      # an Attack Mad Science: 12 a hit whatever its rider
         return MAD_SCIENCE_DAMAGE
     return PLAIN_DAMAGE[card.card_id][up]

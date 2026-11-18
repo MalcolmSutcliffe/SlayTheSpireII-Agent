@@ -184,16 +184,17 @@ def _timed_out(signum, frame):
     raise RunTimedOut
 
 
-def play_run_guarded(seed : int, *args, timeout : int = RUN_TIMEOUT, **kwargs) -> dict:
+def play_run_guarded(seed : int, *args, timeout : int = RUN_TIMEOUT, play=None, **kwargs) -> dict:
     """play_run, given up after `timeout` seconds (0: never): an endless loop in the engine costs one run instead of stalling the suite. A run given up is
     logged with no rooms and picks and cause "engine error: timed out after N s", which value_model.Rows leaves out and evaluate.report does not compare.
-    Uses SIGALRM: call it from the main thread of a process (a suite worker is one)."""
+    Uses SIGALRM: call it from the main thread of a process (a suite worker is one). `play`: the function that plays the run (default play_run; label.py's labeled runs)."""
+    play = play or play_run
     if not timeout:
-        return play_run(seed, *args, **kwargs)
+        return play(seed, *args, **kwargs)
     previous = signal.signal(signal.SIGALRM, _timed_out)
     signal.alarm(timeout)
     try:
-        return play_run(seed, *args, **kwargs)
+        return play(seed, *args, **kwargs)
     except RunTimedOut:
         pilot = parse_pilot(kwargs.get("pilot", "rollout"))
         ascension = kwargs.get("ascension", args[4] if len(args) > 4 else 0)          # play_run(seed, chooser, counts, c, epsilon, ascension, ...)

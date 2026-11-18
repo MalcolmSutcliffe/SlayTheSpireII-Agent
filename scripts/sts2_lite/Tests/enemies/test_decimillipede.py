@@ -158,6 +158,8 @@ def test_a_segment_lying_dead_reattaches_one_turn_later_not_at_once():
 
 def test_segments_killed_a_turn_apart_come_back_a_turn_apart():
     cs, game = played_turn("front_reattached_middle_dead_before", "front_reattached_middle_dead_after")
+    # captured before v0.111 (Toasty Mittens exhausted the top card); now it asks for a card of the hand: either gives Feel No Pain's block
+    CombatSimulator(cs).choose_card(cs.pending_choice.indices[0])
     assert [e.enemy_id for e in cs.enemies] == [e.enemy_id for e in game.enemies]
     assert [(d.enemy_id, d.move_id) for d in cs.dormant] == [("DECIMILLIPEDE_SEGMENT_MIDDLE_0", "REATTACH")]
     from agents.verify import compare

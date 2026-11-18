@@ -39,6 +39,16 @@ def kind_bonus(card : dict, deck : list[dict], config : DeckEvalConfig = DEFAULT
     return bonus * {"uncommon": config.uncommon_bonus_factor, "rare": config.rare_bonus_factor}.get(str(card.get("rarity", "")).lower(), 1.0)
 
 
+def decide(rows : list[tuple], win_rate : float, early : bool, config : DeckEvalConfig = DEFAULT) -> tuple[tuple | None, bool, float]:
+    """The take-or-skip rule on future_rows' rows ((gain, se, ...) each, the kind bonus already in the gain): (the best row, whether to take it, the gain it had
+    to beat). The best card is taken when its gain clears `card_z` standard errors plus the skip floor."""
+    best = max(rows, key=lambda r: r[0], default=None)
+    if best is None:
+        return None, False, 0.0
+    needed = config.card_z * best[1] + skip_floor(early, win_rate, config)
+    return best, best[0] > needed, needed
+
+
 class CardRewardChooser:
     def __init__(self, fights : int | None = None, pool=None, route_provider=lambda: None, log=print, advisor : DeckAdvisor | None = None):
         self.advisor = advisor or DeckAdvisor(fights, pool, route_provider, log)
@@ -66,11 +76,9 @@ class CardRewardChooser:
         future = self.future_rows(decision, deck, player, route, skip, count)
         base = future["base"]
         rows = future["rows"]
-        best = max(rows, key=lambda r: r[0], default=None)
+        best, take, needed = decide(rows, base.win_rate, early, cfg)
         if best is None:
             return skip or decision.options[0]
-        needed = cfg.card_z * best[1] + skip_floor(early, base.win_rate, cfg)
-        take = best[0] > needed
         chosen = best[2] if take else (skip or best[2])
         mix = mix_ahead(ctx.get("act", 1), route)
         self.log("card reward act %d (weak %.0f normal %.0f elite %.0f%s boss %.1f%s, %d fights, %.1fs, base %.1f rooms, %.0f%% clear the act) | needs > %.2f rooms -> %s" %

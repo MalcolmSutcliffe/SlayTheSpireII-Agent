@@ -59,7 +59,7 @@ CARD_ENERGY_COST_AND_TARGET : dict[CardId, tuple[int | str, TargetType]] = {
     CardId.EQUILIBRIUM : (2, _S),
     CardId.ETERNAL_ARMOR : (3, _S),
     CardId.EVIL_EYE : (1, _S),
-    CardId.EXPECT_A_FIGHT : (2, _S),
+    CardId.EXPECT_A_FIGHT : (3, _S),
     CardId.EXTERMINATE : (1, _ALL),
     CardId.FASTEN : (1, _S),
     CardId.FEED : (1, _A),
@@ -120,7 +120,7 @@ CARD_ENERGY_COST_AND_TARGET : dict[CardId, tuple[int | str, TargetType]] = {
     CardId.RAGE : (0, _S),
     CardId.RAMPAGE : (1, _A),
     CardId.RELAX : (3, _S),
-    CardId.REND : (2, _A),
+    CardId.REND : (1, _A),
     CardId.RESTLESSNESS : (0, _S),
     CardId.ROLLING_BOULDER : (3, _S),
     CardId.RUPTURE : (1, _S),
@@ -182,7 +182,7 @@ TOXIC_DAMAGE = 5
 # energy cost change when upgraded (the rest of an upgrade is read from is_upgraded when the card is played)
 UPGRADE_COST_CHANGE = {
     CardId.BARRICADE : -1, CardId.CORRUPTION : -1, CardId.DARK_EMBRACE : -1, CardId.STAMPEDE : -1,
-    CardId.UNMOVABLE : -1, CardId.HAVOC : -1, CardId.EXPECT_A_FIGHT : -1, CardId.INFERNAL_BLADE : -1,
+    CardId.UNMOVABLE : -1, CardId.HAVOC : -1, CardId.INFERNAL_BLADE : -1,
     CardId.BODY_SLAM : -1, CardId.HELLRAISER : -1, CardId.MIND_BLAST : -1,
     CardId.AUTOMATION : -1, CardId.MAYHEM : -1, CardId.NOSTALGIA : -1, CardId.CALAMITY : -1,
     CardId.APOTHEOSIS : -1, CardId.ABUNDANCE : -1, CardId.ALCHEMIZE : -1, CardId.ENTRENCH : -1, CardId.DISTRACTION : -1,
@@ -191,7 +191,7 @@ UPGRADE_COST_CHANGE = {
 # CardModel base cost of the cards above (an upgrade caps a rolled Confused cost at base + change)
 UPGRADE_BASE_COST = {
     CardId.BARRICADE : 3, CardId.CORRUPTION : 3, CardId.DARK_EMBRACE : 2, CardId.STAMPEDE : 2,
-    CardId.UNMOVABLE : 2, CardId.HAVOC : 1, CardId.EXPECT_A_FIGHT : 2, CardId.INFERNAL_BLADE : 1,
+    CardId.UNMOVABLE : 2, CardId.HAVOC : 1, CardId.INFERNAL_BLADE : 1,
     CardId.BODY_SLAM : 1, CardId.HELLRAISER : 2, CardId.MIND_BLAST : 1,
     CardId.AUTOMATION : 1, CardId.MAYHEM : 2, CardId.NOSTALGIA : 1, CardId.CALAMITY : 3,
     CardId.APOTHEOSIS : 2, CardId.ABUNDANCE : 1, CardId.ALCHEMIZE : 1, CardId.ENTRENCH : 2, CardId.DISTRACTION : 1,
@@ -278,7 +278,8 @@ _unknown_enchantments : set[str] = set()
 _unknown_cards : set[str] = set()
 
 # Quest cards: unplayable like a Wound and nothing else in combat (Spoils Map, Lantern Key and Byrdonis Egg act on the map and at rest sites, which the campaign simulator models), so the combat engine loads them as the dead stand-in without calling them missing
-QUEST_CARDS = frozenset({"SPOILS_MAP", "LANTERN_KEY", "BYRDONIS_EGG"})
+QUEST_CARDS = frozenset({"SPOILS_MAP", "LANTERN_KEY", "BYRDONIS_EGG", "DOWSING"})
+DOWSING_ROOMS = 5         # Dowsing.maxRooms: ? rooms entered with it in the deck before it becomes Abundance
 
 # Mad Science: the riders Tinker Time offers for each card type, and (damage / block, rider numbers) the sim plays them with
 MAD_SCIENCE_RIDERS = {"Attack": ("SAPPING", "VIOLENCE", "CHOKING"), "Skill": ("ENERGIZED", "WISDOM", "CHAOS"), "Power": ("EXPERTISE", "CURIOUS", "IMPROVEMENT")}

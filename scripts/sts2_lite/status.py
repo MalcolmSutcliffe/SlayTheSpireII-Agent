@@ -50,7 +50,7 @@ class StatusId(Enum):
     DEMON_FORM = auto()
     FEEL_NO_PAIN = auto()
     FLAME_BARRIER = auto()
-    DIAMOND_DIADEM = auto()
+    BLUR = auto()       # block is not cleared at the owner's next turn start (Diamond Diadem); a counter that ticks after that
     JUGGERNAUT = auto()
     JUGGLING = auto()
     ONE_TWO_PUNCH = auto()
@@ -526,9 +526,6 @@ def _rage_on_end_turn(combat : CombatSimulator, owner : Creature, amount : int):
 def _flame_barrier_on_enemy_turn_end(combat : CombatSimulator, owner : Creature, amount : int):
     del owner.status[StatusId.FLAME_BARRIER]
 
-def _diamond_diadem_on_enemy_turn_end(combat : CombatSimulator, owner : Creature, amount : int):
-    del owner.status[StatusId.DIAMOND_DIADEM]
-
 def _one_two_punch_on_end_turn(combat : CombatSimulator, owner : Creature, amount : int):
     del owner.status[StatusId.ONE_TWO_PUNCH]
 
@@ -667,6 +664,8 @@ def _entropy_on_turn_start(combat : CombatSimulator, owner : Creature, amount : 
     if _own(combat, owner):
         combat.request_transform(amount)
 
+AXEBOT_RESPAWN_MAX_HP = 10
+
 def _stock_on_death(combat : CombatSimulator, owner : Creature, amount : int):
     # StockPower.AfterDeath: a new Axebot in the same place with one life fewer, opening with Boot Up
     from sts2_lite.enemy import Enemy     # enemy.py imports this module
@@ -674,6 +673,9 @@ def _stock_on_death(combat : CombatSimulator, owner : Creature, amount : int):
     new = Enemy.spawn(monster, int(slot), combat.combat_state.ascension)
     if amount - 1 > 0:
         new.status[StatusId.STOCK] = StatusInstance(StatusId.STOCK, amount - 1)
+    bonus = AXEBOT_RESPAWN_MAX_HP * (2 - (amount - 1))     # Axebot.RespawnMaxHpBonus: +10 Max HP for each life used
+    new.max_hp += bonus
+    new.current_hp += bonus
     combat.summon(new, at=getattr(owner, "last_index", None))
 
 def _galvanic_on_card_played(combat : CombatSimulator, owner : Creature, amount : int, card):
@@ -801,7 +803,6 @@ STATUS_HANDLERS : dict[tuple[StatusId, HookType], Callable] = HandlerTable({
     (StatusId.RAGE, HookType.CARD_PLAYED) : _rage_on_card_played,
     (StatusId.RAGE, HookType.END_TURN) : _rage_on_end_turn,
     (StatusId.FLAME_BARRIER, HookType.ENEMY_TURN_END) : _flame_barrier_on_enemy_turn_end,
-    (StatusId.DIAMOND_DIADEM, HookType.ENEMY_TURN_END) : _diamond_diadem_on_enemy_turn_end,
     (StatusId.ONE_TWO_PUNCH, HookType.END_TURN) : _one_two_punch_on_end_turn,
     (StatusId.JUGGLING, HookType.CARD_PLAYED) : _juggling_on_card_played,
     (StatusId.AGGRESSION, HookType.BEFORE_PLAYER_TURN) : _aggression_on_before_player_turn,

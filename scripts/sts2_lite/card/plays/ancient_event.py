@@ -35,7 +35,7 @@ def play_brightest_flame(card: Card, combat : CombatSimulator, target_index=0, i
     amount = 3 if is_upgraded else 2
     combat.gain_energy(amount)
     player.draw_cards(amount)
-    player.lose_max_hp(1)
+    player.lose_max_hp(2)
 
 def play_maul(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     # `card` is this play's own copy; every Maul of the fight grows, in every pile

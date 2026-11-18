@@ -68,15 +68,30 @@ def _value_model(name : str):
     return ValueModel.load(folder)
 
 
+@functools.lru_cache(maxsize=8)
+def _pick_model(name : str):
+    """A pick model from data/selfplay/models/NAME (pick_model.py --out), loaded once per process."""
+    from agents.selfplay.suite import OUT_ROOT
+    from agents.selfplay.pick_model import PickModel
+    folder = OUT_ROOT / "models" / name
+    if not (folder / "meta.json").exists():
+        raise ValueError(f"no pick model at {folder} (fit one with: python -m agents.selfplay.pick_model --out ...)")
+    return PickModel.load(folder)
+
+
 def make_chooser(name : str, seed : int | str = 0) -> CardChooser:
     """"random", "rarity", or "model:NAME[:FLOOR]": the value model saved as data/selfplay/models/NAME (e.g. model:gen0/mlp), taking a card only when it adds
     more than FLOOR rooms (default 0)."""
+    if name.startswith("pick:"):            # a pick model distilled from the walks (pick_model.py): pick:NAME[:MARGIN], e.g. pick:walk0/mlp
+        from agents.selfplay.pick_model import PickChooser
+        path, _, margin = name[len("pick:"):].partition(":")
+        return PickChooser(_pick_model(path), float(margin) if margin else None)
     if name.startswith("model:"):
         from agents.selfplay.value_model import ModelChooser
         path, _, floor = name[len("model:"):].partition(":")
         return ModelChooser(_value_model(path), float(floor) if floor else 0.0)
     if name not in CHOOSERS:
-        raise ValueError(f"unknown chooser {name!r}: {sorted(CHOOSERS)} or model:NAME[:FLOOR]")
+        raise ValueError(f"unknown chooser {name!r}: {sorted(CHOOSERS)}, model:NAME[:FLOOR] or pick:NAME[:MARGIN]")
     return CHOOSERS[name](seed)
 
 

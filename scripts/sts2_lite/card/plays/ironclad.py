@@ -116,7 +116,7 @@ def play_cinder(card: Card, combat : CombatSimulator, target_index=0, is_upgrade
         combat.fire(HookType.CARD_EXHAUSTED, victim)
 
 def play_colossus(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    _gain_block(combat, 8 if is_upgraded else 5)
+    _gain_block(combat, 7 if is_upgraded else 4)
     combat.combat_state.player.apply_status(StatusId.COLOSSUS, 1)
 
 def play_conflagration(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
@@ -130,7 +130,7 @@ def play_corruption(card: Card, combat : CombatSimulator, target_index=0, is_upg
 
 def play_crimson_mantle(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     player = combat.combat_state.player
-    player.apply_status(StatusId.CRIMSON_MANTLE, 10 if is_upgraded else 8)
+    player.apply_status(StatusId.CRIMSON_MANTLE, 10 if is_upgraded else 7)
     player.crimson_mantle_plays += 1        # self-damage per turn (CrimsonMantlePower.IncrementSelfDamage)
 
 def play_cruelty(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
@@ -143,7 +143,7 @@ def play_defend(card: Card, combat : CombatSimulator, target_index=0, is_upgrade
     _gain_block(combat, 8 if is_upgraded else 5)
 
 def play_demon_form(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    combat.combat_state.player.apply_status(StatusId.DEMON_FORM, 3 if is_upgraded else 2)
+    combat.combat_state.player.apply_status(StatusId.DEMON_FORM, 4 if is_upgraded else 3)
 
 def play_dismantle(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     target = enemy_at(combat, target_index)
@@ -165,8 +165,8 @@ def play_evil_eye(card: Card, combat : CombatSimulator, target_index=0, is_upgra
 
 def play_expect_a_fight(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     player = combat.combat_state.player
-    combat.gain_energy(sum(1 for c in player.hand if c.type == CardType.Attack))
-    player.apply_status(StatusId.NO_ENERGY_GAIN, 1)
+    # 15(16) Block, plus 5(8) for each Strength (CalculatedBlockVar, a Move: Dexterity and Frail apply)
+    _gain_block(combat, (16 if is_upgraded else 15) + (8 if is_upgraded else 5) * max(0, player.status_amount(StatusId.STRENGTH)))
 
 def play_feed(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     target = enemy_at(combat, target_index)
@@ -201,8 +201,7 @@ def play_flame_barrier(card: Card, combat : CombatSimulator, target_index=0, is_
     combat.combat_state.player.apply_status(StatusId.FLAME_BARRIER, 6 if is_upgraded else 4)
 
 def play_forgotten_ritual(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    if combat.combat_state.player.cards_exhausted_this_turn > 0:
-        combat.gain_energy(4 if is_upgraded else 3)
+    combat.gain_energy(4 if is_upgraded else 3)
 
 def play_havoc(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     player = combat.combat_state.player
@@ -275,7 +274,7 @@ def play_juggling(card: Card, combat : CombatSimulator, target_index=0, is_upgra
 
 def play_mangle(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     target = enemy_at(combat, target_index)
-    _attack(combat, 20 if is_upgraded else 15, target)
+    _attack(combat, 26 if is_upgraded else 20, target)
     temp_strength(target, StatusId.MANGLE, 15 if is_upgraded else 10, -1, combat)
 
 def play_molten_fist(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
@@ -345,8 +344,8 @@ def play_rage(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=
 def play_rampage(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     # `card` is this play's own copy (see CombatSimulator.private_copy), so it can remember the growth
     target = enemy_at(combat, target_index)
-    _attack(combat, 9 + card.bonus_damage, target)
-    card.bonus_damage += 9 if is_upgraded else 5
+    _attack(combat, 10 + card.bonus_damage, target)
+    card.bonus_damage += 10 if is_upgraded else 5
 
 def play_rupture(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     combat.combat_state.player.apply_status(StatusId.RUPTURE, 2 if is_upgraded else 1)
@@ -361,7 +360,7 @@ def play_second_wind(card: Card, combat : CombatSimulator, target_index=0, is_up
 def play_setup_strike(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     target = enemy_at(combat, target_index)
     _attack(combat, 9 if is_upgraded else 7, target)
-    temp_strength(combat.combat_state.player, StatusId.SETUP_STRIKE, 3 if is_upgraded else 2, 1)
+    temp_strength(combat.combat_state.player, StatusId.SETUP_STRIKE, 4 if is_upgraded else 3, 1)
 
 def play_shrug_it_off(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     _gain_block(combat, 11 if is_upgraded else 8)
@@ -409,7 +408,7 @@ def play_sword_boomerang(card: Card, combat : CombatSimulator, target_index=0, i
 
 def play_taunt(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     target = enemy_at(combat, target_index)
-    _gain_block(combat, 8 if is_upgraded else 7)
+    _gain_block(combat, 7 if is_upgraded else 6)
     _vulnerable(combat, target, 2 if is_upgraded else 1)
 
 def play_tear_asunder(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):

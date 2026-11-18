@@ -14,8 +14,8 @@ CHARACTERS = ("IRONCLAD", "SILENT", "DEFECT", "NECROBINDER", "REGENT")      # ev
 PRISMATIC_ODDS = 1 / 3
 
 NEOW_PAIRED = {"CURSED_PEARL": "GOLDEN_PEARL", "HEFTY_TABLET": "ARCANE_SCROLL", "LEAFY_POULTICE": "NEW_LEAF", "PRECARIOUS_SHEARS": "PRECISE_SCISSORS"}
-OROBAS_1 = ("ELECTRIC_SHRYMP", "GLASS_EYE", "SAND_CASTLE")
-OROBAS_2 = ("ALCHEMICAL_COFFER", "DRIFTWOOD", "RADIANT_PEARL")
+OROBAS_1 = ("ELECTRIC_SHRYMP", "GLASS_EYE")
+OROBAS_2 = ("ALCHEMICAL_COFFER", "DRIFTWOOD", "RADIANT_PEARL", "SAND_CASTLE")
 PAEL_1 = ("PAELS_FLESH", "PAELS_HORN", "PAELS_TEARS")
 PAEL_3 = ("PAELS_EYE", "PAELS_BLOOD")
 TEZCATARA_1 = ("VERY_HOT_COCOA", "YUMMY_COOKIE")
@@ -25,7 +25,7 @@ NONUPEIPE = ("BLESSED_ANTLER", "BRILLIANT_SCARF", "DELICATE_FROND", "DIAMOND_DIA
 TANX = ("CLAWS", "CROSSBOW", "IRON_CLUB", "MEAT_CLEAVER", "SAI", "SPIKED_GAUNTLETS", "TANXS_WHISTLE", "THROWING_AXE", "WAR_HAMMER")
 VAKUU = (("BLOOD_SOAKED_ROSE", "WHISPERING_EARRING", "FIDDLE"), ("PRESERVED_FOG", "SERE_TALON", "DISTINGUISHED_CAPE"), ("CHOICES_PARADOX", "MUSIC_BOX", "LORDS_PARASOL", "JEWELED_MASK"))
 DARV_ANY = (("ASTROLABE",), ("BLACK_STAR",), ("CALLING_BELL",), ("EMPTY_CAGE",), ("PANDORAS_BOX",), ("RUNIC_PYRAMID",), ("SNECKO_EYE",))
-DARV_ACT_2, DARV_ACT_3 = ("ECTOPLASM", "SOZU"), ("PHILOSOPHERS_STONE", "VELVET_CHOKER")
+DARV_ACT_2, DARV_ACT_2_ON = (("ECTOPLASM",), ("SOZU",)), (("PHILOSOPHERS_STONE",), ("VELVET_CHOKER",))      # act 2 only / act 2 and later
 TRANSCENDENCE = {"BASH": "BREAK"}                 # the starter cards Archaic Tooth turns into an Ancient card (the Ironclad's)
 STARTER_RELIC_UPGRADE = {"BURNING_BLOOD": "BLACK_BLOOD"}
 SHARED = ("DARV",)
@@ -82,7 +82,7 @@ def _dusty_tome_card(run, rng) -> str:
 
 def neow(run, rng) -> list[AncientOption]:
     curse = rng.choice([c for c in NEOW_CURSES])
-    positive = [p for p in NEOW_POSITIVE if p != NEOW_PAIRED.get(curse)]
+    positive = [p for p in NEOW_POSITIVE if p != NEOW_PAIRED.get(curse) and not (curse == "NEOWS_SACRIFICE" and p in ("PHIAL_HOLSTER", "LOST_COFFER"))]
     if curse != "LARGE_CAPSULE":
         positive.append("LAVA_ROCK" if rng.random() < 0.5 else "SMALL_CAPSULE")
     positive.append("NUTRITIOUS_OYSTER" if rng.random() < 0.5 else "STONE_HUMIDIFIER")
@@ -156,9 +156,10 @@ def vakuu(run, rng) -> list[AncientOption]:
 
 def darv(run, rng) -> list[AncientOption]:
     sets = list(DARV_ANY)
-    sets.append(DARV_ACT_2 if run.act == 2 else None)
-    sets.append(DARV_ACT_3 if run.act == 3 else None)
-    sets = [s for s in sets if s]
+    if run.act == 2:
+        sets += DARV_ACT_2
+    if run.act >= 2:
+        sets += DARV_ACT_2_ON
     picks = [_opt(rng.choice(s)) for s in sets]
     rng.shuffle(picks)
     if rng.random() < 0.5:

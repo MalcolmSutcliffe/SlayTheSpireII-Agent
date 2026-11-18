@@ -16,7 +16,7 @@ from agents.verify import _fresh_spawn_hp_is_random
 from sts2_lite.Tests.enemies.test_glory_simple import at, turn
 
 DECOMPILED = Path(os.environ.get("STS2_DECOMPILED") or Path(__file__).resolve().parents[4] / "sts2_decompiled")
-MONSTERS = DECOMPILED / "MegaCrit.Sts2.Core.Models.Monsters"
+MONSTERS = DECOMPILED / "Core" / "Models" / "Monsters"
 needs_source = pytest.mark.skipif(not MONSTERS.exists(), reason="decompiled monsters not available")
 
 VALUE = re.compile(r"\b(\w+)\s*=>\s*AscensionHelper\.GetValueIfAscension\(AscensionLevel\.(\w+),\s*(-?\d+),\s*(-?\d+)\)")
@@ -57,7 +57,7 @@ def test_spawn_hit_points_follow_the_source():
     for monster, (low, high, tough_low, tough_high) in SPAWN_HP.items():
         text = (MONSTERS / (monster.title().replace("_", "") + ".cs")).read_text()
         def hp(prop):
-            m = re.search(prop + r"\s*=>\s*(?:AscensionHelper\.GetValueIfAscension\(AscensionLevel\.ToughEnemies,\s*(\d+),\s*(\d+)\)|(\d+)|MinInitialHp);", text)
+            m = re.search(prop + r"\s*=>\s*(?:AscensionHelper\.GetValueIfAscension\(AscensionLevel\.ToughEnemies,\s*(\d+),\s*(\d+)\)|(\d+)|MinInitialHp)\s*(?:\+\s*\w+\s*)?;", text)
             return (int(m.group(1)), int(m.group(2))) if m.group(1) else (int(m.group(3)),) * 2 if m.group(3) else None
         mn, mx = hp("MinInitialHp"), hp("MaxInitialHp") or hp("MinInitialHp")
         assert (low, high, tough_low, tough_high) == (mn[1], mx[1], mn[0], mx[0]), monster

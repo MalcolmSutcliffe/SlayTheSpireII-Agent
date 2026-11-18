@@ -67,7 +67,7 @@ def test_cursed_pearl_and_cape():
     n = len(c.run.deck)
     obtain_relic(c, "CURSED_PEARL")
     obtain_relic(c, "DISTINGUISHED_CAPE")
-    assert len(c.run.deck) == n + 4 and c.run.max_hp == 80 - 9
+    assert len(c.run.deck) == n + 1 + 2 + 3 and c.run.max_hp == 80       # Greed; the Cape's two curses and three Apparitions
 
 
 def test_early_only_relics_leave_the_bag_late():
