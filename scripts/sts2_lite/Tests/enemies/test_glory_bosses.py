@@ -92,6 +92,14 @@ def test_the_amalgam_s_moves():
     cs = at("TORCH_HEAD_AMALGAM", "STRONG_TACKLE")
     assert moves_over(cs, 7) == ["STRONG_TACKLE", "TACKLE_2", "BEAM", "TACKLE_3", "TACKLE_4", "BEAM", "TACKLE_3", "TACKLE_4"]
 
+
+def test_amalgam_pre_v0111_tackle_opening_is_followed_by_tackle_2():
+    from sts2_lite.enemy_moves import MOVE_TABLES, table_move_id
+    table = MOVE_TABLES["TORCH_HEAD_AMALGAM"](0)
+    assert table_move_id("TORCH_HEAD_AMALGAM", "TACKLE_MOVE", table) == "TACKLE"
+    assert table["TACKLE"].next_move == "TACKLE_2" and table["TACKLE"].damage == 18
+    assert MOVE_TABLES["TORCH_HEAD_AMALGAM"](10)["TACKLE"].damage == 19
+
 def test_the_queen_s_death_ends_the_fight_even_with_the_amalgam_alive():
     cs = queen_fight("EXECUTION")
     cs.enemies[1].current_hp = 1
@@ -323,13 +331,12 @@ def enemy_diffs(cs, want):
     return [d for d in verify.compare(cs, want) if (d.startswith("enemy") or "dormant" in d) and "hp" not in d]
 
 def test_every_boss_capture_loads_with_moves_and_damage_agreeing():
-    # ("queen", "turn_1") was captured before v0.111: its Torch Head Amalgam opens with TACKLE_MOVE, now STRONG_TACKLE_MOVE
-    for enemy, name in (("queen", "turn_2"), ("queen", "turn_2_bound_played"), ("queen", "minion_killed"),
+    # ("queen", "turn_1") was captured before v0.111: its Torch Head Amalgam opens with TACKLE_MOVE (the table's TACKLE), now STRONG_TACKLE_MOVE
+    for enemy, name in (("queen", "turn_1"), ("queen", "turn_2"), ("queen", "turn_2_bound_played"), ("queen", "minion_killed"),
                         ("test_subject", "phase_1"), ("test_subject", "phase_2"), ("test_subject", "phase_3"), ("test_subject", "between_phases"),
                         ("aeonglass", "capture_1"), ("aeonglass", "capture_2")):
         glory(enemy, name)
 
-@pytest.mark.skip(reason="captured before v0.111: the Amalgam's TACKLE_MOVE opening is now STRONG_TACKLE_MOVE; re-capture the Queen fight")
 def test_queen_turn_one_to_two_chains_the_player_and_moves_the_amalgam_on():
     cs = glory("queen", "turn_1")
     turn(cs)

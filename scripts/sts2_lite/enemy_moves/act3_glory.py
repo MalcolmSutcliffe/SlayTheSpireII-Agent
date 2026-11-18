@@ -351,6 +351,9 @@ def torch_head_amalgam(ascension : int) -> MoveTable:
     tackle, weak = deadly(ascension, 18, 22), deadly(ascension, 14, 16)
     return {
         "STRONG_TACKLE": Move(frozenset({"attack"}), "TACKLE_2", damage=deadly(ascension, 26, 32), hits=1),
+        # before v0.111 the fight opened with TACKLE_MOVE (captured base damage 18 at A0/A2, 19 at A10), then went on as now; kept so older
+        # captures and logs line up (without it the game's TACKLE_MOVE was read as TACKLE_2 and the Amalgam ran a move ahead)
+        "TACKLE": Move(frozenset({"attack"}), "TACKLE_2", damage=deadly(ascension, 18, 19), hits=1),
         "TACKLE_2": Move(frozenset({"attack"}), "BEAM", damage=tackle, hits=1),
         "BEAM": Move(frozenset({"attack"}), "TACKLE_3", damage=8, hits=3),
         "TACKLE_3": Move(frozenset({"attack"}), "TACKLE_4", damage=weak, hits=1),
