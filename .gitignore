@@ -23,3 +23,7 @@ SlayTheSpireII-Agent.sln
 /cli-anything-sts2/agent-harness/bridge/plugin/.dotnet-cli-home/
 /cli-anything-sts2/agent-harness/bridge/install/bridge_plugin/
 
+/.claude
+.claudeignore
+CLAUDE.md
+/docs

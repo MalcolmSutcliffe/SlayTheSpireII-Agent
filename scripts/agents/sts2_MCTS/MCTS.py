@@ -167,7 +167,7 @@ class sts2_MCTS:
 
         stats = { 
             "plain_check" : None if plain_check is None else {k: v for k, v in plain_check.items() if k != "action"},
-            "children": [{"action": c.action, "visits": c.visits, "q": c.total_reward / c.visits} for c in self._root_node.children],
+            "children": [{"action": c.action, "visits": c.visits, "q": c.total_reward / c.visits if c.visits else math.nan} for c in self._root_node.children],
             "num_sims" : self._num_sims,
             "time_taken" : time.perf_counter() - search_started,
             "exit_reason" : exit_reason,

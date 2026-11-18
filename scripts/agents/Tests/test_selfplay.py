@@ -5,7 +5,10 @@ import pytest
 
 from agents.selfplay import suite
 from agents.selfplay.choosers import Counts, Explorer, RarityChooser, RandomChooser, base_id, card_key, make_chooser
-from agents.selfplay.run import play_run
+import time
+
+from agents.selfplay import run as run_module
+from agents.selfplay.run import Pilot, parse_pilot, play_run, play_run_guarded
 from agents.deck_eval.fight_pool import load_pool
 
 needs_pool = pytest.mark.skipif(not load_pool(), reason="the engine has no encounters")
@@ -73,6 +76,12 @@ def test_a_run_is_repeatable_and_logs_its_rooms_and_picks():
     for pick in a["picks"]:
         assert pick["chosen"] == "SKIP" or pick["chosen"] in pick["offered"]
         assert len(pick["scores"]) == len(pick["offered"]) + 1
+        room = a["rooms"][pick["room"] - 1]
+        assert pick["after"]["reward"] and pick["after"]["room"] == room["room"] and pick["after"]["floor"] == room["floor"]
+        if pick["chosen"] != "SKIP":
+            assert pick["after"]["deck"][-1] == pick["chosen"]
+            if pick["room"] < len(a["rooms"]):          # the next room's deck has the card the run picked
+                assert a["rooms"][pick["room"]]["deck"].count(pick["chosen"]) >= pick["after"]["deck"].count(pick["chosen"])
     json.dumps(a)
 
 
@@ -93,3 +102,35 @@ def test_ascension_mix():
     assert suite.parse_ascensions("0,5,10,10") == [0, 5, 10, 10]
     assert {suite.ascension_of(s, [0, 5, 10]) for s in range(200)} == {0, 5, 10}
     assert suite.ascension_of(3, [0, 5, 10]) == suite.ascension_of(3, [0, 5, 10])
+
+
+def test_pilots():
+    assert parse_pilot("rollout") == Pilot() and parse_pilot("rollout").name == "rollout"
+    big = parse_pilot("mcts:100:big")
+    assert big.name == "mcts:100:big" and big.mcts_plays("Elite") and big.mcts_plays("Boss") and not big.mcts_plays("Monster")
+    every = parse_pilot("mcts:50")
+    assert every.mcts_plays("Monster") and every.search_config().max_sims == 50 and every.search_config().paired_scenarios == 0
+    for bad in ("mcts", "mcts:0", "mcts:x", "mcts:10:small", "greedy"):
+        with pytest.raises(ValueError):
+            parse_pilot(bad)
+
+
+@needs_pool
+@pytest.mark.slow
+def test_an_mcts_pilot_plays_the_elites_and_bosses_and_the_run_is_repeatable():
+    a, b = play_run(4, "rarity", epsilon=0.0, pilot="mcts:10:big"), play_run(4, "rarity", epsilon=0.0, pilot="mcts:10:big")
+    assert a == b and a["pilot"] == "mcts:10:big"
+    rollout = play_run(4, "rarity", epsilon=0.0)
+    assert rollout["pilot"] == "rollout" and rollout["outcome"]["mcts_decisions"] == 0
+    assert a["outcome"]["mcts_decisions"] > 0 or not any(r["room"] in ("Elite", "Boss") for r in a["rooms"])
+
+
+def test_a_stuck_run_is_given_up_and_logged_as_an_engine_error(monkeypatch):
+    monkeypatch.setattr(run_module, "play_run", lambda seed, *a, **k: time.sleep(5))
+    start = time.perf_counter()
+    out = play_run_guarded(9, "rarity", None, 0.5, 0.05, 3, pilot="mcts:100:big", timeout=1)
+    assert time.perf_counter() - start < 3
+    assert out["seed"] == 9 and out["ascension"] == 3 and out["pilot"] == "mcts:100:big" and out["rooms"] == [] and out["picks"] == []
+    assert out["outcome"]["cause"].startswith("engine error: timed out")
+    monkeypatch.setattr(run_module, "play_run", lambda seed, *a, **k: {"seed": seed})
+    assert play_run_guarded(4, timeout=1) == {"seed": 4}          # a run in time comes back as it is

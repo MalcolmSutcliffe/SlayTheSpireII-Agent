@@ -2,12 +2,15 @@
 
 `featurize` turns a snapshot (choosers.snapshot) into numbers: where the run is (act, floor, ascension, HP, gold), the upcoming boss, the deck (a count of each card, upgraded
 ones apart, plus totals of what the cards do, read from card_profile.json, which the engine measured, so a card the model has hardly seen still has a meaning), the relics and
-the potions. `Vocab` is the cards, relics and bosses the features have a column for (built from the training data). A model maps features to the target: the rooms the run
-still clears, capped at `HORIZON` (so one lucky run through three acts does not dominate a loss).
+the potions, plus `after_reward` for the state right after a card reward. `Vocab` is the cards, relics and bosses the features have a column for (built from the
+training data). A model maps features to the target: the rooms the run still clears from the state, to the end of the run. The rows are every room entered and
+every card reward (the deck with the pick added: what a chooser compares), in order (`sequence_of`, `Rows`); `td_targets` turns a run's outcome and a model's
+values into TD(lambda) targets, which are far less noisy than the outcome of one run and still reach the end of it (fit.py fits them round after round).
 
 `Ridge` (a linear model) and `MLP` (two hidden layers, numpy only) share `fit(X, y, Xval, yval)` and `predict(X)`. `ValueModel` holds a vocab and a model, and gives what a card chooser
 needs: `value(snap)` and `gain(snap, card)` = value(deck + card) - value(deck). `ModelChooser` makes it a `CardChooser`."""
 from __future__ import annotations
+import functools
 import json
 import math
 from collections import Counter
@@ -15,19 +18,28 @@ from pathlib import Path
 
 import numpy as np
 
-from agents.selfplay.choosers import base_id
+from agents.selfplay.choosers import base_id, card_key
 
-HORIZON = 20
+HORIZON = 20        # the old cap on the target (rooms): rows_of / Rows.mc take it as an option, off by default
 MAX_COPIES = 4
 MIN_SD = 0.1        # a column that hardly varies is not scaled up to unit spread: a rare card would otherwise reach values in the hundreds
 CLIP = 8.0
 ROOMS = ("Monster", "Elite", "Boss", "RestSite", "Shop", "Treasure", "Unknown")
 PROFILE_KEYS = ("damage", "block", "draw", "energy", "strength", "vuln", "weak", "hp", "power", "all")
 PROFILE_FILE = Path(__file__).resolve().parents[1] / "deck_eval" / "card_profile.json"
-POSITION_NAMES = ["act1", "act2", "act3", "floor", "ascension", "hp_frac", "max_hp", "gold", "deck_size", "potions", "relics"] + [f"room:{r}" for r in ROOMS]
+POSITION_NAMES = ["act1", "act2", "act3", "floor", "ascension", "hp_frac", "max_hp", "gold", "deck_size", "potions", "relics"] + [f"room:{r}" for r in ROOMS] + ["after_reward", "pilot_mcts"]
+AFTER_REWARD, PILOT_MCTS = POSITION_NAMES.index("after_reward"), POSITION_NAMES.index("pilot_mcts")
 
 
+def pilot_is_mcts(snap : dict) -> bool:
+    """Whether the state's fights are the MCTS's: training rows carry their run's pilot (Rows); a snapshot without one is a question about the agent itself,
+    which fights with the MCTS."""
+    return snap.get("pilot", "mcts") != "rollout"
+
+
+@functools.lru_cache(maxsize=1)
 def profile() -> dict:
+    """card_profile.json, read once (a chooser featurizes at every pick)."""
     return json.loads(PROFILE_FILE.read_text()) if PROFILE_FILE.exists() else {}
 
 
@@ -37,7 +49,7 @@ class Vocab:
         self.card_at = {c: i for i, c in enumerate(cards)}
         self.relic_at = {c: i for i, c in enumerate(relics)}
         self.boss_at = {c: i for i, c in enumerate(bosses)}
-        self.size = len(POSITION_NAMES) + len(bosses) + len(relics) + 2 * len(cards) + len(PROFILE_KEYS)
+        self.size = len(POSITION_NAMES) + len(bosses) + len(relics) + 3 * len(cards) + 2 * len(PROFILE_KEYS)
 
     @classmethod
     def build(cls, snaps, min_count : int = 40) -> "Vocab":
@@ -58,7 +70,8 @@ class Vocab:
 
     def names(self) -> list[str]:
         return (POSITION_NAMES + [f"boss:{b}" for b in self.bosses] + [f"relic:{r}" for r in self.relics] + [f"card:{c}" for c in self.cards]
-                + [f"upgraded:{c}" for c in self.cards] + [f"does:{k}" for k in PROFILE_KEYS])
+                + [f"upgraded:{c}" for c in self.cards] + [f"does:{k}" for k in PROFILE_KEYS]
+                + [f"mcts_card:{c}" for c in self.cards] + [f"mcts_does:{k}" for k in PROFILE_KEYS])
 
 
 def featurize(snaps : list[dict], vocab : Vocab) -> np.ndarray:
@@ -67,6 +80,8 @@ def featurize(snaps : list[dict], vocab : Vocab) -> np.ndarray:
     p0 = len(POSITION_NAMES)
     X = np.zeros((len(snaps), vocab.size), dtype=np.float32)
     b0, r0, c0, u0, a0 = p0, p0 + nb, p0 + nb + nr, p0 + nb + nr + nc, p0 + nb + nr + 2 * nc
+    m0 = a0 + len(PROFILE_KEYS)             # the deck again, under the MCTS only: what a card is worth to the MCTS on top of what it is worth to either pilot
+    md0 = m0 + nc
     for i, s in enumerate(snaps):
         row = X[i]
         act = s["act"]
@@ -82,6 +97,8 @@ def featurize(snaps : list[dict], vocab : Vocab) -> np.ndarray:
         row[10] = len(s["relics"]) / 10.0
         if s.get("room") in ROOMS:
             row[11 + ROOMS.index(s["room"])] = 1.0
+        if s.get("reward"):
+            row[AFTER_REWARD] = 1.0
         j = vocab.boss_at.get(s["boss"])
         if j is not None:
             row[b0 + j] = 1.0
@@ -100,19 +117,77 @@ def featurize(snaps : list[dict], vocab : Vocab) -> np.ndarray:
             if entry:
                 for k, name in enumerate(PROFILE_KEYS):
                     row[a0 + k] += float(entry.get(name) or 0) / 20.0
+        if pilot_is_mcts(s):
+            row[PILOT_MCTS] = 1.0
+            row[m0:m0 + nc] = row[c0:c0 + nc]
+            row[md0:md0 + len(PROFILE_KEYS)] = row[a0:a0 + len(PROFILE_KEYS)]
     return X
 
 
-def rows_of(runs, horizon : int = HORIZON):
-    """(snapshots, targets, run seeds) of every room entered in `runs`: the rooms the run still cleared from there, up to `horizon`."""
-    snaps, ys, seeds = [], [], []
-    for run in runs:
-        cleared = run["outcome"]["rooms_cleared"]
-        for i, room in enumerate(run["rooms"]):
-            snaps.append(room)
-            ys.append(min(max(0, cleared - i), horizon))
-            seeds.append(run["seed"])
-    return snaps, np.array(ys, dtype=np.float32), np.array(seeds)
+def sequence_of(run : dict) -> list[tuple[dict, int]]:
+    """The states of a run in the order it met them, each with the rooms already cleared there: entering room i (i cleared), then after each card reward won
+    in room i (i + 1 cleared: the snapshot with the pick added, logged as `after`). Logs from before `after` was recorded give the rooms alone."""
+    after = {}
+    for pick in run.get("picks", []):
+        if "after" in pick:
+            after.setdefault(pick["room"], []).append(pick["after"])
+    seq = []
+    for i, room in enumerate(run["rooms"]):
+        seq.append((room, i))
+        seq += [(snap, i + 1) for snap in after.get(i + 1, [])]
+    return seq
+
+
+class Rows:
+    """Every state of `runs` as a training row, run after run in order. `progress`: rooms cleared at the state; `final`: rooms the run cleared in all;
+    `episode`: which run (0, 1, ...); `seeds`: the run's seed. `mc` is the plain target: the rooms the run still cleared from the state."""
+    def __init__(self, runs):
+        self.snaps, progress, final, episode, seeds = [], [], [], [], []
+        runs = [r for r in runs if not str(r["outcome"].get("cause")).startswith("engine error")]         # the engine failed, not the deck (run.ENGINE_ERROR)
+        for k, run in enumerate(runs):
+            cleared = run["outcome"]["rooms_cleared"]
+            pilot = run.get("pilot", "rollout")          # logs from before pilots were played by the rollout policy
+            for snap, done in sequence_of(run):
+                self.snaps.append(dict(snap, pilot=pilot))
+                progress.append(done)
+                final.append(cleared)
+                episode.append(k)
+                seeds.append(run["seed"])
+        self.progress, self.final = np.array(progress, dtype=np.float32), np.array(final, dtype=np.float32)
+        self.episode, self.seeds = np.array(episode), np.array(seeds)
+
+    def __len__(self):
+        return len(self.snaps)
+
+    def mc(self, horizon : int | None = None, gamma : float = 1.0) -> np.ndarray:
+        """The rooms still cleared from each state (discounted by `gamma` per state when below 1), capped at `horizon` when given."""
+        y = td_targets(self, None, lam=1.0, gamma=gamma)
+        return y if horizon is None else np.minimum(y, horizon)
+
+
+def td_targets(rows : Rows, values : np.ndarray | None, lam : float = 0.8, gamma : float = 1.0) -> np.ndarray:
+    """TD(lambda) targets, worked backwards through each run. The step from one state to the next earns the rooms cleared between them; the last state of a
+    run earns the rooms still to clear (0 after a death on entering, the rest of the act after a reward) and nothing after.
+        G[t] = r[t] + gamma * ((1 - lam) * V[t+1] + lam * G[t+1]),   G[last] = r[last]
+    lam = 1 is the plain outcome (`values` unused); lam = 0 is one step and then the model's own value. `values`: the model's V at every row."""
+    progress, final, episode = rows.progress, rows.final, rows.episode
+    n = len(progress)
+    G = np.zeros(n, dtype=np.float64)
+    for t in range(n - 1, -1, -1):
+        last = t == n - 1 or episode[t + 1] != episode[t]
+        if last:
+            G[t] = max(0.0, final[t] - progress[t])
+        else:
+            r = max(0.0, progress[t + 1] - progress[t])
+            boot = G[t + 1] if lam == 1.0 else (1 - lam) * float(values[t + 1]) + lam * G[t + 1]
+            G[t] = r + gamma * boot
+    return G.astype(np.float32)
+
+
+def rows_of(runs, horizon : int | None = None):
+    """(snapshots, targets, run seeds) of every state of `runs` (sequence_of): the rooms the run still cleared from there, capped at `horizon` when given."""
+    rows = Rows(runs)
+    return rows.snaps, rows.mc(horizon), rows.seeds
 
 
 class Ridge:
@@ -253,10 +328,12 @@ class ValueModel:
 
 
 class ModelChooser:
-    """A CardChooser from a value model: a card scores its gain, skipping scores 0 (the deck as it is)."""
-    def __init__(self, model : ValueModel):
-        self.model = model
+    """A CardChooser from a value model: a card scores its gain over the deck as it is, skipping scores `floor` (a card has to add more than that many rooms).
+    The snapshot is scored as the agent's own (pilot: the MCTS), whoever plays the run the chooser is used in."""
+    def __init__(self, model : ValueModel, floor : float = 0.0):
+        self.model, self.floor = model, floor
 
     def scores(self, snap, offered):
-        keys = [str(c.get("id")) for c in offered]
-        return self.model.gains(snap, keys) + [0.0]
+        keys = [card_key(c) for c in offered]          # an upgraded card on offer is scored as one
+        snap = {k: v for k, v in snap.items() if k != "pilot"}
+        return self.model.gains(snap, keys) + [self.floor]

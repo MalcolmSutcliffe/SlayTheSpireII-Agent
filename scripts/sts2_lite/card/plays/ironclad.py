@@ -309,11 +309,16 @@ def play_perfected_strike(card: Card, combat : CombatSimulator, target_index=0, 
     strikes = _strikes(combat.combat_state.player, card)
     _attack(combat, 6 + (3 if is_upgraded else 2) * strikes, target)
 
+# Pillage.OnPlay draws with no limit. Under Hellraiser every Strike drawn plays itself and leaves the hand, so with only Strikes left in the draw and discard
+# piles against an enemy that cannot die (Waterfall Giant's Demise phase) the hand never fills and the loop never ends (a self-play run hung on it). No real
+# Pillage draws this many cards without filling the hand or meeting a non-Attack.
+PILLAGE_MAX_DRAWS = 100
+
 def play_pillage(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     target = enemy_at(combat, target_index)
     _attack(combat, 9 if is_upgraded else 6, target)
     player = combat.combat_state.player
-    while True:                 # draw until something that is not an Attack comes up, or the hand is full
+    for _ in range(PILLAGE_MAX_DRAWS):      # draw until something that is not an Attack comes up, or the hand is full
         drawn = player.draw_card()
         if drawn is None or drawn.type != CardType.Attack or len(player.hand) >= 10:
             break

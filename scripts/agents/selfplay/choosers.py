@@ -8,6 +8,7 @@ the run's outcome can be plugged in as it is; the first choosers (random, rarity
 has hardly been tried is picked more often; and with chance `epsilon` it picks uniformly among the cards and the skip. Every pick records whether it differs from what the
 chooser alone would have picked (`exploratory`), because a pick forced on a deck that cannot use the card will lose, and a fit should know that."""
 from __future__ import annotations
+import functools
 import math
 import random
 from typing import Protocol
@@ -56,9 +57,26 @@ class RarityChooser:
 CHOOSERS = {"random": RandomChooser, "rarity": RarityChooser}
 
 
+@functools.lru_cache(maxsize=8)
+def _value_model(name : str):
+    """A fitted value model from data/selfplay/models/NAME (fit.py --out), loaded once per process."""
+    from agents.selfplay.suite import OUT_ROOT
+    from agents.selfplay.value_model import ValueModel
+    folder = OUT_ROOT / "models" / name
+    if not (folder / "model.npz").exists():
+        raise ValueError(f"no value model at {folder} (fit one with: python -m agents.selfplay.fit --out ...)")
+    return ValueModel.load(folder)
+
+
 def make_chooser(name : str, seed : int | str = 0) -> CardChooser:
+    """"random", "rarity", or "model:NAME[:FLOOR]": the value model saved as data/selfplay/models/NAME (e.g. model:gen0/mlp), taking a card only when it adds
+    more than FLOOR rooms (default 0)."""
+    if name.startswith("model:"):
+        from agents.selfplay.value_model import ModelChooser
+        path, _, floor = name[len("model:"):].partition(":")
+        return ModelChooser(_value_model(path), float(floor) if floor else 0.0)
     if name not in CHOOSERS:
-        raise ValueError(f"unknown chooser {name!r}: {sorted(CHOOSERS)}")
+        raise ValueError(f"unknown chooser {name!r}: {sorted(CHOOSERS)} or model:NAME[:FLOOR]")
     return CHOOSERS[name](seed)
 
 
