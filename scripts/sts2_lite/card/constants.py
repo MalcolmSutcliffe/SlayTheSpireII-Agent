@@ -48,6 +48,11 @@ CARD_ENERGY_COST_AND_TARGET : dict[CardId, tuple[int | str, TargetType]] = {
     CardId.DARK_EMBRACE : (2, _S),
     CardId.DARK_SHACKLES : (0, _A),
     CardId.DEFEND_IRONCLAD : (1, _S),
+    CardId.DEFEND_SILENT : (1, _S),
+    CardId.NEUTRALIZE : (0, _A),
+    CardId.SHIV : (0, _A),
+    CardId.STRIKE_SILENT : (1, _A),
+    CardId.SURVIVOR : (1, _S),
     CardId.DEMON_FORM : (3, _S),
     CardId.DISCOVERY : (1, _S),
     CardId.DISMANTLE : (1, _A),
@@ -218,7 +223,7 @@ EXHAUSTING_CARDS = frozenset({CardId.SLIMED, CardId.TREMBLE, CardId.IMPERVIOUS, 
                               CardId.SCRAWL, CardId.PURITY, CardId.SECRET_TECHNIQUE, CardId.SECRET_WEAPON, CardId.THINKING_AHEAD,
                               CardId.PANIC_BUTTON, CardId.PROLONG, CardId.DARK_SHACKLES, CardId.JACK_OF_ALL_TRADES, CardId.ANOINTED, CardId.DISCOVERY, CardId.ALCHEMIZE, CardId.LUMINESCE,
                               CardId.ENLIGHTENMENT, CardId.METAMORPHOSIS, CardId.DISTRACTION, CardId.NEOWS_FURY,
-                              CardId.ABUNDANCE, CardId.APOTHEOSIS, CardId.APPARITION, CardId.RELAX, CardId.WHISTLE, CardId.WISH})
+                              CardId.ABUNDANCE, CardId.APOTHEOSIS, CardId.APPARITION, CardId.RELAX, CardId.WHISTLE, CardId.WISH, CardId.SHIV})
 
 # curses (Debt's gold loss is not modelled: the sim does not track gold)
 CURSE_CARDS = frozenset({CardId.BAD_LUCK, CardId.DEBT, CardId.REGRET, CardId.DECAY, CardId.SHAME, CardId.DOUBT, CardId.NORMALITY, CardId.INJURY,

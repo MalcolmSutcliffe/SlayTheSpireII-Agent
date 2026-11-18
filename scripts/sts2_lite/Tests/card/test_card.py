@@ -325,7 +325,7 @@ UNTARGETED_COLORLESS = (CardId.FINESSE, CardId.PRODUCTION, CardId.MASTER_OF_STRA
                         CardId.CALAMITY, CardId.JACK_OF_ALL_TRADES, CardId.CATASTROPHE, CardId.BEAT_DOWN, CardId.ANOINTED,
                         CardId.DISCOVERY, CardId.ENTROPY, CardId.HIDDEN_GEM, CardId.ALCHEMIZE, CardId.LUMINESCE,
                         CardId.TOXIC, CardId.FRANTIC_ESCAPE, CardId.DISINTEGRATION, CardId.MIND_ROT, CardId.SLOTH, CardId.WASTE_AWAY,
-                        CardId.STRATAGEM, CardId.ENTHRALLED)
+                        CardId.STRATAGEM, CardId.ENTHRALLED, CardId.DEFEND_SILENT, CardId.SURVIVOR)
 
 def test_every_single_target_card_rejects_a_bad_target():
     from sts2_lite.card import GET_CARD_FUNCTION

@@ -150,7 +150,8 @@ class StatusId(Enum):
     FEEDING_FRENZY = auto()         # Feeding Frenzy: the Strength it gave is lost when the turn ends
     FLEX_POTION = auto()            # Flex Potion: the Strength it gave is lost when the turn ends
     SPEED_POTION = auto()           # Speed Potion: the Dexterity it gave is lost when the turn ends
-    STRATAGEM = auto()              # Stratagem: whenever the draw pile is shuffled, put `amount` cards of your choice from it into the hand
+    STRATAGEM = auto()
+    POISON = auto()                 # at the start of its owner's turn: loses that much HP (unblockable), then 1 less Poison              # Stratagem: whenever the draw pile is shuffled, put `amount` cards of your choice from it into the hand
 
 INFESTED_SPAWNS = 4
 CRAB_RAGE_STRENGTH, CRAB_RAGE_BLOCK = 6, 99
@@ -169,7 +170,7 @@ TICKS_DOWN = frozenset({
 })
 RESETS_EACH_TURN = frozenset({StatusId.SLOW})
 
-DEBUFFS = frozenset({StatusId.WEAK, StatusId.VULNERABLE, StatusId.FRAIL, StatusId.SHRINK,
+DEBUFFS = frozenset({StatusId.POISON, StatusId.WEAK, StatusId.VULNERABLE, StatusId.FRAIL, StatusId.SHRINK,
                      StatusId.CONSTRICT, StatusId.TANGLED, StatusId.RINGING,
                      StatusId.NO_DRAW, StatusId.NO_ENERGY_GAIN, StatusId.MANGLE, StatusId.CONFUSED,
                      StatusId.NO_BLOCK, StatusId.THE_GAMBIT, StatusId.DARK_SHACKLES,
@@ -658,6 +659,26 @@ def _stratagem_on_shuffle(combat : CombatSimulator, owner : Creature, amount : i
     if _own(combat, owner):
         combat.request_stratagem(amount)
 
+def poison_trigger(owner : Creature):
+    """PoisonPower.Trigger: lose the Poison's amount in HP (Unblockable | Unpowered, so Intangible still caps it), then one less if the
+    owner lives. TriggerCount is 1 (Accelerant, which adds triggers, is not modelled yet)."""
+    poison = owner.status.get(StatusId.POISON)
+    if poison is None or owner.current_hp <= 0:
+        return
+    owner.lose_hp(poison.amount)
+    if owner.current_hp > 0:
+        poison.amount -= 1
+        if poison.amount <= 0:
+            del owner.status[StatusId.POISON]
+
+def _poison_on_enemy_turn(combat : CombatSimulator, owner : Creature, amount : int):
+    if not _own(combat, owner):
+        poison_trigger(owner)
+
+def _poison_on_player_turn(combat : CombatSimulator, owner : Creature, amount : int):
+    if _own(combat, owner):
+        poison_trigger(owner)
+
 def _calamity_on_card_played(combat : CombatSimulator, owner : Creature, amount : int, card):
     # every Attack played adds random Attacks to the hand
     from sts2_lite.card import Card, CardType, INFERNAL_BLADE_POOL     # card.py imports this module
@@ -821,6 +842,8 @@ STATUS_HANDLERS : dict[tuple[StatusId, HookType], Callable] = HandlerTable({
     (StatusId.THE_BOMB, HookType.END_TURN) : _the_bomb_on_end_turn,
     (StatusId.MAYHEM, HookType.AUTO_PRE_PLAY) : _mayhem_on_auto_pre_play,
     (StatusId.STRATAGEM, HookType.SHUFFLED) : _stratagem_on_shuffle,
+    (StatusId.POISON, HookType.ENEMY_TURN_STARTED) : _poison_on_enemy_turn,
+    (StatusId.POISON, HookType.BLOCK_CLEARED) : _poison_on_player_turn,
     (StatusId.CALAMITY, HookType.CARD_PLAYED) : _calamity_on_card_played,
     (StatusId.ENTROPY, HookType.PLAYER_TURN_START) : _entropy_on_turn_start,
 })

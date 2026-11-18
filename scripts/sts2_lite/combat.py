@@ -578,6 +578,19 @@ class CombatSimulator:
         else:
             cs.pending_choice = choice
 
+    def request_discard(self, amount : int):
+        """CardSelectCmd.FromHandForDiscard: discard `amount` cards of the hand, one pick at a time (all of them when the hand holds no more)."""
+        hand = self.combat_state.player.hand
+        if amount > 0 and hand:
+            self.request_choice("discard", list(range(len(hand))), "hand", amount)
+
+    def discard_from_hand(self, card : Card):
+        """CardCmd.Discard: a card leaves the hand for the discard pile by an effect (Sly and the discard relics react to it)."""
+        player = self.combat_state.player
+        player.hand.remove(card)
+        player.discard_pile.append(card)
+        self.fire(HookType.CARD_DISCARDED, card)
+
     def request_discovery(self, offers : list[Card]):
         """Discovery: pick one of the cards made up for the choice (or none); it joins the hand for free this turn."""
         self.combat_state.pending_choice = PendingChoice("discover", list(range(len(offers))), "offer", hidden=True, offers=offers)
@@ -682,6 +695,10 @@ class CombatSimulator:
             self.fire(HookType.CARD_EXHAUSTED, card)
             if choice.amount > 1 and player.hand:
                 self.request_choice("exhaust_any", list(range(len(player.hand))), "hand", choice.amount - 1)
+        elif choice.kind == "discard":
+            self.discard_from_hand(card)
+            if choice.amount > 1 and player.hand:
+                self.request_choice("discard", list(range(len(player.hand))), "hand", choice.amount - 1)
         elif choice.kind == "discard_any":          # Gambler's Brew: `amount` counts the cards discarded so far, this one included
             player.hand.remove(card)
             player.discard_pile.append(card)
@@ -1268,6 +1285,9 @@ class CombatSimulator:
             for enemy in acting:
                 enemy.clear_block()         # everyone's block goes as the side's turn starts, before an ally (Guardbot) can add to it
             self.blocks_cleared = True
+            self.fire(HookType.ENEMY_TURN_STARTED)      # Poison
+            self.resolve_deaths()
+            acting = [enemy for enemy in acting if enemy in self.combat_state.enemies and enemy.current_hp > 0]     # killed by Poison
             for enemy in acting:
                 enemy.perform_turn(self)
                 self.resolve_deaths()        # an attacker can die to Flame Barrier

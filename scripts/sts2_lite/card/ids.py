@@ -213,7 +213,13 @@ class CardId(Enum):
     WHISTLE = auto()
     WISH = auto()
     STRATAGEM = auto()
-    ENTHRALLED = auto()       # curse (Blood-Soaked Rose): costs 2, Eternal; while it is in hand no other card can be played by hand
+    ENTHRALLED = auto()
+    # the Silent
+    STRIKE_SILENT = auto()
+    DEFEND_SILENT = auto()
+    NEUTRALIZE = auto()
+    SURVIVOR = auto()
+    SHIV = auto()             # token: 0-cost Attack, 4 damage (6 upgraded), Exhaust       # curse (Blood-Soaked Rose): costs 2, Eternal; while it is in hand no other card can be played by hand
 
 class CardKeyword(Enum):
     """Entities.Cards.CardKeyword (None omitted). Values are bits: cards store keywords as an int mask (Enum hashing is slow)."""

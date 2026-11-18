@@ -455,7 +455,7 @@ def potion_courier(c : Ctx) -> Page:
             c.gain_potion("FOUL_POTION")
 
     def ransack(c : Ctx):
-        c.gain_potion(c.rng.choice([p for p in potion_pool() if POTION_INFO[p].rarity == PotionRarity.UNCOMMON]).name)
+        c.gain_potion(c.rng.choice([p for p in potion_pool(c.run.character) if POTION_INFO[p].rarity == PotionRarity.UNCOMMON]).name)
     return [Option("grab_potions", grab_potions), Option("ransack", ransack)]
 
 
@@ -477,7 +477,7 @@ def the_legends_were_true(c : Ctx) -> Page:
 
     def exit_slowly(c : Ctx):
         c.lose_hp(8)
-        c.gain_potion(c.rng.choice(potion_pool()).name)
+        c.gain_potion(c.rng.choice(potion_pool(c.run.character)).name)
     return [Option("nab_the_map", lambda c: c.add_placeholder("SPOILS_MAP", "Spoils Map", "Quest")), Option("slowly_find_an_exit", exit_slowly, hp_cost=8, lethal=c.run.hp <= 8)]
 
 
@@ -777,13 +777,13 @@ def _potion_rarity(potion : dict) -> str:
 @event("THE_FUTURE_OF_POTIONS", allowed=lambda run: len(run.potions) >= 2)
 def the_future_of_potions(c : Ctx) -> Page:
     """Trade one of your first three potions for 3 upgraded cards of its rarity (a random type, no Power for a common potion): pick one."""
-    from sts2_lite.event.run import CLASS_POOL, card_entry
+    from sts2_lite.event.run import class_pool_ids, card_entry
     from sts2_lite.relic.run_hooks import add_to_deck
 
     def trade(i : int, rarity : str, card_type : str):
         def apply(c : Ctx):
             c.discard_potion(i)
-            pool = [card_entry(cid) for cids in CLASS_POOL.values() for cid in cids]
+            pool = [card_entry(cid) for cid in class_pool_ids(c.run.character)]
             pool = [x for x in pool if x.get("rarity") == rarity and x.get("type") == card_type]
             offered = [dict(x, is_upgraded=True, _upgrade=True) for x in c.rng.sample(pool, min(3, len(pool)))]
             c.pick_from_offer(offered, 1)
@@ -873,7 +873,7 @@ def trial(c : Ctx) -> Page:
     def nondescript_guilty(c : Ctx):
         c.add_card("DOUBT")
         for _ in range(2):
-            c.pick_from_offer(random_class_cards(3, c.rng, ascension=c.run.ascension), 1)
+            c.pick_from_offer(random_class_cards(3, c.rng, ascension=c.run.ascension, character=c.run.character), 1)
 
     def nondescript_innocent(c : Ctx):
         c.add_card("DOUBT")

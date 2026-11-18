@@ -8,7 +8,7 @@ from sts2_lite.status import StatusId
 from sts2_lite.card.constants import MAD_SCIENCE_BLOCK, MAD_SCIENCE_DAMAGE, mad_science_rider, BECKON_HP_LOSS, BURN_DAMAGE, CONSUMED_ON_PLAY, CURSE_NAMES, ENCHANT_CORRUPTED_HP_LOSS, ENCHANT_SOWN_ENERGY, INFECTION_DAMAGE, NORMALITY_CARD_LIMIT, PLAYABLE_CURSES, TOXIC_DAMAGE, UPGRADE_BASE_COST, UPGRADE_COST_CHANGE, UPGRADE_KEYWORD, UPGRADE_REMOVED_KEYWORD, WITHER_DAMAGE, _AXE, _CHOKER, _ETHEREAL, _EXHAUST, _INNATE, _REPLAY, _RETAIN, _SCARF, _UNPLAYABLE, QUEST_CARDS, _unknown_cards, _unknown_enchantments, keyword_mask
 from sts2_lite.card.effects import _gain_block
 from sts2_lite.card.ids import CardId, CardKeyword, CardType, EnchantmentId, TargetType
-from sts2_lite.card.tables import ANCIENT_CARDS, COLORLESS_CARDS, EVENT_CARDS, GENERATABLE_CARDS, HAND_CURSE_EFFECTS, STRIKE_CARDS, TOKEN_CARDS
+from sts2_lite.card.tables import ANCIENT_CARDS, COLORLESS_CARDS, EVENT_CARDS, GENERATABLE_CARDS, SILENT_CARDS, HAND_CURSE_EFFECTS, STRIKE_CARDS, TOKEN_CARDS
 
 if TYPE_CHECKING:
     from sts2_lite.combat import CombatSimulator
@@ -290,7 +290,7 @@ class Card:
     @classmethod
     def create_generated(cls, card_id : CardId, upgraded : bool = False) -> Card:
         """A fresh copy of a card that a card effect adds to the player's piles (Infernal Blade, Stoke)."""
-        name, card_type, cost, target = (GENERATABLE_CARDS.get(card_id) or COLORLESS_CARDS.get(card_id) or EVENT_CARDS.get(card_id) or ANCIENT_CARDS.get(card_id)
+        name, card_type, cost, target = (GENERATABLE_CARDS.get(card_id) or SILENT_CARDS.get(card_id) or COLORLESS_CARDS.get(card_id) or EVENT_CARDS.get(card_id) or ANCIENT_CARDS.get(card_id)
                                          or TOKEN_CARDS[card_id])
         c = cls()
         c.card_id, c.name, c.type = card_id, name, card_type

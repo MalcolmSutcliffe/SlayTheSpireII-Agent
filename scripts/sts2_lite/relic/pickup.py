@@ -17,16 +17,16 @@ from sts2_lite.relic.bag import pull_relic, relic_name
 def offer_cards(ctx, count : int, pool_rarity : str | None = None, uniform : bool = False, no_upgrade : bool = False, n_screens : int = 1, pool=None):
     """`n_screens` card reward screens of `count` cards. `pool_rarity` limits the pool to one rarity (a uniform draw); `pool` is a list of card ids to draw from."""
     from sts2_lite.rewards import CardRarityOdds, create_card_reward
-    from sts2_lite.rewards.cards import IRONCLAD_POOL
+    from sts2_lite.rewards.cards import card_pool
     from sts2_lite.rewards.odds import OddsType
     run = ctx.run
     for _ in range(n_screens):
         odds = CardRarityOdds(ctx.rng, run.ascension, run.hidden.rarity_offset)
         pool = list(pool) if pool is not None else None
         if pool_rarity:
-            pool = list(IRONCLAD_POOL[pool_rarity])
+            pool = list(card_pool(run.character)[pool_rarity])
         offers = create_card_reward(ctx.rng, odds, max(0, run.act - 1), count, OddsType.UNIFORM if (uniform or pool_rarity) else OddsType.REGULAR_ENCOUNTER,
-                                    pool=pool, no_upgrade_roll=no_upgrade)
+                                    pool=pool, no_upgrade_roll=no_upgrade, character=run.character)
         run.offers.append({"kind": "cards", "cards": [card_entry(o.card_id, o.upgraded) for o in offers]})
 
 
@@ -154,7 +154,7 @@ def _paels_tooth(c):
 def _give_potions(c, n : int):
     """Random potions go straight on the belt (PotionCmd.TryToProcure): the ones that find no free slot are lost."""
     from sts2_lite.potion_pool import create_random_potions
-    for potion in create_random_potions(c.rng, n):
+    for potion in create_random_potions(c.rng, n, c.run.character):
         if len(c.run.potions) < c.run.potion_slots:
             c.run.potions.append({"id": potion.name, "name": potion.name.replace("_", " ").title()})
 
@@ -185,13 +185,13 @@ def _hefty_tablet(c):
 
 def _leafy_poultice(c):
     """12 max HP for the first Basic Strike and the first Basic Defend becoming random cards."""
-    from sts2_lite.event.run import CLASS_POOL, is_basic_defend, is_basic_strike
+    from sts2_lite.event.run import class_pool_ids, is_basic_defend, is_basic_strike
     c.lose_max_hp(12)
     for test in (is_basic_strike, is_basic_defend):
         found = next((i for i, x in enumerate(c.run.deck) if test(x)), None)
         if found is not None:
             old = c.run.deck[found]
-            c.run.deck[found] = card_entry(c.rng.choice([cid for cids in CLASS_POOL.values() for cid in cids if cid.name != old["id"]]))
+            c.run.deck[found] = card_entry(c.rng.choice([cid for cid in class_pool_ids(c.run.character) if cid.name != old["id"]]))
 
 
 def _neows_bones(c):
@@ -214,8 +214,9 @@ def _precarious_shears(c):
 
 def _scroll_boxes(c):
     """Two bundles of 2 Common + 1 Uncommon (six different cards); the agent keeps one bundle."""
-    from sts2_lite.rewards.cards import IRONCLAD_POOL
-    commons, uncommons, used, bundles = list(IRONCLAD_POOL["Common"]), list(IRONCLAD_POOL["Uncommon"]), set(), []
+    from sts2_lite.rewards.cards import card_pool
+    pool = card_pool(c.run.character)
+    commons, uncommons, used, bundles = list(pool["Common"]), list(pool["Uncommon"]), set(), []
     for _ in range(2):
         bundle = []
         for pool, n in ((commons, 2), (uncommons, 1)):
@@ -245,7 +246,7 @@ def _add_cards(card_id : str, n : int = 1) -> Callable:
 
 def _touch_of_orobas(c):
     """The starter relic is replaced by its upgrade (Burning Blood: Black Blood)."""
-    upgrades = {"BURNING_BLOOD": ("BLACK_BLOOD", "Black Blood")}
+    upgrades = {"BURNING_BLOOD": ("BLACK_BLOOD", "Black Blood"), "RING_OF_THE_SNAKE": ("RING_OF_THE_DRAKE", "Ring of the Drake")}
     for i, r in enumerate(c.run.relics):
         if r["id"] in upgrades:
             c.run.relics[i] = {"id": upgrades[r["id"]][0], "name": upgrades[r["id"]][1]}
@@ -286,10 +287,10 @@ def _claws(c):
 
 
 def _transform_picked(c, indices, upgrade : bool = False):
-    from sts2_lite.event.run import CLASS_POOL
+    from sts2_lite.event.run import class_pool_ids
     for i in indices:
         old = c.run.deck[i]
-        new = card_entry(c.rng.choice([cid for cids in CLASS_POOL.values() for cid in cids if cid.name != old["id"]]), upgrade)
+        new = card_entry(c.rng.choice([cid for cid in class_pool_ids(c.run.character) if cid.name != old["id"]]), upgrade)
         c.run.deck[i] = new
 
 

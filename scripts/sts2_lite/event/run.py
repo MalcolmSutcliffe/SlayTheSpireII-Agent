@@ -7,7 +7,7 @@ import random
 
 from sts2_lite.card.constants import CARD_ENERGY_COST_AND_TARGET, PLAYABLE_CURSES
 from sts2_lite.card.ids import CardId, CardType
-from sts2_lite.card.tables import CARD_RARITY, COLORLESS_CARDS, GENERATABLE_CARDS, STRIKE_CARDS, DEFEND_CARDS
+from sts2_lite.card.tables import CARD_RARITY, CHARACTER_CARDS, COLORLESS_CARDS, GENERATABLE_CARDS, SILENT_CARDS, STRIKE_CARDS, DEFEND_CARDS
 from sts2_lite.run.state import RunState
 
 REST_HEAL_SHARE = 0.30          # what a rest site heals, as a share of max HP (the Dense Vegetation and Unrest Site heal match it)
@@ -30,7 +30,7 @@ def card_entry(card_id : CardId | str, upgraded : bool = False) -> dict:
         cost, target = CARD_ENERGY_COST_AND_TARGET[cid]
     else:
         cost, target = ANCIENT_CARDS[cid][2:4]
-    for table in (GENERATABLE_CARDS, COLORLESS_CARDS, EVENT_CARDS, TOKEN_CARDS, ANCIENT_CARDS):
+    for table in (GENERATABLE_CARDS, SILENT_CARDS, COLORLESS_CARDS, EVENT_CARDS, TOKEN_CARDS, ANCIENT_CARDS):
         if cid in table:
             name, ctype = table[cid][0], table[cid][1]
             break
@@ -58,7 +58,19 @@ def _pool(table : dict, rarities : tuple[str, ...]) -> dict[str, list[CardId]]:
     return pool
 
 
-CLASS_POOL = _pool(GENERATABLE_CARDS, ("Common", "Uncommon", "Rare"))
+CLASS_POOL = _pool(GENERATABLE_CARDS, ("Common", "Uncommon", "Rare"))        # the Ironclad's
+
+
+def class_pool(character : str = "IRONCLAD") -> dict[str, list[CardId]]:
+    """A character's card pool by rarity, as events and relics draw from it."""
+    if character.upper() == "IRONCLAD":
+        return CLASS_POOL
+    from sts2_lite.rewards.cards import card_pool
+    return {rarity: list(cids) for rarity, cids in card_pool(character).items()}
+
+
+def class_pool_ids(character : str = "IRONCLAD") -> list[CardId]:
+    return [cid for cids in class_pool(character).values() for cid in cids]
 COLORLESS_POOL = [cid for cid in COLORLESS_CARDS if CARD_RARITY.get(cid) is not None and CARD_RARITY[cid].name in ("Uncommon", "Rare")]
 
 
@@ -80,12 +92,12 @@ def can_upgrade(card : dict) -> bool:
     return not card.get("is_upgraded") and card.get("can_upgrade", True) and card.get("type") not in ("Curse", "Status")
 
 
-def random_class_cards(n : int, r : random.Random, exclude : set[str] = frozenset(), ascension : int = 0) -> list[dict]:
-    """n distinct Ironclad cards as an event or relic offers them (CardCreationOptions.ForNonCombatWithDefaultOdds): the regular-encounter rarity odds
+def random_class_cards(n : int, r : random.Random, exclude : set[str] = frozenset(), ascension : int = 0, character : str = "IRONCLAD") -> list[dict]:
+    """n distinct cards of the character's pool as an event or relic offers them (CardCreationOptions.ForNonCombatWithDefaultOdds): the regular-encounter rarity odds
     without the run's rarity offset, and no upgrades."""
     from sts2_lite.rewards import CardRarityOdds, OddsType, Source, create_card_reward
     blacklist = [CardId[name] for name in exclude if name in CardId.__members__]
-    offers = create_card_reward(r, CardRarityOdds(r, ascension), 0, n, OddsType.REGULAR_ENCOUNTER, Source.OTHER, no_upgrade_roll=True, blacklist=blacklist)
+    offers = create_card_reward(r, CardRarityOdds(r, ascension), 0, n, OddsType.REGULAR_ENCOUNTER, Source.OTHER, no_upgrade_roll=True, blacklist=blacklist, character=character)
     return [card_entry(offer.card_id) for offer in offers]
 
 
@@ -144,10 +156,10 @@ def mad_science_entry(card_type : str, rider : str) -> dict:
     return dict(card_entry("MAD_SCIENCE"), type=card_type, target_type="AnyEnemy" if card_type == "Attack" else "Self", rider=rider)
 
 
-def random_pool_card(r : random.Random, where, ascension : int = 0) -> dict | None:
-    """One Ironclad card that satisfies `where(card_entry)`, with the default non-combat odds (CardCreationOptions.ForNonCombatWithDefaultOdds + a filter)."""
+def random_pool_card(r : random.Random, where, ascension : int = 0, character : str = "IRONCLAD") -> dict | None:
+    """One card of the character's pool that satisfies `where(card_entry)`, with the default non-combat odds (CardCreationOptions.ForNonCombatWithDefaultOdds + a filter)."""
     from sts2_lite.rewards import CardRarityOdds, OddsType, Source, create_card_reward
-    pool = [cid for cids in CLASS_POOL.values() for cid in cids if where(card_entry(cid))]
+    pool = [cid for cid in class_pool_ids(character) if where(card_entry(cid))]
     if not pool:
         return None
     offers = create_card_reward(r, CardRarityOdds(r, ascension), 0, 1, OddsType.REGULAR_ENCOUNTER, Source.OTHER, pool=pool, no_upgrade_roll=True)

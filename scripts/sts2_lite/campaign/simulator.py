@@ -62,7 +62,7 @@ class RunSimulator:
         self.game = GameRng(seed)
         self.search = SearchRng(search_seed)
         self.run_state = new_run(ascension)
-        self.run_state.hidden.relic_bag = RelicGrabBag(self.game.stream("relics"))
+        self.run_state.hidden.relic_bag = RelicGrabBag(self.game.stream("relics"), self.run_state.character)
         self.run_state.hidden.relic_bag.remove(self.run_state.relics[0]["id"])
         self.fights = 0
         self.took_damage = True         # the last fight cost hit points (Lava Lamp)
@@ -268,7 +268,7 @@ class RunSimulator:
             if kind == "relic":
                 items.append(Reward("relic", relic=pull_relic(r) if r.hidden.relic_bag else None))
             elif kind == "potion":
-                items.append(Reward("potion", potion=random_potion(self.game.stream("potion_rewards"))))
+                items.append(Reward("potion", potion=random_potion(self.game.stream("potion_rewards"), self.run_state.character)))
         while items:
             option = self.ask(screens.combat_rewards(r, items))
             if option.action["action"] == "proceed":
@@ -313,7 +313,7 @@ class RunSimulator:
                     run_hooks.add_to_deck(r, picked)
             elif offer["kind"] == "potion":
                 from sts2_lite.campaign.rewards import random_potion
-                self.add_potion(random_potion(self.game.stream("potion_rewards")))
+                self.add_potion(random_potion(self.game.stream("potion_rewards"), self.run_state.character))
             elif offer["kind"] == "relic":
                 self.gain_relic(offer.get("relic"))
                 if offer.get("wax"):

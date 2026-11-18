@@ -8,7 +8,7 @@ from sts2_lite import rng
 from sts2_lite.creature import Creature
 from sts2_lite.card import Card, CardId, CardType, CardKeyword, CONFUSED_MAX_COST, EnchantmentId, SLITHER_MAX_COST, PLAIN_DAMAGE, GENERATABLE_CARDS
 
-BASIC_ATTACK_COSTS = {CardId.STRIKE_IRONCLAD: 1, CardId.BASH: 2}      # the starter Attacks are not in the generated-card table
+BASIC_ATTACK_COSTS = {CardId.STRIKE_IRONCLAD: 1, CardId.BASH: 2, CardId.STRIKE_SILENT: 1}      # the starter Attacks are not in the generated-card table
 from sts2_lite.status import StatusInstance, StatusId, INSTANCED
 from sts2_lite.relic import RelicId, RelicInstance, strength_received, lizard_tail_revive, hand_draw_bonus, blocks_draw, free_by_relic
 from sts2_lite.potion import Potion, PotionId, DEFAULT_POTION_SLOTS, FAIRY_HEAL
@@ -162,7 +162,7 @@ class Player(Creature):
             base = BASIC_ATTACK_COSTS.get(card.card_id) if card.type == CardType.Attack else None
             if base is None and card.card_id in GENERATABLE_CARDS:
                 base = Card.create_generated(card.card_id, card.is_upgraded).energy_cost
-            if base is None and card.card_id in (CardId.DEFEND_IRONCLAD, CardId.SLIMED):
+            if base is None and card.card_id in (CardId.DEFEND_IRONCLAD, CardId.DEFEND_SILENT, CardId.SURVIVOR, CardId.SLIMED):
                 base = 1
             if base not in (None, 0) and base != "X":
                 own = Card.create_copy(card)

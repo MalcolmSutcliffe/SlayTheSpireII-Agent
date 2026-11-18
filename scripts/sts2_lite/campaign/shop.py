@@ -10,7 +10,7 @@ from sts2_lite.potion_pool import create_random_potions
 from sts2_lite.relic import run_hooks
 from sts2_lite.relic.bag import MERCHANT_BASE_COST, RELIC_INFO, pull_relic, relic_name, roll_rarity
 from sts2_lite.rewards import CardRarityOdds
-from sts2_lite.rewards.cards import IRONCLAD_POOL, create_for_merchant, roll_for_upgrade, NEVER_UPGRADES
+from sts2_lite.rewards.cards import card_pool_ids, create_for_merchant, roll_for_upgrade, NEVER_UPGRADES
 
 COLORED_TYPES = ("Attack", "Attack", "Skill", "Skill", "Power")
 COLORLESS_RARITIES = ("Uncommon", "Rare")
@@ -95,7 +95,7 @@ class Shop:
             roll_for_upgrade(rng, card_id, NEVER_UPGRADES, act, r.ascension)
             cid = card_id
         else:
-            options = [c for pool in IRONCLAD_POOL.values() for c in pool if c.name not in taken]
+            options = [c for c in card_pool_ids(r.character) if c.name not in taken]
             cid = create_for_merchant(rng, odds, options, entry.slot, lambda c: card_entry(c)["type"], act).card_id
         card = card_entry(cid)
         entry.item = run_hooks.modify_card_offers(r, [card], self.relic_rng, False, is_reward=False)[0]

@@ -10,7 +10,7 @@ import random
 from dataclasses import dataclass, field
 from typing import Callable
 
-from sts2_lite.event.run import RunSnapshot, can_enchant, can_upgrade, card_entry, enchanted, random_class_cards, random_pool_card, placeholder_entry, is_curse, CLASS_POOL
+from sts2_lite.event.run import RunSnapshot, can_enchant, can_upgrade, card_entry, enchanted, random_class_cards, random_pool_card, placeholder_entry, is_curse, class_pool_ids
 
 
 class CardPicker:
@@ -92,8 +92,8 @@ class Ctx:
         add_to_deck(self.run, placeholder_entry(card_id, name, card_type))
 
     def add_pool_card(self, where):
-        """A card of the Ironclad pool that `where` accepts, drawn with the default non-combat odds."""
-        card = random_pool_card(self.rng, where, self.run.ascension)
+        """A card of the character's pool that `where` accepts, drawn with the default non-combat odds."""
+        card = random_pool_card(self.rng, where, self.run.ascension, self.run.character)
         if card is not None:
             from sts2_lite.relic.run_hooks import add_to_deck
             add_to_deck(self.run, card)
@@ -122,11 +122,11 @@ class Ctx:
         self.run.deck[i] = dict(self.run.deck[i], is_upgraded=True, _upgrade=True)
 
     def transform(self, n : int, pred : Callable[[dict], bool] = lambda c: not is_curse(c)):
-        """Replace n picked cards by Ironclad cards drawn uniformly from the pool (never the same card)."""
+        """Replace n picked cards by cards of the character's pool drawn uniformly from the pool (never the same card)."""
         allowed = [i for i, c in enumerate(self.run.deck) if c.get("removable") is not False and pred(c)]
         for i in sorted(set(self.picker.transform(self.run.deck, n, allowed)) & set(allowed)):
             old = self.run.deck[i]
-            new = card_entry(self.rng.choice([cid for cids in CLASS_POOL.values() for cid in cids if cid.name != old["id"]]))      # uniform over the pool, not by rarity
+            new = card_entry(self.rng.choice([cid for cid in class_pool_ids(self.run.character) if cid.name != old["id"]]))      # uniform over the pool, not by rarity
             self.run.deck[i] = new
 
     def enchantable(self, enchantment : str, card_type : str | None = None) -> list[int]:
@@ -153,7 +153,7 @@ class Ctx:
         from sts2_lite.event.run import COLORLESS_POOL
         if colorless:
             return [card_entry(c) for c in self.rng.sample(COLORLESS_POOL, n)]
-        return random_class_cards(n, self.rng)
+        return random_class_cards(n, self.rng, character=self.run.character)
 
     # --- relics and potions
     def gain_relic(self, relic_id : str | None = None, name : str | None = None):
@@ -168,7 +168,7 @@ class Ctx:
         if len(self.run.potions) < self.run.potion_slots:
             if potion_id is None:
                 from sts2_lite.potion_pool import random_potion_id
-                potion_id = random_potion_id(self.rng).name
+                potion_id = random_potion_id(self.rng, self.run.character).name
             self.run.potions.append({"id": potion_id, "name": potion_id.replace("_", " ").title()})
 
     def tradable_relics(self) -> list[str]:

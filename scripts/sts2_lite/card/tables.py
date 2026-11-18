@@ -96,6 +96,7 @@ GENERATABLE_CARDS = {
 }
 
 TOKEN_CARDS = {CardId.GIANT_ROCK : ("Giant Rock", CardType.Attack, 1, A),      # made by Primal Force
+               CardId.SHIV : ("Shiv", CardType.Attack, 0, A),                 # the Silent's Blade Dance, Cloak and Dagger, Cunning Potion...
                CardId.LUMINESCE : ("Luminesce", CardType.Skill, 0, S)}          # Radiant Pearl: Retain. Gain 2 Energy (3 upgraded). Exhaust.
 
 # event cards (CardRarity.Event): never generated in combat; listed so tests and transforms can build them
@@ -145,6 +146,12 @@ COLORLESS_CARDS = {
     CardId.STRATAGEM : ("Stratagem", CardType.Power, 1, S),
 }
 
+# the Silent's cards (SilentCardPool), Basic ones included: the reward pool is the Common / Uncommon / Rare ones (rewards.cards.card_pool)
+SILENT_CARDS = {
+    CardId.STRIKE_SILENT : ("Strike", CardType.Attack, 1, A), CardId.DEFEND_SILENT : ("Defend", CardType.Skill, 1, S),
+    CardId.NEUTRALIZE : ("Neutralize", CardType.Attack, 0, A), CardId.SURVIVOR : ("Survivor", CardType.Skill, 1, S),
+}
+
 # Ancient cards the sim could not read from the decompiled source (name, type, cost, target)
 ANCIENT_CARDS = {
     CardId.ABUNDANCE : ("Abundance", CardType.Skill, 1, S), CardId.APOTHEOSIS : ("Apotheosis", CardType.Skill, 2, S),
@@ -152,6 +159,8 @@ ANCIENT_CARDS = {
     CardId.MAUL : ("Maul", CardType.Attack, 1, A), CardId.RELAX : ("Relax", CardType.Skill, 3, S),
     CardId.WHISTLE : ("Whistle", CardType.Attack, 2, A), CardId.WISH : ("Wish", CardType.Skill, 0, S),
 }
+
+CHARACTER_CARDS = {"IRONCLAD": GENERATABLE_CARDS, "SILENT": SILENT_CARDS}      # each character's card table (its pool, Basic cards included for the Silent)
 
 # what Jack of All Trades can make: Hand of Greed (and Alchemize and Hidden Gem) cannot be generated in combat, and it makes no Jack of All Trades
 NOT_GENERATED_COLORLESS = frozenset({CardId.HAND_OF_GREED, CardId.HIDDEN_GEM, CardId.JACK_OF_ALL_TRADES, CardId.ALCHEMIZE})
@@ -185,7 +194,7 @@ class CardRarity(Enum):
 # table is complete). The true game rarity is stored: a policy that treats Bash like a Common does that itself.
 _RARITY_NAMES = {
     CardRarity.Basic : (
-        "STRIKE_IRONCLAD DEFEND_IRONCLAD BASH"
+        "STRIKE_IRONCLAD DEFEND_IRONCLAD BASH STRIKE_SILENT DEFEND_SILENT NEUTRALIZE SURVIVOR"
     ),
     CardRarity.Common : (
         "BLOOD_WALL PERFECTED_STRIKE BREAKTHROUGH SHRUG_IT_OFF POMMEL_STRIKE IRON_WAVE THUNDERCLAP TREMBLE ANGER BODY_SLAM TWIN_STRIKE "
@@ -213,7 +222,7 @@ _RARITY_NAMES = {
         "CLASH DUAL_WIELD ENTRENCH CALTROPS DISTRACTION OUTMANEUVER HELLO_WORLD REBOUND RIP_AND_TEAR STACK"
     ),
     CardRarity.Token : (
-        "GIANT_ROCK LUMINESCE"
+        "GIANT_ROCK LUMINESCE SHIV"
     ),
     CardRarity.Status : (
         "SLIMED INFECTION BURN BECKON WITHER DAZED WOUND SOOT TOXIC FRANTIC_ESCAPE DISINTEGRATION MIND_ROT SLOTH WASTE_AWAY"
@@ -241,10 +250,10 @@ ZERO_COST_POOL = [cid for cid, (_, _, cost, _) in GENERATABLE_CARDS.items() if c
 RETURNING_CARDS = frozenset({CardId.BOLAS, CardId.THRUMMING_HATCHET})
 
 # cards with the Defend tag (Fasten)
-DEFEND_CARDS = frozenset({CardId.DEFEND_IRONCLAD, CardId.ULTIMATE_DEFEND})
+DEFEND_CARDS = frozenset({CardId.DEFEND_IRONCLAD, CardId.ULTIMATE_DEFEND, CardId.DEFEND_SILENT})
 
 # cards with the Strike tag (Hellraiser plays them when they are drawn)
-STRIKE_CARDS = frozenset({CardId.ULTIMATE_STRIKE, CardId.SEEKER_STRIKE, CardId.STRIKE_IRONCLAD, CardId.PERFECTED_STRIKE, CardId.POMMEL_STRIKE, CardId.TWIN_STRIKE,
+STRIKE_CARDS = frozenset({CardId.STRIKE_SILENT, CardId.ULTIMATE_STRIKE, CardId.SEEKER_STRIKE, CardId.STRIKE_IRONCLAD, CardId.PERFECTED_STRIKE, CardId.POMMEL_STRIKE, CardId.TWIN_STRIKE,
                           CardId.ASHEN_STRIKE, CardId.SETUP_STRIKE})
 
 def _curse_debuff(player, status : StatusId):
