@@ -5,7 +5,7 @@ Card entries are made from the sim's own tables, so a card an event adds has the
 from __future__ import annotations
 import random
 
-from sts2_lite.card.constants import CARD_ENERGY_COST_AND_TARGET
+from sts2_lite.card.constants import CARD_ENERGY_COST_AND_TARGET, PLAYABLE_CURSES
 from sts2_lite.card.ids import CardId, CardType
 from sts2_lite.card.tables import CARD_RARITY, COLORLESS_CARDS, GENERATABLE_CARDS, STRIKE_CARDS, DEFEND_CARDS
 from sts2_lite.run.state import RunState
@@ -17,7 +17,7 @@ EXTRA_TYPES = {CardId.FEED : CardType.Attack, CardId.NOT_YET : CardType.Skill, C
 
 BASIC_CARDS = {CardId.STRIKE_IRONCLAD : ("Strike", CardType.Attack), CardId.DEFEND_IRONCLAD : ("Defend", CardType.Skill), CardId.BASH : ("Bash", CardType.Attack)}
 CURSE_IDS = frozenset(CardId[n] for n in ("DECAY", "NORMALITY", "INJURY", "POOR_SLEEP", "GREED", "CLUMSY", "BAD_LUCK", "DEBT", "GUILTY", "SPORE_MIND",
-                                          "CURSE_OF_THE_BELL", "ASCENDERS_BANE", "DOUBT", "REGRET", "SHAME", "WRITHE", "FOLLY"))
+                                          "CURSE_OF_THE_BELL", "ASCENDERS_BANE", "DOUBT", "REGRET", "SHAME", "WRITHE", "FOLLY", "ENTHRALLED"))
 
 
 def card_entry(card_id : CardId | str, upgraded : bool = False) -> dict:
@@ -25,7 +25,7 @@ def card_entry(card_id : CardId | str, upgraded : bool = False) -> dict:
     from sts2_lite.card.tables import ANCIENT_CARDS, EVENT_CARDS, TOKEN_CARDS
     cid = card_id if isinstance(card_id, CardId) else CardId[card_id]
     if cid in CURSE_IDS:
-        cost, target = CARD_ENERGY_COST_AND_TARGET.get(cid, (0, None))       # a curse cannot be played
+        cost, target = PLAYABLE_CURSES.get(cid, 0), None       # most curses cannot be played
     elif cid in CARD_ENERGY_COST_AND_TARGET:
         cost, target = CARD_ENERGY_COST_AND_TARGET[cid]
     else:

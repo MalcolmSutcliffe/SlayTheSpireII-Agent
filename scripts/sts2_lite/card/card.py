@@ -5,7 +5,7 @@ import re
 from sts2_lite.relic import before_card_played, blocks_play, extra_plays, free_by_relic, restore, snapshot, x_bonus
 from sts2_lite.status import StatusId
 
-from sts2_lite.card.constants import MAD_SCIENCE_BLOCK, MAD_SCIENCE_DAMAGE, mad_science_rider, BECKON_HP_LOSS, BURN_DAMAGE, CONSUMED_ON_PLAY, CURSE_NAMES, ENCHANT_CORRUPTED_HP_LOSS, ENCHANT_SOWN_ENERGY, INFECTION_DAMAGE, NORMALITY_CARD_LIMIT, TOXIC_DAMAGE, UPGRADE_BASE_COST, UPGRADE_COST_CHANGE, UPGRADE_KEYWORD, UPGRADE_REMOVED_KEYWORD, WITHER_DAMAGE, _AXE, _CHOKER, _ETHEREAL, _EXHAUST, _INNATE, _REPLAY, _RETAIN, _SCARF, _UNPLAYABLE, QUEST_CARDS, _unknown_cards, _unknown_enchantments, keyword_mask
+from sts2_lite.card.constants import MAD_SCIENCE_BLOCK, MAD_SCIENCE_DAMAGE, mad_science_rider, BECKON_HP_LOSS, BURN_DAMAGE, CONSUMED_ON_PLAY, CURSE_NAMES, ENCHANT_CORRUPTED_HP_LOSS, ENCHANT_SOWN_ENERGY, INFECTION_DAMAGE, NORMALITY_CARD_LIMIT, PLAYABLE_CURSES, TOXIC_DAMAGE, UPGRADE_BASE_COST, UPGRADE_COST_CHANGE, UPGRADE_KEYWORD, UPGRADE_REMOVED_KEYWORD, WITHER_DAMAGE, _AXE, _CHOKER, _ETHEREAL, _EXHAUST, _INNATE, _REPLAY, _RETAIN, _SCARF, _UNPLAYABLE, QUEST_CARDS, _unknown_cards, _unknown_enchantments, keyword_mask
 from sts2_lite.card.effects import _gain_block
 from sts2_lite.card.ids import CardId, CardKeyword, CardType, EnchantmentId, TargetType
 from sts2_lite.card.tables import ANCIENT_CARDS, COLORLESS_CARDS, EVENT_CARDS, GENERATABLE_CARDS, HAND_CURSE_EFFECTS, STRIKE_CARDS, TOKEN_CARDS
@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 # hot-path aliases (enum members are singletons: `is` is their equality)
 _ATTACK, _SKILL = CardType.Attack, CardType.Skill
-_CLASH, _NORMALITY = CardId.CLASH, CardId.NORMALITY
+_CLASH, _NORMALITY, _ENTHRALLED = CardId.CLASH, CardId.NORMALITY, CardId.ENTHRALLED
 _CORRUPTION, _FREE_ATTACK, _TANGLED, _RINGING, _SLOTH = StatusId.CORRUPTION, StatusId.FREE_ATTACK, StatusId.TANGLED, StatusId.RINGING, StatusId.SLOTH
 
 
@@ -270,13 +270,13 @@ class Card:
 
     @classmethod
     def create_curse(cls, card_id : CardId) -> Card:
-        """A curse: cost 0 and unplayable, except Spore Mind (1 energy, Exhaust)."""
+        """A curse: cost 0 and unplayable, except Spore Mind (1 energy, Exhaust) and Enthralled (2 energy)."""
         c = cls()
         c.card_id, c.type = card_id, CardType.Curse
         c.name = CURSE_NAMES.get(card_id) or card_id.name.replace("_", " ").title()
-        c.energy_cost, c.target_type = (1 if card_id == CardId.SPORE_MIND else 0), TargetType.NONE
+        c.energy_cost, c.target_type = PLAYABLE_CURSES.get(card_id, 0), TargetType.NONE
         c.is_upgraded = False
-        c.is_unplayable = card_id != CardId.SPORE_MIND
+        c.is_unplayable = card_id not in PLAYABLE_CURSES
         return c
 
     @classmethod
@@ -637,6 +637,8 @@ class Card:
             return False            # Sloth: at most this many cards a turn
         if cs.cards_played >= NORMALITY_CARD_LIMIT and any(c.card_id is _NORMALITY for c in player.hand):
             return False            # Normality: at most 3 cards a turn while it is in hand
+        if self.card_id is not _ENTHRALLED and any(c.card_id is _ENTHRALLED for c in player.hand):
+            return False            # Enthralled.ShouldPlay: only Enthralled itself while it is in hand (autoplay skips this check)
         if player.relics and _CHOKER in player.relics and blocks_play(player):
             return False            # Velvet Choker
         if type(self.energy_cost) is str and self.energy_cost == "X":

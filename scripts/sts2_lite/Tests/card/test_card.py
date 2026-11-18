@@ -324,7 +324,8 @@ UNTARGETED_COLORLESS = (CardId.FINESSE, CardId.PRODUCTION, CardId.MASTER_OF_STRA
                         CardId.ROLLING_BOULDER, CardId.THE_BOMB, CardId.THE_GAMBIT, CardId.MAYHEM, CardId.NOSTALGIA,
                         CardId.CALAMITY, CardId.JACK_OF_ALL_TRADES, CardId.CATASTROPHE, CardId.BEAT_DOWN, CardId.ANOINTED,
                         CardId.DISCOVERY, CardId.ENTROPY, CardId.HIDDEN_GEM, CardId.ALCHEMIZE, CardId.LUMINESCE,
-                        CardId.TOXIC, CardId.FRANTIC_ESCAPE, CardId.DISINTEGRATION, CardId.MIND_ROT, CardId.SLOTH, CardId.WASTE_AWAY)
+                        CardId.TOXIC, CardId.FRANTIC_ESCAPE, CardId.DISINTEGRATION, CardId.MIND_ROT, CardId.SLOTH, CardId.WASTE_AWAY,
+                        CardId.STRATAGEM, CardId.ENTHRALLED)
 
 def test_every_single_target_card_rejects_a_bad_target():
     from sts2_lite.card import GET_CARD_FUNCTION
@@ -530,7 +531,7 @@ def test_cards_that_get_cheaper_when_upgraded(card_id):
     base = {CardId.BARRICADE: 3, CardId.CORRUPTION: 3, CardId.DARK_EMBRACE: 2, CardId.STAMPEDE: 2, CardId.UNMOVABLE: 2, CardId.HAVOC: 1,
             CardId.EXPECT_A_FIGHT: 2, CardId.INFERNAL_BLADE: 1, CardId.BODY_SLAM: 1, CardId.HELLRAISER: 2, CardId.MIND_BLAST: 1,
             CardId.AUTOMATION: 1, CardId.MAYHEM: 2, CardId.NOSTALGIA: 1, CardId.CALAMITY: 3,
-                CardId.APOTHEOSIS: 2, CardId.ABUNDANCE: 1, CardId.ALCHEMIZE: 1, CardId.ENTRENCH: 2, CardId.DISTRACTION: 1}[card_id]
+                CardId.APOTHEOSIS: 2, CardId.ABUNDANCE: 1, CardId.ALCHEMIZE: 1, CardId.ENTRENCH: 2, CardId.DISTRACTION: 1, CardId.STRATAGEM: 1}[card_id]
     assert power(card_id, base).upgraded_copy().energy_cost == base - 1
 
 def test_cost_never_goes_below_zero():

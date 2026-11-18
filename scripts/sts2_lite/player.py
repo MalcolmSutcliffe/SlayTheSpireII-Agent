@@ -356,7 +356,9 @@ class Player(Creature):
         if len(self.hand) >= 10:
             return None
         if len(self.draw_pile) == 0:
-            self.shuffle_discard_into_draw()
+            if self.shuffle_discard_into_draw() and self.draw_pause_hook is not None:
+                self.draw_pause_hook(1, from_hand_draw)     # the pick the shuffle asked for comes first: this draw waits for it
+                return None
         if len(self.draw_pile) == 0:
             return None
         card = self.draw_pile.pop()
@@ -453,9 +455,10 @@ class Player(Creature):
             self.known_top -= 1
         del self.draw_pile[index]
 
-    def shuffle_discard_into_draw(self):
+    def shuffle_discard_into_draw(self) -> bool:
+        """True when the shuffle asked for a card choice (Stratagem), which comes before anything else."""
         if not self.discard_pile:
-            return
+            return False
         self.draw_pile.extend(self.discard_pile)
         self.discard_pile = []
         self.known_top = 0
@@ -464,8 +467,7 @@ class Player(Creature):
         if fitted:      # Perfect Fit: placed on top instead of being shuffled, and the agent knows them
             self.draw_pile = [c for c in self.draw_pile if c.enchantment != EnchantmentId.PERFECT_FIT] + fitted
             self.known_top = len(fitted)
-        if self.shuffle_hook is not None:
-            self.shuffle_hook()
+        return self.shuffle_hook is not None and self.shuffle_hook()
 
     def upgrade_card(self, card : Card) -> Card | None:
         """Replace a card in the hand or a pile with its upgraded version. Returns it, or None if the card

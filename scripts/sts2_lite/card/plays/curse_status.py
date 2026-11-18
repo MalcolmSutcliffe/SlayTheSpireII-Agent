@@ -35,6 +35,7 @@ def play_slimed(card: Card, combat : CombatSimulator, target_index=0, is_upgrade
 CURSE_STATUS_PLAYS = {
     CardId.BECKON : play_beckon,
     CardId.DISINTEGRATION : play_knowledge_curse,
+    CardId.ENTHRALLED : play_beckon,       # does nothing; playing it only gets it out of the hand
     CardId.FRANTIC_ESCAPE : play_frantic_escape,
     CardId.MIND_ROT : play_knowledge_curse,
     CardId.SLIMED : play_slimed,

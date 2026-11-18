@@ -21,11 +21,11 @@ def end_turn(hand):
 
 
 def test_every_curse_is_a_curse_type_and_generatable():
-    assert len(CURSE_CARDS) == 17
+    assert len(CURSE_CARDS) == 18
     for cid in CURSE_CARDS:
         assert GENERATED_CARDS[cid]().type == CardType.Curse
 
-@pytest.mark.parametrize("cid", sorted(CURSE_CARDS - {CardId.SPORE_MIND}, key=lambda c: c.name))
+@pytest.mark.parametrize("cid", sorted(CURSE_CARDS - {CardId.SPORE_MIND, CardId.ENTHRALLED}, key=lambda c: c.name))
 def test_curses_are_unplayable_and_cost_nothing(cid):
     c = curse(cid)
     assert c.unplayable and c.is_unplayable and c.energy_cost == 0
@@ -252,3 +252,34 @@ def test_a_quest_card_is_a_dead_card_that_is_not_reported_as_missing(capsys, car
     c = Card.from_dict(dict(RAW, id=card_id, name=name, type="Quest", is_upgraded=False))
     assert c.name == name and c.type == CardType.Status and c.unplayable and c.energy_cost == 0
     assert "not implemented" not in capsys.readouterr().out
+
+
+# ------------------------------------------------------------ Enthralled
+def test_enthralled_costs_two_and_is_eternal():
+    c = curse(CardId.ENTHRALLED)
+    assert c.type == CardType.Curse and not c.unplayable and c.energy_cost == 2 and CardKeyword.ETERNAL in c.keywords and not c.is_upgradable
+
+def test_enthralled_blocks_every_other_card_while_in_hand():
+    cs = make_state([curse(CardId.ENTHRALLED), strike(), defend()], enemy_count=1)
+    sim = CombatSimulator(cs)
+    assert not cs.player.hand[1].can_play_card(sim, 0) and not cs.player.hand[2].can_play_card(sim, 0)
+    assert [a["card_index"] for a in sim.get_available_actions() if a["action"] == "play_card"] == [0]
+
+def test_playing_enthralled_frees_the_hand():
+    cs = make_state([curse(CardId.ENTHRALLED), strike()], enemy_count=1)
+    sim = CombatSimulator(cs)
+    sim.play_card(0, 0)
+    assert cs.energy == 1 and cs.player.discard_pile[-1].card_id == CardId.ENTHRALLED
+    assert cs.player.hand[0].can_play_card(sim, 0)
+
+def test_enthralled_cannot_be_played_without_two_energy():
+    cs = make_state([curse(CardId.ENTHRALLED), strike()], enemy_count=1)
+    cs.energy = 1
+    sim = CombatSimulator(cs)
+    assert not any(a["action"] == "play_card" for a in sim.get_available_actions())
+
+def test_two_enthralled_can_both_be_played():
+    cs = make_state([curse(CardId.ENTHRALLED), curse(CardId.ENTHRALLED), strike()], enemy_count=1)
+    cs.energy = 4
+    sim = CombatSimulator(cs)
+    assert cs.player.hand[1].can_play_card(sim, 0) and not cs.player.hand[2].can_play_card(sim, 0)

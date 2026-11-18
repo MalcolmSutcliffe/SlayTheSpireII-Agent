@@ -59,6 +59,9 @@ def play_the_gambit(card: Card, combat : CombatSimulator, target_index=0, is_upg
 def play_mayhem(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     combat.combat_state.player.apply_status(StatusId.MAYHEM, 1)
 
+def play_stratagem(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    combat.combat_state.player.apply_status(StatusId.STRATAGEM, 1)
+
 def play_nostalgia(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     combat.combat_state.player.apply_status(StatusId.NOSTALGIA, 1)
 
@@ -274,6 +277,7 @@ COLORLESS_PLAYS = {
     CardId.JACK_OF_ALL_TRADES : play_jack_of_all_trades,
     CardId.MASTER_OF_STRATEGY : play_master_of_strategy,
     CardId.MAYHEM : play_mayhem,
+    CardId.STRATAGEM : play_stratagem,
     CardId.MIND_BLAST : play_mind_blast,
     CardId.NOSTALGIA : play_nostalgia,
     CardId.OMNISLICE : play_omnislice,

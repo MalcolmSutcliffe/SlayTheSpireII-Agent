@@ -150,6 +150,7 @@ class StatusId(Enum):
     FEEDING_FRENZY = auto()         # Feeding Frenzy: the Strength it gave is lost when the turn ends
     FLEX_POTION = auto()            # Flex Potion: the Strength it gave is lost when the turn ends
     SPEED_POTION = auto()           # Speed Potion: the Dexterity it gave is lost when the turn ends
+    STRATAGEM = auto()              # Stratagem: whenever the draw pile is shuffled, put `amount` cards of your choice from it into the hand
 
 INFESTED_SPAWNS = 4
 CRAB_RAGE_STRENGTH, CRAB_RAGE_BLOCK = 6, 99
@@ -653,6 +654,10 @@ def _the_bomb_on_end_turn(combat : CombatSimulator, owner : Creature, amount : i
 def _mayhem_on_auto_pre_play(combat : CombatSimulator, owner : Creature, amount : int):
     combat.auto_play_from_top(amount)
 
+def _stratagem_on_shuffle(combat : CombatSimulator, owner : Creature, amount : int):
+    if _own(combat, owner):
+        combat.request_stratagem(amount)
+
 def _calamity_on_card_played(combat : CombatSimulator, owner : Creature, amount : int, card):
     # every Attack played adds random Attacks to the hand
     from sts2_lite.card import Card, CardType, INFERNAL_BLADE_POOL     # card.py imports this module
@@ -815,6 +820,7 @@ STATUS_HANDLERS : dict[tuple[StatusId, HookType], Callable] = HandlerTable({
     (StatusId.PANACHE, HookType.PLAYER_TURN_ENDED) : _panache_on_player_turn_ended,
     (StatusId.THE_BOMB, HookType.END_TURN) : _the_bomb_on_end_turn,
     (StatusId.MAYHEM, HookType.AUTO_PRE_PLAY) : _mayhem_on_auto_pre_play,
+    (StatusId.STRATAGEM, HookType.SHUFFLED) : _stratagem_on_shuffle,
     (StatusId.CALAMITY, HookType.CARD_PLAYED) : _calamity_on_card_played,
     (StatusId.ENTROPY, HookType.PLAYER_TURN_START) : _entropy_on_turn_start,
 })

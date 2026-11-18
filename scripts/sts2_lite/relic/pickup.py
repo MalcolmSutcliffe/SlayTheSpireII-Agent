@@ -367,7 +367,7 @@ EFFECTS : dict[str, Callable] = {
     "CLAWS": _claws, "TRI_BOOMERANG": lambda c: c.enchant("INSTINCT", 1, count=3),
     "STRAWBERRY": _max_hp(7), "MANGO": _max_hp(14), "PEAR": _max_hp(10), "LEES_WAFFLE": _max_hp(7, heal_full=True), "FAKE_MANGO": _max_hp(3),
     "FAKE_LEES_WAFFLE": lambda c: c.heal(int(c.run.max_hp * 0.10)),
-    "OLD_COIN": _gold(300), "GOLDEN_PEARL": _gold(150), "CURSED_PEARL": _cursed_pearl,
+    "OLD_COIN": _gold(300), "GOLDEN_PEARL": _gold(150), "CURSED_PEARL": _cursed_pearl, "BLOOD_SOAKED_ROSE": lambda c: c.add_card("ENTHRALLED"),
     "POTION_BELT": _potion_belt, "ALCHEMICAL_COFFER": _alchemical_coffer,
     "WAR_PAINT": _upgrade_type("Skill"), "WHETSTONE": _upgrade_type("Attack"), "FRAGRANT_MUSHROOM": _fragrant_mushroom,
     "KIFUDA": _enchant_n("ADROIT", 3, 3), "GNARLED_HAMMER": _enchant_n("SHARP", 3, 3), "PUNCH_DAGGER": _enchant_n("MOMENTUM", 5, 1), "ROYAL_STAMP": _enchant_n("ROYALLY_APPROVED", 1, 1),

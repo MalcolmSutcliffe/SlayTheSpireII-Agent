@@ -556,6 +556,28 @@ class CombatSimulator:
             return self.combat_state.pending_choice.offers
         return player.discard_pile if name == "discard" else player.hand
 
+    def request_stratagem(self, amount : int):
+        """StratagemPower.AfterShuffle: `amount` cards of the draw pile go to the hand, picked one at a time (cards that are the same count
+        once, and a lone option is taken without asking). The options are the cards themselves, not their places in the pile, which a draw
+        or autoplay made before the answer can change."""
+        cs = self.combat_state
+        if cs.pending_choice is not None:       # another pick is waiting: this one follows it
+            cs.continuations = cs.continuations + [("stratagem", amount)]
+            return
+        seen, offers = set(), []
+        for c in cs.player.draw_pile:
+            key = (c.card_id, c.is_upgraded, c.energy_cost)
+            if key not in seen:
+                seen.add(key)
+                offers.append(c)
+        if not offers:
+            return
+        choice = PendingChoice("stratagem", list(range(len(offers))), "offer", amount=amount, offers=offers)
+        if len(offers) == 1:
+            self._apply_choice(choice, 0)
+        else:
+            cs.pending_choice = choice
+
     def request_discovery(self, offers : list[Card]):
         """Discovery: pick one of the cards made up for the choice (or none); it joins the hand for free this turn."""
         self.combat_state.pending_choice = PendingChoice("discover", list(range(len(offers))), "offer", hidden=True, offers=offers)
@@ -676,6 +698,12 @@ class CombatSimulator:
         elif choice.kind == "to_draw_pile":
             self._pile(choice.pile).remove(card)
             player.put_on_top(card)                 # the end of the list is the top
+        elif choice.kind == "stratagem":
+            if any(c is card for c in player.draw_pile):
+                player.remove_from_draw_pile(card)
+                (player.hand if len(player.hand) < MAX_HAND_SIZE else player.discard_pile).append(card)     # a full hand sends it to the discard pile
+            if choice.amount > 1:
+                self.request_stratagem(choice.amount - 1)
         elif choice.kind == "draw_to_hand":
             player.remove_from_draw_pile(card)
             (player.hand if len(player.hand) < MAX_HAND_SIZE else player.discard_pile).append(card)     # a full hand sends it to the discard pile
@@ -769,8 +797,10 @@ class CombatSimulator:
                 del player.status[StatusId.VIGOR]
         self.vigor_pending = None
 
-    def _shuffled(self):
+    def _shuffled(self) -> bool:
+        """True when the shuffle asked for a card choice (Stratagem)."""
         self.fire(HookType.SHUFFLED)
+        return self.combat_state.pending_choice is not None
 
     def _block_cleared(self):
         self.fire(HookType.BLOCK_CLEARED)
@@ -969,6 +999,8 @@ class CombatSimulator:
                 self.play_random_from_draw_pile(args[0])
             elif kind == "draw":
                 cs.player.draw_cards(*args)
+            elif kind == "stratagem":
+                self.request_stratagem(*args)
             elif kind == "turn_start":
                 self._finish_player_turn_start(*args)
             elif kind == "replay":
