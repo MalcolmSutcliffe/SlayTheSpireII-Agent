@@ -151,7 +151,9 @@ class StatusId(Enum):
     FLEX_POTION = auto()            # Flex Potion: the Strength it gave is lost when the turn ends
     SPEED_POTION = auto()           # Speed Potion: the Dexterity it gave is lost when the turn ends
     STRATAGEM = auto()
-    POISON = auto()                 # at the start of its owner's turn: loses that much HP (unblockable), then 1 less Poison              # Stratagem: whenever the draw pile is shuffled, put `amount` cards of your choice from it into the hand
+    POISON = auto()
+    ANTICIPATE = auto()             # Anticipate (TemporaryDexterityPower): the Dexterity it gave is lost when the turn ends
+    PIERCING_WAIL = auto()          # Piercing Wail (TemporaryStrengthPower, negative): the Strength it took comes back when the owner's turn ends                 # at the start of its owner's turn: loses that much HP (unblockable), then 1 less Poison              # Stratagem: whenever the draw pile is shuffled, put `amount` cards of your choice from it into the hand
 
 INFESTED_SPAWNS = 4
 CRAB_RAGE_STRENGTH, CRAB_RAGE_BLOCK = 6, 99
@@ -170,7 +172,7 @@ TICKS_DOWN = frozenset({
 })
 RESETS_EACH_TURN = frozenset({StatusId.SLOW})
 
-DEBUFFS = frozenset({StatusId.POISON, StatusId.WEAK, StatusId.VULNERABLE, StatusId.FRAIL, StatusId.SHRINK,
+DEBUFFS = frozenset({StatusId.POISON, StatusId.PIERCING_WAIL, StatusId.WEAK, StatusId.VULNERABLE, StatusId.FRAIL, StatusId.SHRINK,
                      StatusId.CONSTRICT, StatusId.TANGLED, StatusId.RINGING,
                      StatusId.NO_DRAW, StatusId.NO_ENERGY_GAIN, StatusId.MANGLE, StatusId.CONFUSED,
                      StatusId.NO_BLOCK, StatusId.THE_GAMBIT, StatusId.DARK_SHACKLES,

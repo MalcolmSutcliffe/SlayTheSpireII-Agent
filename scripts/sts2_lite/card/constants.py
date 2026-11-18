@@ -53,6 +53,26 @@ CARD_ENERGY_COST_AND_TARGET : dict[CardId, tuple[int | str, TargetType]] = {
     CardId.SHIV : (0, _A),
     CardId.STRIKE_SILENT : (1, _A),
     CardId.SURVIVOR : (1, _S),
+    CardId.ANTICIPATE : (0, _S),
+    CardId.BACKFLIP : (1, _S),
+    CardId.BLADE_DANCE : (1, _S),
+    CardId.CLOAK_AND_DAGGER : (1, _S),
+    CardId.DAGGER_SPRAY : (1, _ALL),
+    CardId.DAGGER_THROW : (1, _A),
+    CardId.DEADLY_POISON : (1, _A),
+    CardId.DEFLECT : (0, _S),
+    CardId.DODGE_AND_ROLL : (1, _S),
+    CardId.FLICK_FLACK : (1, _ALL),
+    CardId.LEADING_STRIKE : (1, _A),
+    CardId.PIERCING_WAIL : (1, _ALL),
+    CardId.POISONED_STAB : (1, _A),
+    CardId.PREDATOR : (2, _A),
+    CardId.PREPARED : (0, _S),
+    CardId.RICOCHET : (2, _RAND),
+    CardId.SLICE : (0, _A),
+    CardId.SNAKEBITE : (2, _A),
+    CardId.SUCKER_PUNCH : (1, _A),
+    CardId.UNTOUCHABLE : (2, _S),
     CardId.DEMON_FORM : (3, _S),
     CardId.DISCOVERY : (1, _S),
     CardId.DISMANTLE : (1, _A),
@@ -213,7 +233,7 @@ UPGRADE_KEYWORD = {CardId.HELLO_WORLD : 4, CardId.MAD_SCIENCE : 4, CardId.SCRAWL
 
 CONFUSED_MAX_COST = 3
 
-_EXHAUST, _ETHEREAL, _INNATE, _UNPLAYABLE, _RETAIN, _ETERNAL, _REPLAY = 1, 2, 4, 8, 16, 64, 128
+_EXHAUST, _ETHEREAL, _INNATE, _UNPLAYABLE, _RETAIN, _SLY, _ETERNAL, _REPLAY = 1, 2, 4, 8, 16, 32, 64, 128
 
 # cards with the Exhaust keyword
 EXHAUSTING_CARDS = frozenset({CardId.SLIMED, CardId.TREMBLE, CardId.IMPERVIOUS, CardId.MOLTEN_FIST,
@@ -223,7 +243,8 @@ EXHAUSTING_CARDS = frozenset({CardId.SLIMED, CardId.TREMBLE, CardId.IMPERVIOUS, 
                               CardId.SCRAWL, CardId.PURITY, CardId.SECRET_TECHNIQUE, CardId.SECRET_WEAPON, CardId.THINKING_AHEAD,
                               CardId.PANIC_BUTTON, CardId.PROLONG, CardId.DARK_SHACKLES, CardId.JACK_OF_ALL_TRADES, CardId.ANOINTED, CardId.DISCOVERY, CardId.ALCHEMIZE, CardId.LUMINESCE,
                               CardId.ENLIGHTENMENT, CardId.METAMORPHOSIS, CardId.DISTRACTION, CardId.NEOWS_FURY,
-                              CardId.ABUNDANCE, CardId.APOTHEOSIS, CardId.APPARITION, CardId.RELAX, CardId.WHISTLE, CardId.WISH, CardId.SHIV})
+                              CardId.ABUNDANCE, CardId.APOTHEOSIS, CardId.APPARITION, CardId.RELAX, CardId.WHISTLE, CardId.WISH, CardId.SHIV,
+                              CardId.BLADE_DANCE, CardId.PIERCING_WAIL})
 
 # curses (Debt's gold loss is not modelled: the sim does not track gold)
 CURSE_CARDS = frozenset({CardId.BAD_LUCK, CardId.DEBT, CardId.REGRET, CardId.DECAY, CardId.SHAME, CardId.DOUBT, CardId.NORMALITY, CardId.INJURY,
@@ -241,7 +262,10 @@ UNPLAYABLE_CARDS = frozenset({CardId.DAZED, CardId.WOUND, CardId.NOT_IMPLEMENTED
 ETHEREAL_CARDS = frozenset({CardId.APPARITION, CardId.DAZED, CardId.CLUMSY, CardId.FOLLY, CardId.ASCENDERS_BANE})
 
 # Retain / Innate / Eternal: only Retain acts in combat (Innate and Eternal are deck-level)
-RETAINING_CARDS = frozenset({CardId.POOR_SLEEP, CardId.RESTLESSNESS, CardId.PURITY, CardId.LUMINESCE})
+RETAINING_CARDS = frozenset({CardId.POOR_SLEEP, CardId.RESTLESSNESS, CardId.PURITY, CardId.LUMINESCE, CardId.SNAKEBITE})
+
+# cards with the Sly keyword: discarded by an effect, they play themselves for free (CardCmd.DiscardAndDraw)
+SLY_CARDS = frozenset({CardId.FLICK_FLACK, CardId.RICOCHET, CardId.UNTOUCHABLE})
 
 INNATE_CARDS = frozenset({CardId.APOTHEOSIS, CardId.WRITHE, CardId.FOLLY, CardId.DRAMATIC_ENTRANCE, CardId.MIND_BLAST})
 
@@ -262,7 +286,8 @@ def _set_canonical_keywords():
     for card_id in CardId:
         card_id.keyword_mask = ((_EXHAUST if card_id in EXHAUSTING_CARDS else 0) | (_ETHEREAL if card_id in ETHEREAL_CARDS else 0)
                                 | (_UNPLAYABLE if card_id in UNPLAYABLE_CARDS else 0) | (_RETAIN if card_id in RETAINING_CARDS else 0)
-                                | (_INNATE if card_id in INNATE_CARDS else 0) | (_ETERNAL if card_id in ETERNAL_CARDS else 0))
+                                | (_INNATE if card_id in INNATE_CARDS else 0) | (_ETERNAL if card_id in ETERNAL_CARDS else 0)
+                                | (_SLY if card_id in SLY_CARDS else 0))
 
 _set_canonical_keywords()
 

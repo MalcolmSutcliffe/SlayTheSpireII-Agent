@@ -83,11 +83,15 @@ def _vulnerable(combat : CombatSimulator, target : Creature, amount : int):
     if target.status_amount(StatusId.VULNERABLE) > before:      # Vicious: not if Artifact stopped it
         player.draw_cards(player.status_amount(StatusId.VICIOUS))
 
-def _weak(combat : CombatSimulator, target : Creature, amount : int):
+def _debuff(combat : CombatSimulator, target : Creature, status : StatusId, amount : int):
+    """A debuff from the card being played (Unsettling Lamp doubles it)."""
     player = combat.combat_state.player
     if player.relics:
-        amount *= debuff_multiplier(player, combat.card_in_play, target)      # Unsettling Lamp
-    target.apply_status(StatusId.WEAK, amount)
+        amount *= debuff_multiplier(player, combat.card_in_play, target)
+    target.apply_status(status, amount)
+
+def _weak(combat : CombatSimulator, target : Creature, amount : int):
+    _debuff(combat, target, StatusId.WEAK, amount)
 
 def temp_strength(target : Creature, marker : StatusId, amount : int, sign : int, combat : CombatSimulator | None = None):
     """Strength that is taken back when the target's turn ends (Setup Strike, Mangle). `sign` is -1 for a loss."""
@@ -101,6 +105,8 @@ def temp_strength(target : Creature, marker : StatusId, amount : int, sign : int
 
 PLAIN_DAMAGE = {        # id : (damage, damage upgraded) of the cards that print one fixed number
     CardId.STRIKE_SILENT : (6, 9), CardId.NEUTRALIZE : (3, 4), CardId.SHIV : (4, 6),
+    CardId.DAGGER_SPRAY : (4, 6), CardId.DAGGER_THROW : (9, 12), CardId.FLICK_FLACK : (7, 9), CardId.LEADING_STRIKE : (3, 6),
+    CardId.POISONED_STAB : (6, 8), CardId.PREDATOR : (15, 20), CardId.RICOCHET : (3, 3), CardId.SLICE : (6, 9), CardId.SUCKER_PUNCH : (8, 10),
     CardId.BYRD_SWOOP : (14, 18), CardId.CLASH : (14, 18), CardId.REBOUND : (9, 12), CardId.RIP_AND_TEAR : (7, 9), CardId.PECK : (2, 2), CardId.EXTERMINATE : (3, 4), CardId.SQUASH : (10, 12),
     CardId.ANGER : (6, 8), CardId.BASH : (8, 10), CardId.BLUDGEON : (32, 42), CardId.BREAK : (20, 30),
     CardId.BREAKTHROUGH : (9, 13), CardId.CINDER : (18, 24), CardId.CONFLAGRATION : (2, 2),

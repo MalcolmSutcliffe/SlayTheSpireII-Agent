@@ -176,10 +176,11 @@ def test_unknown_character_is_refused():
     with pytest.raises(NotImplementedError):
         new_run(0, "DEFECT")
 
-def test_silent_reward_pool_is_refused_until_its_cards_exist():
-    from sts2_lite.rewards.cards import card_pool
-    with pytest.raises(NotImplementedError):
-        card_pool("SILENT")
+def test_silent_reward_pool_holds_its_commons():
+    from sts2_lite.rewards.cards import card_pool_ids
+    pool = set(card_pool_ids("SILENT"))
+    assert {CardId.BLADE_DANCE, CardId.DEADLY_POISON, CardId.SLICE} <= pool
+    assert CardId.STRIKE_SILENT not in pool and CardId.SHIV not in pool and CardId.BASH not in pool
 
 def test_silent_potion_pool():
     from sts2_lite.potion_pool import potion_pool
@@ -197,3 +198,158 @@ def test_relic_bag_holds_the_characters_own_relics():
 def test_character_of_title():
     from sts2_lite.character import character_of_title
     assert character_of_title("The Silent") == "SILENT" and character_of_title("The Ironclad") == "IRONCLAD" and character_of_title(None) == "IRONCLAD"
+
+
+# ------------------------------------------------------------ Common cards
+def ids(cards):
+    return [c.card_id for c in cards]
+
+def two_enemies(hand, hp=100):
+    return make_state(hand, enemy_count=2, enemy_hp=hp)
+
+@pytest.mark.parametrize("card_id, damage", [(CardId.SLICE, 6), (CardId.PREDATOR, 15), (CardId.SUCKER_PUNCH, 8), (CardId.DAGGER_THROW, 9)])
+def test_common_attack_damage(card_id, damage):
+    cs = one_enemy([gen(card_id)])
+    play(cs)
+    assert cs.enemies[0].current_hp == 100 - damage
+
+@pytest.mark.parametrize("card_id, upgraded, block", [(CardId.DEFLECT, False, 4), (CardId.DEFLECT, True, 7),
+                                                       (CardId.UNTOUCHABLE, False, 6), (CardId.BACKFLIP, False, 5)])
+def test_common_block(card_id, upgraded, block):
+    cs = one_enemy([gen(card_id, upgraded)])
+    play(cs)
+    assert cs.player.block == block
+
+def test_slice_and_deflect_are_free():
+    for cid in (CardId.SLICE, CardId.DEFLECT, CardId.ANTICIPATE, CardId.PREPARED):
+        assert gen(cid).energy_cost == 0
+
+def test_backflip_draws_two():
+    cs = one_enemy([gen(CardId.BACKFLIP)])
+    cs.player.draw_pile = [gen(CardId.SLICE), gen(CardId.SLICE), gen(CardId.SLICE)]
+    play(cs)
+    assert len(cs.player.hand) == 2 and len(cs.player.draw_pile) == 1
+
+@pytest.mark.parametrize("upgraded, shivs", [(False, 3), (True, 4)])
+def test_blade_dance_makes_shivs_and_exhausts(upgraded, shivs):
+    cs = one_enemy([gen(CardId.BLADE_DANCE, upgraded)])
+    play(cs)
+    assert ids(cs.player.hand) == [CardId.SHIV] * shivs and ids(cs.player.exhaust_pile) == [CardId.BLADE_DANCE]
+
+def test_cloak_and_dagger():
+    cs = one_enemy([gen(CardId.CLOAK_AND_DAGGER, True)])
+    play(cs)
+    assert cs.player.block == 6 and ids(cs.player.hand) == [CardId.SHIV] * 2
+
+def test_leading_strike_hits_and_makes_two_shivs():
+    cs = one_enemy([gen(CardId.LEADING_STRIKE)])
+    play(cs)
+    assert cs.enemies[0].current_hp == 97 and ids(cs.player.hand) == [CardId.SHIV] * 2
+
+def test_dagger_spray_hits_every_enemy_twice():
+    cs = two_enemies([gen(CardId.DAGGER_SPRAY)])
+    play(cs)
+    assert [e.current_hp for e in cs.enemies] == [92, 92]
+
+def test_flick_flack_hits_every_enemy():
+    cs = two_enemies([gen(CardId.FLICK_FLACK, True)])
+    play(cs)
+    assert [e.current_hp for e in cs.enemies] == [91, 91]
+
+def test_ricochet_hits_random_enemies_four_times():
+    cs = two_enemies([gen(CardId.RICOCHET)])
+    play(cs)
+    assert sum(100 - e.current_hp for e in cs.enemies) == 12
+
+def test_dagger_throw_draws_then_discards():
+    cs = one_enemy([gen(CardId.DAGGER_THROW), gen(CardId.STRIKE_SILENT)])
+    cs.player.draw_pile = [gen(CardId.SLICE)]
+    sim = play(cs)
+    pending = cs.pending_choice
+    assert pending is not None and pending.kind == "discard" and len(pending.indices) == 2
+    sim.choose_card(next(i for i in pending.indices if cs.player.hand[i].card_id == CardId.SLICE))
+    assert ids(cs.player.hand) == [CardId.STRIKE_SILENT]
+
+@pytest.mark.parametrize("card_id, upgraded, poison", [(CardId.DEADLY_POISON, False, 5), (CardId.DEADLY_POISON, True, 7),
+                                                        (CardId.SNAKEBITE, False, 7), (CardId.SNAKEBITE, True, 10)])
+def test_poison_cards(card_id, upgraded, poison):
+    cs = one_enemy([gen(card_id, upgraded)])
+    play(cs)
+    assert cs.enemies[0].status_amount(StatusId.POISON) == poison
+
+def test_snakebite_is_retained():
+    from sts2_lite.card import RETAINING_CARDS
+    assert CardId.SNAKEBITE in RETAINING_CARDS
+
+def test_poisoned_stab():
+    cs = one_enemy([gen(CardId.POISONED_STAB, True)])
+    play(cs)
+    e = cs.enemies[0]
+    assert e.current_hp == 92 and e.status_amount(StatusId.POISON) == 4
+
+def test_sucker_punch_weakens():
+    cs = one_enemy([gen(CardId.SUCKER_PUNCH, True)])
+    play(cs)
+    assert cs.enemies[0].current_hp == 90 and cs.enemies[0].status_amount(StatusId.WEAK) == 2
+
+def test_predator_draws_two_more_next_turn():
+    cs = one_enemy([gen(CardId.PREDATOR)])
+    play(cs)
+    assert cs.player.status_amount(StatusId.DRAW_CARDS_NEXT_TURN) == 2
+
+def test_anticipate_dexterity_wears_off_at_end_of_turn():
+    cs = one_enemy([gen(CardId.ANTICIPATE), gen(CardId.DEFLECT)])
+    sim = play(cs)
+    assert cs.player.status_amount(StatusId.DEXTERITY) == 2
+    sim.play_card(0, 0)
+    assert cs.player.block == 6
+    sim.end_turn()
+    assert cs.player.status_amount(StatusId.DEXTERITY) == 0 and StatusId.ANTICIPATE not in cs.player.status
+
+def test_dodge_and_roll_blocks_again_next_turn():
+    cs = one_enemy([gen(CardId.DODGE_AND_ROLL)])
+    sim = play(cs)
+    assert cs.player.block == 4 and cs.player.status_amount(StatusId.BLOCK_NEXT_TURN) == 4
+    sim.end_turn()
+    assert cs.player.block == 4
+
+def test_piercing_wail_takes_strength_until_the_enemy_turn_ends():
+    cs = two_enemies([gen(CardId.PIERCING_WAIL)])
+    for e in cs.enemies:
+        e.attack_damage, e.num_attacks = 10, 1
+    sim = play(cs)
+    assert all(e.status_amount(StatusId.STRENGTH) == -6 for e in cs.enemies)
+    assert ids(cs.player.exhaust_pile) == [CardId.PIERCING_WAIL]
+    sim.end_turn()
+    assert cs.player.current_hp == 50 - 4 - 4
+    assert all(e.status_amount(StatusId.STRENGTH) == 0 for e in cs.enemies)
+
+def test_prepared_upgraded_draws_two_and_discards_two():
+    cs = one_enemy([gen(CardId.PREPARED, True), gen(CardId.STRIKE_SILENT), gen(CardId.DEFEND_SILENT)])
+    cs.player.draw_pile = [gen(CardId.SLICE), gen(CardId.DEFLECT)]
+    sim = play(cs)
+    for _ in range(2):
+        pending = cs.pending_choice
+        assert pending is not None and pending.kind == "discard"
+        sim.choose_card(next(i for i in pending.indices if cs.player.hand[i].card_id in (CardId.SLICE, CardId.DEFLECT)))
+    assert cs.pending_choice is None
+    assert set(ids(cs.player.hand)) == {CardId.STRIKE_SILENT, CardId.DEFEND_SILENT} and len(cs.player.hand) == 2
+    assert {CardId.SLICE, CardId.DEFLECT} <= set(ids(cs.player.discard_pile))
+
+
+# ------------------------------------------------------------ Sly
+def test_sly_card_discarded_by_an_effect_plays_for_free():
+    cs = one_enemy([gen(CardId.SURVIVOR), gen(CardId.FLICK_FLACK)])
+    play(cs)
+    assert cs.enemies[0].current_hp == 93 and cs.energy == 2
+    assert set(ids(cs.player.discard_pile)) == {CardId.SURVIVOR, CardId.FLICK_FLACK}
+
+def test_sly_untouchable_blocks_when_discarded():
+    cs = one_enemy([gen(CardId.SURVIVOR), gen(CardId.UNTOUCHABLE)])
+    play(cs)
+    assert cs.player.block == 8 + 6
+
+def test_sly_card_is_not_played_at_end_of_turn_discard():
+    cs = one_enemy([gen(CardId.FLICK_FLACK)])
+    CombatSimulator(cs).end_turn()
+    assert cs.enemies[0].current_hp == 100

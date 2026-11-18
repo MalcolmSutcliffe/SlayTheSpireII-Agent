@@ -219,7 +219,27 @@ class CardId(Enum):
     DEFEND_SILENT = auto()
     NEUTRALIZE = auto()
     SURVIVOR = auto()
-    SHIV = auto()             # token: 0-cost Attack, 4 damage (6 upgraded), Exhaust       # curse (Blood-Soaked Rose): costs 2, Eternal; while it is in hand no other card can be played by hand
+    SHIV = auto()             # token: 0-cost Attack, 4 damage (6 upgraded), Exhaust
+    ANTICIPATE = auto()
+    BACKFLIP = auto()
+    BLADE_DANCE = auto()
+    CLOAK_AND_DAGGER = auto()
+    DAGGER_SPRAY = auto()
+    DAGGER_THROW = auto()
+    DEADLY_POISON = auto()
+    DEFLECT = auto()
+    DODGE_AND_ROLL = auto()
+    FLICK_FLACK = auto()
+    LEADING_STRIKE = auto()
+    PIERCING_WAIL = auto()
+    POISONED_STAB = auto()
+    PREDATOR = auto()
+    PREPARED = auto()
+    RICOCHET = auto()
+    SLICE = auto()
+    SNAKEBITE = auto()
+    SUCKER_PUNCH = auto()
+    UNTOUCHABLE = auto()       # curse (Blood-Soaked Rose): costs 2, Eternal; while it is in hand no other card can be played by hand
 
 class CardKeyword(Enum):
     """Entities.Cards.CardKeyword (None omitted). Values are bits: cards store keywords as an int mask (Enum hashing is slow)."""

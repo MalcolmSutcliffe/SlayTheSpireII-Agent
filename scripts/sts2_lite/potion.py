@@ -284,10 +284,7 @@ def _ghost_in_a_jar(combat, t): player_of(combat).apply_status(StatusId.INTANGIB
 
 def _cunning_potion(combat, t):
     """Shiv.CreateInHand, then each is upgraded."""
-    from sts2_lite.card import CardId
-    player = player_of(combat)
-    for _ in range(CUNNING_POTION_SHIVS):
-        player.add_to_hand(Card.create_generated(CardId.SHIV, True))
+    combat.create_shivs(CUNNING_POTION_SHIVS, upgraded=True)
 
 def _potion_of_binding(combat, t):
     for enemy in living_enemies(combat):

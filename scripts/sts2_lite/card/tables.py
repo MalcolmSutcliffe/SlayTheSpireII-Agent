@@ -150,6 +150,27 @@ COLORLESS_CARDS = {
 SILENT_CARDS = {
     CardId.STRIKE_SILENT : ("Strike", CardType.Attack, 1, A), CardId.DEFEND_SILENT : ("Defend", CardType.Skill, 1, S),
     CardId.NEUTRALIZE : ("Neutralize", CardType.Attack, 0, A), CardId.SURVIVOR : ("Survivor", CardType.Skill, 1, S),
+    # Common
+    CardId.ANTICIPATE : ("Anticipate", CardType.Skill, 0, S),
+    CardId.BACKFLIP : ("Backflip", CardType.Skill, 1, S),
+    CardId.BLADE_DANCE : ("Blade Dance", CardType.Skill, 1, S),
+    CardId.CLOAK_AND_DAGGER : ("Cloak and Dagger", CardType.Skill, 1, S),
+    CardId.DAGGER_SPRAY : ("Dagger Spray", CardType.Attack, 1, ALL),
+    CardId.DAGGER_THROW : ("Dagger Throw", CardType.Attack, 1, A),
+    CardId.DEADLY_POISON : ("Deadly Poison", CardType.Skill, 1, A),
+    CardId.DEFLECT : ("Deflect", CardType.Skill, 0, S),
+    CardId.DODGE_AND_ROLL : ("Dodge and Roll", CardType.Skill, 1, S),
+    CardId.FLICK_FLACK : ("Flick-Flack", CardType.Attack, 1, ALL),
+    CardId.LEADING_STRIKE : ("Leading Strike", CardType.Attack, 1, A),
+    CardId.PIERCING_WAIL : ("Piercing Wail", CardType.Skill, 1, ALL),
+    CardId.POISONED_STAB : ("Poisoned Stab", CardType.Attack, 1, A),
+    CardId.PREDATOR : ("Predator", CardType.Attack, 2, A),
+    CardId.PREPARED : ("Prepared", CardType.Skill, 0, S),
+    CardId.RICOCHET : ("Ricochet", CardType.Attack, 2, RAND),
+    CardId.SLICE : ("Slice", CardType.Attack, 0, A),
+    CardId.SNAKEBITE : ("Snakebite", CardType.Skill, 2, A),
+    CardId.SUCKER_PUNCH : ("Sucker Punch", CardType.Attack, 1, A),
+    CardId.UNTOUCHABLE : ("Untouchable", CardType.Skill, 2, S),
 }
 
 # Ancient cards the sim could not read from the decompiled source (name, type, cost, target)
@@ -198,7 +219,8 @@ _RARITY_NAMES = {
     ),
     CardRarity.Common : (
         "BLOOD_WALL PERFECTED_STRIKE BREAKTHROUGH SHRUG_IT_OFF POMMEL_STRIKE IRON_WAVE THUNDERCLAP TREMBLE ANGER BODY_SLAM TWIN_STRIKE "
-        "MOLTEN_FIST SWORD_BOOMERANG CINDER TAUNT ARMAMENTS HEADBUTT TRUE_GRIT HAVOC SETUP_STRIKE"
+        "MOLTEN_FIST SWORD_BOOMERANG CINDER TAUNT ARMAMENTS HEADBUTT TRUE_GRIT HAVOC SETUP_STRIKE "
+        "ANTICIPATE BACKFLIP BLADE_DANCE CLOAK_AND_DAGGER DAGGER_SPRAY DAGGER_THROW DEADLY_POISON DEFLECT DODGE_AND_ROLL FLICK_FLACK LEADING_STRIKE PIERCING_WAIL POISONED_STAB PREDATOR PREPARED RICOCHET SLICE SNAKEBITE SUCKER_PUNCH UNTOUCHABLE"
     ),
     CardRarity.Uncommon : (
         "INFLAME FIGHT_ME BLUDGEON UNRELENTING HEMOKINESIS DISMANTLE BULLY ASHEN_STRIKE UPPERCUT WHIRLWIND SPITE EVIL_EYE SECOND_WIND "
@@ -253,7 +275,7 @@ RETURNING_CARDS = frozenset({CardId.BOLAS, CardId.THRUMMING_HATCHET})
 DEFEND_CARDS = frozenset({CardId.DEFEND_IRONCLAD, CardId.ULTIMATE_DEFEND, CardId.DEFEND_SILENT})
 
 # cards with the Strike tag (Hellraiser plays them when they are drawn)
-STRIKE_CARDS = frozenset({CardId.STRIKE_SILENT, CardId.ULTIMATE_STRIKE, CardId.SEEKER_STRIKE, CardId.STRIKE_IRONCLAD, CardId.PERFECTED_STRIKE, CardId.POMMEL_STRIKE, CardId.TWIN_STRIKE,
+STRIKE_CARDS = frozenset({CardId.STRIKE_SILENT, CardId.LEADING_STRIKE, CardId.ULTIMATE_STRIKE, CardId.SEEKER_STRIKE, CardId.STRIKE_IRONCLAD, CardId.PERFECTED_STRIKE, CardId.POMMEL_STRIKE, CardId.TWIN_STRIKE,
                           CardId.ASHEN_STRIKE, CardId.SETUP_STRIKE})
 
 def _curse_debuff(player, status : StatusId):

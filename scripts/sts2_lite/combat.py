@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 from sts2_lite.creature import Creature
 from sts2_lite.player import Player
 from sts2_lite.enemy import Enemy
-from sts2_lite.card import TargetType, CardType, Card, CardId, STRIKE_CARDS, NORMALITY_CARD_LIMIT, CHANGED_ON_PLAY, MAX_HAND_SIZE, RETURNING_CARDS, transform_options
+from sts2_lite.card import TargetType, CardType, Card, CardId, CardKeyword, STRIKE_CARDS, NORMALITY_CARD_LIMIT, CHANGED_ON_PLAY, MAX_HAND_SIZE, RETURNING_CARDS, transform_options
 from sts2_lite.damage import modify_damage, base_from_displayed, bases_from_displayed, EPSILON
 from sts2_lite import rng
 from sts2_lite.hooks import HookType
@@ -579,17 +579,34 @@ class CombatSimulator:
             cs.pending_choice = choice
 
     def request_discard(self, amount : int):
-        """CardSelectCmd.FromHandForDiscard: discard `amount` cards of the hand, one pick at a time (all of them when the hand holds no more)."""
+        """CardSelectCmd.FromHandForDiscard: discard `amount` cards of the hand, picked one at a time and discarded together once all are
+        picked (all of them when the hand holds no more)."""
         hand = self.combat_state.player.hand
-        if amount > 0 and hand:
-            self.request_choice("discard", list(range(len(hand))), "hand", amount)
+        if amount <= 0 or not hand:
+            return
+        if len(hand) <= amount:
+            self.discard_cards(list(hand))
+        else:
+            self.request_choice("discard", list(range(len(hand))), "hand", amount, picked=[])
 
-    def discard_from_hand(self, card : Card):
-        """CardCmd.Discard: a card leaves the hand for the discard pile by an effect (Sly and the discard relics react to it)."""
+    def discard_cards(self, cards : list[Card]):
+        """CardCmd.Discard / DiscardAndDraw: the cards go to the discard pile (CARD_DISCARDED for each), then the Sly ones play themselves for free."""
         player = self.combat_state.player
-        player.hand.remove(card)
-        player.discard_pile.append(card)
-        self.fire(HookType.CARD_DISCARDED, card)
+        sly = []
+        for card in cards:
+            player.hand.remove(card)
+            player.discard_pile.append(card)
+            if CardKeyword.SLY in card.keywords:
+                sly.append(card)
+            self.fire(HookType.CARD_DISCARDED, card)
+        if sly:
+            self._run_autoplay(sly)
+
+    def create_shivs(self, count : int, upgraded : bool = False):
+        """Shiv.CreateInHand (a full hand sends them to the discard pile)."""
+        player = self.combat_state.player
+        for _ in range(count):
+            player.add_to_hand(Card.create_generated(CardId.SHIV, upgraded))
 
     def request_discovery(self, offers : list[Card]):
         """Discovery: pick one of the cards made up for the choice (or none); it joins the hand for free this turn."""
@@ -696,9 +713,12 @@ class CombatSimulator:
             if choice.amount > 1 and player.hand:
                 self.request_choice("exhaust_any", list(range(len(player.hand))), "hand", choice.amount - 1)
         elif choice.kind == "discard":
-            self.discard_from_hand(card)
-            if choice.amount > 1 and player.hand:
-                self.request_choice("discard", list(range(len(player.hand))), "hand", choice.amount - 1)
+            picked = choice.picked + [index]
+            left = [i for i in range(len(player.hand)) if i not in picked]
+            if choice.amount > 1 and left:
+                self.request_choice("discard", left, "hand", choice.amount - 1, picked=picked)
+            else:
+                self.discard_cards([player.hand[i] for i in picked])
         elif choice.kind == "discard_any":          # Gambler's Brew: `amount` counts the cards discarded so far, this one included
             player.hand.remove(card)
             player.discard_pile.append(card)
@@ -1150,13 +1170,14 @@ class CombatSimulator:
     @staticmethod
     def _return_temporary_strength(creature : Creature):
         """Setup Strike, Mangle and Dark Shackles: the Strength they gave or took is returned when the creature's turn ends."""
-        for marker, sign in ((StatusId.SETUP_STRIKE, 1), (StatusId.MANGLE, -1), (StatusId.DARK_SHACKLES, -1), (StatusId.FLEX_POTION, 1), (StatusId.REPTILE_TRINKET, 1), (StatusId.FEEDING_FRENZY, 1)):
+        for marker, sign in ((StatusId.SETUP_STRIKE, 1), (StatusId.MANGLE, -1), (StatusId.PIERCING_WAIL, -1), (StatusId.DARK_SHACKLES, -1), (StatusId.FLEX_POTION, 1), (StatusId.REPTILE_TRINKET, 1), (StatusId.FEEDING_FRENZY, 1)):
             amount = creature.status.pop(marker, None)
             if amount is not None:
                 creature.apply_status(StatusId.STRENGTH, -sign * amount.amount, bypass_artifact=True)
-        speed = creature.status.pop(StatusId.SPEED_POTION, None)       # Speed Potion: its Dexterity
-        if speed is not None:
-            creature.apply_status(StatusId.DEXTERITY, -speed.amount, bypass_artifact=True)
+        for marker in (StatusId.SPEED_POTION, StatusId.ANTICIPATE):        # Speed Potion, Anticipate: their Dexterity
+            speed = creature.status.pop(marker, None)
+            if speed is not None:
+                creature.apply_status(StatusId.DEXTERITY, -speed.amount, bypass_artifact=True)
 
     def _take_extra_turn(self):
         """CombatManager.SwitchSides (extra turn): no enemy turn, RoundNumber kept, TurnNumber + 1."""
