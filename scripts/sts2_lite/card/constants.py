@@ -254,7 +254,7 @@ CURSE_CARDS = frozenset({CardId.BAD_LUCK, CardId.DEBT, CardId.REGRET, CardId.DEC
 PLAYABLE_CURSES = {CardId.SPORE_MIND : 1, CardId.ENTHRALLED : 2}      # energy cost of the curses that can be played
 
 # cards with the Unplayable keyword
-UNPLAYABLE_CARDS = frozenset({CardId.DAZED, CardId.WOUND, CardId.NOT_IMPLEMENTED, CardId.INFECTION, CardId.BURN, CardId.WITHER, CardId.SOOT,
+UNPLAYABLE_CARDS = frozenset({CardId.SPOILS_MAP, CardId.LANTERN_KEY, CardId.BYRDONIS_EGG, CardId.DOWSING, CardId.DAZED, CardId.WOUND, CardId.NOT_IMPLEMENTED, CardId.INFECTION, CardId.BURN, CardId.WITHER, CardId.SOOT,
                               CardId.DISINTEGRATION, CardId.MIND_ROT, CardId.SLOTH, CardId.WASTE_AWAY}
                              | (CURSE_CARDS - PLAYABLE_CURSES.keys()))
 
@@ -312,8 +312,10 @@ _unknown_enchantments : set[str] = set()
 
 _unknown_cards : set[str] = set()
 
-# Quest cards: unplayable like a Wound and nothing else in combat (Spoils Map, Lantern Key and Byrdonis Egg act on the map and at rest sites, which the campaign simulator models), so the combat engine loads them as the dead stand-in without calling them missing
-QUEST_CARDS = frozenset({"SPOILS_MAP", "LANTERN_KEY", "BYRDONIS_EGG", "DOWSING"})
+# Quest cards (CardType.Quest, cost -1, Unplayable, MaxUpgradeLevel 0): in combat they do nothing, like a Wound (Spoils Map, Lantern Key, Byrdonis Egg
+# and Dowsing act on the map, at events and at rest sites, which the campaign simulator models). They load as themselves (Card.create_quest).
+QUEST_NAMES = {CardId.SPOILS_MAP: "Spoils Map", CardId.LANTERN_KEY: "Lantern Key", CardId.BYRDONIS_EGG: "Byrdonis Egg", CardId.DOWSING: "Dowsing"}
+QUEST_CARDS = frozenset(cid.name for cid in QUEST_NAMES)
 DOWSING_ROOMS = 5         # Dowsing.maxRooms: ? rooms entered with it in the deck before it becomes Abundance
 
 # Mad Science: the riders Tinker Time offers for each card type, and (damage / block, rider numbers) the sim plays them with

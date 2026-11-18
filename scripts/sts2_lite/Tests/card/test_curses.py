@@ -247,11 +247,26 @@ def test_unknown_offered_card_keeps_its_place_on_the_screen():
 
 import pytest
 
-@pytest.mark.parametrize("card_id,name", [("SPOILS_MAP", "Spoils Map"), ("LANTERN_KEY", "Lantern Key"), ("BYRDONIS_EGG", "Byrdonis Egg")])
-def test_a_quest_card_is_a_dead_card_that_is_not_reported_as_missing(capsys, card_id, name):
-    c = Card.from_dict(dict(RAW, id=card_id, name=name, type="Quest", is_upgraded=False))
-    assert c.name == name and c.type == CardType.Status and c.unplayable and c.energy_cost == 0
+@pytest.mark.parametrize("card_id,name", [("SPOILS_MAP", "Spoils Map"), ("LANTERN_KEY", "Lantern Key"), ("BYRDONIS_EGG", "Byrdonis Egg"), ("DOWSING", "Dowsing")])
+def test_a_quest_card_loads_as_itself_and_is_dead_like_a_wound(capsys, card_id, name):
+    c = Card.from_dict(dict(RAW, id=card_id, name=name, type="Quest", cost=-1, can_play=False, is_upgraded=False))
+    assert c.card_id == CardId[card_id] and c.name == name and c.type == CardType.Quest
+    assert c.unplayable and c.is_unplayable and c.energy_cost == 0 and not c.is_upgradable
     assert "not implemented" not in capsys.readouterr().out
+
+def test_a_quest_card_in_hand_is_never_playable_and_stays_put_at_end_of_turn():
+    from sts2_lite.combat import CombatSimulator
+    quest = Card.create_quest(CardId.SPOILS_MAP)
+    cs = make_state([quest], enemy_count=1)
+    sim = CombatSimulator(cs)
+    assert all(a["action"] != "play_card" for a in sim.get_available_actions())
+    sim.end_turn()
+    assert any(c.card_id == CardId.SPOILS_MAP for c in cs.player.discard_pile + cs.player.draw_pile + cs.player.hand)
+    assert not cs.player.exhaust_pile
+
+def test_quest_cards_cannot_be_transformed():
+    from sts2_lite.card.tables import transform_options
+    assert transform_options(Card.create_quest(CardId.LANTERN_KEY)) == []
 
 
 # ------------------------------------------------------------ Enthralled

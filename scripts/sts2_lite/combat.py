@@ -337,7 +337,7 @@ class CombatState:
         hand = self.player.hand
         if StatusId.RINGING not in self.player.status or any(not c.is_unplayable for c in hand):
             return
-        candidates = [c for c in hand if c.type != CardType.Status and c.type != CardType.Curse]
+        candidates = [c for c in hand if c.type not in (CardType.Status, CardType.Curse, CardType.Quest)]
         if candidates:
             self.cards_played = 1
             for c in candidates:
@@ -349,7 +349,7 @@ class CombatState:
         hand, energy = self.player.hand, self.energy
         if not any(c.card_id == CardId.NORMALITY for c in hand):
             return
-        blocked = [c for c in hand if c.is_unplayable and not c.unplayable and c.type not in (CardType.Status, CardType.Curse)
+        blocked = [c for c in hand if c.is_unplayable and not c.unplayable and c.type not in (CardType.Status, CardType.Curse, CardType.Quest)
                    and (c.energy_cost == "X" or c.energy_cost <= energy)]
         if blocked:
             self.cards_played = max(self.cards_played, NORMALITY_CARD_LIMIT)

@@ -5,7 +5,7 @@ import re
 from sts2_lite.relic import before_card_played, blocks_play, extra_plays, free_by_relic, restore, snapshot, x_bonus
 from sts2_lite.status import StatusId
 
-from sts2_lite.card.constants import MAD_SCIENCE_BLOCK, MAD_SCIENCE_DAMAGE, mad_science_rider, BECKON_HP_LOSS, BURN_DAMAGE, CONSUMED_ON_PLAY, CURSE_NAMES, ENCHANT_CORRUPTED_HP_LOSS, ENCHANT_SOWN_ENERGY, INFECTION_DAMAGE, NORMALITY_CARD_LIMIT, PLAYABLE_CURSES, TOXIC_DAMAGE, UPGRADE_BASE_COST, UPGRADE_COST_CHANGE, UPGRADE_KEYWORD, UPGRADE_REMOVED_KEYWORD, WITHER_DAMAGE, _AXE, _CHOKER, _ETHEREAL, _EXHAUST, _INNATE, _REPLAY, _RETAIN, _SCARF, _UNPLAYABLE, QUEST_CARDS, _unknown_cards, _unknown_enchantments, keyword_mask
+from sts2_lite.card.constants import MAD_SCIENCE_BLOCK, MAD_SCIENCE_DAMAGE, mad_science_rider, BECKON_HP_LOSS, BURN_DAMAGE, CONSUMED_ON_PLAY, CURSE_NAMES, ENCHANT_CORRUPTED_HP_LOSS, ENCHANT_SOWN_ENERGY, INFECTION_DAMAGE, NORMALITY_CARD_LIMIT, PLAYABLE_CURSES, QUEST_NAMES, TOXIC_DAMAGE, UPGRADE_BASE_COST, UPGRADE_COST_CHANGE, UPGRADE_KEYWORD, UPGRADE_REMOVED_KEYWORD, WITHER_DAMAGE, _AXE, _CHOKER, _ETHEREAL, _EXHAUST, _INNATE, _REPLAY, _RETAIN, _SCARF, _UNPLAYABLE, QUEST_CARDS, _unknown_cards, _unknown_enchantments, keyword_mask
 from sts2_lite.card.effects import _gain_block
 from sts2_lite.card.ids import CardId, CardKeyword, CardType, EnchantmentId, TargetType
 from sts2_lite.card.tables import ANCIENT_CARDS, COLORLESS_CARDS, EVENT_CARDS, GENERATABLE_CARDS, SILENT_CARDS, HAND_CURSE_EFFECTS, STRIKE_CARDS, TOKEN_CARDS
@@ -92,8 +92,10 @@ class Card:
 
     @classmethod
     def from_dict(cls, card : dict):
+        if card["id"] in QUEST_CARDS:
+            return cls.create_quest(CardId[card["id"]])
         if card["id"] not in CardId.__members__ or card["id"] == "NOT_IMPLEMENTED":
-            if card["id"] not in _unknown_cards and card["id"] not in QUEST_CARDS:
+            if card["id"] not in _unknown_cards:
                 _unknown_cards.add(card["id"])
                 print(f"card {card['id']} is not implemented in the sim: treated as a Wound")
             placeholder = cls.create_not_implemented(card.get("name") or card["id"])
@@ -269,6 +271,16 @@ class Card:
         return c
 
     @classmethod
+    def create_quest(cls, card_id : CardId) -> Card:
+        """A Quest card: unplayable and inert in combat, like a Wound, and never upgraded."""
+        c = cls()
+        c.card_id, c.name, c.type = card_id, QUEST_NAMES[card_id], CardType.Quest
+        c.energy_cost, c.target_type = 0, TargetType.NONE
+        c.is_upgraded = False
+        c.is_unplayable = True
+        return c
+
+    @classmethod
     def create_curse(cls, card_id : CardId) -> Card:
         """A curse: cost 0 and unplayable, except Spore Mind (1 energy, Exhaust) and Enthralled (2 energy)."""
         c = cls()
@@ -366,7 +378,7 @@ class Card:
 
     @property
     def is_upgradable(self) -> bool:
-        return not self.is_upgraded and self.type != CardType.Status and self.type != CardType.Curse
+        return not self.is_upgraded and self.type not in (CardType.Status, CardType.Curse, CardType.Quest)
 
     def downgraded_copy(self) -> Card:
         """Dampen: the plain version of an upgraded card (what upgraded_copy undid); shared piles stay untouched."""

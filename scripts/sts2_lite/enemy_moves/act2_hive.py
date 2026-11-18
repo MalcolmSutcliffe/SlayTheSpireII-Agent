@@ -171,7 +171,7 @@ def _steal_priority(card) -> int:
         return 3
     rarity = CARD_RARITY[card.card_id]
     return {CardRarity.Uncommon: 0, CardRarity.Common: 1, CardRarity.Rare: 1, CardRarity.Event: 1,
-            CardRarity.Basic: 2, CardRarity.Ancient: 3}.get(rarity, 4)
+            CardRarity.Basic: 2, CardRarity.Quest: 2, CardRarity.Ancient: 3}.get(rarity, 4)
 
 
 def _steal_a_card(enemy, combat):

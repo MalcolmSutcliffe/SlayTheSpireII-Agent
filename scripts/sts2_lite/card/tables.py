@@ -193,8 +193,8 @@ TRANSFORM_COLORLESS = [cid for cid in COLORLESS_CARDS if cid not in (CardId.HAND
 
 def transform_options(card : Card) -> list[CardId]:
     """CardFactory.GetFilteredTransformationOptions: Common to Rare cards of the card's own pool (Neow's Fury is colorless), never the same card.
-    Empty for Statuses and Curses, which cannot be transformed here."""
-    if card.type in (CardType.Status, CardType.Curse):
+    Empty for Statuses, Curses and Quest cards, which cannot be transformed here."""
+    if card.type in (CardType.Status, CardType.Curse, CardType.Quest):
         return []
     colorless = card.card_id in COLORLESS_CARDS or card.card_id == CardId.NEOWS_FURY or card.card_id in ANCIENT_CARDS
     return [cid for cid in (TRANSFORM_COLORLESS if colorless else GENERATABLE_CARDS) if cid != card.card_id]
@@ -210,6 +210,7 @@ class CardRarity(Enum):
     Token = auto()
     Status = auto()
     Curse = auto()
+    Quest = auto()
 
 # The rarity of every card, read from the `CardRarity` of each class in the decompiled Models.Cards (test_card_rarity checks the
 # table is complete). The true game rarity is stored: a policy that treats Bash like a Common does that itself.
@@ -252,6 +253,9 @@ _RARITY_NAMES = {
     CardRarity.Curse : (
         "REGRET DECAY SHAME DOUBT NORMALITY INJURY POOR_SLEEP GREED CLUMSY CURSE_OF_THE_BELL WRITHE FOLLY BAD_LUCK DEBT GUILTY SPORE_MIND "
         "ASCENDERS_BANE ENTHRALLED"
+    ),
+    CardRarity.Quest : (
+        "SPOILS_MAP LANTERN_KEY BYRDONIS_EGG DOWSING"
     ),
 }
 

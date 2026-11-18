@@ -9,6 +9,7 @@ class CardType(Enum):
     Attack = auto()
     Status = auto()
     Curse = auto()
+    Quest = auto()          # Spoils Map, Lantern Key, Byrdonis Egg, Dowsing: unplayable, they act outside combat
 
 class CardId(Enum):
     __hash__ = object.__hash__      # members are singletons; Enum.__hash__ is pure Python
@@ -239,7 +240,11 @@ class CardId(Enum):
     SLICE = auto()
     SNAKEBITE = auto()
     SUCKER_PUNCH = auto()
-    UNTOUCHABLE = auto()       # curse (Blood-Soaked Rose): costs 2, Eternal; while it is in hand no other card can be played by hand
+    UNTOUCHABLE = auto()
+    SPOILS_MAP = auto()        # Quest cards: unplayable and inert in combat (Card.create_quest)
+    LANTERN_KEY = auto()
+    BYRDONIS_EGG = auto()
+    DOWSING = auto()
 
 class CardKeyword(Enum):
     """Entities.Cards.CardKeyword (None omitted). Values are bits: cards store keywords as an int mask (Enum hashing is slow)."""
