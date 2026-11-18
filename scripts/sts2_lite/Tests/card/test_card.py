@@ -327,7 +327,10 @@ UNTARGETED_COLORLESS = (CardId.FINESSE, CardId.PRODUCTION, CardId.MASTER_OF_STRA
                         CardId.TOXIC, CardId.FRANTIC_ESCAPE, CardId.DISINTEGRATION, CardId.MIND_ROT, CardId.SLOTH, CardId.WASTE_AWAY,
                         CardId.STRATAGEM, CardId.ENTHRALLED, CardId.DEFEND_SILENT, CardId.SURVIVOR,
                         *(CardId[n] for n in ('ANTICIPATE', 'BACKFLIP', 'BLADE_DANCE', 'CLOAK_AND_DAGGER', 'DAGGER_SPRAY', 'DEFLECT', 'DODGE_AND_ROLL',
-                                              'FLICK_FLACK', 'PIERCING_WAIL', 'PREPARED', 'RICOCHET', 'UNTOUCHABLE')))
+                                              'FLICK_FLACK', 'PIERCING_WAIL', 'PREPARED', 'RICOCHET', 'UNTOUCHABLE',
+                                              'ACCELERANT', 'ACCURACY', 'ACROBATICS', 'BLUR', 'BOUNCING_FLASK', 'CALCULATED_GAMBLE', 'ECHOING_SLASH',
+                                              'ESCAPE_PLAN', 'EXPERTISE', 'SIDESTEP', 'FOOTWORK', 'HAND_TRICK', 'HAZE', 'HIDDEN_DAGGERS', 'INFINITE_BLADES',
+                                              'MIRAGE', 'NOXIOUS_FUMES', 'PHANTOM_BLADES', 'REFLEX', 'SPEEDSTER', 'TACTICIAN', 'UP_MY_SLEEVE')))
 
 def test_every_single_target_card_rejects_a_bad_target():
     from sts2_lite.card import GET_CARD_FUNCTION

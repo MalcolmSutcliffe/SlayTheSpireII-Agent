@@ -171,6 +171,41 @@ SILENT_CARDS = {
     CardId.SNAKEBITE : ("Snakebite", CardType.Skill, 2, A),
     CardId.SUCKER_PUNCH : ("Sucker Punch", CardType.Attack, 1, A),
     CardId.UNTOUCHABLE : ("Untouchable", CardType.Skill, 2, S),
+    CardId.ACCELERANT : ("Accelerant", CardType.Power, 1, S),
+    CardId.ACCURACY : ("Accuracy", CardType.Power, 1, S),
+    CardId.ACROBATICS : ("Acrobatics", CardType.Skill, 1, S),
+    CardId.BACKSTAB : ("Backstab", CardType.Attack, 0, A),
+    CardId.BLUR : ("Blur", CardType.Skill, 1, S),
+    CardId.BOUNCING_FLASK : ("Bouncing Flask", CardType.Skill, 2, RAND),
+    CardId.BUBBLE_BUBBLE : ("Bubble Bubble", CardType.Skill, 1, A),
+    CardId.CALCULATED_GAMBLE : ("Calculated Gamble", CardType.Skill, 0, S),
+    CardId.DASH : ("Dash", CardType.Attack, 2, A),
+    CardId.ECHOING_SLASH : ("Echoing Slash", CardType.Attack, 1, ALL),
+    CardId.ESCAPE_PLAN : ("Escape Plan", CardType.Skill, 0, S),
+    CardId.EXPERTISE : ("Expertise", CardType.Skill, 1, S),
+    CardId.EXPOSE : ("Expose", CardType.Skill, 0, A),
+    CardId.FINISHER : ("Finisher", CardType.Attack, 1, A),
+    CardId.FLECHETTES : ("Flechettes", CardType.Attack, 1, A),
+    CardId.SIDESTEP : ("Sidestep", CardType.Skill, 0, S),
+    CardId.FOOTWORK : ("Footwork", CardType.Power, 1, S),
+    CardId.HAND_TRICK : ("Hand Trick", CardType.Skill, 1, S),
+    CardId.HAZE : ("Haze", CardType.Skill, 2, ALL),
+    CardId.HIDDEN_DAGGERS : ("Hidden Daggers", CardType.Skill, 0, S),
+    CardId.INFINITE_BLADES : ("Infinite Blades", CardType.Power, 1, S),
+    CardId.LEG_SWEEP : ("Leg Sweep", CardType.Skill, 2, A),
+    CardId.MEMENTO_MORI : ("Memento Mori", CardType.Attack, 1, A),
+    CardId.MIRAGE : ("Mirage", CardType.Skill, 1, S),
+    CardId.NOXIOUS_FUMES : ("Noxious Fumes", CardType.Power, 1, S),
+    CardId.PHANTOM_BLADES : ("Phantom Blades", CardType.Power, 1, S),
+    CardId.PINPOINT : ("Pinpoint", CardType.Attack, 3, A),
+    CardId.POUNCE : ("Pounce", CardType.Attack, 2, A),
+    CardId.PRECISE_CUT : ("Precise Cut", CardType.Attack, 0, A),
+    CardId.REFLEX : ("Reflex", CardType.Skill, 3, S),
+    CardId.SKEWER : ("Skewer", CardType.Attack, 'X', A),
+    CardId.SPEEDSTER : ("Speedster", CardType.Power, 2, S),
+    CardId.STRANGLE : ("Strangle", CardType.Attack, 1, A),
+    CardId.TACTICIAN : ("Tactician", CardType.Skill, 3, S),
+    CardId.UP_MY_SLEEVE : ("Up My Sleeve", CardType.Skill, 2, S),
 }
 
 # Ancient cards the sim could not read from the decompiled source (name, type, cost, target)
@@ -224,6 +259,7 @@ _RARITY_NAMES = {
         "ANTICIPATE BACKFLIP BLADE_DANCE CLOAK_AND_DAGGER DAGGER_SPRAY DAGGER_THROW DEADLY_POISON DEFLECT DODGE_AND_ROLL FLICK_FLACK LEADING_STRIKE PIERCING_WAIL POISONED_STAB PREDATOR PREPARED RICOCHET SLICE SNAKEBITE SUCKER_PUNCH UNTOUCHABLE"
     ),
     CardRarity.Uncommon : (
+        "ACCELERANT ACCURACY ACROBATICS BACKSTAB BLUR BOUNCING_FLASK BUBBLE_BUBBLE CALCULATED_GAMBLE DASH ECHOING_SLASH ESCAPE_PLAN EXPERTISE EXPOSE FINISHER FLECHETTES SIDESTEP FOOTWORK HAND_TRICK HAZE HIDDEN_DAGGERS INFINITE_BLADES LEG_SWEEP MEMENTO_MORI MIRAGE NOXIOUS_FUMES PHANTOM_BLADES PINPOINT POUNCE PRECISE_CUT REFLEX SKEWER SPEEDSTER STRANGLE TACTICIAN UP_MY_SLEEVE "
         "INFLAME FIGHT_ME BLUDGEON UNRELENTING HEMOKINESIS DISMANTLE BULLY ASHEN_STRIKE UPPERCUT WHIRLWIND SPITE EVIL_EYE SECOND_WIND "
         "BLOODLETTING FINESSE FLASH_OF_STEEL ULTIMATE_STRIKE ULTIMATE_DEFEND PRODUCTION DRAMATIC_ENTRANCE SHOCKWAVE PROWESS IMPATIENCE "
         "RESTLESSNESS FISTICUFFS MIND_BLAST OMNISLICE VOLLEY PURITY SEEKER_STRIKE THINKING_AHEAD EQUILIBRIUM PANIC_BUTTON PROLONG FASTEN "

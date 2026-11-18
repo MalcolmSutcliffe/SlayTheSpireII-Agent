@@ -60,6 +60,7 @@ def _player(p) -> tuple:
             _multiset(p.hand), _multiset(unseen), tuple(c.signature() for c in known), _multiset(p.discard_pile), _multiset(p.exhaust_pile),
             _relics(p.relics),
             p.inferno_plays, p.cards_played_total, p.crimson_mantle_plays, p.attacks_played_this_turn, p.plays_started_this_turn,
+            p.skills_played_this_turn, p.shivs_played_this_turn, p.discards_this_turn,
             tuple(sorted(p.returning, key=repr)), p.card_blocks_this_turn, p.cards_exhausted_this_turn, p.gold,
             p.has_been_attacked_this_turn, p.lost_hp_this_turn, p.hp_loss_events, tuple(p.hp_lost_log), p.is_minion, p.binding, p.bound_cards, p.bound_played, p.smogged,
             tuple(sorted((x.slot, x.potion_id.value) for x in p.potions)), p.extra_turn_pending)

@@ -150,10 +150,17 @@ class StatusId(Enum):
     FEEDING_FRENZY = auto()         # Feeding Frenzy: the Strength it gave is lost when the turn ends
     FLEX_POTION = auto()            # Flex Potion: the Strength it gave is lost when the turn ends
     SPEED_POTION = auto()           # Speed Potion: the Dexterity it gave is lost when the turn ends
-    STRATAGEM = auto()
-    POISON = auto()
+    STRATAGEM = auto()              # Stratagem: whenever the draw pile is shuffled, put `amount` cards of your choice from it into the hand
+    POISON = auto()                 # at the start of its owner's turn: loses that much HP (unblockable), then 1 less Poison
     ANTICIPATE = auto()             # Anticipate (TemporaryDexterityPower): the Dexterity it gave is lost when the turn ends
-    PIERCING_WAIL = auto()          # Piercing Wail (TemporaryStrengthPower, negative): the Strength it took comes back when the owner's turn ends                 # at the start of its owner's turn: loses that much HP (unblockable), then 1 less Poison              # Stratagem: whenever the draw pile is shuffled, put `amount` cards of your choice from it into the hand
+    PIERCING_WAIL = auto()          # Piercing Wail (TemporaryStrengthPower, negative): the Strength it took comes back when the owner's turn ends
+    ACCELERANT = auto()             # Poison on the enemies triggers this many extra times (PoisonPower.TriggerCount)
+    ACCURACY = auto()               # Shivs deal this much more damage
+    INFINITE_BLADES = auto()        # before the hand draw: this many Shivs into the hand
+    NOXIOUS_FUMES = auto()          # at the start of the player's turn: this much Poison on every enemy
+    PHANTOM_BLADES = auto()         # Shivs have Retain; the first Shiv played each turn deals this much more damage
+    SPEEDSTER = auto()              # every card drawn outside the hand draw: this much damage to every enemy (Unpowered)
+    FREE_SKILL = auto()             # Pounce: the next Skill played costs 0
 
 INFESTED_SPAWNS = 4
 CRAB_RAGE_STRENGTH, CRAB_RAGE_BLOCK = 6, 99
@@ -338,8 +345,14 @@ def _smoggy_on_player_turn_ended(combat : CombatSimulator, owner : Creature, amo
     owner.smogged = False           # SmoggyPower.AfterSideTurnEnd
 
 def _strangle_on_card_played(combat : CombatSimulator, owner : Creature, amount : int, card):
-    # Mad Science (Choking): every card the player plays this turn costs the owner HP (assumed: unpowered damage that block absorbs, and the card that applied it triggers it too)
-    owner.apply_damage(amount)
+    """StranglePower.AfterCardPlayed: the owner loses (Unblockable | Unpowered) the amount it had when the play began, so the card that applied
+    or stacked it does not count what it added (apply_strangle notes that in records)."""
+    inst = owner.status.get(StatusId.STRANGLE)
+    fresh = inst.records[0][0] if inst is not None and inst.records else 0
+    if inst is not None and inst.records:
+        inst.records = []
+    if amount - fresh > 0:
+        owner.lose_hp(amount - fresh)
 
 def _strangle_on_player_turn_ended(combat : CombatSimulator, owner : Creature, amount : int):
     owner.status.pop(StatusId.STRANGLE, None)
@@ -661,25 +674,41 @@ def _stratagem_on_shuffle(combat : CombatSimulator, owner : Creature, amount : i
     if _own(combat, owner):
         combat.request_stratagem(amount)
 
-def poison_trigger(owner : Creature):
+def poison_trigger(owner : Creature, accelerant : int = 0):
     """PoisonPower.Trigger: lose the Poison's amount in HP (Unblockable | Unpowered, so Intangible still caps it), then one less if the
-    owner lives. TriggerCount is 1 (Accelerant, which adds triggers, is not modelled yet)."""
+    owner lives; TriggerCount times: 1 plus the living opponents' Accelerant, at most the Poison's amount."""
     poison = owner.status.get(StatusId.POISON)
     if poison is None or owner.current_hp <= 0:
         return
-    owner.lose_hp(poison.amount)
-    if owner.current_hp > 0:
+    for _ in range(min(poison.amount, 1 + accelerant)):
+        owner.lose_hp(poison.amount)
+        if owner.current_hp <= 0:
+            return
         poison.amount -= 1
         if poison.amount <= 0:
             del owner.status[StatusId.POISON]
+            return
 
 def _poison_on_enemy_turn(combat : CombatSimulator, owner : Creature, amount : int):
     if not _own(combat, owner):
-        poison_trigger(owner)
+        player = combat.combat_state.player
+        poison_trigger(owner, player.status_amount(StatusId.ACCELERANT) if player.current_hp > 0 else 0)
 
 def _poison_on_player_turn(combat : CombatSimulator, owner : Creature, amount : int):
     if _own(combat, owner):
         poison_trigger(owner)
+
+def _infinite_blades_before_hand_draw(combat : CombatSimulator, owner : Creature, amount : int):
+    """InfiniteBladesPower.BeforeHandDraw: Shivs into the hand (after the block is cleared, before the draw)."""
+    if _own(combat, owner):
+        combat.create_shivs(amount)
+
+def _noxious_fumes_on_turn_start(combat : CombatSimulator, owner : Creature, amount : int):
+    """NoxiousFumesPower.AfterSideTurnStart: Poison on every enemy."""
+    if _own(combat, owner):
+        for enemy in combat.combat_state.enemies:
+            if enemy.current_hp > 0:
+                enemy.apply_status(StatusId.POISON, amount)
 
 def _calamity_on_card_played(combat : CombatSimulator, owner : Creature, amount : int, card):
     # every Attack played adds random Attacks to the hand
@@ -816,6 +845,8 @@ STATUS_HANDLERS : dict[tuple[StatusId, HookType], Callable] = HandlerTable({
     (StatusId.SMOGGY, HookType.CARD_PLAYED) : _smoggy_on_card_played,
     (StatusId.SMOGGY, HookType.PLAYER_TURN_ENDED) : _smoggy_on_player_turn_ended,
     (StatusId.STRANGLE, HookType.CARD_PLAYED) : _strangle_on_card_played,
+    (StatusId.INFINITE_BLADES, HookType.BLOCK_CLEARED) : _infinite_blades_before_hand_draw,
+    (StatusId.NOXIOUS_FUMES, HookType.PLAYER_TURN_START) : _noxious_fumes_on_turn_start,
     (StatusId.STRANGLE, HookType.PLAYER_TURN_ENDED) : _strangle_on_player_turn_ended,
     (StatusId.REBOUND, HookType.PLAYER_TURN_ENDED) : _rebound_on_player_turn_ended,
     (StatusId.SURPRISE, HookType.DEATH) : _surprise_on_death,

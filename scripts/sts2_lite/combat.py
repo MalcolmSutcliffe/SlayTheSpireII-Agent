@@ -589,24 +589,35 @@ class CombatSimulator:
         else:
             self.request_choice("discard", list(range(len(hand))), "hand", amount, picked=[])
 
-    def discard_cards(self, cards : list[Card]):
-        """CardCmd.Discard / DiscardAndDraw: the cards go to the discard pile (CARD_DISCARDED for each), then the Sly ones play themselves for free."""
+    def discard_cards(self, cards : list[Card], draw : int = 0):
+        """CardCmd.Discard / DiscardAndDraw: the cards go to the discard pile (CARD_DISCARDED for each), `draw` cards are drawn, then the Sly ones
+        play themselves for free."""
         player = self.combat_state.player
         sly = []
         for card in cards:
             player.hand.remove(card)
             player.discard_pile.append(card)
-            if CardKeyword.SLY in card.keywords:
+            player.discards_this_turn += 1
+            if card.sly:
                 sly.append(card)
             self.fire(HookType.CARD_DISCARDED, card)
+        if draw > 0:
+            player.draw_cards(draw)
+            if self.combat_state.pending_choice is not None:
+                if sly:
+                    self.combat_state.continuations = self.combat_state.continuations + [("play", tuple(sly))]
+                return
         if sly:
             self._run_autoplay(sly)
 
     def create_shivs(self, count : int, upgraded : bool = False):
-        """Shiv.CreateInHand (a full hand sends them to the discard pile)."""
+        """Shiv.CreateInHand (a full hand sends them to the discard pile); with Phantom Blades they have Retain."""
         player = self.combat_state.player
         for _ in range(count):
-            player.add_to_hand(Card.create_generated(CardId.SHIV, upgraded))
+            shiv = Card.create_generated(CardId.SHIV, upgraded)
+            if StatusId.PHANTOM_BLADES in player.status:
+                shiv = shiv.with_keyword(CardKeyword.RETAIN)
+            player.add_to_hand(shiv)
 
     def request_discovery(self, offers : list[Card]):
         """Discovery: pick one of the cards made up for the choice (or none); it joins the hand for free this turn."""
@@ -726,6 +737,8 @@ class CombatSimulator:
                 self.request_choice("discard_any", list(range(len(player.hand))), "hand", choice.amount + 1)
             else:
                 player.draw_cards(choice.amount + 1)
+        elif choice.kind == "sly":                 # Hand Trick: a Skill in hand gets Sly this turn
+            player.hand[index] = card.with_turn_keyword(CardKeyword.SLY)
         elif choice.kind == "free_card":            # Touch of Insanity: free for the rest of the combat
             player.hand[index] = card.reduced_to(0, True)
         elif choice.kind == "to_hand_free":         # Liquid Memories: from the discard pile, free this turn
@@ -809,7 +822,7 @@ class CombatSimulator:
     def private_copy(card : Card) -> Card:
         """Cards that change when played (Rampage, Thrash, Frantic Escape, Swift/Sown/Vigorous/Momentum/Glam) are played as a copy: card objects are shared between
         simulated states, so the played one must not be changed in place. The copy goes to the discard pile."""
-        if card.card_id in (CardId.RAMPAGE, CardId.THRASH, CardId.FRANTIC_ESCAPE) or card.enchantment in CHANGED_ON_PLAY:
+        if card.card_id in (CardId.RAMPAGE, CardId.THRASH, CardId.FRANTIC_ESCAPE, CardId.UP_MY_SLEEVE) or card.enchantment in CHANGED_ON_PLAY:
             return Card.create_copy(card)
         return card
 
@@ -854,9 +867,15 @@ class CombatSimulator:
                 self.fire(HookType.HP_LOST, amount)
         self.fire(HookType.HP_CHANGED)
 
-    def _card_drawn(self, card : Card):
-        """Automation counts every card drawn; Hellraiser plays a Strike the moment it is drawn."""
+    def _card_drawn(self, card : Card, from_hand_draw : bool = False):
+        """Automation counts every card drawn; Hellraiser plays a Strike the moment it is drawn; Speedster hits every enemy for a draw outside the hand draw."""
         player = self.combat_state.player
+        speedster = player.status.get(StatusId.SPEEDSTER)
+        if speedster is not None and not from_hand_draw:
+            for enemy in self.combat_state.enemies:
+                if enemy.current_hp > 0:
+                    enemy.apply_damage(speedster.amount, player)        # SpeedsterPower.AfterCardDrawn: Unpowered
+            self.resolve_deaths()
         automation = player.status.get(StatusId.AUTOMATION)
         if automation is not None:
             for record in automation.records:
@@ -886,6 +905,11 @@ class CombatSimulator:
             player.status.pop(StatusId.GIGANTIFICATION, None)         # Gigantification Potion: spent by the Attack
             player.attacks_played_this_turn += 1
             player.reduce_stomp_costs()
+            if card.card_id is CardId.SHIV:
+                player.shivs_played_this_turn += 1
+        elif card.type == CardType.Skill:
+            player.skills_played_this_turn += 1
+            player.reduce_stomp_costs(CardId.PINPOINT)          # Pinpoint.AfterCardPlayed
         if player.relics:
             after_card_played(player, card)
         self.fire(HookType.CARD_PLAYED, card)
@@ -1038,6 +1062,8 @@ class CombatSimulator:
                 cs.player.draw_cards(*args)
             elif kind == "stratagem":
                 self.request_stratagem(*args)
+            elif kind == "shivs":
+                self.create_shivs(*args)
             elif kind == "turn_start":
                 self._finish_player_turn_start(*args)
             elif kind == "replay":
@@ -1141,6 +1167,7 @@ class CombatSimulator:
         player.status.pop(StatusId.NO_DRAW, None)           # Battle Trance and Expect a Fight last
         player.status.pop(StatusId.NO_ENERGY_GAIN, None)    # until the end of the player's turn
         player.restore_free_cards()
+        player.clear_turn_keywords()
         self._return_temporary_strength(player)
         if player.extra_turn_pending or (player.relics and take_extra_turn(self)):
             player.extra_turn_pending = False         # Ambergris

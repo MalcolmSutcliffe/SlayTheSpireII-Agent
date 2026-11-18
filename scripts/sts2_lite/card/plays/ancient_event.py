@@ -7,7 +7,7 @@ from sts2_lite.relic import debuff_multiplier
 from sts2_lite.status import StatusId
 
 from sts2_lite.card.card import Card
-from sts2_lite.card.effects import PLAIN_DAMAGE, _attack, _gain_block, _vulnerable, temp_strength
+from sts2_lite.card.effects import PLAIN_DAMAGE, _attack, _gain_block, _vulnerable, temp_strength, apply_strangle
 from sts2_lite.card.constants import MAD_SCIENCE_BLOCK, MAD_SCIENCE_DAMAGE
 from sts2_lite.card.ids import CardId, CardType
 from sts2_lite.card.tables import GENERATABLE_CARDS, INFERNAL_BLADE_POOL
@@ -195,7 +195,7 @@ def play_mad_science(card: Card, combat : CombatSimulator, target_index=0, is_up
             _debuff(combat, target, StatusId.WEAK, MAD_SCIENCE_WEAK)
             _vulnerable(combat, target, MAD_SCIENCE_VULNERABLE)
         elif rider == "CHOKING" and target.current_hp > 0:
-            _debuff(combat, target, StatusId.STRANGLE, MAD_SCIENCE_STRANGLE)
+            apply_strangle(combat, target, MAD_SCIENCE_STRANGLE)
     elif card.type == CardType.Skill:
         _gain_block(combat, MAD_SCIENCE_BLOCK)
         if rider == "ENERGIZED":

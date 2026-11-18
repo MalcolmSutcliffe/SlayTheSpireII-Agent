@@ -515,7 +515,7 @@ def test_horn_cleat_block_is_there_during_the_draw():
     held(cs, RelicId.HORN_CLEAT)
     sim = CombatSimulator(cs)
     seen = []
-    cs.player.draw_hook = lambda c: seen.append(cs.player.block)
+    cs.player.draw_hook = lambda c, *_: seen.append(cs.player.block)
     sim.end_turn()
     assert seen[0] == 14 and cs.player.block == 14
 

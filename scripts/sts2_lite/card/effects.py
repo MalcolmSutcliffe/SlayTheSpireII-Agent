@@ -20,10 +20,31 @@ def _attack(combat : CombatSimulator, base : int, target : Creature, hits : int 
     if card is not None and card.enchantment is not None:
         base = _enchanted_damage(card, base)
     base += combat.vigor_bonus()
+    if card is not None and card.card_id is CardId.SHIV:
+        base += shiv_bonus(owner)
     recompute = None
     if hits > 1 and RelicId.HAND_DRILL in owner.relics:     # a broken block makes later hits Vulnerable
         recompute = lambda: combat.calculate_damage(base, owner, target)
     target.apply_attack_damage(combat.calculate_damage(base, owner, target), owner, hits, recompute)
+
+def shiv_bonus(player) -> int:
+    """AccuracyPower and PhantomBladesPower (ModifyDamageAdditive): Shivs hit harder; Phantom Blades only until a Shiv play has finished this turn."""
+    status = player.status
+    if StatusId.ACCURACY not in status and StatusId.PHANTOM_BLADES not in status:
+        return 0
+    bonus = player.status_amount(StatusId.ACCURACY)
+    if player.shivs_played_this_turn == 0:
+        bonus += player.status_amount(StatusId.PHANTOM_BLADES)
+    return bonus
+
+def apply_strangle(combat : CombatSimulator, target : Creature, amount : int):
+    """StranglePower: the card being played does not trigger what it added (BeforeCardPlayed noted the amount before it); records[0][0] holds that much."""
+    before = target.status_amount(StatusId.STRANGLE)
+    _debuff(combat, target, StatusId.STRANGLE, amount)
+    inst = target.status.get(StatusId.STRANGLE)
+    added = target.status_amount(StatusId.STRANGLE) - before
+    if inst is not None and added > 0 and combat.card_in_play is not None:
+        inst.records = [[(inst.records[0][0] if inst.records else 0) + added]]
 
 def _enchanted_damage(card : Card, base):
     """A card's damage enchantment, before Strength and the other modifiers (a float: Corrupted halves are kept)."""
@@ -104,6 +125,15 @@ def temp_strength(target : Creature, marker : StatusId, amount : int, sign : int
     target.apply_status(StatusId.STRENGTH, sign * amount, bypass_artifact=True)
 
 PLAIN_DAMAGE = {        # id : (damage, damage upgraded) of the cards that print one fixed number
+    CardId.BACKSTAB : (11, 15),
+    CardId.DASH : (10, 13),
+    CardId.ECHOING_SLASH : (10, 13),
+    CardId.FINISHER : (6, 8),
+    CardId.FLECHETTES : (5, 7),
+    CardId.PINPOINT : (15, 19),
+    CardId.POUNCE : (14, 20),
+    CardId.SKEWER : (8, 11),
+    CardId.STRANGLE : (8, 10),
     CardId.STRIKE_SILENT : (6, 9), CardId.NEUTRALIZE : (3, 4), CardId.SHIV : (4, 6),
     CardId.DAGGER_SPRAY : (4, 6), CardId.DAGGER_THROW : (9, 12), CardId.FLICK_FLACK : (7, 9), CardId.LEADING_STRIKE : (3, 6),
     CardId.POISONED_STAB : (6, 8), CardId.PREDATOR : (15, 20), CardId.RICOCHET : (3, 3), CardId.SLICE : (6, 9), CardId.SUCKER_PUNCH : (8, 10),
