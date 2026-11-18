@@ -48,7 +48,7 @@ def inflame():
 
 # ---------------------------------------------------------------- the values
 @pytest.mark.parametrize("monster, move, base, deadly, hits", [
-    ("AXEBOT", "ONE_TWO", 9, 10, 2), ("AXEBOT", "HAMMER_UPPERCUT", 12, 14, 1),
+    ("AXEBOT", "ONE_TWO", 10, 11, 2), ("AXEBOT", "HAMMER_UPPERCUT", 14, 18, 1),
     ("PUNCH_CONSTRUCT", "STRONG_PUNCH", 14, 16, 1), ("PUNCH_CONSTRUCT", "FAST_PUNCH", 5, 6, 2),
     ("GLOBE_HEAD", "THUNDER_STRIKE", 6, 7, 3), ("GLOBE_HEAD", "SHOCKING_SLAP", 13, 14, 1), ("GLOBE_HEAD", "GALVANIC_BURST", 16, 17, 1),
     ("SCROLL_OF_BITING", "CHOMP", 14, 16, 1), ("SCROLL_OF_BITING", "CHEW", 5, 6, 2),
@@ -69,7 +69,7 @@ def test_axebot_alternates_hammer_and_one_two():
 def test_hammer_uppercut_weakens_and_frails():
     cs = at("AXEBOT", "HAMMER_UPPERCUT")
     turn(cs)
-    assert cs.player.current_hp == 80 - 12
+    assert cs.player.current_hp == 80 - 14
     assert (cs.player.status_amount(StatusId.WEAK), cs.player.status_amount(StatusId.FRAIL)) == (2, 2)
 
 def test_boot_up_blocks_and_grants_strength_by_lives_used():
@@ -92,7 +92,7 @@ def test_a_dead_axebot_returns_with_one_life_fewer_in_the_same_place():
     sim.play_card(0, 0)
     assert len(cs.enemies) == 2 and not sim.is_over
     new = cs.enemies[0]
-    assert new.enemy_id == "AXEBOT_0" and new.current_hp == new.max_hp and 70 <= new.max_hp <= 78
+    assert new.enemy_id == "AXEBOT_0" and new.current_hp == new.max_hp and 80 <= new.max_hp <= 88       # +10 Max HP for the life used
     assert new.move_id == "BOOT_UP" and new.status_amount(StatusId.STOCK) == 1
     assert cs.enemies[1].move_id == "ONE_TWO"
 

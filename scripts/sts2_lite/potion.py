@@ -152,6 +152,7 @@ POTION_INFO : dict[PotionId, PotionInfo] = {
 }
 _BY_NORMALISED_NAME = {_normalise(p.name): p for p in PotionId}
 _BY_NORMALISED_NAME.update({_normalise(info.name): p for p, info in POTION_INFO.items()})
+_BY_NORMALISED_NAME.update({"CLARITY": PotionId.CLARITY_EXTRACT})          # the game's own id for Clarity Extract
 
 # what Entropic Brew and Alchemize can make (rolled by rarity as in the first game: 65 / 25 / 10), assumed; Entropic Brew makes no Entropic Brew (assumed)
 

@@ -68,11 +68,12 @@ def test_pael_options_follow_the_deck():
 
 
 def test_darv_offers_the_act_relics_and_sometimes_dusty_tome():
-    for act, pair in ((2, {"ECTOPLASM", "SOZU"}), (3, {"PHILOSOPHERS_STONE", "VELVET_CHOKER"})):
-        relics = {o.relic for offered in many("DARV", act=act) for o in offered}
-        assert pair <= relics and "DUSTY_TOME" in relics
-        other = {"PHILOSOPHERS_STONE", "VELVET_CHOKER"} if act == 2 else {"ECTOPLASM", "SOZU"}
-        assert not relics & other
+    # Ectoplasm and Sozu in act 2 only; Philosopher's Stone and Velvet Choker from act 2 on (each its own set since v0.111)
+    for act, offered, absent in ((2, {"ECTOPLASM", "SOZU", "PHILOSOPHERS_STONE", "VELVET_CHOKER"}, set()),
+                                 (3, {"PHILOSOPHERS_STONE", "VELVET_CHOKER"}, {"ECTOPLASM", "SOZU"})):
+        relics = {o.relic for offered_ in many("DARV", act=act) for o in offered_}
+        assert offered <= relics and "DUSTY_TOME" in relics
+        assert not relics & absent
     tomes = [o for offered in many("DARV", act=2) for o in offered if o.relic == "DUSTY_TOME"]
     assert tomes and all(o.setup["card"] == "CORRUPTION" for o in tomes)
 

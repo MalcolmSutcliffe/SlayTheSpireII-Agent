@@ -43,7 +43,7 @@ from sts2_lite.status import StatusId
 from agents.base_agent import BaseAgent
 from agents.deck_eval.boss_spawner import BOSS_ACTS, normalize_boss_id
 from agents.deck_eval.config import DEFAULT, DeckEvalConfig
-from agents.deck_eval.cards import RARITY_RANK, SHOP_RELIC_POSITION, removal_rank
+from agents.deck_eval.cards import RARITY_RANK, SHOP_RELIC_POSITION, removal_rank, transform_rank
 from agents.deck_eval.elite_odds import ACT_IDS, elite_sequence
 from agents.deck_eval.future_cards import EXTRA_CARD_SHARE, fight_act, route_steps
 from agents.deck_eval.playout import RolloutError, play_out
@@ -174,7 +174,7 @@ class PlanPicker(CardPicker):
         return sorted(allowed, key=lambda i: (self._rank(deck[i]), i))[:n]
 
     def transform(self, deck, n, allowed):
-        return sorted(allowed, key=lambda i: (self._rank(deck[i]), i))[:n]
+        return sorted(allowed, key=lambda i: (transform_rank(deck[i]), i))[:n]
 
     def upgrade(self, deck, n, allowed):
         return sorted(allowed, key=lambda i: (str(deck[i].get("id", "")).startswith(("STRIKE", "DEFEND")), -RARITY_RANK.get(deck[i].get("rarity"), 0), i))[:n]
@@ -194,14 +194,24 @@ class WalkResult:
     fights : int                # rooms cleared, the lookahead's included
 
 
+CARD_WALK_HEAL_BELOW = 0.5          # the walks that rate a card rest below this share of the max HP
+
+
 class WalkAgent(BaseAgent):
     """The decisions inside a walk. Rest, upgrades, rewards and relics are BaseAgent's; a card reward takes the rarest card by chance `take_rate`."""
     name = "walk"
 
-    def __init__(self, take_rate : float, seed : int):
+    def __init__(self, take_rate : float, seed : int, card_walk : bool = False, focus : str | None = None):
+        """`card_walk`: the walk rates a card choice: a rest site heals below CARD_WALK_HEAL_BELOW of the max HP, else upgrades `focus` (the id of the card under rating) while a copy is not upgraded."""
         super().__init__()
-        self.take_rate, self.seed = take_rate, seed
+        self.take_rate, self.seed, self.focus = take_rate, seed, focus
         self._rng = random.Random(seed)
+        if card_walk:
+            self.rest_heal_below = CARD_WALK_HEAL_BELOW
+
+    def _card_to_upgrade(self, picks):
+        focused = [o for o in picks if self.focus is not None and (o.data or {}).get("id") == self.focus and not (o.data or {}).get("is_upgraded", False)]
+        return focused[-1] if focused else super()._card_to_upgrade(picks)
 
     def _get_card_reward_decision(self, decision):
         cards = [o for o in decision.options if "id" in (o.data or {})]
@@ -249,10 +259,10 @@ class WalkAgent(BaseAgent):
 class RouteSimulator(RunSimulator):
     """`RunSimulator`'s rooms for a run that is already under way, along a list of rooms instead of a map. Fights are played with the rollout policy."""
 
-    def __init__(self, run : RunState, walk : Walk, config, event : EventPlan | AncientPlan | None = None, scoring : DeckEvalConfig = DEFAULT):
+    def __init__(self, run : RunState, walk : Walk, config, event : EventPlan | AncientPlan | None = None, scoring : DeckEvalConfig = DEFAULT, card_walk : bool = False, focus : str | None = None):
         """`config`: the SearchConfig whose rollout policy plays the fights; `scoring`: how the walk is scored (deck_eval/config.py)."""
         self.walk, self.config, self.opening, self.turn_limit, self.scoring = walk, config, event, None, scoring
-        self.agent = WalkAgent(walk.take_rate, walk.seed)
+        self.agent = WalkAgent(walk.take_rate, walk.seed, card_walk, focus)
         self.ascension, self.time_budget = run.ascension, None
         self.game, self.search = GameRng(walk.seed), SearchRng(walk.seed)
         self.run_state = run
@@ -264,7 +274,11 @@ class RouteSimulator(RunSimulator):
 
     def rooms_ahead(self, act : int) -> int:
         """The rooms of the run beyond a walk that began in `act` and played `lookahead_rooms` rooms of the next one."""
-        return max(0, (2 - act) * self.scoring.act_rooms + self.scoring.act_rooms - self.scoring.lookahead_rooms)
+        return max(0, (2 - act) * self.scoring.act_rooms + self.scoring.act_rooms - self.lookahead())
+
+    def lookahead(self) -> int:
+        """The rooms of the next act the walk plays: `lookahead_rooms`, or more when the act has so few rooms left that the walk would be shorter than `min_walk_rooms`."""
+        return max(self.scoring.lookahead_rooms, self.scoring.min_walk_rooms - len(self.walk.steps))
 
     def reseed(self, label):
         """Every stream of the run starts again from the walk's seed and `label`: a room does not depend on how many draws an earlier one made."""
@@ -439,7 +453,7 @@ class RouteSimulator(RunSimulator):
         r.hidden.unknown_odds.reset()
         r.hidden.events, r.hidden.events_visited = list(ACTS[act_id].events + SHARED_EVENTS), 0
         random.Random(walk.seed + 8).shuffle(r.hidden.events)
-        return route_steps(None, act)[:self.scoring.lookahead_rooms]
+        return route_steps(None, act)[:self.lookahead()]
 
     def walk_route(self) -> WalkResult:
         r, walk = self.run_state, self.walk
@@ -479,9 +493,9 @@ def _normalized(deck : list[dict], target_types : dict[str, str]) -> list[dict]:
 
 
 def play_walk(walk : Walk, deck : list[dict], player : dict, config, target_types : dict[str, str], event : EventPlan | AncientPlan | None = None, simulator=None,
-              scoring : DeckEvalConfig = DEFAULT) -> WalkResult:
+              scoring : DeckEvalConfig = DEFAULT, card_walk : bool = False, focus : str | None = None) -> WalkResult:
     """One walk with `deck`, from the run as `player` (hp, max hp, gold, relics, potions) has it; with `event`, that event option is played first.
-    `config`: the SearchConfig of the rollouts; `scoring`: how the walk is scored. `simulator`: a RouteSimulator subclass to play it with (benchmarks/calibrate.py)."""
+    `card_walk`: the walk rates a card choice (rest sites heal below half the HP, else upgrade the card with id `focus`: see WalkAgent). `config`: the SearchConfig of the rollouts; `scoring`: how the walk is scored. `simulator`: a RouteSimulator subclass to play it with (benchmarks/calibrate.py)."""
     run = RunState.from_player(player, _normalized(deck, target_types), act=walk.act, floor=walk.floor, ascension=walk.ascension)
     run.act_id, run.boss = walk.act_id, walk.rooms.boss.id
     hidden = Hidden()
@@ -493,7 +507,8 @@ def play_walk(walk : Walk, deck : list[dict], player : dict, config, target_type
     hidden.events, hidden.events_visited = list(ACTS[walk.act_id].events + SHARED_EVENTS), 0         # the events a "?" can turn into, in the order the act deals them
     random.Random(walk.seed + 1).shuffle(hidden.events)
     run.hidden = hidden
-    return (simulator or RouteSimulator)(run, walk, config, event, scoring=scoring).walk_route()
+    extra = {"card_walk": card_walk, "focus": focus} if card_walk else {}
+    return (simulator or RouteSimulator)(run, walk, config, event, scoring=scoring, **extra).walk_route()
 
 
 def sample_walks(route, act : int, ascension : int, n : int, seed : int, floor : int = 1) -> list[Walk]:

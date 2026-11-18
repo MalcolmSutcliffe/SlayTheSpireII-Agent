@@ -46,7 +46,8 @@ def test_the_list_is_the_wikis_ironclad_list():
 @pytest.mark.parametrize("game_id, expected", [
     ("FAIRY_IN_A_BOTTLE", PotionId.FAIRY_IN_A_BOTTLE), ("fairy_in_a_bottle", PotionId.FAIRY_IN_A_BOTTLE), ("REGEN_POTION", PotionId.REGEN_POTION),
     ("GAMBLERS_BREW", PotionId.GAMBLERS_BREW), ("GAMBLER_S_BREW", PotionId.GAMBLERS_BREW), ("SOLDIERS_STEW", PotionId.SOLDIERS_STEW),
-    ("POTION_SHAPED_ROCK", PotionId.POTION_SHAPED_ROCK), ("MAZALETHS_GIFT", PotionId.MAZALETHS_GIFT)])
+    ("POTION_SHAPED_ROCK", PotionId.POTION_SHAPED_ROCK), ("MAZALETHS_GIFT", PotionId.MAZALETHS_GIFT),
+    ("CLARITY", PotionId.CLARITY_EXTRACT), ("CLARITY_EXTRACT", PotionId.CLARITY_EXTRACT)])
 def test_game_ids_are_recognised(game_id, expected):
     assert PotionId.from_game_id(game_id) is expected
 

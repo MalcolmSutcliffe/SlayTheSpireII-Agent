@@ -354,12 +354,12 @@ def test_evil_eye_counts_an_earlier_exhaust_card_played_this_turn():
 def test_taunt_blocks_and_applies_vulnerable():
     cs = one_enemy([skill(CardId.TAUNT, target=TargetType.AnyEnemy)])
     play(cs)
-    assert cs.player.block == 7 and cs.enemies[0].status_amount(StatusId.VULNERABLE) == 1
+    assert cs.player.block == 6 and cs.enemies[0].status_amount(StatusId.VULNERABLE) == 1
 
 def test_taunt_upgraded():
     cs = one_enemy([skill(CardId.TAUNT, target=TargetType.AnyEnemy, upgraded=True)])
     play(cs)
-    assert cs.player.block == 8 and cs.enemies[0].status_amount(StatusId.VULNERABLE) == 2
+    assert cs.player.block == 7 and cs.enemies[0].status_amount(StatusId.VULNERABLE) == 2
 
 # ---------------------------------------------------------------- Second Wind
 def test_second_wind_exhausts_non_attacks_for_block_each():
@@ -647,18 +647,18 @@ def test_primal_force_costs_nothing_and_does_not_exhaust():
 def test_setup_strike_hits_then_gives_temporary_strength():
     cs = state([setup_strike()])
     play(cs)
-    assert hps(cs) == [93] and st(cs.player, StatusId.STRENGTH) == 2 and st(cs.player, StatusId.SETUP_STRIKE) == 2
+    assert hps(cs) == [93] and st(cs.player, StatusId.STRENGTH) == 3 and st(cs.player, StatusId.SETUP_STRIKE) == 3
 
 def test_setup_strike_upgraded():
     cs = state([setup_strike(True)])
     play(cs)
-    assert hps(cs) == [91] and st(cs.player, StatusId.STRENGTH) == 3
+    assert hps(cs) == [91] and st(cs.player, StatusId.STRENGTH) == 4
 
 def test_the_strength_is_used_by_the_next_attack_this_turn():
     cs = state([setup_strike(), strike()])
     sim = play(cs)
     sim.play_card(0, 0)
-    assert hps(cs) == [100 - 7 - 8]
+    assert hps(cs) == [100 - 7 - 9]
 
 def test_setup_strike_strength_goes_at_the_end_of_the_turn():
     cs = state([setup_strike()]); cs.player.draw_pile = fresh(10)
@@ -677,7 +677,7 @@ def test_two_setup_strikes_stack_and_both_are_returned():
     cs = state([setup_strike(), setup_strike()]); cs.player.draw_pile = fresh(10)
     sim = play(cs)
     sim.play_card(0, 0)
-    assert st(cs.player, StatusId.STRENGTH) == 4
+    assert st(cs.player, StatusId.STRENGTH) == 6
     sim.end_turn()
     assert st(cs.player, StatusId.STRENGTH) == 0
 
@@ -714,12 +714,12 @@ def test_perfected_strike_counts_a_strike_exhausted_during_the_fight():
 def test_mangle_hits_and_takes_ten_strength_from_the_enemy():
     cs = state([mangle()]); cs.energy = 3
     play(cs)
-    assert hps(cs) == [85] and st(cs.enemies[0], StatusId.STRENGTH) == -10 and st(cs.enemies[0], StatusId.MANGLE) == 10
+    assert hps(cs) == [80] and st(cs.enemies[0], StatusId.STRENGTH) == -10 and st(cs.enemies[0], StatusId.MANGLE) == 10
 
 def test_mangle_upgraded():
     cs = state([mangle(True)]); cs.energy = 3
     play(cs)
-    assert hps(cs) == [80] and st(cs.enemies[0], StatusId.STRENGTH) == -15
+    assert hps(cs) == [74] and st(cs.enemies[0], StatusId.STRENGTH) == -15
 
 def test_mangle_weakens_the_enemy_attack_this_turn_only():
     cs = state([mangle()]); cs.energy = 3; cs.player.draw_pile = fresh(10)
@@ -733,7 +733,7 @@ def test_artifact_blocks_mangle_but_not_the_damage():
     cs = state([mangle()]); cs.energy = 3
     cs.enemies[0].apply_status(StatusId.ARTIFACT, 1)
     play(cs)
-    assert hps(cs) == [85] and st(cs.enemies[0], StatusId.STRENGTH) == 0 and StatusId.MANGLE not in cs.enemies[0].status
+    assert hps(cs) == [80] and st(cs.enemies[0], StatusId.STRENGTH) == 0 and StatusId.MANGLE not in cs.enemies[0].status
     assert StatusId.ARTIFACT not in cs.enemies[0].status
 
 def test_mangle_after_an_enemy_with_strength_gets_restored_exactly():
@@ -950,20 +950,20 @@ def test_carrying_counters_never_lowers_them():
 def test_rampage_grows_by_five_each_play():
     cs = state([rampage()]); cs.energy = 9
     sim = play(cs)
-    assert hps(cs) == [91]
+    assert hps(cs) == [90]
     cs.player.hand = list(cs.player.discard_pile); cs.player.discard_pile = []
     sim.play_card(0, 0)
-    assert hps(cs) == [91 - 14]
+    assert hps(cs) == [90 - 15]
     cs.player.hand = list(cs.player.discard_pile); cs.player.discard_pile = []
     sim.play_card(0, 0)
-    assert hps(cs) == [91 - 14 - 19]
+    assert hps(cs) == [90 - 15 - 20]
 
-def test_upgraded_rampage_grows_by_nine():
+def test_upgraded_rampage_grows_by_ten():
     cs = state([rampage(True)]); cs.energy = 9
     sim = play(cs)
     cs.player.hand = list(cs.player.discard_pile); cs.player.discard_pile = []
     sim.play_card(0, 0)
-    assert hps(cs) == [100 - 9 - 18]
+    assert hps(cs) == [100 - 10 - 20]
 
 def test_the_growth_stays_on_the_card_in_the_discard_pile():
     cs = state([rampage()])
@@ -980,22 +980,22 @@ def test_other_branches_do_not_see_the_growth():
     branch = CombatState.deepcopy(cs)
     play(cs)
     CombatSimulator(branch).play_card(0, 0)
-    assert hps(branch) == [91] and original.bonus_damage == 0
+    assert hps(branch) == [90] and original.bonus_damage == 0
 
 def test_a_rampage_that_is_not_played_stays_the_same():
     cs = state([rampage(), defend()]); cs.player.hand[0].bonus_damage = 10
     play(cs, target=0)
-    assert hps(cs) == [100 - 19]
+    assert hps(cs) == [100 - 20]
 
 def test_rampage_strength_applies_on_top():
     cs = state([rampage()]); cs.player.apply_status(StatusId.STRENGTH, 3)
     play(cs)
-    assert hps(cs) == [100 - 12]
+    assert hps(cs) == [100 - 13]
 
 def test_one_two_punch_plays_rampage_twice_with_growth():
     cs = state([rampage()]); cs.player.apply_status(StatusId.ONE_TWO_PUNCH, 1)
     play(cs)
-    assert hps(cs) == [100 - 9 - 14] and cs.player.discard_pile[0].bonus_damage == 10
+    assert hps(cs) == [100 - 10 - 15] and cs.player.discard_pile[0].bonus_damage == 10
 
 def test_a_failed_rampage_play_leaves_the_original_in_the_hand():
     original = rampage(); cs = state([original])
@@ -1076,7 +1076,7 @@ def test_thrash_uses_the_current_damage_of_special_cards():
     assert cs.player.discard_pile[0].bonus_damage == 12
     cs = state([thrash(), rampage()]); cs.player.hand[1].bonus_damage = 10
     play(cs)
-    assert cs.player.discard_pile[0].bonus_damage == 19
+    assert cs.player.discard_pile[0].bonus_damage == 20
 
 def test_thrash_exhaust_triggers_feel_no_pain_and_does_not_change_the_original():
     original = thrash(); cs = state([original, strike()])
@@ -1399,28 +1399,28 @@ def test_all_the_new_cards_load():
         assert Card.from_dict(bridge_card(name, "Deal 5 damage.")).card_id == CardId[name]
 
 def test_a_loaded_rampage_reads_its_growth_from_the_text():
-    pl = Player.from_dict(bridge_player([bridge_card("RAMPAGE", "Deal 14 damage.")]))
+    pl = Player.from_dict(bridge_player([bridge_card("RAMPAGE", "Deal 15 damage.")]))
     assert pl.hand[0].bonus_damage == 5
-    pl = Player.from_dict(bridge_player([bridge_card("RAMPAGE", "Deal 9 damage.")]))
+    pl = Player.from_dict(bridge_player([bridge_card("RAMPAGE", "Deal 10 damage.")]))
     assert pl.hand[0].bonus_damage == 0
-    pl = Player.from_dict(bridge_player([bridge_card("RAMPAGE", "Deal 24 damage.")]))
+    pl = Player.from_dict(bridge_player([bridge_card("RAMPAGE", "Deal 25 damage.")]))
     assert pl.hand[0].bonus_damage == 15
 
-def test_an_upgraded_loaded_rampage_grows_by_nine():
-    pl = Player.from_dict(bridge_player([bridge_card("RAMPAGE", "Deal 18 damage.", up=True)]))
-    assert pl.hand[0].bonus_damage == 9
+def test_an_upgraded_loaded_rampage_grows_by_ten():
+    pl = Player.from_dict(bridge_player([bridge_card("RAMPAGE", "Deal 20 damage.", up=True)]))
+    assert pl.hand[0].bonus_damage == 10
 
 def test_loaded_rampage_text_includes_strength_which_is_taken_back_out():
-    pl = Player.from_dict(bridge_player([bridge_card("RAMPAGE", "Deal 17 damage.")], [("STRENGTH_POWER", 3)]))
+    pl = Player.from_dict(bridge_player([bridge_card("RAMPAGE", "Deal 18 damage.")], [("STRENGTH_POWER", 3)]))
     assert pl.hand[0].bonus_damage == 5
 
 def test_loaded_rampage_text_includes_weak_which_is_taken_back_out():
-    pl = Player.from_dict(bridge_player([bridge_card("RAMPAGE", "Deal 10 damage.")], [("WEAK_POWER", 1)]))
+    pl = Player.from_dict(bridge_player([bridge_card("RAMPAGE", "Deal 11 damage.")], [("WEAK_POWER", 1)]))
     assert pl.hand[0].bonus_damage == 5
 
 def test_cards_in_other_piles_are_read_as_printed():
     d = bridge_player([], [("STRENGTH_POWER", 3)])
-    d["discard_pile"] = [bridge_card("RAMPAGE", "Deal 14 damage.")]
+    d["discard_pile"] = [bridge_card("RAMPAGE", "Deal 15 damage.")]
     d["draw_pile"] = [bridge_card("THRASH", "Deal 10 damage.")]
     pl = Player.from_dict(d)
     assert pl.discard_pile[0].bonus_damage == 5 and pl.draw_pile[0].bonus_damage == 6
@@ -1449,7 +1449,7 @@ def test_setup_strike_strength_goes_even_through_artifact():
     cs = state([setup_strike()]); cs.player.draw_pile = fresh(10)
     cs.player.apply_status(StatusId.ARTIFACT, 1)
     sim = play(cs)
-    assert st(cs.player, StatusId.STRENGTH) == 2
+    assert st(cs.player, StatusId.STRENGTH) == 3
     sim.end_turn()
     assert st(cs.player, StatusId.STRENGTH) == 0 and st(cs.player, StatusId.ARTIFACT) == 1
 
@@ -1459,7 +1459,7 @@ def test_inferno_estimate_rounds_to_the_nearest_play():
     assert pl.inferno_plays == 3
 
 def test_loaded_rampage_growth_rounds_to_the_nearest_step():
-    pl = Player.from_dict(bridge_player([bridge_card("RAMPAGE", "Deal 17 damage.")]))
+    pl = Player.from_dict(bridge_player([bridge_card("RAMPAGE", "Deal 18 damage.")]))
     assert pl.hand[0].bonus_damage == 10
 
 def test_a_loaded_stomp_costing_two_remembers_its_full_cost():

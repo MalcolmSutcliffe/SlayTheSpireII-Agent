@@ -131,7 +131,7 @@ def _game_ids(monster):
     if monster.startswith("DECIMILLIPEDE_SEGMENT_"):
         monster = "DECIMILLIPEDE_SEGMENT"       # the three segments share their moves in the abstract base class
     name = "".join(w.capitalize() for w in monster.split("_"))
-    files = [f for f in (DECOMPILED / "MegaCrit.Sts2.Core.Models.Monsters").glob("*.cs") if f.stem.lower() == name.lower()]
+    files = [f for f in (DECOMPILED / "Core" / "Models" / "Monsters").glob("*.cs") if f.stem.lower() == name.lower()]
     return set(re.findall(r'new MoveState\("([A-Z0-9_]+)"', files[0].read_text())) if files else None
 
 @pytest.mark.skipif(not DECOMPILED.exists(), reason="decompiled game source not present")

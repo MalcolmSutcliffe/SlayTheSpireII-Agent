@@ -305,3 +305,85 @@ def test_an_upgrade_screen_picks_the_rarest_card_through_the_manager():
     m, client = manager([screen] * 2)
     m.tick()
     assert client.commands == [["select-card", "3"]]
+
+
+def test_a_rest_site_takes_one_option_even_when_the_screen_keeps_listing_the_others():
+    options = [{"index": 0, "id": "HEAL", "is_enabled": True}, {"index": 1, "id": "SMITH", "is_enabled": True}]
+    first = state("rest_site", options=options, can_proceed=False, player={"hp": 20, "max_hp": 80})
+    again = state("rest_site", options=options, can_proceed=False, player={"hp": 44, "max_hp": 80})          # healed (Tiny Mailbox's rewards pending): the buttons are still there
+    done = state("rest_site", options=options, can_proceed=True, player={"hp": 44, "max_hp": 80})
+    m, client = manager([first, again, done])
+    m.tick(); m.tick()
+    assert client.commands == [["rest", "0"]]                 # the second screen offers nothing: the agent waits
+    client.index = 2
+    m.tick()
+    assert client.commands == [["rest", "0"], ["proceed"]]
+    next_site = {**first, "context": {"act": 1, "floor": 4}}          # the next rest site is a new one
+    m2, client2 = manager([next_site, next_site])
+    m2.rested_at = (1, 3)
+    m2.tick()
+    assert client2.commands == [["rest", "0"]]
+
+def test_a_miniature_tent_keeps_the_rest_site_open():
+    options = [{"index": 0, "id": "HEAL", "is_enabled": True}, {"index": 1, "id": "SMITH", "is_enabled": True}]
+    tent = {"hp": 70, "max_hp": 80, "relics": [{"id": "MINIATURE_TENT"}]}
+    screens = [state("rest_site", options=options, can_proceed=False, player=tent)] * 3
+    m, client = manager(screens)
+    m.tick(); m.tick()
+    assert [c[0] for c in client.commands] == ["rest", "rest"]
+
+
+def test_what_the_agent_met_but_the_engine_does_not_model_goes_to_the_run_findings(tmp_path):
+    from agents import unknowns
+    from agent_runner.run_manager import RunManager
+    from agent_runner.run_verifier import RunVerifier
+    verifier = RunVerifier(log_path=str(tmp_path / "findings.jsonl"), echo=False)
+    manager = RunManager.__new__(RunManager)
+    manager.run_verifier = verifier
+    unknowns.note("ancient_relic", "NEOW:Mystery", "NEOW offered 'Mystery', which the engine does not know")
+    unknowns.note("ancient_relic", "NEOW:Mystery", "again")
+    manager.report_unknowns({"decision": "event_choice", "context": {"act": 1, "floor": 1}})
+    lines = (tmp_path / "findings.jsonl").read_text().splitlines()
+    assert len(lines) == 1
+    assert "unknown.ancient_relic" in lines[0] and "Mystery" in lines[0]
+    assert unknowns.drain() == []
+
+
+def test_a_new_turn_with_energy_but_no_hand_yet_is_still_being_dealt():
+    from agent_runner import combat_session
+    import time
+    ended = {"round": 4, "time": time.time()}
+    dealing = {"round": 5, "hand": [], "energy": 3, "draw_pile_count": 10, "discard_pile_count": 0}      # the state the agent ended the turn on (a10-3, round 5)
+    assert combat_session.turn_is_changing(dealing, ended)
+    assert not combat_session.turn_is_changing({**dealing, "hand": [{"id": str(i)} for i in range(5)], "draw_pile_count": 5}, ended)       # dealt: play
+    assert not combat_session.turn_is_changing({**dealing, "draw_pile_count": 0}, ended)                      # nothing left to draw: a real empty hand
+    assert combat_session.turn_is_changing({**dealing, "energy": 0, "draw_pile_count": 0}, ended)             # the old case: new round, nothing yet
+
+
+def test_a_step_whose_replay_hits_a_card_choice_is_not_checked_and_does_not_stop_the_run(monkeypatch, capsys):
+    from agent_runner import combat_session
+    from sts2_lite.combat import IllegalActionError
+    batch = {"actions": [], "before": {}, "predicted": object(), "random_step": False, "random_target": True, "before_sim": object()}
+    monkeypatch.setattr(combat_session, "potions_of", lambda state: ())
+    monkeypatch.setattr(combat_session, "compare", lambda *a, **k: ["a difference"])
+    def replay(*a, **k):
+        raise IllegalActionError("a card choice must be made first")
+    monkeypatch.setattr(combat_session, "some_target_roll_matches", replay)
+    assert combat_session.verify_step(batch, {}, object(), "/dev/null") is True
+    assert "could not be checked" in capsys.readouterr().out
+
+
+def test_a_hand_still_being_dealt_is_waited_for_after_end_turn_and_at_the_start_of_a_fight():
+    from agent_runner import combat_session
+    import time
+    ended = {"round": 6, "time": time.time()}
+    two_of_five = {"round": 7, "hand": [{"id": "ARMAMENTS"}, {"id": "DEFEND_IRONCLAD"}], "energy": 3, "draw_pile_count": 10, "discard_pile_count": 0}     # a10-3 floor 17, round 7
+    assert combat_session.turn_is_changing(two_of_five, ended)
+    full = {**two_of_five, "hand": [{"id": str(i)} for i in range(5)], "draw_pile_count": 7}
+    assert not combat_session.turn_is_changing(full, ended)
+    small_deck = {**two_of_five, "draw_pile_count": 0, "discard_pile_count": 0}                     # only two cards exist: that is the whole hand
+    assert not combat_session.turn_is_changing(small_deck, ended)
+    late = {"round": 6, "time": time.time() - combat_session.PARTIAL_HAND_TIMEOUT - 1}
+    assert not combat_session.turn_is_changing(two_of_five, late)                                   # a reduced draw: taken as it is after the timeout
+    assert not combat_session.first_state_ready(two_of_five) and combat_session.first_state_ready(full)
+    assert combat_session.first_state_ready(two_of_five, waited=combat_session.PARTIAL_HAND_TIMEOUT)

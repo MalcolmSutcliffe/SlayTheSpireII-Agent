@@ -204,21 +204,21 @@ def test_rend_counts_debuffs():
     cs = make_state([card(CardId.REND)], enemy_count=1, enemy_hp=60)
     cs.enemies[0].apply_status(StatusId.WEAK, 2); cs.enemies[0].apply_status(StatusId.FRAIL, 1)
     play(cs)
-    assert hps(cs) == [60 - 25]
+    assert hps(cs) == [60 - 20]
 
 def test_rend_without_debuffs_and_upgraded():
     cs = make_state([card(CardId.REND)], enemy_count=1, enemy_hp=60); play(cs)
-    assert hps(cs) == [45]
+    assert hps(cs) == [50]
     cs = make_state([card(CardId.REND, True)], enemy_count=1, enemy_hp=60)
     cs.enemies[0].apply_status(StatusId.WEAK, 1)
     play(cs)
-    assert hps(cs) == [60 - 26]
+    assert hps(cs) == [60 - 20]       # 12 + 8
 
 def test_rend_ignores_temporary_debuffs():
     cs = make_state([card(CardId.REND)], enemy_count=1, enemy_hp=60)
     cs.enemies[0].apply_status(StatusId.MANGLE, 3)
     play(cs)
-    assert hps(cs) == [45]
+    assert hps(cs) == [50]
 
 def test_omnislice_copies_the_damage_to_the_others_unpowered():
     cs = make_state([card(CardId.OMNISLICE)], enemy_count=3, enemy_hp=40)
@@ -357,7 +357,7 @@ def test_capture_rend_counts_strength_loss_but_not_the_temporary_marker():
     cs = replay_from_discard("rend_temp_debuff", CardId.REND, 38)
     assert cs.enemies[0].status_amount(StatusId.MANGLE) == 1
     play(cs)
-    assert hps(cs) == [18]       # 15 + 5 for the Strength loss, none for Mangle
+    assert hps(cs) == [23]       # 10 + 5 for the Strength loss, none for Mangle
 
 def test_capture_fisticuffs_for_zero_matches_the_game():
     cs = CombatState.from_dict(capture("fisticuffs_for_0_before"))
@@ -785,7 +785,7 @@ def test_rend_does_not_count_dark_shackles():
     sim = play(cs)
     cs.enemies[0].apply_status(StatusId.WEAK, 1)
     sim.play_card(0, 0)
-    assert hps(cs) == [100 - (15 + 2 * 5)]      # Weak and the Strength loss count; the temporary marker does not
+    assert hps(cs) == [100 - (10 + 2 * 5)]      # Weak and the Strength loss count; the temporary marker does not
 
 # ------------------------------------------------------------ Automation
 def test_automation_pays_energy_every_ten_draws():
@@ -1264,15 +1264,15 @@ def test_beat_down_is_not_manually_targeted():
 # ------------------------------------------------------------ Anointed
 def test_anointed_brings_rares_from_the_draw_pile():
     cs = one_enemy([card(CardId.ANOINTED), defend()])
-    rare = lambda: Card.create_generated(CardId.SALVO)
+    rare = lambda: Card.create_generated(CardId.DOMINATE)
     cs.player.draw_pile = [strike(), rare(), strike(), rare(), rare()]
     play(cs)
-    assert ids(cs.player.hand).count(CardId.SALVO) == 3 and len(cs.player.draw_pile) == 2
+    assert ids(cs.player.hand).count(CardId.DOMINATE) == 3 and len(cs.player.draw_pile) == 2
     assert cs.player.exhaust_pile
 
 def test_anointed_is_limited_by_the_free_space_in_the_hand():
     cs = one_enemy([card(CardId.ANOINTED)] + [defend() for _ in range(7)])
-    cs.player.draw_pile = [Card.create_generated(CardId.SALVO) for _ in range(5)]
+    cs.player.draw_pile = [Card.create_generated(CardId.DOMINATE) for _ in range(5)]
     play(cs)
     assert len(cs.player.hand) == 10 and len(cs.player.draw_pile) == 2
 
@@ -1280,8 +1280,8 @@ def test_anointed_upgrade_retains():
     assert not card(CardId.ANOINTED).retains and card(CardId.ANOINTED).upgraded_copy().retains
 
 def test_rare_table_matches_the_game_for_a_few_cards():
-    assert {CardId.BARRICADE, CardId.SALVO, CardId.MAYHEM, CardId.THE_GAMBIT} <= RARE_CARDS
-    assert not {CardId.STRIKE_IRONCLAD, CardId.BASH, CardId.ANGER, CardId.EQUILIBRIUM, CardId.AUTOMATION} & RARE_CARDS
+    assert {CardId.BARRICADE, CardId.DOMINATE, CardId.MAYHEM, CardId.THE_GAMBIT} <= RARE_CARDS
+    assert not {CardId.STRIKE_IRONCLAD, CardId.BASH, CardId.ANGER, CardId.EQUILIBRIUM, CardId.AUTOMATION, CardId.SALVO, CardId.CRUELTY} & RARE_CARDS
 
 # ------------------------------------------------------------ the verifier treats these as chance events
 def test_verify_tags_random_card_plays_and_calamity_attacks():

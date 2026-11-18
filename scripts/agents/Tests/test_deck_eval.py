@@ -492,7 +492,7 @@ def test_an_event_option_is_played_by_the_engine_before_the_walk():
 def test_an_option_that_kills_scores_nothing_and_a_cleared_act_goes_on_into_the_next_one():
     from agents.deck_eval.route_sim import EventPlan, sample_walks
     from agents.deck_eval.config import DEFAULT
-    ev = DeckEvaluator(POOL, target_types(POOL))
+    ev = DeckEvaluator(POOL, target_types(POOL), config=__import__('agents.deck_eval.config', fromlist=['DEFAULT']).DEFAULT.tuned(min_walk_rooms=0))
     p = _player()
     dying = ev.score_walks(p["deck"], {**p, "hp": 1, "max_hp": 80}, [_event_walk()], EventPlan("ABYSSAL_BATHS", [], "immerse"))          # +2 HP, then 3 damage: dead
     assert dying.win_rate == 0 and dying.rewards[0] == 0.0
@@ -502,7 +502,7 @@ def test_an_option_that_kills_scores_nothing_and_a_cleared_act_goes_on_into_the_
     assert score.win_rate == 1.0 and score.rewards[0] >= len(walks[0].steps) + 1          # the act's rooms and a good part of the next act's first ones
     from agents.deck_eval import route_sim as rs
     run = _walk_run(walks[0], hp=500, max_hp=500)
-    sim = rs.RouteSimulator(run, walks[0], ev.config)
+    sim = rs.RouteSimulator(run, walks[0], ev.config, scoring=DEFAULT.tuned(min_walk_rooms=0))
     result = sim.walk_route()
     assert run.act == 2 and run.act_id == "HIVE" and result.fights >= len(walks[0].steps) and len(sim.credits) <= len(walks[0].steps) + DEFAULT.lookahead_rooms
 
@@ -510,7 +510,8 @@ def test_an_option_that_kills_scores_nothing_and_a_cleared_act_goes_on_into_the_
 @needs_pool
 def test_dying_at_the_boss_costs_what_comes_after_it():
     from agents.deck_eval.route_sim import sample_walks
-    ev, p = DeckEvaluator(POOL, target_types(POOL)), _player()
+    from agents.deck_eval.config import DEFAULT
+    ev, p = DeckEvaluator(POOL, target_types(POOL), config=DEFAULT.tuned(min_walk_rooms=0)), _player()
     walks = sample_walks(PlannedRoute(["combat", "rest", "boss"], 4, 1, None, "OVERGROWTH"), 1, 0, 6, 3)
     weak, strong = ev.score_walks(p["deck"], p, walks), ev.score_walks(p["deck"], {**p, "hp": 500, "max_hp": 500}, walks)
     assert strong.mean - weak.mean > 2.0          # clearing the boss is worth the next act's rooms too, not one more fight in twenty
@@ -520,10 +521,10 @@ def test_dying_at_the_boss_costs_what_comes_after_it():
 def test_a_walk_that_survives_is_credited_with_a_share_of_the_run_still_ahead():
     from agents.deck_eval.route_sim import sample_walks
     from agents.deck_eval.config import DEFAULT
-    ev, p = DeckEvaluator(POOL, target_types(POOL)), _player()
+    ev, p = DeckEvaluator(POOL, target_types(POOL), config=DEFAULT.tuned(min_walk_rooms=0)), _player()
     walks = sample_walks(PlannedRoute(["combat", "rest", "boss"], 4, 1, None, "OVERGROWTH"), 1, 0, 2, 3)
     strong = {**p, "hp": 500, "max_hp": 500}
-    flat = DeckEvaluator(POOL, target_types(POOL), config=DEFAULT.tuned(continuation_share=0.0))
+    flat = DeckEvaluator(POOL, target_types(POOL), config=DEFAULT.tuned(continuation_share=0.0, min_walk_rooms=0))
     gap = ev.score_walks(p["deck"], strong, walks).mean - flat.score_walks(p["deck"], strong, walks).mean
     assert abs(gap - DEFAULT.continuation_share * (DEFAULT.act_rooms + DEFAULT.act_rooms - DEFAULT.lookahead_rooms)) < 1e-6          # act 1: all of act 3 and the act 2 rooms beyond the lookahead
 
@@ -532,7 +533,7 @@ def test_a_walk_that_survives_is_credited_with_a_share_of_the_run_still_ahead():
 def test_potions_held_and_max_hp_gained_count_once_at_the_end():
     from agents.deck_eval.route_sim import sample_walks
     from agents.deck_eval.config import DEFAULT
-    ev, p = DeckEvaluator(POOL, target_types(POOL)), _player()
+    ev, p = DeckEvaluator(POOL, target_types(POOL), config=DEFAULT.tuned(min_walk_rooms=0)), _player()
     walks = sample_walks(PlannedRoute(["rest", "combat"], 4, 0, None, "OVERGROWTH"), 1, 0, 1, 3)
     plain = {**p, "hp": 500, "max_hp": 500, "potions": []}
     held = {**plain, "potions": [{"id": "FIRE_POTION", "name": "Fire Potion"}] * 2}
@@ -619,6 +620,12 @@ def test_the_ancient_chooser_reads_the_screen_and_takes_the_best_relic():
         return Decision("event", {"event_id": ancient, "player": p, "context": {"act": 1, "floor": 0}}, options)
     assert chooser.choose(screen("PAEL", ["Paels Flesh", "Paels Claw", "Paels Legion"])).label in ("Paels Flesh", "Paels Claw", "Paels Legion")
     assert chooser.choose(screen("PAEL", ["Paels Flesh", "A Thing The Engine Lacks"])) is None          # a relic it does not know: left to the default
+    from agents import unknowns
+    unknowns.drain()
+    assert chooser.choose(screen("PAEL", ["Proceed"])).label == "Proceed"                                # the relic is taken: the way on is not an unknown relic
+    assert unknowns.drain() == []
+    chooser.choose(screen("PAEL", ["Paels Flesh", "A Thing The Engine Lacks"]))
+    assert [k for k, key, m in unknowns.drain()] == ["ancient_relic"]                                    # an unknown relic is noted for the run's findings
     assert chooser.choose(screen("ABYSSAL_BATHS", ["immerse", "abstain"])) is None                       # not an ancient
 
 
@@ -792,8 +799,87 @@ def test_the_fight_correction_turns_some_of_the_policys_losses_into_wins_the_sam
 
 def test_the_elite_bonus_grows_with_the_row_of_the_elite():
     import agents.deck_eval.path_search as ps
+    from dataclasses import replace
     from agents.deck_eval.config import DEFAULT
-    early = ps.elite_bonus(("combat", "elite", "rest"), 1, 14)
-    late = ps.elite_bonus(("combat", "elite", "rest"), 9, 14)
-    assert 0 < early < late <= DEFAULT.elite_bonus and ps.elite_bonus(("combat", "rest"), 1, 14) == 0
-    assert ps.elite_bonus(("elite", "elite"), 1, 14) > ps.elite_bonus(("elite",), 1, 14)
+    cfg = replace(DEFAULT, elite_early=0.5)
+    early = ps.elite_bonus(("combat", "elite", "rest"), 1, 14, cfg)
+    late = ps.elite_bonus(("combat", "elite", "rest"), 9, 14, cfg)
+    assert 0 < early < late <= cfg.elite_bonus and ps.elite_bonus(("combat", "rest"), 1, 14, cfg) == 0
+    assert ps.elite_bonus(("elite", "elite"), 1, 14, cfg) > ps.elite_bonus(("elite",), 1, 14, cfg)
+
+
+def test_the_elite_bonus_falls_by_half_a_room_each_act():
+    import agents.deck_eval.path_search as ps
+    from agents.deck_eval.config import DEFAULT
+    kinds = ("elite",)
+    one, two, three = (ps.elite_bonus(kinds, 14, 14, DEFAULT, act) for act in (1, 2, 3))
+    assert (one, two, three) == (DEFAULT.elite_bonus, DEFAULT.elite_bonus - 0.5, DEFAULT.elite_bonus - 1.0)
+
+
+def test_a_card_walk_rests_below_half_the_hp_and_upgrades_the_card_it_rates():
+    from agents.decision import Decision, Option, REST, CARD_SELECT
+    from agents.deck_eval.route_sim import WalkAgent
+    def rest(hp):
+        opts = [Option("Rest", {"action": "choose_rest_option", "index": 0}, {"index": 0, "id": "HEAL"}), Option("Smith", {"action": "choose_rest_option", "index": 1}, {"index": 1, "id": "SMITH"})]
+        return Decision(REST, {"player": {"hp": hp, "max_hp": 100}}, opts)
+    plain, card_walk = WalkAgent(1.0, 1), WalkAgent(1.0, 1, card_walk=True, focus="HEADBUTT")
+    assert plain.get_decision(rest(60)).data["id"] == "HEAL" and card_walk.get_decision(rest(60)).data["id"] == "SMITH"        # 60%: under 70%, over 50%
+    assert card_walk.get_decision(rest(40)).data["id"] == "HEAL"
+    cards = [{"index": 0, "id": "BASH", "rarity": "Basic", "is_upgraded": False}, {"index": 1, "id": "HEADBUTT", "rarity": "Common", "is_upgraded": False}, {"index": 2, "id": "RAMPAGE", "rarity": "Rare", "is_upgraded": False}]
+    screen = lambda: Decision(CARD_SELECT, {"screen_type": "upgrade", "prompt": "Choose a card to Upgrade.", "player": {}}, [Option(c["id"], {"action": "select_card", "index": c["index"]}, c) for c in cards])
+    assert card_walk.get_decision(screen()).data["id"] == "HEADBUTT"
+    assert WalkAgent(1.0, 1, card_walk=True).get_decision(screen()).data["id"] == "RAMPAGE"          # no card under rating: the rarest
+    cards[1]["is_upgraded"] = True
+    assert card_walk.get_decision(screen()).data["id"] == "RAMPAGE"                                  # already upgraded: the usual choice
+
+
+def test_a_hurt_agent_takes_the_path_to_a_rest_or_shop_when_the_walks_cannot_tell_it_from_the_best():
+    from agents.deck_eval.path_search import Candidate, PathSearch
+    from agents.deck_eval.config import DEFAULT
+    noisy = [8, 12, 9, 15, 11, 14, 10, 13] * 5
+    fights = Candidate(None, ("combat", "combat", "rest", "treasure"), 0, rewards=[r + 0.4 for r in noisy])
+    care = Candidate(None, ("unknown", "shop", "rest", "treasure"), 0, rewards=list(noisy))
+    clear = Candidate(None, ("combat", "combat", "rest", "treasure"), 0, rewards=[r - 5 for r in noisy])
+    hurt, fine = {"hp": 30, "max_hp": 80}, {"hp": 70, "max_hp": 80}
+    assert PathSearch.tied_when_hurt(fights, [fights, care, clear], hurt, DEFAULT) is care
+    assert PathSearch.tied_when_hurt(fights, [fights, care, clear], fine, DEFAULT) is fights          # healthy: the best path stands
+    assert PathSearch.tied_when_hurt(fights, [fights, clear], hurt, DEFAULT) is fights                 # a path clearly worse is not tied
+
+
+def test_a_shop_on_the_path_earns_a_bonus_from_the_gold_expected_there():
+    from agents.deck_eval.path_search import shop_bonus
+    from agents.deck_eval.config import DEFAULT
+    assert shop_bonus(("combat", "rest"), 400) == 0
+    assert shop_bonus(("shop", "combat"), 400) == 400 / 200                       # the next room: the gold held now
+    assert shop_bonus(("combat", "combat", "shop"), 100) == 0                          # 130 gold expected: under the minimum
+    assert shop_bonus(("combat", "combat", "shop"), 180) == (180 + 2 * 15) / 200      # two rooms of gold on the way take it over 200
+    assert shop_bonus(("shop", "combat", "shop"), 0) == 0
+
+
+def test_each_card_type_earns_a_bonus_that_falls_as_the_deck_gets_more_of_it():
+    from agents.deck_eval.card_reward_chooser import kind_bonus
+    from agents.deck_eval.config import DEFAULT as D
+    basics = [{"id": "DEFEND_IRONCLAD", "type": "Skill", "rarity": "Basic"}, {"id": "STRIKE_IRONCLAD", "type": "Attack", "rarity": "Basic"}] * 3
+    power, shrug = {"id": "DARK_EMBRACE", "type": "Power", "rarity": "Uncommon"}, {"id": "SHRUG_IT_OFF", "type": "Skill", "rarity": "Common"}
+    anger = {"id": "ANGER", "type": "Attack", "rarity": "Common"}
+    assert kind_bonus(anger, basics) == D.attack_bonus and kind_bonus(shrug, basics) == D.skill_bonus          # the starter cards do not count
+    assert kind_bonus(power, basics) == D.power_bonus * D.uncommon_bonus_factor
+    assert kind_bonus(power, basics + [power]) == D.power_bonus * D.power_decay * D.uncommon_bonus_factor
+    assert kind_bonus(shrug, basics + [shrug, shrug]) == D.skill_bonus * D.skill_decay ** 2
+    assert kind_bonus(anger, basics + [shrug]) == D.attack_bonus                  # each type decays by its own cards
+    rare = {"id": "DEMON_FORM", "type": "Power", "rarity": "Rare"}
+    assert kind_bonus(rare, basics) == D.power_bonus * D.rare_bonus_factor
+    assert kind_bonus({"id": "BLUDGEON", "type": "Attack", "rarity": "Rare"}, basics) == D.attack_bonus * D.rare_bonus_factor
+    assert kind_bonus({"id": "BASH", "type": "Attack", "rarity": "Basic"}, basics) == 0
+    assert kind_bonus({"id": "INJURY", "type": "Curse", "rarity": "Curse"}, basics) == 0
+
+
+def test_a_walk_with_few_rooms_left_in_its_act_plays_more_of_the_next():
+    from types import SimpleNamespace
+    from agents.deck_eval.config import DeckEvalConfig
+    from agents.deck_eval.route_sim import RouteSimulator
+    cfg = DeckEvalConfig(lookahead_rooms=3, min_walk_rooms=8)
+    short = SimpleNamespace(scoring=cfg, walk=SimpleNamespace(steps=["boss"]))
+    long = SimpleNamespace(scoring=cfg, walk=SimpleNamespace(steps=["normal"] * 10))
+    assert RouteSimulator.lookahead(short) == 7
+    assert RouteSimulator.lookahead(long) == 3

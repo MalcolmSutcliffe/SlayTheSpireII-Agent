@@ -89,12 +89,12 @@ class CardRarityOdds:
         return self._roll(odds_type, self.current_value if offset is None else offset)
 
     def roll_with_base_odds(self, odds_type : OddsType) -> Rarity:
-        """Events and relics: no offset and no change. As in the game, the uncommon test uses the base uncommon number itself,
-        so the uncommon band is [rare, uncommon) and not [rare, rare + uncommon)."""
+        """Events and relics: no offset and no change. The uncommon band is [rare, rare + uncommon) (it was [rare, uncommon) before v0.111)."""
         x = self.rng.random()
-        if x < base_odds(odds_type, Rarity.RARE, self.ascension):
+        rare = base_odds(odds_type, Rarity.RARE, self.ascension)
+        if x < rare:
             return Rarity.RARE
-        if x < base_odds(odds_type, Rarity.UNCOMMON, self.ascension):
+        if x < base_odds(odds_type, Rarity.UNCOMMON, self.ascension) + rare:
             return Rarity.UNCOMMON
         return Rarity.COMMON
 

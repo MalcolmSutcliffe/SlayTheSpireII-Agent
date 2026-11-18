@@ -23,6 +23,32 @@ def fights_for(budget : float, seconds_per_fight : float, decks : int, config : 
     return int(min(config.max_fights, max(config.min_fights, budget / (max(seconds_per_fight, 1e-6) * decks))))
 
 
+def _kind(card : dict) -> str:
+    return str(card.get("type", "")).lower()
+
+
+def kind_bonus(card : dict, deck : list[dict], config : DeckEvalConfig = DEFAULT) -> float:
+    """Rooms added to a card's gain for its type (Attack, Skill, Power): the type's base bonus, scaled by the type's decay for each card of that type the deck already
+    has (starter cards not counted: the first of a type gets the most, once the deck has one or two it builds around them). An Uncommon card's bonus is multiplied by
+    config.uncommon_bonus_factor, a Rare's by config.rare_bonus_factor. Basic cards, curses and statuses get none."""
+    kind = _kind(card)
+    if kind not in ("attack", "skill", "power") or str(card.get("rarity", "")).lower() == "basic":
+        return 0.0
+    owned = sum(_kind(c) == kind and str(c.get("rarity", "")).lower() != "basic" for c in deck)
+    bonus = getattr(config, kind + "_bonus") * getattr(config, kind + "_decay") ** owned
+    return bonus * {"uncommon": config.uncommon_bonus_factor, "rare": config.rare_bonus_factor}.get(str(card.get("rarity", "")).lower(), 1.0)
+
+
+def decide(rows : list[tuple], win_rate : float, early : bool, config : DeckEvalConfig = DEFAULT) -> tuple[tuple | None, bool, float]:
+    """The take-or-skip rule on future_rows' rows ((gain, se, ...) each, the kind bonus already in the gain): (the best row, whether to take it, the gain it had
+    to beat). The best card is taken when its gain clears `card_z` standard errors plus the skip floor."""
+    best = max(rows, key=lambda r: r[0], default=None)
+    if best is None:
+        return None, False, 0.0
+    needed = config.card_z * best[1] + skip_floor(early, win_rate, config)
+    return best, best[0] > needed, needed
+
+
 class CardRewardChooser:
     def __init__(self, fights : int | None = None, pool=None, route_provider=lambda: None, log=print, advisor : DeckAdvisor | None = None):
         self.advisor = advisor or DeckAdvisor(fights, pool, route_provider, log)
@@ -50,11 +76,9 @@ class CardRewardChooser:
         future = self.future_rows(decision, deck, player, route, skip, count)
         base = future["base"]
         rows = future["rows"]
-        best = max(rows, key=lambda r: r[0], default=None)
+        best, take, needed = decide(rows, base.win_rate, early, cfg)
         if best is None:
             return skip or decision.options[0]
-        needed = cfg.card_z * best[1] + skip_floor(early, base.win_rate, cfg)
-        take = best[0] > needed
         chosen = best[2] if take else (skip or best[2])
         mix = mix_ahead(ctx.get("act", 1), route)
         self.log("card reward act %d (weak %.0f normal %.0f elite %.0f%s boss %.1f%s, %d fights, %.1fs, base %.1f rooms, %.0f%% clear the act) | needs > %.2f rooms -> %s" %
@@ -80,13 +104,17 @@ class CardRewardChooser:
         does them. A deck is rated by how far it gets and how healthy, so the fights it is weakest in weigh the most (the ones it dies in cost it all the fights
         after them). `count` is the fights to play: the walks are as many as fit. Returns the rows, the base score, the walks and their fights."""
         walks = self.advisor.walks(decision, count)
-        base = self.evaluator.score_walks(deck, player, walks)
+        base = self.evaluator.score_walks(deck, player, walks, card_walk=True)
         rows = []
         for opt in decision.options:
             card = opt.data or {}
             if opt is skip or "id" not in card:
                 continue
-            score = self.evaluator.score_walks(deck + [card], player, walks)
+            score = self.evaluator.score_walks(deck + [card], player, walks, card_walk=True, focus=card.get("id"))
             gain, se = paired_gain(score.rewards, base.rewards)
+            bonus = kind_bonus(card, deck, self.config)
+            gain += bonus
+            if bonus:
+                self.log("  kind bonus %s: %+.2f (walk gain %+.2f)" % (card.get("name", card["id"]), bonus, gain - bonus))
             rows.append((gain, se, opt, card.get("name", opt.label), score))
         return {"rows": rows, "base": base, "fights": [f for w in walks for f in range(w.fights)], "walks": len(walks)}

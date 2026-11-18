@@ -34,13 +34,13 @@ class DeckEvaluator:
         self.pool, self.target_types, self.deck_config = pool, target_types, config
         self.config = SearchConfig().tuned(rollout=policy)
 
-    def score_walks(self, deck : list[dict], player : dict, walks : list, event=None) -> DeckScore:
+    def score_walks(self, deck : list[dict], player : dict, walks : list, event=None, card_walk : bool = False, focus : str | None = None) -> DeckScore:
         """Every walk through the route ahead played with `deck` (route_sim: the engine's run simulator from the run as `player` has it): a DeckScore with one
         reward per walk, `win_rate` the share of walks that came through every fight, `mean_hp_left` the HP at the end of them. Two decks on the same walks can
-        be compared walk by walk. `event`: an EventPlan played before each walk."""
+        be compared walk by walk. `event`: an EventPlan played before each walk. `card_walk`, `focus`: see route_sim.play_walk (the card reward chooser's walks)."""
         start, rewards, alive, hp_left = time.perf_counter(), [], 0, 0.0
         for walk in walks:
-            result = play_walk(walk, deck, player, self.config, self.target_types, event, scoring=self.deck_config)
+            result = play_walk(walk, deck, player, self.config, self.target_types, event, scoring=self.deck_config, card_walk=card_walk, focus=focus)
             rewards.append(result.reward)
             alive += result.alive
             hp_left += result.hp if result.alive else 0

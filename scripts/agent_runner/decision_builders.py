@@ -2,7 +2,7 @@
 A screen with nothing to click yet (loading, animating) gives no options, and the runner waits."""
 from collections import Counter
 
-from agents.decision import (Decision, Option, MAP, CARD_REWARD, REWARDS, REST, SHOP, EVENT, CARD_SELECT, RELIC, TREASURE)
+from agents.decision import (potion_options, Decision, Option, MAP, CARD_REWARD, REWARDS, REST, SHOP, EVENT, CARD_SELECT, RELIC, TREASURE)
 
 PROCEED = {"action": "proceed"}
 
@@ -42,7 +42,8 @@ def rewards_options(state : dict, declined : Counter | None = None) -> list[Opti
             left[reward_key(item)] -= 1
             continue
         options.append(Option(item.get("description") or item.get("type") or "reward", {"action": "claim_reward", "index": item["index"]}, item))
-    return options + _proceed(state)
+    options += _proceed(state)
+    return options + potion_options(state) if options else options          # a screen with nothing to click yet stays empty (the runner waits), not left to a potion action
 
 def rest_options(state : dict) -> list[Option]:
     options = [Option(o.get("name") or o.get("id") or "option", {"action": "choose_rest_option", "index": o["index"]}, o)
@@ -61,7 +62,7 @@ def shop_options(state : dict) -> list[Option]:
         options.append(Option(label, {"action": "shop_purchase", "index": item["index"]}, item))
     # Leaving is always on offer: buying opens the shop's inventory, which covers the Proceed button (can_proceed reads False), and the
     # proceed action closes the inventory first, so the agent could not leave if it waited for can_proceed.
-    return options + [Option("leave shop", dict(PROCEED))]
+    return options + [Option("leave shop", dict(PROCEED))] + potion_options(state)
 
 def event_options(state : dict) -> list[Option]:
     if state.get("in_dialogue"):

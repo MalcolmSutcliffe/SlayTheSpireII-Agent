@@ -91,7 +91,6 @@ class RelicId(Enum):
     VELVET_CHOKER = auto()
     THROWING_AXE = auto()
     MUSIC_BOX = auto()
-    DIAMOND_DIADEM = auto()
     CROSSBOW = auto()
     BIIIG_HUG = auto()
     RUNIC_PYRAMID = auto()

@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Callable
 
 from sts2_lite.hooks import HookType, HandlerTable
 
-from sts2_lite.relic.card_hooks import _art_of_war_turn, _attack_seen, _burning_sticks, _charons_ashes, _count_card, _count_scarf, _daughter_of_the_wind, _diamond_diadem, _forgotten_soul, _game_piece, _iron_club, _joss_paper_ethereal, _joss_paper_exhausted, _kunai, _kusarigama, _letter_opener, _lost_wisp, _mummified_hand, _music_box, _new_turn_flag, _new_turn_rainbow, _nunchaku, _on_attack, _on_power, _on_skill, _ornamental_fan, _pen_nib_played, _permafrost, _pocketwatch_played, _pocketwatch_turn, _pollinous_core_turn, _rainbow_ring, _reset_counter, _ring_of_the_drake_turn, _ripple_basin_end, _shuriken, _tuning_fork
+from sts2_lite.relic.card_hooks import _art_of_war_turn, _attack_seen, _burning_sticks, _charons_ashes, _count_card, _count_scarf, _daughter_of_the_wind, _forgotten_soul, _game_piece, _iron_club, _joss_paper_ethereal, _joss_paper_exhausted, _kunai, _kusarigama, _letter_opener, _lost_wisp, _mummified_hand, _music_box, _new_turn_flag, _new_turn_rainbow, _nunchaku, _on_attack, _on_power, _on_skill, _ornamental_fan, _pen_nib_played, _permafrost, _pocketwatch_played, _pocketwatch_turn, _pollinous_core_turn, _rainbow_ring, _reset_counter, _ring_of_the_drake_turn, _ripple_basin_end, _shuriken, _tuning_fork
 from sts2_lite.relic.ids import RelicId
 from sts2_lite.relic.turn_hooks import _abacus, _biiig_hug, _brimstone, _candelabra, _captains_wheel, _centennial_puzzle, _chandelier, _cloak_clasp, _crossbow, _demon_tongue, _demon_tongue_reset, _gremlin_horn, _happy_flower, _history_course, _history_course_record, _horn_cleat, _mercury_hourglass, _mr_struggles, _orichalcum, _orichalcum_check, _paels_eye_exhaust, _paels_legion_turn, _paels_tears, _paels_tears_check, _parrying_shield, _pendulum, _red_skull, _sai, _screaming_flagon, _seal_of_gold, _self_forming_clay, _sparkling_rouge, _stone_calendar, _toasty_mittens, _unceasing_top
 
@@ -38,8 +38,6 @@ EVENT_HANDLERS : dict[tuple[RelicId, HookType], Callable] = HandlerTable({
     (RelicId.MUSIC_BOX, HookType.CARD_PLAYED) : _music_box,
     (RelicId.BRILLIANT_SCARF, HookType.CARD_PLAYED) : _count_scarf,
     (RelicId.VELVET_CHOKER, HookType.CARD_PLAYED) : _count_card,
-    (RelicId.DIAMOND_DIADEM, HookType.CARD_PLAYED) : _count_card,
-    (RelicId.DIAMOND_DIADEM, HookType.END_TURN) : _diamond_diadem,
     (RelicId.MUSIC_BOX, HookType.BEFORE_PLAYER_TURN) : _new_turn_flag,
     (RelicId.BRILLIANT_SCARF, HookType.BEFORE_PLAYER_TURN) : _reset_counter,
     (RelicId.VELVET_CHOKER, HookType.BEFORE_PLAYER_TURN) : _reset_counter,
@@ -51,7 +49,7 @@ EVENT_HANDLERS : dict[tuple[RelicId, HookType], Callable] = HandlerTable({
     (RelicId.BRIMSTONE, HookType.PLAYER_TURN_START) : _brimstone,
     (RelicId.FAKE_HAPPY_FLOWER, HookType.PLAYER_TURN_START) : _happy_flower,
     (RelicId.SAI, HookType.PLAYER_TURN_START) : _sai,
-    (RelicId.TOASTY_MITTENS, HookType.BEFORE_PLAYER_TURN) : _toasty_mittens,
+    (RelicId.TOASTY_MITTENS, HookType.PLAYER_TURN_START) : _toasty_mittens,
     (RelicId.HISTORY_COURSE, HookType.CARD_PLAYED) : _history_course_record,
     (RelicId.HISTORY_COURSE, HookType.AUTO_PRE_PLAY) : _history_course,
     (RelicId.CROSSBOW, HookType.PLAYER_TURN_START) : _crossbow,

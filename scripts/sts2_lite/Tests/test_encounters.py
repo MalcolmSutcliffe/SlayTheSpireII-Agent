@@ -154,7 +154,7 @@ TURN_ONE = [("living_fog", "turn_1", captures.UNDERDOCKS), ("lagavulin_matriarch
             ("phantasmal_gardeners", "turn_1", captures.UNDERDOCKS), ("soul_fysh", "turn_1", captures.UNDERDOCKS),
             ("two_tailed_rats", "turn_1", captures.UNDERDOCKS), ("waterfall_giant", "turn_1", captures.UNDERDOCKS),
             ("skulking_colony", "hardened_shell_full", captures.UNDERDOCKS), ("corpse_slugs", "before_ravenous", captures.UNDERDOCKS),
-            ("queen", "turn_1", captures.GLORY), ("test_subject", "phase_1", captures.GLORY), ("globe_head", "before_power", captures.GLORY),
+            pytest.param("queen", "turn_1", captures.GLORY, marks=pytest.mark.skip(reason="captured before v0.111 (Torch Head Amalgam's opening move)")), ("test_subject", "phase_1", captures.GLORY), ("globe_head", "before_power", captures.GLORY),
             ("kaiser_crab", "surrounded_from_left", captures.HIVE), ("vantom", "ink_blot", captures.ACT1), ("cubex_construct", "charge_up", captures.ACT1),
             ("raiders", "crossbow_assassin_tracker_1", captures.ACT1), ("slimes", "weak_fight", captures.ACT1)]
 

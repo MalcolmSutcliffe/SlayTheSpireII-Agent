@@ -256,3 +256,71 @@ def test_the_worst_win_still_beats_the_best_unfinished_fight():
     root = fight(enemy(60))
     best_loss = rate(fight(enemy(1), player_hp=50, turn=DEFAULT_CONFIG.max_rollout_turns), root)
     assert won(hp=1, turns=DEFAULT_CONFIG.max_rollout_turns, start=50) > best_loss
+
+
+def _won_with_tail(used, hp=30, final_fight=False):
+    from sts2_lite.relic import RelicId, RelicInstance
+    cs = make_state([])
+    cs.enemies[0].current_hp = 0
+    cs.player.current_hp, cs.player.max_hp, cs.turn_number, cs.final_fight = hp, 50, 3, final_fight
+    cs.player.relics[RelicId.LIZARD_TAIL] = RelicInstance(RelicId.LIZARD_TAIL, used=used)
+    return primed(cs, new_mcts(), starting_hp=50)._rate_outcome(cs)
+
+def test_an_unused_lizard_tail_counts_half_the_max_hp_at_the_end_of_a_won_fight():
+    assert _won_with_tail(False) - _won_with_tail(True) == pytest.approx(DEFAULT_CONFIG.reward.lizard_tail_share * 50 / 50)
+    assert DEFAULT_CONFIG.reward.lizard_tail_share == 0.5
+
+def test_a_lizard_tail_is_worth_nothing_in_the_last_fight():
+    assert _won_with_tail(False, final_fight=True) == pytest.approx(_won_with_tail(True, final_fight=True))
+
+
+# ---------------------------------------------------------------- the Test Subject: three forms
+def _subject(hp, status=(StatusId.ADAPTABLE,)):
+    e = enemy(hp, 111, "TEST_SUBJECT_0")
+    e.status = {s: StatusInstance(s, 1) for s in status}
+    return e
+
+def _subject_fight(*enemies, dormant=()):
+    cs = fight(*enemies, dormant=dormant, player_hp=40)
+    cs.ascension = 10
+    return cs
+
+def test_a_test_subject_counts_the_forms_it_has_still_to_come_in_the_fight_total():
+    from agents.sts2_MCTS.outcome_score import expected_total_hp
+    assert expected_total_hp(_subject_fight(_subject(111))) == 111 + 212 + 313
+
+def test_killing_the_first_form_of_the_test_subject_is_progress_not_the_end():
+    start = _subject_fight(_subject(111))
+    killed = _subject_fight(dormant=[Enemy.lie_dead_subject(_subject(0))])
+    wounded = _subject_fight(_subject(50))
+    total = 111 + 212 + 313
+    assert progress(start) == 1.0
+    assert progress(killed, root=start) == pytest.approx((212 + 313) / total)           # the dead form is gone, the next two are still to beat
+    assert progress(wounded, root=start) > progress(killed, root=start)
+    assert rate(killed, root=start) > rate(wounded, root=start) > rate(start, root=start)  # more of the fight done is a better line
+
+def test_the_second_form_is_read_off_its_powers():
+    second = _subject(150, status=(StatusId.PAINFUL_STABS,))
+    start = _subject_fight(_subject(111))
+    assert progress(_subject_fight(second), root=start) == pytest.approx((150 + 313) / (111 + 212 + 313))
+
+
+# ---------------------------------------------------------------- the Axebot: Stock brings it back
+def _axebot(hp, lives):
+    e = enemy(hp, 82, "AXEBOT_0")
+    e.status = {StatusId.STOCK: StatusInstance(StatusId.STOCK, lives)} if lives else {}
+    return e
+
+def test_an_axebot_counts_the_lives_it_has_still_to_come_in_the_fight_total():
+    from agents.sts2_MCTS.outcome_score import expected_total_hp
+    assert expected_total_hp(fight(_axebot(82, 2), player_hp=40)) == 82 * 3
+
+def test_killing_an_axebot_that_comes_back_is_progress_not_a_worse_state():
+    start = fight(_axebot(82, 2), player_hp=40)
+    wounded = fight(_axebot(20, 2), player_hp=40)
+    killed = fight(_axebot(82, 1), player_hp=40)              # the Stock power summons the next one at once
+    assert progress(start, root=start) == 1.0
+    assert progress(killed, root=start) == pytest.approx(164 / 246)
+    assert progress(wounded, root=start) == pytest.approx((20 + 164) / 246)
+    assert progress(killed, root=start) < progress(wounded, root=start)      # less of the fight left
+    assert rate(killed, root=start) > rate(start, root=start)

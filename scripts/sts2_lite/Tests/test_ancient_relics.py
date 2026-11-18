@@ -98,8 +98,8 @@ def test_neows_bones_gives_two_neow_relics_and_a_curse():
     c = ctx_with_bag()
     n = len(c.run.relics)
     obtain_relic(c, "NEOWS_BONES")
-    got = [r["id"] for r in c.run.relics[n + 1:]]
-    assert len(got) == 2 and all(r in neow_relics() for r in got) and "NEOWS_BONES" not in neow_relics()
+    got = [r["id"] for r in c.run.relics[n + 1:] if r["id"] in neow_relics()]       # (a Large Capsule brings two more of its own)
+    assert len(got) == 2 and "NEOWS_BONES" not in neow_relics()
     assert any(x["type"] == "Curse" for x in c.run.deck)
 
 
@@ -131,7 +131,7 @@ def test_simple_ancient_pickups():
     obtain_relic(c, "LOOMING_FRUIT")
     obtain_relic(c, "SIGNET_RING")
     obtain_relic(c, "TANXS_WHISTLE")
-    assert c.run.max_hp == mx + 31 and c.run.hp == hp + 31 and c.run.gold >= gold + 999 and "WHISTLE" in ids(c)
+    assert c.run.max_hp == mx + 31 and c.run.hp == hp + 31 and c.run.gold >= gold + 888 and "WHISTLE" in ids(c)
 
 
 def test_claws_transform_into_maul_keeping_upgrade():
@@ -167,8 +167,9 @@ def test_card_changing_ancient_relics():
     obtain_relic(c, "PRESERVED_FOG")
     assert "FOLLY" in ids(c) and len(c.run.deck) == n - 3 + 1
     c = ctx_with_bag()
+    mx = c.run.max_hp
     obtain_relic(c, "SERE_TALON")
-    assert ids(c).count("WISH") == 3 and len(c.run.deck) == n + 5
+    assert ids(c).count("WISH") == 3 and len(c.run.deck) == n + 3 and c.run.max_hp == mx - 9
     c = ctx_with_bag()
     obtain_relic(c, "PANDORAS_BOX")
     assert "STRIKE_R" not in ids(c) and "DEFEND_R" not in ids(c) and len(c.run.deck) == n
@@ -189,7 +190,7 @@ def test_golden_compass_map_and_fur_coat_marks_and_winged_boots():
     assert node is m.boss
 
 
-def test_fur_coat_marks_seven_fight_points_and_boots_count_down():
+def test_fur_coat_marks_eight_fight_points_and_boots_count_down():
     from sts2_lite.map import generate_map
     import random
     c = ctx_with_bag()
@@ -197,7 +198,7 @@ def test_fur_coat_marks_seven_fight_points_and_boots_count_down():
     c.run.map = generate_map("OVERGROWTH", random.Random(3), 15)
     obtain_relic(c, "FUR_COAT")
     marked = c.run.relic_state["FUR_COAT"]["marked"]
-    assert len(marked) == 7 and all(c.run.map.at(*m).type.name in ("MONSTER", "ELITE") for m in marked)
+    assert len(marked) == 8 and all(c.run.map.at(*m).type.name in ("MONSTER", "ELITE") for m in marked)
     assert run_hooks.fur_coat_marked(c.run, marked[0]) and not run_hooks.fur_coat_marked(c.run, (0, 0))
     obtain_relic(c, "WINGED_BOOTS")
     for _ in range(3):
@@ -211,7 +212,7 @@ def test_toy_box_wax_melts_every_three_fights_and_silver_crucible_upgrades_three
     c = ctx_with_bag()
     obtain_relic(c, "TOY_BOX")
     waxes = [o for o in c.run.offers if o.get("wax")]
-    assert len(waxes) == 4 and len({o["relic"] for o in waxes}) == 4
+    assert len(waxes) == 5 and len({o["relic"] for o in waxes}) == 5
     for o in waxes:
         c.run.relics.append({"id": o["relic"], "name": o["relic"], "wax": True})
     for _ in range(3):
@@ -223,3 +224,22 @@ def test_toy_box_wax_melts_every_three_fights_and_silver_crucible_upgrades_three
         out = run_hooks.modify_card_offers(c.run, [card_entry("ANGER")], random.Random(i), True)
         assert out[0].get("is_upgraded") == (i < 3)
     assert not run_hooks.treasure_gives_relic(c.run) and run_hooks.treasure_gives_relic(c.run)
+
+
+def test_neows_sacrifice_gives_an_ambergris_and_a_guilty():
+    c = ctx_with_bag()
+    obtain_relic(c, "NEOWS_SACRIFICE")
+    assert "GUILTY" in ids(c)
+    assert [p["id"] for p in c.run.potions] == ["AMBERGRIS"]
+
+
+def test_dowsing_rod_adds_a_dowsing_that_becomes_abundance_after_five_unknown_rooms():
+    from sts2_lite.campaign.simulator import RunSimulator
+    c = ctx_with_bag()
+    obtain_relic(c, "DOWSING_ROD")
+    assert ids(c).count("DOWSING") == 1 and "DOWSING_ROD" in neow_relics()
+    for _ in range(4):
+        RunSimulator._dowse(None, c.run)
+    assert "DOWSING" in ids(c) and "ABUNDANCE" not in ids(c)
+    RunSimulator._dowse(None, c.run)
+    assert "DOWSING" not in ids(c) and ids(c).count("ABUNDANCE") == 1

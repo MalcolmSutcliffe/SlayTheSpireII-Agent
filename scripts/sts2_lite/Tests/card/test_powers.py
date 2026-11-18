@@ -46,7 +46,7 @@ def play_index(sim, index, target=0):
 # ---------------------------------------------------------------- applying the powers
 @pytest.mark.parametrize("card_id,cost,status_id,amount,upgraded_amount", [
     (CardId.CRUELTY, 1, StatusId.CRUELTY, 25, 50),
-    (CardId.DEMON_FORM, 3, StatusId.DEMON_FORM, 2, 3),
+    (CardId.DEMON_FORM, 3, StatusId.DEMON_FORM, 3, 4),
     (CardId.FEEL_NO_PAIN, 1, StatusId.FEEL_NO_PAIN, 3, 4),
     (CardId.JUGGERNAUT, 2, StatusId.JUGGERNAUT, 6, 8),
     (CardId.RUPTURE, 1, StatusId.RUPTURE, 1, 2),
@@ -807,12 +807,12 @@ def test_unmovable_doubles_every_block_of_the_same_play_and_counts_each_one_afte
 def test_colossus_gives_block_and_a_one_turn_buff():
     cs = one_enemy([card(CardId.COLOSSUS, 1, CardType.Skill, TargetType.Self)])
     play(cs)
-    assert cs.player.block == 5 and status(cs.player, StatusId.COLOSSUS) == 1
+    assert cs.player.block == 4 and status(cs.player, StatusId.COLOSSUS) == 1
 
 def test_colossus_upgraded_block():
     cs = one_enemy([card(CardId.COLOSSUS, 1, CardType.Skill, TargetType.Self, upgraded=True)])
     play(cs)
-    assert cs.player.block == 8
+    assert cs.player.block == 7
 
 def test_colossus_halves_damage_from_vulnerable_attackers():
     cs = one_enemy([])
@@ -1029,7 +1029,7 @@ def test_auto_play_picks_a_random_living_target():
 def test_auto_play_of_a_power_stays_out_of_the_piles():
     cs = one_enemy([power(CardId.DEMON_FORM, 3)])
     CombatSimulator(cs).auto_play(cs.player.hand[0])
-    assert status(cs.player, StatusId.DEMON_FORM) == 2 and cs.player.discard_pile == []
+    assert status(cs.player, StatusId.DEMON_FORM) == 3 and cs.player.discard_pile == []
 
 def test_gain_block_event_ignores_zero():
     from sts2_lite.hooks import HookType
@@ -1172,7 +1172,9 @@ def test_only_one_attack_is_free_and_the_costs_come_back():
     """Mangle uses the Free Attack; the game then shows Pommel Strike at 1 again."""
     cs = load("free_attack_mangle_before")
     play_free_attack(cs, 1)
-    assert compare(cs, load("free_attack_mangle_after")) == []
+    game = load("free_attack_mangle_after")
+    game.enemies[0].current_hp -= 20 - 15        # captured before v0.111, when Mangle dealt 15
+    assert compare(cs, game) == []
     pommel = next(c for c in cs.player.hand if c.card_id == CardId.POMMEL_STRIKE)
     assert pommel.current_cost(cs.player) == 1 and cs.player.status_amount(StatusId.FREE_ATTACK) == 0
 

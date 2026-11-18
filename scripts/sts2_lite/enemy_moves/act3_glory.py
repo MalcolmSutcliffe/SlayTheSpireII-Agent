@@ -15,8 +15,8 @@ def axebot(ascension : int) -> MoveTable:
         enemy.apply_status(StatusId.STRENGTH, deadly(ascension, 3, 4) * lives_used)
     return {
         "BOOT_UP": Move(frozenset({"defend", "buff"}), "HAMMER_UPPERCUT", block=deadly(ascension, 10, 15), effect=boot_up),
-        "ONE_TWO": Move(frozenset({"attack"}), "HAMMER_UPPERCUT", damage=deadly(ascension, 9, 10), hits=2),
-        "HAMMER_UPPERCUT": Move(frozenset({"attack", "debuff"}), "ONE_TWO", damage=deadly(ascension, 12, 14), hits=1,
+        "ONE_TWO": Move(frozenset({"attack"}), "HAMMER_UPPERCUT", damage=deadly(ascension, 10, 11), hits=2),
+        "HAMMER_UPPERCUT": Move(frozenset({"attack", "debuff"}), "ONE_TWO", damage=deadly(ascension, 14, 18), hits=1,
                                 player_status=((StatusId.WEAK, 2), (StatusId.FRAIL, 2))),
     }
 
@@ -263,7 +263,7 @@ def soul_nexus(ascension : int) -> MoveTable:
 def mecha_knight(ascension : int) -> MoveTable:
     return {
         "CHARGE": Move(frozenset({"attack"}), "FLAMETHROWER", damage=deadly(ascension, 25, 30), hits=1),
-        "FLAMETHROWER": Move(frozenset({"status"}), "WINDUP", hand_cards=((CardId.BURN, 4),)),
+        "FLAMETHROWER": Move(frozenset({"attack", "status"}), "WINDUP", damage=deadly(ascension, 8, 12), hits=1, hand_cards=((CardId.BURN, 4),)),
         "WINDUP": Move(frozenset({"defend", "buff"}), "HEAVY_CLEAVE", block=15, self_status=((StatusId.STRENGTH, 5),)),
         "HEAVY_CLEAVE": Move(frozenset({"attack"}), "FLAMETHROWER", damage=deadly(ascension, 35, 40), hits=1),
     }
@@ -348,9 +348,9 @@ ALLY_DEATH_HOOKS = {"QUEEN": queen_ally_died}
 
 
 def torch_head_amalgam(ascension : int) -> MoveTable:
-    tackle, weak = deadly(ascension, 18, 19), deadly(ascension, 14, 15)
+    tackle, weak = deadly(ascension, 18, 22), deadly(ascension, 14, 16)
     return {
-        "TACKLE": Move(frozenset({"attack"}), "TACKLE_2", damage=tackle, hits=1),
+        "STRONG_TACKLE": Move(frozenset({"attack"}), "TACKLE_2", damage=deadly(ascension, 26, 32), hits=1),
         "TACKLE_2": Move(frozenset({"attack"}), "BEAM", damage=tackle, hits=1),
         "BEAM": Move(frozenset({"attack"}), "TACKLE_3", damage=8, hits=3),
         "TACKLE_3": Move(frozenset({"attack"}), "TACKLE_4", damage=weak, hits=1),
@@ -419,7 +419,7 @@ def _increasing_intensity(enemy, combat):
 
 def aeonglass(ascension : int) -> MoveTable:
     return {
-        "EBB": Move(frozenset({"attack", "defend"}), "EYE_LASERS", damage=deadly(ascension, 26, 32), hits=1, block=33),
+        "EBB": Move(frozenset({"attack", "defend"}), "EYE_LASERS", damage=deadly(ascension, 22, 26), hits=1, block=33),
         "EYE_LASERS": Move(frozenset({"attack"}), "INCREASING_INTENSITY", damage=deadly(ascension, 11, 12), hits=2),
         "INCREASING_INTENSITY": Move(frozenset({"status", "buff"}), "EBB", effect=_increasing_intensity),
     }

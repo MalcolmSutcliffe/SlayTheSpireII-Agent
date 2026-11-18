@@ -23,7 +23,7 @@ def other(monster, move, hp=200, max_hp=None, intents=(), status=()):
     raw["hp"], raw["max_hp"] = hp, max_hp or hp
     return raw
 
-def queen_fight(queen_move, amalgam_move="TACKLE", ascension=0, amalgam_hp=199):
+def queen_fight(queen_move, amalgam_move="STRONG_TACKLE", ascension=0, amalgam_hp=199):
     """[Torch Head Amalgam, Queen]: the order of the encounter's slots."""
     queen = other("QUEEN", queen_move, hp=400)
     cs = at("TORCH_HEAD_AMALGAM", amalgam_move, ascension=ascension, hp=amalgam_hp, max_hp=199, status=[status("MINION")], extra=[queen])
@@ -33,10 +33,10 @@ def queen_fight(queen_move, amalgam_move="TACKLE", ascension=0, amalgam_hp=199):
 
 @pytest.mark.parametrize("monster, move, base, deadly, hits", [
     ("QUEEN", "OFF_WITH_YOUR_HEAD", 3, 4, 5), ("QUEEN", "EXECUTION", 15, 18, 1),
-    ("TORCH_HEAD_AMALGAM", "TACKLE", 18, 19, 1), ("TORCH_HEAD_AMALGAM", "TACKLE_3", 14, 15, 1), ("TORCH_HEAD_AMALGAM", "BEAM", 8, 8, 3),
+    ("TORCH_HEAD_AMALGAM", "STRONG_TACKLE", 26, 32, 1), ("TORCH_HEAD_AMALGAM", "TACKLE_2", 18, 22, 1), ("TORCH_HEAD_AMALGAM", "TACKLE_3", 14, 16, 1), ("TORCH_HEAD_AMALGAM", "BEAM", 8, 8, 3),
     ("TEST_SUBJECT", "BITE", 20, 22, 1), ("TEST_SUBJECT", "SKULL_BASH", 14, 16, 1), ("TEST_SUBJECT", "MULTI_CLAW", 10, 11, 3),
     ("TEST_SUBJECT", "PHASE3_LACERATE", 10, 11, 3), ("TEST_SUBJECT", "BIG_POUNCE", 45, 45, 1),
-    ("AEONGLASS", "EBB", 26, 32, 1), ("AEONGLASS", "EYE_LASERS", 11, 12, 2),
+    ("AEONGLASS", "EBB", 22, 26, 1), ("AEONGLASS", "EYE_LASERS", 11, 12, 2),
 ])
 def test_damage_rises_on_deadly_ascension(monster, move, base, deadly, hits):
     for ascension, damage in ((0, base), (9, deadly)):
@@ -89,8 +89,8 @@ def test_the_queen_read_without_her_amalgam_remembers_it_is_dead():
     assert cs.enemies[0].counter == 1
 
 def test_the_amalgam_s_moves():
-    cs = at("TORCH_HEAD_AMALGAM", "TACKLE")
-    assert moves_over(cs, 7) == ["TACKLE", "TACKLE_2", "BEAM", "TACKLE_3", "TACKLE_4", "BEAM", "TACKLE_3", "TACKLE_4"]
+    cs = at("TORCH_HEAD_AMALGAM", "STRONG_TACKLE")
+    assert moves_over(cs, 7) == ["STRONG_TACKLE", "TACKLE_2", "BEAM", "TACKLE_3", "TACKLE_4", "BEAM", "TACKLE_3", "TACKLE_4"]
 
 def test_the_queen_s_death_ends_the_fight_even_with_the_amalgam_alive():
     cs = queen_fight("EXECUTION")
@@ -253,7 +253,7 @@ def test_ebb_then_lasers_then_intensity():
 def test_ebb_gains_33_block():
     cs = aeonglass()
     turn(cs)
-    assert cs.enemies[0].block == 33 and cs.player.current_hp == 80 - 26
+    assert cs.enemies[0].block == 33 and cs.player.current_hp == 80 - 22
 
 def test_the_sixth_card_played_puts_a_wither_in_hand_and_the_count_restarts():
     cs = aeonglass(cards_left=2)
@@ -269,7 +269,7 @@ def test_a_wither_costs_three_hit_points_at_the_end_of_the_turn_before_block():
     cs = aeonglass()
     cs.player.hand = [Card.create_wither()]
     CombatSimulator(cs).end_turn()
-    assert cs.player.current_hp == 80 - 3 - 26         # the Wither at the end of the turn, then Ebb
+    assert cs.player.current_hp == 80 - 3 - 22         # the Wither at the end of the turn, then Ebb
 
 def test_increasing_intensity_upgrades_every_wither_adds_one_and_strengthens():
     cs = aeonglass("INCREASING_INTENSITY")
@@ -323,11 +323,13 @@ def enemy_diffs(cs, want):
     return [d for d in verify.compare(cs, want) if (d.startswith("enemy") or "dormant" in d) and "hp" not in d]
 
 def test_every_boss_capture_loads_with_moves_and_damage_agreeing():
-    for enemy, name in (("queen", "turn_1"), ("queen", "turn_2"), ("queen", "turn_2_bound_played"), ("queen", "minion_killed"),
+    # ("queen", "turn_1") was captured before v0.111: its Torch Head Amalgam opens with TACKLE_MOVE, now STRONG_TACKLE_MOVE
+    for enemy, name in (("queen", "turn_2"), ("queen", "turn_2_bound_played"), ("queen", "minion_killed"),
                         ("test_subject", "phase_1"), ("test_subject", "phase_2"), ("test_subject", "phase_3"), ("test_subject", "between_phases"),
                         ("aeonglass", "capture_1"), ("aeonglass", "capture_2")):
         glory(enemy, name)
 
+@pytest.mark.skip(reason="captured before v0.111: the Amalgam's TACKLE_MOVE opening is now STRONG_TACKLE_MOVE; re-capture the Queen fight")
 def test_queen_turn_one_to_two_chains_the_player_and_moves_the_amalgam_on():
     cs = glory("queen", "turn_1")
     turn(cs)

@@ -36,7 +36,7 @@ def test_brightest_flame_energy_cards_and_max_hp():
     cs = one_enemy([ancient(CardId.BRIGHTEST_FLAME)])
     cs.player.draw_pile = [defend() for _ in range(5)]
     play(cs)
-    assert cs.energy == 5 and len(cs.player.hand) == 2 and cs.player.max_hp == 49 and cs.player.current_hp == 49
+    assert cs.energy == 5 and len(cs.player.hand) == 2 and cs.player.max_hp == 48 and cs.player.current_hp == 48
 
 def test_brightest_flame_upgraded():
     cs = one_enemy([ancient(CardId.BRIGHTEST_FLAME, True)])

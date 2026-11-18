@@ -187,7 +187,10 @@ def test_red_skull_strength_applies_to_breakthrough_hit():
 def test_toasty_mittens_drum_of_battle_random_exhaust_is_not_an_energy_mismatch():
     before, after, actions = load_mismatch("toasty_drum_of_battle")
     pre = CombatState.deepcopy(before)
-    CombatSimulator(before).end_turn()
+    sim = CombatSimulator(before)
+    sim.end_turn()
+    if before.pending_choice is not None:       # since v0.111 Toasty Mittens asks for a card of the hand (the capture is older)
+        sim.choose_card(before.pending_choice.indices[0])
     assert compare(before, after, random_step=is_random_step(pre, before, actions)) == []
 
 def test_jack_of_all_trades_random_card_is_tolerated():

@@ -4,11 +4,12 @@ from sts2_lite.combat import CombatState, CombatSimulator
 
 from agents.base_agent import BaseAgent
 from agents.pathing import PathPlanner
+from agents.potion_cycle import FoulPotions, cycle as cycle_potions
 from agents.deck_eval.advisor import DeckAdvisor
 from agents.deck_eval.ancient_chooser import AncientChooser
 from agents.deck_eval.boss_spawner import BOSS_ACTS, normalize_boss_id
 from agents.deck_eval.card_reward_chooser import CardRewardChooser
-from agents.deck_eval.cards import removal_rank
+from agents.deck_eval.cards import removal_rank, transform_rank
 from agents.deck_eval.config import DEFAULT as DEFAULT_DECK_CONFIG, DeckEvalConfig
 from agents.deck_eval.elite_odds import act_id, identify
 from agents.deck_eval.event_chooser import EventChooser
@@ -44,6 +45,7 @@ class MyAgent(BaseAgent):
         self._card_chooser = None
         self._upgrader = None
         self._shopper = None
+        self._fouls = FoulPotions()
         self._eventer = None
         self._ancient = None
         self._mcts = sts2_MCTS()        # kept between calls: the next search reuses the part of this tree the game went into
@@ -90,8 +92,15 @@ class MyAgent(BaseAgent):
         """Smith or heal, by what each is worth on the fights ahead."""
         return self._upgrade_chooser().choose_rest(decision) or super()._get_rest_decision(decision)
 
+    def _get_rewards_decision(self, decision):
+        """Fruit Juice is drunk; a full belt gives up a Blood Potion / Fruit Juice or its worst potion for a better one on offer (agents/potion_cycle.py); then the rewards are claimed in order."""
+        return cycle_potions(decision) or super()._get_rewards_decision(decision)
+
     def _get_shop_decision(self, decision):
         """Every relic, card and the removal rated by the deck evaluator (a Z-score over deck_config.shop_z to buy): relics first, then potions before an elite, then the best card or removal: see agents/deck_eval/shop_chooser.py."""
+        used = self._fouls.choose(decision)          # a Foul Potion thrown at the merchant is 100 gold
+        if used is not None:
+            return used
         if self._shopper is None:
             self._shopper = ShopChooser(self._deck_advisor())
         return self._shopper.choose(decision)
@@ -103,10 +112,12 @@ class MyAgent(BaseAgent):
         return self._ancient.choose(decision) or self._eventer.choose(decision) or super()._get_event_decision(decision)
 
     def _card_to_select(self, decision, picks):
-        """A card among `picks` (the ones not picked yet) by what the screen does with it: removals and transforms take the worst cards (a curse, a Strike, a Defend, then the lowest rarity),
+        """A card among `picks` (the ones not picked yet) by what the screen does with it: removals take the worst cards (a curse, a Strike, a Defend, then the lowest rarity), transforms a Strike, a Defend, then the lowest rarity (a curse only becomes another curse),
         an upgrade the card with the best gain on the walks, an enchantment the card that will use it most (see `enchant_score`)."""
         screen = "%s %s" % (decision.state.get("screen_type", ""), decision.state.get("prompt", ""))
-        if re.search(r"remove|transform", screen, re.I):
+        if re.search(r"transform", screen, re.I):
+            return min(enumerate(picks), key=lambda item: (transform_rank(item[1].data), item[0]))[1]
+        if re.search(r"remove", screen, re.I):
             def worst(item):
                 position, option = item
                 rank = removal_rank(option.data)

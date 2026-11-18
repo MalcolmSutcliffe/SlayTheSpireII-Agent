@@ -8,7 +8,7 @@ from sts2_lite.Tests.card.test_card import hps
 from sts2_lite.Tests.relic.test_always_on import card, strike, bash, defend, inflame, state, relic, enemy_attack, plays
 
 
-GROUP_4 = ["BRILLIANT_SCARF", "VELVET_CHOKER", "THROWING_AXE", "MUSIC_BOX", "DIAMOND_DIADEM"]
+GROUP_4 = ["BRILLIANT_SCARF", "VELVET_CHOKER", "THROWING_AXE", "MUSIC_BOX"]
 
 def havoc():
     return card(CardId.HAVOC, 1, CardType.Skill, TargetType.Self)
@@ -141,20 +141,25 @@ def test_music_box_once_with_throwing_axe():
 
 
 # ---------------------------------------------------------------- Diamond Diadem
-def test_diadem_halves_attacks_after_a_quiet_turn():
-    cs = state([strike(), strike()], RelicId.DIAMOND_DIADEM)
-    enemy_attack(cs, 11)
-    plays(cs, (0, 0), (0, 0)).end_turn()
-    assert cs.player.current_hp == 50 - 5 and StatusId.DIAMOND_DIADEM not in cs.player.status
+def test_diadem_starts_the_fight_with_20_block_and_blur():
+    from sts2_lite.relic.combat_start import BLOCK, PLAYER_STATUS
+    assert BLOCK["DIAMOND_DIADEM"] == 20 and PLAYER_STATUS["DIAMOND_DIADEM"] == (StatusId.BLUR, 1)
 
-def test_diadem_not_after_3_cards():
-    cs = state([defend(), defend(), defend()], RelicId.DIAMOND_DIADEM)
-    enemy_attack(cs, 25)
-    plays(cs, (0, 0), (0, 0), (0, 0)).end_turn()
-    assert cs.player.current_hp == 50 - 10 and relic(cs, RelicId.DIAMOND_DIADEM).counter == 0
+def test_blur_keeps_the_block_through_one_turn_start_only():
+    cs = state([])
+    cs.player.draw_pile = [defend() for _ in range(20)]
+    cs.player.block = 20; cs.player.apply_status(StatusId.BLUR, 1)
+    sim = CombatSimulator(cs)
+    sim.end_turn()
+    assert cs.player.block == 20 and StatusId.BLUR not in cs.player.status
+    sim.end_turn()
+    assert cs.player.block == 0
 
-def test_diadem_power_loads():
-    assert StatusInstance.from_dict({"id": "DIAMOND_DIADEM_POWER", "amount": 1}).status_id == StatusId.DIAMOND_DIADEM
+def test_the_reworked_diadem_has_nothing_left_to_do_in_combat():
+    assert RelicInstance.from_dict({"id": "DIAMOND_DIADEM", "counter": None, "status": "Normal"}) is None
+
+def test_blur_power_loads():
+    assert StatusInstance.from_dict({"id": "BLUR_POWER", "amount": 1}).status_id == StatusId.BLUR
 
 
 # ---------------------------------------------------------------- Crossbow (AfterSideTurnStart)

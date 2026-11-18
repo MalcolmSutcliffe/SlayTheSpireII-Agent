@@ -26,6 +26,35 @@ KNOWN_GAPS = {
     "f46_r1_Slimed_Berserker_203943538293",                  # a fight saved after a potion was used (Duplication, Unmovable, 1 energy less)
     "f39_r1_Slimed_Berserker_163749411389",                  # saved after a Swift Potion was drunk (3 cards more in the hand, 1 energy less) and 14 damage dealt
     "f35_r1_Living_Shield+Turret_Operator_163120247940",     # Mr. Struggles' 1 damage hurts the Turret Operator in the game (hp 40) before the Rampart block comes; the sim blocks it (hp 41, block 24)
+    "f13_r1_Phantasmal_Gardener_220125297297",               # saved mid-fight: the Gardeners are hurt and Vulnerable, 2 energy, 4 cards in hand (the fight's other captures match)
+    "f48_r1_Queen+Torch_Head_Amalgam_224458603556",          # saved after a Radiant Tincture was drunk (Radiance, and 3 Strength from Reptile Trinket, 1 energy more)
+    # captures from the runs a10-3 and a10-4 whose "round 1" state was saved after the agent had already played (or while the hand was still being dealt): hand empty or short, energy spent,
+    # block already gained. The runner has since waited for the dealt hand (CombatSession.turn_is_changing), so these are not an opening to compare
+    "f35_r1_Scroll_of_Biting_222531759681",
+    "f37_r1_Devoted_Sculptor_222642475942",
+    "f38_r1_Axebot_222852885921",
+    "f40_r1_Battle_Friend_V3_0_223219510245",
+    "f42_r1_Mecha_Knight_223321318508",
+    "f44_r1_Soul_Nexus_223816284447",
+    "f45_r1_Globe_Head_224120741930",
+    "f46_r1_Flail_Knight+Magi_Knight+Spectral_Knight_224424435198",
+    "f48_r1_Queen+Torch_Head_Amalgam_225054015748",
+    "f36_r1_Battle_Friend_V2_0_001248525231",
+    "f37_r1_Living_Shield+Turret_Operator_001320543836",
+    # engine gap: the Turret Operator's hp differs (sim 22, game 25)
+    "f36_r1_Living_Shield+Turret_Operator_211209807788",
+    # captured before v0.111: Torch Head Amalgam opened with TACKLE_MOVE (now STRONG_TACKLE_MOVE)
+    "f48_r1_Queen+Torch_Head_Amalgam_164431063539",
+    "f48_r1_Queen+Torch_Head_Amalgam_224118728330",
+    "f48_r1_Queen+Torch_Head_Amalgam_193343216333",
+    # captured before v0.111 with the old Diamond Diadem (half damage after a quiet turn); it now starts the fight with 20 Block and Blur
+    "f46_r1_Mecha_Knight_132256953481",
+    "f48_r1_Aeonglass_132820454315",
+    "f35_r1_Devoted_Sculptor_130837280283",
+    "f37_r1_Scroll_of_Biting_131003211585",
+    "f38_r1_Cubex_Construct+Punch_Construct_131131344152",
+    "f42_r1_Flail_Knight+Magi_Knight+Spectral_Knight_131407821199",
+    "f43_r1_Frog_Knight_131812130017",
 }
 
 

@@ -186,6 +186,15 @@ class RunSimulator:
             self.enter(point)
 
     # --- rooms
+    def _dowse(self, r):
+        from sts2_lite.card.constants import DOWSING_ROOMS
+        from sts2_lite.event.run import card_entry
+        for i, c in enumerate(r.deck):
+            if c["id"] == "DOWSING":
+                c["rooms_entered"] = c.get("rooms_entered", 0) + 1
+                if c["rooms_entered"] >= DOWSING_ROOMS:
+                    r.deck[i] = card_entry("ABUNDANCE")        # TransformTo<Abundance>: a fixed transform, not upgraded
+
     def enter(self, point):
         r = self.run_state
         kind = ROOM_OF_POINT[point.type]
@@ -195,6 +204,8 @@ class RunSimulator:
             if run_hooks.golden_path_act(r) or (r.act == 3 and self.has_card("LANTERN_KEY")):         # LanternKey.ModifyUnknownMapPointRoomTypes
                 kind = "Event"
         self.fur_coat = run_hooks.fur_coat_marked(r, point.coord)
+        if from_unknown:        # Dowsing.BeforeRoomEntered: counts ? map points (whatever room they turn into)
+            self._dowse(r)
         if r.hidden.spoils_point is not None and tuple(point.coord) == tuple(r.hidden.spoils_point) and self.has_card("SPOILS_MAP"):       # SpoilsMap.OnQuestComplete
             run_hooks.gain_gold(r, 600)
             r.deck.pop(next(i for i, c in enumerate(r.deck) if c["id"] == "SPOILS_MAP"))
@@ -384,8 +395,8 @@ class RunSimulator:
                     continue
                 for i in sorted(set(picks), reverse=True):
                     r.deck.pop(i)
-                r.max_hp += 9
-                r.hp += 9
+                r.max_hp += 5        # CookRestSiteOption: +5 Max HP
+                r.hp += 5
             elif choice == "CLONE":
                 for card in [c for c in r.deck if (c.get("enchantment") or {}).get("id") == "CLONE"]:
                     run_hooks.add_to_deck(r, dict(card))

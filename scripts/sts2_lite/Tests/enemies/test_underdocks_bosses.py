@@ -18,7 +18,7 @@ def strict(monkeypatch):
 
 @pytest.mark.parametrize("monster, move, base, deadly, hits", [
     ("LAGAVULIN_MATRIARCH", "SLASH", 19, 21, 1), ("LAGAVULIN_MATRIARCH", "DISEMBOWEL", 9, 10, 2), ("LAGAVULIN_MATRIARCH", "SLASH2", 12, 14, 1),
-    ("SOUL_FYSH", "DE_GAS", 16, 17, 1), ("SOUL_FYSH", "GAZE", 7, 8, 1), ("SOUL_FYSH", "SCREAM", 13, 15, 1),
+    ("SOUL_FYSH", "DE_GAS", 16, 18, 1), ("SOUL_FYSH", "GAZE", 7, 8, 1), ("SOUL_FYSH", "SCREAM", 13, 15, 1),
     ("WATERFALL_GIANT", "STOMP", 15, 16, 1), ("WATERFALL_GIANT", "RAM", 10, 11, 1),
     ("WATERFALL_GIANT", "PRESSURE_GUN", 20, 23, 1), ("WATERFALL_GIANT", "PRESSURE_UP", 13, 14, 1),
 ])

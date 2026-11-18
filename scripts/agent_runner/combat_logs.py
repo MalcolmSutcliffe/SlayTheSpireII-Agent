@@ -95,6 +95,18 @@ def log_decision(path : str | None, game_state : dict, combat_state : CombatStat
         record["stopped_by"] = stats.get("exit_reason")
         record["reused"] = stats.get("reused")                  # the tree of the last search was kept (and how many visits it came with)
         record["inherited_visits"] = stats.get("inherited_visits")
+        paired = stats.get("paired")                            # the moves replayed under the same scenarios (None: nothing to compare)
+        if paired is not None:
+            record["paired"] = {"replaced": paired.get("replaced"), "scenarios_run": paired.get("scenarios_run"),
+                                "compared": [{"move": describe_action(c["action"], combat_state), "visits": c["visits"],
+                                              "gain": round(c["gain"], 4), "se": round(c["se"], 4)} for c in paired.get("compared", [])]}
+        record["potions_allowed"] = stats.get("potions_allowed")
+        gate = stats.get("gate")                                # why the potion gate opened (None: it was not tested this search)
+        if gate is not None:
+            record["gate"] = {k: (round(v, 3) if isinstance(v, float) else v) for k, v in gate.items()}
+        plain = stats.get("plain_check")                        # a potion pick checked against a search of the plain moves
+        if plain is not None:
+            record["plain_check"] = {k: (round(v, 4) if isinstance(v, float) else v) for k, v in plain.items()}
         order = stats.get("order")                              # another order of the turn's plain plays was tried (None: nothing to compare)
         if order is not None:
             record["order"] = {k: order[k] for k in ("replaced", "plays", "distinct", "error") if k in order}

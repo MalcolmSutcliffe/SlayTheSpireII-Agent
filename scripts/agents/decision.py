@@ -29,6 +29,20 @@ class Option:
         return self.action["action"]
 
 
+# potions the game lets be drunk outside a fight (PotionUsage.AnyTime): the screens list a "use" for these only; any potion can be thrown away
+USABLE_OUT_OF_COMBAT = ("FRUIT_JUICE", "BLOOD_POTION", "FOUL_POTION")
+
+def potion_option(verb : str, entry : dict) -> Option:
+    """`verb` "use" or "discard" for the potion of `entry` (a belt entry: its id, name and slot). The screens list these (agent_runner/decision_builders.py) and agents/potion_cycle.py chooses them."""
+    name = entry.get("name") or entry.get("id")
+    return Option("%s %s" % ("drink" if verb == "use" else "discard", name), {"action": "%s_potion" % verb, "slot": entry["slot"], "potion_id": entry.get("id")}, entry)
+
+def potion_options(state : dict) -> list[Option]:
+    """The potion actions a screen offers out of combat, one per potion on the belt."""
+    belt = [p for p in (state.get("player") or {}).get("potions") or [] if p and p.get("slot") is not None]
+    return ([potion_option("use", p) for p in belt if p.get("id") in USABLE_OUT_OF_COMBAT] + [potion_option("discard", p) for p in belt])
+
+
 @dataclass
 class Decision:
     kind: str

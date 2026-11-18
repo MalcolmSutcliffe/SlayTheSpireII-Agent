@@ -11,7 +11,8 @@ from dataclasses import dataclass, field
 from .combat_session import CombatSession
 from .decision_builders import build_decision, reward_key
 from .executors import execute
-from agents.decision import CARD_REWARD, REWARDS
+from agents import unknowns
+from agents.decision import CARD_REWARD, REST, REWARDS
 from .game_client import NOT_IN_FIGHT_SECONDS, POLL_SECONDS, GameClient, dump
 from .run_verifier import DEFAULT_LOG as RUN_LOG, DEFAULT_RECORD, RunVerifier
 
@@ -47,6 +48,7 @@ class RunManager:
         self.tried : dict[str, set[str]] = {}       # screen (as the game showed it) -> actions sent on it that changed nothing
         self.declined = Counter()       # reward items the agent skipped: the game keeps listing them, so they are not claimed again
         self.opened = None              # the reward item whose card screen is open, to know what a Skip declines
+        self.rested_at = None           # (act, floor) of the rest site whose option the agent has chosen
         self.run_verifier = run_verifier or (self.default_verifier(log_path) if verify else None)
 
     @staticmethod
@@ -69,6 +71,11 @@ class RunManager:
             if self.run_verifier is not None:
                 print(f"run verifier: {self.run_verifier.summary()}")
 
+    def report_unknowns(self, game_state : dict):
+        """What the agent met that the engine does not model goes into the run's findings (once each), to be added to the engine later."""
+        for kind, key, message in unknowns.drain():
+            self.verify_run("report", f"unknown.{kind}", "warning", game_state, message, None, None, key)
+
     def verify_run(self, call, *args):
         """Tell the run verifier something. It watches: whatever goes wrong inside it must never stop the run, so it is switched off after its first failure."""
         if self.run_verifier is None:
@@ -82,6 +89,7 @@ class RunManager:
     def tick(self):
         """One pass: read the game and, when it is the agent's turn to act, decide and act. Returns early to read the game again."""
         game_state = self.client.get_state()
+        self.report_unknowns(game_state)
         kind = self.combat.kind_of(game_state)
         if kind == "away":
             self.away(game_state)
@@ -98,16 +106,28 @@ class RunManager:
         decision = build_decision(game_state, self.declined)
         if decision is not None and decision.kind not in (REWARDS, CARD_REWARD):
             self.forget_rewards()       # on to the next screen: the skipped rewards are left behind
+        decision = self.one_rest_option(game_state, decision)
         if decision is None or not decision.options:
             self.wait(game_state)
             return
         if SETTLE_BEFORE_DECIDING:
             game_state = self.client.settled(game_state)
             self.run_state.update(game_state)
-            decision = build_decision(game_state, self.declined)
+            decision = self.one_rest_option(game_state, build_decision(game_state, self.declined))
             if decision is None or not decision.options:
                 return              # the screen moved on while it settled: read it again
         self.decide(game_state, decision)
+
+    def one_rest_option(self, game_state : dict, decision):
+        """A rest site takes one option (Miniature Tent: more). Whatever Rest triggers (Tiny Mailbox's potions, the heal's pause) can leave the screen listing the other options for a moment:
+        once one is chosen, only Proceed is on offer at that site, and nothing at all (wait) until Proceed shows."""
+        if decision is None or decision.kind != REST:
+            return decision
+        here = (self.run_state.act, self.run_state.floor)
+        tent = any((r or {}).get("id") == "MINIATURE_TENT" for r in (game_state.get("player") or {}).get("relics") or [])
+        if self.rested_at == here and not tent:
+            decision.options = [o for o in decision.options if o.action["action"] != "choose_rest_option"]
+        return decision
 
     def forget_rewards(self):
         self.declined.clear()
@@ -170,6 +190,8 @@ class RunManager:
         self.track_rewards(decision, option)
         self.verify_run("state", game_state)
         self.verify_run("acted", option.action)
+        if decision.kind == REST and option.action["action"] == "choose_rest_option":
+            self.rested_at = (self.run_state.act, self.run_state.floor)
         execute(self.client, option.action)
         if not self.client.wait_for_change(screen):
             tried.add(dump(option.action))

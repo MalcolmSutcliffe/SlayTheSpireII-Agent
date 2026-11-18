@@ -106,3 +106,24 @@ def test_a_potion_that_can_wait_for_the_end_of_the_turn_is_not_played_first():
     mcts, root = root_for(cs, SearchConfig(paired_scenarios=60, check_workers=1))
     result = mcts._paired_check(potion_child(root))
     assert result["replaced"] and result["child"].action["action"] == "play_card"
+
+
+def test_a_potion_pick_is_checked_against_a_search_of_the_plain_moves():
+    cs = scenario([strike(), defend()], hp=40, damage=10)
+    cs.enemies[0].max_hp = cs.enemies[0].current_hp = 6        # one Strike wins the fight
+    config = SearchConfig(time_budget=None, max_sims=200, min_sims=50, early_exit=False)
+    mcts = primed(cs, new_mcts(config))
+    root = sts2_DeterministicNode(None, CombatState_copy(cs), None)
+    expand_node(root)
+    mcts._root_node, mcts._table, mcts._tree_potions, mcts._potions_on = root, {}, True, True
+    potion = next(c for c in root.children if c.action["action"] == "use_potion")
+    potion.visits, potion.total_reward = 1000, 0.1 * 1000                      # a potion line the tree rates far below winning
+    found = mcts._plain_check(cs, potion.action)
+    assert found["replaced"] and found["action"]["action"] != "use_potion" and found["plain_q"] > found["potion_q"]
+    assert mcts._root_node is root and mcts._potions_on is True and mcts._tree_potions is True        # the potion tree is put back
+    potion.total_reward = 1000 * 100.0                                         # ... and one it rates far above any plain move
+    assert not mcts._plain_check(cs, potion.action)["replaced"]
+
+def CombatState_copy(cs):
+    from sts2_lite.combat import CombatState
+    return CombatState.deepcopy(cs)

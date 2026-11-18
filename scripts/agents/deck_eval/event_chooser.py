@@ -11,6 +11,7 @@ A page after the first is played by replaying the options chosen so far (the num
 or whose option names are not the model's, is left to the caller (`choose` returns None). The analysis takes at most DeckEvalConfig.event_seconds."""
 from __future__ import annotations
 
+from agents import unknowns
 from agents.decision import Decision, Option
 from agents.deck_eval.advisor import DeckAdvisor
 from agents.deck_eval.route_sim import EventMismatch, EventPlan, event_option_key
@@ -42,6 +43,7 @@ class EventChooser:
         try:
             rewards, count, seconds = self.advisor.race(decision, plays, self.advisor.config.event_seconds)
         except EventMismatch as e:
+            unknowns.note("event", f"{event_id}:{e}", f"event {event_id}: the options do not match the engine's model ({e}); options {[o.label for o in options]}")
             self.advisor.log("event %s: the options do not match the engine's model (%s) -> left to the default" % (event_id, e))
             return None
         means = {i: sum(r) / len(r) for i, r in rewards.items()}

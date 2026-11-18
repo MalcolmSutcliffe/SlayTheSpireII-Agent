@@ -26,9 +26,10 @@ ENERGY_RELICS = frozenset({"ECTOPLASM", "SOZU", "PHILOSOPHERS_STONE", "BLESSED_A
 COUNTER_RELICS = frozenset({"EMBER_TEA", "BONE_TEA", "TEA_OF_DISCOURTESY", "PUMPKIN_CANDLE"})     # act only while their counter is above 0
 
 PLAYER_STATUS = {"VAJRA": (StatusId.STRENGTH, 1), "SWORD_OF_JADE": (StatusId.STRENGTH, 3), "ODDLY_SMOOTH_STONE": (StatusId.DEXTERITY, 1),
-                 "AKABEKO": (StatusId.VIGOR, 8), "GORGET": (StatusId.PLATING, 4), "BRONZE_SCALES": (StatusId.THORNS, 3)}
+                 "AKABEKO": (StatusId.VIGOR, 8), "GORGET": (StatusId.PLATING, 4), "BRONZE_SCALES": (StatusId.THORNS, 3),
+                 "DIAMOND_DIADEM": (StatusId.BLUR, 1)}
 ENEMY_STATUS_TURN_1 = {"BAG_OF_MARBLES": (StatusId.VULNERABLE, 1), "RED_MASK": (StatusId.WEAK, 1)}
-BLOCK = {"ANCHOR": 10, "FAKE_ANCHOR": 4}
+BLOCK = {"ANCHOR": 10, "FAKE_ANCHOR": 4, "DIAMOND_DIADEM": 20}      # Diamond Diadem also gives Blur 1 (PLAYER_STATUS)
 HEAL = {"BLOOD_VIAL": 2, "FAKE_BLOOD_VIAL": 1}
 DRAW_BONUS = {"BAG_OF_PREPARATION": 2, "RING_OF_THE_SNAKE": 2, "BIG_MUSHROOM": -2}
 SLING_STRENGTH, EMBER_TEA_STRENGTH = 2, 2
@@ -97,6 +98,7 @@ class Opening:
             player.insert_into_draw_pile(Card.create_dazed())
         if self.has("JEWELED_MASK"):
             powers = [c for c in player.draw_pile if c.type == CardType.Power]
+            powers = [c for c in powers if CardKeyword.INNATE not in c.keywords] or powers       # a non-Innate Power unless they all are
             if powers:
                 card = rng.choice(powers)
                 player.remove_from_draw_pile(card)

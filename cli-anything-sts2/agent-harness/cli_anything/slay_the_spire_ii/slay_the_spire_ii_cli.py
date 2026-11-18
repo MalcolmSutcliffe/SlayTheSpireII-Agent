@@ -134,6 +134,15 @@ def use_potion(ctx: click.Context, slot: int, target: str | None) -> None:
     _run_post(runtime.client, actions.use_potion(slot, target=target))
 
 
+@cli.command("discard-potion")
+@click.argument("slot", type=int)
+@click.pass_context
+def discard_potion(ctx: click.Context, slot: int) -> None:
+    """Throw a potion away by slot index."""
+    runtime = _get_runtime(ctx)
+    _run_post(runtime.client, actions.discard_potion(slot))
+
+
 @cli.command("end-turn")
 @click.pass_context
 def end_turn(ctx: click.Context) -> None:

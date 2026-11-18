@@ -415,7 +415,7 @@ def test_crimson_mantle_loses_one_hp_per_copy_played():
     sim.play_card(0, 0)
     sim.play_card(0, 0)
     sim.end_turn()
-    assert cs.player.current_hp == 50 - 2 and cs.player.block == 16
+    assert cs.player.current_hp == 50 - 2 and cs.player.block == 14
 
 def test_crimson_mantle_plays_survive_a_copy():
     from sts2_lite.combat import CombatState
@@ -489,7 +489,7 @@ def test_crimson_mantle_block_is_given_once():
     sim = CombatSimulator(cs)
     sim.play_card(0, 0)
     sim.end_turn()
-    assert cs.player.block == 8 and cs.player.current_hp == 49
+    assert cs.player.block == 7 and cs.player.current_hp == 49
 
 def test_crimson_mantle_block_still_sets_off_juggernaut():
     cs = with_draw_pile(card_tests.make_state([card(CardId.CRIMSON_MANTLE, 1, CardType.Power)], enemy_count=1, enemy_hp=100))
@@ -656,4 +656,4 @@ def test_losing_max_hp_at_full_hp_is_hp_lost_for_centennial_puzzle():
     cs.player.draw_pile = [make_card(CardId.DEFEND_IRONCLAD, "Defend", CardType.Skill, i % 3, TargetType.Self) for i in range(10)]
     cs.player.relics[RelicId.CENTENNIAL_PUZZLE] = RelicInstance(RelicId.CENTENNIAL_PUZZLE)
     CombatSimulator(cs).play_card(0, 0)
-    assert cs.player.max_hp == 49 and len(cs.player.hand) == 2 + 3 and cs.player.relics[RelicId.CENTENNIAL_PUZZLE].used
+    assert cs.player.max_hp == 48 and len(cs.player.hand) == 2 + 3 and cs.player.relics[RelicId.CENTENNIAL_PUZZLE].used

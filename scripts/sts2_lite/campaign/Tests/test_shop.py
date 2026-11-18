@@ -121,7 +121,7 @@ def test_a_spending_agent_buys_every_kind_of_item_legally():
         return orig(self, entry, spent)
     Shop.after = watch
     try:
-        for seed in range(12):
+        for seed in range(15):       # (a removal is bought from seed 12 on)
             sim = sim_of(Spender(), seed=seed)
             result = sim.run()
             gold_ok &= sim.run_state.gold >= 0 and result.illegal_choices == 0

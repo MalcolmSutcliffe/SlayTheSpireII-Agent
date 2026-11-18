@@ -397,7 +397,7 @@ def test_a_card_the_player_cannot_afford_right_now_is_not_unplayable_for_good():
     assert Card.from_dict(raw).is_unplayable
 
 
-DECOMPILED = Path(__file__).resolve().parents[4] / "sts2_decompiled" / "MegaCrit.Sts2.Core.Models.Cards"
+DECOMPILED = Path(__file__).resolve().parents[4] / "sts2_decompiled" / "Core" / "Models" / "Cards"
 
 def _pascal(card_id : CardId) -> str:
     return "".join(part.capitalize() for part in card_id.name.split("_"))

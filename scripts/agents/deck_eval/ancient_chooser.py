@@ -9,6 +9,8 @@ leaves the choice to the caller (`choose` returns None). The analysis takes at m
 from __future__ import annotations
 import re
 
+from agents import unknowns
+
 from sts2_lite.campaign import ancients
 from sts2_lite.relic.ancient_data import NEOW_CURSES, NEOW_POSITIVE
 from sts2_lite.relic.bag import relic_name
@@ -71,8 +73,13 @@ class AncientChooser:
         if ancient_id not in ancients.GENERATORS:
             return None
         options = decision.options_named("choose_event_option")
+        if options and all(o.label.strip().lower() == "proceed" for o in options):
+            return options[0]               # the relic is taken: only the way on is left, which is not a relic on offer
         plans = [resolve(o.label, ancient_id, self.names) for o in options]
         if not options or None in plans:
+            for o, p in zip(options, plans):
+                if p is None:
+                    unknowns.note("ancient_relic", f"{ancient_id}:{o.label}", f"{ancient_id} offered {o.label!r}, which the engine does not know")
             self.advisor.log("ancient %s: a relic on offer is not one the engine knows (%s) -> left to the default" % (ancient_id, ", ".join(o.label for o, p in zip(options, plans) if p is None)))
             return None
         if len(options) == 1:

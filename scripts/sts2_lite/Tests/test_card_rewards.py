@@ -58,8 +58,8 @@ def test_a_boss_reward_is_always_rare_and_resets_the_offset():
     assert odds.roll(OddsType.BOSS_ENCOUNTER) == Rarity.RARE and odds.current_value == -0.05
 
 
-def test_rolling_with_base_odds_uses_the_uncommon_number_as_the_edge():
-    odds = CardRarityOdds(Fixed(0.029, 0.03, 0.369, 0.37), current_value=0.3)
+def test_rolling_with_base_odds_puts_the_uncommon_band_after_the_rare_one():
+    odds = CardRarityOdds(Fixed(0.029, 0.03, 0.399, 0.40), current_value=0.3)
     assert [odds.roll_with_base_odds(OddsType.REGULAR_ENCOUNTER) for _ in range(4)] == [Rarity.RARE, Rarity.UNCOMMON, Rarity.UNCOMMON, Rarity.COMMON]
     assert odds.current_value == 0.3
     shop = CardRarityOdds(Fixed(0.0), current_value=0.2)
@@ -110,10 +110,10 @@ def test_rarity_shares_of_a_regular_reward_follow_the_odds():
     counts = {Rarity.COMMON: 0, Rarity.UNCOMMON: 0, Rarity.RARE: 0}
     for _ in range(3000):
         odds = CardRarityOdds(rng)
-        for offer in create_card_reward(rng, odds, 0, 1, source=Source.OTHER, no_upgrade_roll=True):        # base odds: 3% rare, 34% uncommon, 63% common
+        for offer in create_card_reward(rng, odds, 0, 1, source=Source.OTHER, no_upgrade_roll=True):        # base odds: 3% rare, 37% uncommon, 60% common
             counts[rarity_of(offer.card_id)] += 1
     shares = {r: n / 3000 for r, n in counts.items()}
-    assert shares[Rarity.RARE] == pytest.approx(0.03, abs=0.015) and shares[Rarity.UNCOMMON] == pytest.approx(0.34, abs=0.04)
+    assert shares[Rarity.RARE] == pytest.approx(0.03, abs=0.015) and shares[Rarity.UNCOMMON] == pytest.approx(0.37, abs=0.04)
 
 
 def test_boss_rewards_are_three_rares():
@@ -153,7 +153,7 @@ def test_the_merchant_sells_the_type_asked_for_and_never_upgrades():
 
 def test_the_reward_pool_is_the_ironclad_pool_of_the_game():
     names = {a: [] for a in ("Common", "Uncommon", "Rare")}
-    path = DECOMPILED / "MegaCrit.Sts2.Core.Models.CardPools" / "IroncladCardPool.cs"
+    path = DECOMPILED / "Core" / "Models" / "CardPools" / "IroncladCardPool.cs"
     if not path.exists():
         pytest.skip("the decompiled game is not here")
     in_pool = {re.sub(r"(?<!^)(?=[A-Z])", "_", n).upper() for n in re.findall(r"ModelDb\.Card<(\w+)>", path.read_text())}
