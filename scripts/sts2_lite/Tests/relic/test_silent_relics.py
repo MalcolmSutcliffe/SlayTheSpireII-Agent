@@ -101,3 +101,22 @@ def test_ninja_scroll_adds_three_shivs_before_the_draw():
 def test_twisted_funnel_poisons_every_enemy(relics, poison):
     cs = open_fight(*relics, enemies=2)
     assert [e.status_amount(StatusId.POISON) for e in cs.enemies] == [poison, poison]
+
+
+# ------------------------------------------------------------ loading counters from the bridge (found replaying silent-a0-1)
+@pytest.mark.parametrize("bridge_id", ["KUNAI", "SHURIKEN", "ORNAMENTAL_FAN"])
+def test_attack_counters_shown_full_while_activating_are_a_reset(bridge_id):
+    """Kunai / Shuriken / Ornamental Fan show 3 while they activate (DisplayAmount when IsActivating): the count is back at 0."""
+    assert RelicInstance.from_dict({"id": bridge_id, "counter": 3}).counter == 0
+    assert RelicInstance.from_dict({"id": bridge_id, "counter": 2}).counter == 2
+
+def test_a_missed_play_does_not_erase_rainbow_ring_types_the_bridge_reports():
+    from copy import deepcopy
+    from sts2_lite.relic.card_hooks import SEEN_ATTACK, SEEN_SKILL
+    cs = state([gen(CardId.FAN_OF_KNIVES)], RelicId.RAINBOW_RING)
+    previous = deepcopy(cs)
+    previous.player.relics[RelicId.RAINBOW_RING].value = SEEN_ATTACK                 # the sim saw only the Attack
+    cs.player.relics[RelicId.RAINBOW_RING].value = SEEN_ATTACK | SEEN_SKILL          # the game reports the Skill too
+    cs.carry_turn_counters(previous)
+    play(cs)
+    assert cs.player.status_amount(StatusId.STRENGTH) == 1 and cs.player.status_amount(StatusId.DEXTERITY) == 1

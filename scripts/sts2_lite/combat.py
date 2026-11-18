@@ -228,7 +228,10 @@ class CombatState:
         for relic_id, relic in new.relics.items():
             kept = old.relics.get(relic_id)
             if kept is not None:
-                relic.value = kept.value        # Beating Remnant's damage so far this turn, the card types seen (Rainbow Ring)
+                if relic_id is RelicId.RAINBOW_RING:
+                    relic.value |= kept.value   # the types the bridge reports seen, plus any the sim saw (a missed play must not erase a reported one)
+                else:
+                    relic.value = kept.value    # Beating Remnant's damage so far this turn
                 if relic_id in PER_TURN_FLAG and kept.used:
                     relic.used = True
         self.cards_played = max(self.cards_played, previous.cards_played)
