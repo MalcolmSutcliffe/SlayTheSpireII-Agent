@@ -152,6 +152,7 @@ class StatusId(Enum):
     SPEED_POTION = auto()           # Speed Potion: the Dexterity it gave is lost when the turn ends
     STRATAGEM = auto()              # Stratagem: whenever the draw pile is shuffled, put `amount` cards of your choice from it into the hand
     POISON = auto()                 # at the start of its owner's turn: loses that much HP (unblockable), then 1 less Poison
+    HELICAL_DART = auto()           # Helical Dart (TemporaryDexterityPower): the Dexterity it gave is lost when the turn ends
     ANTICIPATE = auto()             # Anticipate (TemporaryDexterityPower): the Dexterity it gave is lost when the turn ends
     PIERCING_WAIL = auto()          # Piercing Wail (TemporaryStrengthPower, negative): the Strength it took comes back when the owner's turn ends
     ACCELERANT = auto()             # Poison on the enemies triggers this many extra times (PoisonPower.TriggerCount)
@@ -627,8 +628,8 @@ def _hello_world_on_turn_start(combat : CombatSimulator, owner : Creature, amoun
     """HelloWorldPower: a random common card of the character's pool joins the hand."""
     if _own(combat, owner):
         from sts2_lite.card import Card
-        from sts2_lite.card.tables import CARD_RARITY, GENERATABLE_CARDS, CardRarity
-        commons = [cid for cid in GENERATABLE_CARDS if CARD_RARITY[cid] == CardRarity.Common]
+        from sts2_lite.card.tables import CardRarity, combat_pool
+        commons = combat_pool(owner.character, rarity=CardRarity.Common)
         for _ in range(amount):
             owner.add_to_hand(Card.create_generated(rng.choice(commons)))
 
@@ -776,16 +777,19 @@ def _infinite_blades_before_hand_draw(combat : CombatSimulator, owner : Creature
 def _noxious_fumes_on_turn_start(combat : CombatSimulator, owner : Creature, amount : int):
     """NoxiousFumesPower.AfterSideTurnStart: Poison on every enemy."""
     if _own(combat, owner):
+        from sts2_lite.relic import poison_given      # the relic package imports this module
         for enemy in combat.combat_state.enemies:
             if enemy.current_hp > 0:
-                enemy.apply_status(StatusId.POISON, amount)
+                enemy.apply_status(StatusId.POISON, poison_given(owner, amount))
 
 def _calamity_on_card_played(combat : CombatSimulator, owner : Creature, amount : int, card):
     # every Attack played adds random Attacks to the hand
-    from sts2_lite.card import Card, CardType, INFERNAL_BLADE_POOL     # card.py imports this module
+    from sts2_lite.card import Card, CardType     # card.py imports this module
+    from sts2_lite.card.tables import combat_pool
     if card.type == CardType.Attack:
+        attacks = combat_pool(owner.character, CardType.Attack)
         for _ in range(amount):
-            owner.add_to_hand(Card.create_generated(rng.choice(INFERNAL_BLADE_POOL)))
+            owner.add_to_hand(Card.create_generated(rng.choice(attacks)))
 
 def _entropy_on_turn_start(combat : CombatSimulator, owner : Creature, amount : int):
     if _own(combat, owner):

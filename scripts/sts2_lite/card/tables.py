@@ -141,7 +141,7 @@ COLORLESS_CARDS = {
     CardId.JACKPOT : ("Jackpot", CardType.Attack, 3, A), CardId.CALAMITY : ("Calamity", CardType.Power, 3, S),
     CardId.JACK_OF_ALL_TRADES : ("Jack of All Trades", CardType.Skill, 0, S), CardId.CATASTROPHE : ("Catastrophe", CardType.Skill, 2, S),
     CardId.BEAT_DOWN : ("Beat Down", CardType.Skill, 3, RAND), CardId.ANOINTED : ("Anointed", CardType.Skill, 1, S),
-    CardId.DISCOVERY : ("Discovery", CardType.Skill, 1, S), CardId.ENTROPY : ("Entropy", CardType.Power, 1, S),
+    CardId.DISCOVERY : ("Discovery", CardType.Skill, 1, S), CardId.SPLASH : ("Splash", CardType.Skill, 1, S), CardId.ENTROPY : ("Entropy", CardType.Power, 1, S),
     CardId.HIDDEN_GEM : ("Hidden Gem", CardType.Skill, 1, S), CardId.ALCHEMIZE : ("Alchemize", CardType.Skill, 1, S),
     CardId.STRATAGEM : ("Stratagem", CardType.Power, 1, S),
 }
@@ -257,7 +257,11 @@ def transform_options(card : Card) -> list[CardId]:
     if card.type in (CardType.Status, CardType.Curse, CardType.Quest):
         return []
     colorless = card.card_id in COLORLESS_CARDS or card.card_id == CardId.NEOWS_FURY or card.card_id in ANCIENT_CARDS
-    return [cid for cid in (TRANSFORM_COLORLESS if colorless else GENERATABLE_CARDS) if cid != card.card_id]
+    if colorless:
+        pool = TRANSFORM_COLORLESS
+    else:
+        pool = TRANSFORM_POOLS[CARD_POOL_OF.get(card.card_id, "IRONCLAD")]
+    return [cid for cid in pool if cid != card.card_id]
 
 class CardRarity(Enum):
     """CardRarity of the game. Basic / Ancient / Event / Token / Status / Curse cards are never in a card reward pool."""
@@ -293,7 +297,7 @@ _RARITY_NAMES = {
         "FORGOTTEN_RITUAL HOWL_FROM_BEYOND INFERNAL_BLADE INFERNO PILLAGE RAMPAGE STOMP SALVO CRUELTY STRATAGEM"
     ),
     CardRarity.Rare : (
-        "ABRASIVE ADRENALINE AFTERIMAGE ASSASSINATE BLADE_OF_INK BULLET_TIME BURST CORROSIVE_WAVE ENVENOM FAN_OF_KNIVES GRAND_FINALE KNIFE_TRAP MALAISE MASTER_PLANNER MURDER NIGHTMARE OUTBREAK SERPENT_FORM SHADOW_STEP SHADOWMELD STORM_OF_STEEL THE_HUNT TOOLS_OF_THE_TRADE TRACKING WELL_LAID_PLANS "
+        "ABRASIVE ADRENALINE AFTERIMAGE ASSASSINATE BLADE_OF_INK BULLET_TIME BURST CORROSIVE_WAVE ENVENOM FAN_OF_KNIVES GRAND_FINALE KNIFE_TRAP MALAISE MASTER_PLANNER MURDER NIGHTMARE OUTBREAK SERPENT_FORM SHADOW_STEP SHADOWMELD STORM_OF_STEEL THE_HUNT TOOLS_OF_THE_TRADE TRACKING WELL_LAID_PLANS SPLASH "
         "CRIMSON_MANTLE IMPERVIOUS FEED AGGRESSION MASTER_OF_STRATEGY SCRAWL GOLD_AXE REND ETERNAL_ARMOR HAND_OF_GREED SECRET_TECHNIQUE "
         "SECRET_WEAPON ROLLING_BOULDER THE_GAMBIT MAYHEM NOSTALGIA BOLAS JACKPOT CALAMITY BEAT_DOWN ANOINTED ENTROPY HIDDEN_GEM ALCHEMIZE "
         "BARRICADE DOMINATE DARK_EMBRACE DEMON_FORM JUGGERNAUT ONE_TWO_PUNCH PYRE UNMOVABLE CASCADE CONFLAGRATION FIEND_FIRE NOT_YET "
@@ -333,6 +337,40 @@ INFERNAL_BLADE_POOL = [cid for cid, (_, card_type, _, _) in GENERATABLE_CARDS.it
 STOKE_POOL = list(GENERATABLE_CARDS)
 
 ZERO_COST_POOL = [cid for cid, (_, _, cost, _) in GENERATABLE_CARDS.items() if cost == 0]       # Jackpot: canonical cost 0, not X
+
+# CardFactory.FilterForCombat over Character.CardPool: what card effects generate in combat (Discovery, Attack Potion, Infernal Blade, Crossbow...).
+# Common to Rare cards of the character's pool, minus the ones with CanBeGeneratedInCombat => false.
+NOT_GENERATED_IN_COMBAT = frozenset({CardId.FEED, CardId.NOT_YET, CardId.NIGHTMARE, CardId.THE_HUNT})
+_GENERATED_RARITIES = (CardRarity.Common, CardRarity.Uncommon, CardRarity.Rare)
+COMBAT_CARDS = {
+    "IRONCLAD": GENERATABLE_CARDS,
+    "SILENT": {cid: v for cid, v in SILENT_CARDS.items() if CARD_RARITY[cid] in _GENERATED_RARITIES and cid not in NOT_GENERATED_IN_COMBAT},
+}
+
+
+def combat_cards(character : str = "IRONCLAD") -> dict:
+    """The character's combat-generatable cards (name, type, cost, target); the Ironclad's for a character the engine does not model."""
+    return COMBAT_CARDS.get(character.upper(), GENERATABLE_CARDS)
+
+
+def combat_pool(character : str = "IRONCLAD", card_type : CardType | None = None, rarity : CardRarity | None = None) -> list[CardId]:
+    return [cid for cid, (_, kind, _, _) in combat_cards(character).items()
+            if (card_type is None or kind == card_type) and (rarity is None or CARD_RARITY[cid] == rarity)]
+
+
+def zero_cost_pool(character : str = "IRONCLAD") -> list[CardId]:
+    """Jackpot: canonical cost 0, not X."""
+    return [cid for cid, (_, _, cost, _) in combat_cards(character).items() if cost == 0]
+
+
+# the character pool each card belongs to (CardModel.Pool), for transforms
+CARD_POOL_OF = {cid: name for name, table in CHARACTER_CARDS.items() for cid in table}
+TRANSFORM_POOLS = {name: [cid for cid in table if CARD_RARITY[cid] in _GENERATED_RARITIES] for name, table in CHARACTER_CARDS.items()}
+
+# Splash: Attacks of every character pool but the owner's (only the modelled characters' pools)
+def splash_pool(character : str = "IRONCLAD") -> list[CardId]:
+    others = [name for name in COMBAT_CARDS if name != character.upper()] or list(COMBAT_CARDS)
+    return [cid for name in others for cid in combat_pool(name, CardType.Attack)]
 
 # cards that return to the hand at the start of the next turn if they were played this one (BeforeHandDraw)
 RETURNING_CARDS = frozenset({CardId.BOLAS, CardId.THRUMMING_HATCHET})

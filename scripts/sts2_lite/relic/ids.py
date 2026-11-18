@@ -103,6 +103,10 @@ class RelicId(Enum):
     PAELS_LEGION = auto()
     REPTILE_TRINKET = auto()
     BELT_BUCKLE = auto()
+    HELICAL_DART = auto()
+    SNECKO_SKULL = auto()
+    TINGSHA = auto()
+    TOUGH_BANDAGES = auto()
 
 # What the bridge calls a relic's state (if it reports one) when `used` is true.
 # The game marks Vambrace, Unsettling Lamp and Burning Sticks "Active" until they trigger, and a spent Lizard Tail "Disabled".

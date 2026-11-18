@@ -13,7 +13,7 @@ from sts2_lite.card import TargetType, CardType, Card, CardId, CardKeyword, Ench
 from sts2_lite.damage import modify_damage, base_from_displayed, bases_from_displayed, EPSILON
 from sts2_lite import rng
 from sts2_lite.hooks import HookType
-from sts2_lite.relic import RelicId, dexterity_bonus, PER_TURN_FLAG, ALWAYS_REPORTED, take_extra_turn, after_card_played, release_card, fire_relics, blocks_play, PHILOSOPHERS_STONE_STRENGTH, upgraded_after_play, \
+from sts2_lite.relic import RelicId, poison_given, dexterity_bonus, PER_TURN_FLAG, ALWAYS_REPORTED, take_extra_turn, after_card_played, release_card, fire_relics, blocks_play, PHILOSOPHERS_STONE_STRENGTH, upgraded_after_play, \
     max_energy_gain, victory_heal
 
 from sts2_lite.status import StatusId, TICKS_DOWN, RESETS_EACH_TURN, STATUS_HANDLERS, AUTOMATION_CARDS, face_target, SLOTH_LIMIT, nemesis_toggle
@@ -887,7 +887,7 @@ class CombatSimulator:
         if wave is not None:                # CorrosiveWavePower.AfterCardDrawn: Poison on every enemy
             for enemy in self.combat_state.enemies:
                 if enemy.current_hp > 0:
-                    enemy.apply_status(StatusId.POISON, wave.amount)
+                    enemy.apply_status(StatusId.POISON, poison_given(player, wave.amount))
         speedster = player.status.get(StatusId.SPEEDSTER)
         if speedster is not None and not from_hand_draw:
             for enemy in self.combat_state.enemies:
@@ -1221,7 +1221,7 @@ class CombatSimulator:
             amount = creature.status.pop(marker, None)
             if amount is not None:
                 creature.apply_status(StatusId.STRENGTH, -sign * amount.amount, bypass_artifact=True)
-        for marker in (StatusId.SPEED_POTION, StatusId.ANTICIPATE):        # Speed Potion, Anticipate: their Dexterity
+        for marker in (StatusId.SPEED_POTION, StatusId.ANTICIPATE, StatusId.HELICAL_DART):        # Speed Potion, Anticipate, Helical Dart: their Dexterity
             speed = creature.status.pop(marker, None)
             if speed is not None:
                 creature.apply_status(StatusId.DEXTERITY, -speed.amount, bypass_artifact=True)

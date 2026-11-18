@@ -6,7 +6,8 @@ if TYPE_CHECKING:
 
 from sts2_lite import rng
 from sts2_lite.creature import Creature
-from sts2_lite.card import Card, CardId, CardType, CardKeyword, TargetType, CONFUSED_MAX_COST, EnchantmentId, SLITHER_MAX_COST, PLAIN_DAMAGE, GENERATABLE_CARDS
+from sts2_lite.card import Card, CardId, CardType, CardKeyword, TargetType, CONFUSED_MAX_COST, EnchantmentId, SLITHER_MAX_COST, PLAIN_DAMAGE
+from sts2_lite.card.tables import combat_cards
 
 BASIC_ATTACK_COSTS = {CardId.STRIKE_IRONCLAD: 1, CardId.BASH: 2, CardId.STRIKE_SILENT: 1}      # the starter Attacks are not in the generated-card table
 from sts2_lite.status import StatusInstance, StatusId, INSTANCED
@@ -58,6 +59,7 @@ class Player(Creature):
         self.skills_played_this_turn = 0  # Pinpoint
         self.shivs_played_this_turn = 0   # Phantom Blades
         self.discards_this_turn = 0       # cards discarded by effects this turn (Memento Mori)
+        self.character = "IRONCLAD"       # whose card pool combat effects generate from (Character.CardPool)
         self.nightmares = []              # (card, copies) Nightmare picked: they join the hand before the next hand draw
         self.plays_started_this_turn = 0  # Attack and Skill plays begun this turn, replays and auto-plays included (Nostalgia)
         self.returning = []               # (card id, upgraded) of the Bolas and Thrumming Hatchets played this turn: back in the hand next turn
@@ -78,6 +80,8 @@ class Player(Creature):
     def from_dict(cls, player : dict):
         pl = cls()
         pl.max_hp = player["max_hp"]
+        from sts2_lite.character import character_of_title
+        pl.character = character_of_title(player.get("character"))
         pl.current_hp = player["hp"]
         pl.block = player["block"]
         pl.gold = player.get("gold", 0)
@@ -152,7 +156,7 @@ class Player(Creature):
             if card.type != CardType.Attack or card.energy_cost != 0:
                 continue
             base = BASIC_ATTACK_COSTS.get(card.card_id)
-            if base is None and card.card_id in GENERATABLE_CARDS:
+            if base is None and card.card_id in combat_cards(self.character):
                 base = Card.create_generated(card.card_id, card.is_upgraded).energy_cost
             if base is not None and base != 0:
                 own = Card.create_copy(card)
@@ -166,7 +170,7 @@ class Player(Creature):
             if card.energy_cost != 0:
                 continue
             base = BASIC_ATTACK_COSTS.get(card.card_id) if card.type == CardType.Attack else None
-            if base is None and card.card_id in GENERATABLE_CARDS:
+            if base is None and card.card_id in combat_cards(self.character):
                 base = Card.create_generated(card.card_id, card.is_upgraded).energy_cost
             if base is None and card.card_id in (CardId.DEFEND_IRONCLAD, CardId.DEFEND_SILENT, CardId.SURVIVOR, CardId.SLIMED):
                 base = 1
@@ -253,6 +257,7 @@ class Player(Creature):
         new_pl.shivs_played_this_turn = player.shivs_played_this_turn
         new_pl.discards_this_turn = player.discards_this_turn
         new_pl.nightmares = list(player.nightmares)
+        new_pl.character = player.character
         new_pl.plays_started_this_turn = player.plays_started_this_turn
         new_pl.returning = list(player.returning)
         new_pl.card_blocks_this_turn = player.card_blocks_this_turn

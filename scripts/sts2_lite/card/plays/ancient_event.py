@@ -10,14 +10,14 @@ from sts2_lite.card.card import Card
 from sts2_lite.card.effects import PLAIN_DAMAGE, _attack, _gain_block, _vulnerable, temp_strength, apply_strangle
 from sts2_lite.card.constants import MAD_SCIENCE_BLOCK, MAD_SCIENCE_DAMAGE
 from sts2_lite.card.ids import CardId, CardType
-from sts2_lite.card.tables import GENERATABLE_CARDS, INFERNAL_BLADE_POOL
+from sts2_lite.card.tables import combat_pool
 
 if TYPE_CHECKING:
     from sts2_lite.combat import CombatSimulator
 
 def play_abundance(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     # three different Powers, Upgraded; the one picked joins the hand for free this turn (the game's own three are adopted)
-    powers = [cid for cid, (_, card_type, _, _) in GENERATABLE_CARDS.items() if card_type == CardType.Power]
+    powers = combat_pool(combat.combat_state.player.character, CardType.Power)
     combat.request_discovery([Card.create_generated(cid, True) for cid in rng.sample(powers, min(3, len(powers)))])
 
 def play_apotheosis(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
@@ -105,7 +105,8 @@ def play_enlightenment(card: Card, combat : CombatSimulator, target_index=0, is_
 def play_metamorphosis(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     """CardFactory.GetForCombat (repeats allowed): random Attacks from the pool, free this combat, each at a random place
     in the draw pile."""
-    made = [Card.create_generated(rng.choice(INFERNAL_BLADE_POOL)).free_this_combat()
+    attacks = combat_pool(combat.combat_state.player.character, CardType.Attack)
+    made = [Card.create_generated(rng.choice(attacks)).free_this_combat()
             for _ in range(METAMORPHOSIS_CARDS[is_upgraded])]
     for new_card in made:
         combat.combat_state.player.insert_into_draw_pile(new_card)
@@ -138,7 +139,7 @@ def play_caltrops(card: Card, combat : CombatSimulator, target_index=0, is_upgra
     combat.combat_state.player.apply_status(StatusId.THORNS, 5 if is_upgraded else 3)
 
 def play_distraction(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    skills = [cid for cid, (_, card_type, _, _) in GENERATABLE_CARDS.items() if card_type == CardType.Skill]
+    skills = combat_pool(combat.combat_state.player.character, CardType.Skill)
     combat.combat_state.player.add_to_hand(Card.create_generated(rng.choice(skills)).free_this_turn())
 
 def play_outmaneuver(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
@@ -203,7 +204,7 @@ def play_mad_science(card: Card, combat : CombatSimulator, target_index=0, is_up
         elif rider == "WISDOM":
             player.draw_cards(MAD_SCIENCE_DRAW)
         elif rider == "CHAOS":
-            player.add_to_hand(Card.create_generated(rng.choice(list(GENERATABLE_CARDS))).free_this_turn())
+            player.add_to_hand(Card.create_generated(rng.choice(combat_pool(player.character))).free_this_turn())
     else:
         if rider == "EXPERTISE":
             player.apply_status(StatusId.STRENGTH, MAD_SCIENCE_STAT)

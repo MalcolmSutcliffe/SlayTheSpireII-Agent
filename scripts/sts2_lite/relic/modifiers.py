@@ -110,6 +110,14 @@ def block_gained(owner : Creature, card : Card | None, amount : int):
 # ---
 # Debuffs a card puts on an enemy: Unsettling Lamp doubles every debuff of the first card that applies one, once per fight.
 # ---
+SNECKO_SKULL_POISON = 1
+
+def poison_given(owner : Creature | None, amount : int) -> int:
+    """SneckoSkull.ModifyPowerAmountGivenAdditive: Poison the owner applies is 1 more (before Unsettling Lamp doubles it)."""
+    if owner is not None and owner.relics and RelicId.SNECKO_SKULL in owner.relics:
+        return amount + SNECKO_SKULL_POISON
+    return amount
+
 def debuff_multiplier(owner : Creature, card : Card | None, target : Creature) -> int:
     lamp = owner.relics.get(RelicId.UNSETTLING_LAMP)
     if lamp is None or lamp.used or card is None or target is owner or target.current_hp <= 0:

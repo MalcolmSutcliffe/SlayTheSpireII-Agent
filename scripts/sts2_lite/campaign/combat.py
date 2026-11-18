@@ -67,7 +67,7 @@ def start_fight(run : RunState, encounter_id : str, room_type : str, game, final
         if relic["id"] in ("VENERABLE_TEA_SET", "FAKE_VENERABLE_TEA_SET") and relic.get("status") == "Active":
             relic["status"] = "Normal"
     energy = BASE_ENERGY + opening.energy_bonus()
-    me = {"hp": run.hp, "max_hp": run.max_hp, "block": 0, "gold": run.gold, "status": [], "hand": [], "draw_pile": cards, "discard_pile": [], "exhaust_pile": [],
+    me = {"character": run.character, "hp": run.hp, "max_hp": run.max_hp, "block": 0, "gold": run.gold, "status": [], "hand": [], "draw_pile": cards, "discard_pile": [], "exhaust_pile": [],
           "relics": relics, "potions": [dict(p, slot=i) for i, p in enumerate(run.potions)], "potion_slots": run.potion_slots, "energy": energy, "max_energy": energy}
     with game.scope("combat"):
         player = Player.from_dict(me)

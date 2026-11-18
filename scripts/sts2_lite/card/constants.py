@@ -134,7 +134,7 @@ CARD_ENERGY_COST_AND_TARGET : dict[CardId, tuple[int | str, TargetType]] = {
     CardId.TRACKING : (2, _S),
     CardId.WELL_LAID_PLANS : (2, _S),
     CardId.DEMON_FORM : (3, _S),
-    CardId.DISCOVERY : (1, _S),
+    CardId.DISCOVERY : (1, _S), CardId.SPLASH : (1, _S),
     CardId.DISMANTLE : (1, _A),
     CardId.DOMINATE : (1, _A),
     CardId.DRAMATIC_ENTRANCE : (0, _ALL),

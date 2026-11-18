@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
 
-from sts2_lite.relic import RelicId, block_gained, block_multiplier, debuff_multiplier
+from sts2_lite.relic import RelicId, block_gained, block_multiplier, debuff_multiplier, poison_given
 from sts2_lite.status import StatusId
 
 from sts2_lite.card.constants import ENCHANT_CORRUPTED_DAMAGE, ENCHANT_EMBER_DAMAGE, ENCHANT_INSTINCT_DAMAGE, MAD_SCIENCE_DAMAGE
@@ -115,6 +115,8 @@ def _debuff(combat : CombatSimulator, target : Creature, status : StatusId, amou
     """A debuff from the card being played (Unsettling Lamp doubles it)."""
     player = combat.combat_state.player
     if player.relics:
+        if status is StatusId.POISON:
+            amount = poison_given(player, amount)
         amount *= debuff_multiplier(player, combat.card_in_play, target)
     target.apply_status(status, amount)
 

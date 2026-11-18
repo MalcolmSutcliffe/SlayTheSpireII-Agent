@@ -960,7 +960,7 @@ def test_spiked_gauntlets_capture_inflame_spends_the_shown_cost():
 @pytest.mark.parametrize("relics, extra", [((), 0), ((RelicId.SPIKED_GAUNTLETS,), 1)])
 def test_spiked_gauntlets_powers_made_by_stoke_cost_one_more(monkeypatch, relics, extra):
     import sts2_lite.card.plays.ironclad as ironclad_plays
-    monkeypatch.setattr(ironclad_plays, "STOKE_POOL", [CardId.INFLAME])
+    monkeypatch.setattr(ironclad_plays, "combat_pool", lambda *a, **k: [CardId.INFLAME])
     cs = state([card(CardId.STOKE, 1, CardType.Skill, TargetType.Self), defend()], *relics)
     CombatSimulator(cs).play_card(0, 0)
     made = next(c for c in cs.player.hand if c.card_id is CardId.INFLAME)

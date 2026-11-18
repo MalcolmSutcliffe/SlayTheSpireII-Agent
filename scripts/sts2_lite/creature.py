@@ -6,7 +6,7 @@ if TYPE_CHECKING:
 
 from sts2_lite.status import StatusInstance, StatusId, is_debuff
 from sts2_lite.card import Card, CardId
-from sts2_lite.relic import RelicId, STURDY_CLAMP_BLOCK, modify_hp_loss, dealt_hp_loss, after_damage_given
+from sts2_lite.relic import RelicId, STURDY_CLAMP_BLOCK, modify_hp_loss, dealt_hp_loss, after_damage_given, poison_given
 
 # powers that do not stack (PowerStackType.Single)
 SINGLE_STACK = frozenset({StatusId.SMOGGY})
@@ -130,7 +130,7 @@ class Creature:
         if damage > 0:
             self._lose_hp_from_damage(damage, dealer, powered)
             if powered and dealer is not None and dealer is not self and StatusId.ENVENOM in dealer.status:
-                self.apply_status(StatusId.POISON, dealer.status[StatusId.ENVENOM].amount)       # EnvenomPower.AfterDamageGiven
+                self.apply_status(StatusId.POISON, poison_given(dealer, dealer.status[StatusId.ENVENOM].amount))       # EnvenomPower.AfterDamageGiven
         if dealer is not None and dealer.relics and dealer is not self:
             after_damage_given(dealer, self, broken)
         if powered and dealer is not None and hp_before > self.current_hp and StatusId.PAPER_CUTS in dealer.status:

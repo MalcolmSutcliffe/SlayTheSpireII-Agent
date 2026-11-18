@@ -305,6 +305,7 @@ class CardId(Enum):
     TOOLS_OF_THE_TRADE = auto()
     TRACKING = auto()
     WELL_LAID_PLANS = auto()
+    SPLASH = auto()
 
 class CardKeyword(Enum):
     """Entities.Cards.CardKeyword (None omitted). Values are bits: cards store keywords as an int mask (Enum hashing is slow)."""

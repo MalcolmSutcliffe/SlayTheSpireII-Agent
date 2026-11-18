@@ -130,7 +130,7 @@ POOL = [
     ('RED_SKULL', 'Common', True, False, 'ironclad'),
     ('RUINED_HELMET', 'Rare', True, False, 'ironclad'),
     ('SELF_FORMING_CLAY', 'Uncommon', True, False, 'ironclad'),
-    ('HELICAL_DART', 'Rare', True, False, 'silent'),          # SilentRelicPool (only Ring of the Snake acts in the sim so far)
+    ('HELICAL_DART', 'Rare', True, False, 'silent'),          # SilentRelicPool
     ('NINJA_SCROLL', 'Shop', True, False, 'silent'),
     ('PAPER_KRANE', 'Rare', True, False, 'silent'),
     ('RING_OF_THE_SNAKE', 'Starter', True, False, 'silent'),
