@@ -108,6 +108,31 @@ CARD_ENERGY_COST_AND_TARGET : dict[CardId, tuple[int | str, TargetType]] = {
     CardId.STRANGLE : (1, _A),
     CardId.TACTICIAN : (3, _S),
     CardId.UP_MY_SLEEVE : (2, _S),
+    CardId.ABRASIVE : (3, _S),
+    CardId.ADRENALINE : (0, _S),
+    CardId.AFTERIMAGE : (1, _S),
+    CardId.ASSASSINATE : (0, _A),
+    CardId.BLADE_OF_INK : (1, _S),
+    CardId.BULLET_TIME : (3, _S),
+    CardId.BURST : (1, _S),
+    CardId.CORROSIVE_WAVE : (1, _S),
+    CardId.ENVENOM : (2, _S),
+    CardId.FAN_OF_KNIVES : (2, _S),
+    CardId.GRAND_FINALE : (0, _ALL),
+    CardId.KNIFE_TRAP : (2, _A),
+    CardId.MALAISE : ('X', _A),
+    CardId.MASTER_PLANNER : (2, _S),
+    CardId.MURDER : (3, _A),
+    CardId.NIGHTMARE : (3, _S),
+    CardId.OUTBREAK : (3, _ALL),
+    CardId.SERPENT_FORM : (3, _S),
+    CardId.SHADOW_STEP : (1, _S),
+    CardId.SHADOWMELD : (1, _S),
+    CardId.STORM_OF_STEEL : (1, _S),
+    CardId.THE_HUNT : (1, _A),
+    CardId.TOOLS_OF_THE_TRADE : (1, _S),
+    CardId.TRACKING : (2, _S),
+    CardId.WELL_LAID_PLANS : (2, _S),
     CardId.DEMON_FORM : (3, _S),
     CardId.DISCOVERY : (1, _S),
     CardId.DISMANTLE : (1, _A),
@@ -248,6 +273,16 @@ UPGRADE_COST_CHANGE = {
     CardId.AUTOMATION : -1, CardId.MAYHEM : -1, CardId.NOSTALGIA : -1, CardId.CALAMITY : -1,
     CardId.APOTHEOSIS : -1, CardId.ABUNDANCE : -1, CardId.ALCHEMIZE : -1, CardId.ENTRENCH : -1, CardId.DISTRACTION : -1,
     CardId.STRATAGEM : -1,
+    CardId.BULLET_TIME : -1,
+    CardId.MASTER_PLANNER : -1,
+    CardId.MURDER : -1,
+    CardId.NIGHTMARE : -1,
+    CardId.SHADOW_STEP : -1,
+    CardId.SHADOWMELD : -1,
+    CardId.TOOLS_OF_THE_TRADE : -1,
+    CardId.TRACKING : -1,
+    CardId.WELL_LAID_PLANS : -1,
+
 }
 
 # CardModel base cost of the cards above (an upgrade caps a rolled Confused cost at base + change)
@@ -258,20 +293,30 @@ UPGRADE_BASE_COST = {
     CardId.AUTOMATION : 1, CardId.MAYHEM : 2, CardId.NOSTALGIA : 1, CardId.CALAMITY : 3,
     CardId.APOTHEOSIS : 2, CardId.ABUNDANCE : 1, CardId.ALCHEMIZE : 1, CardId.ENTRENCH : 2, CardId.DISTRACTION : 1,
     CardId.STRATAGEM : 1,
+    CardId.BULLET_TIME : 3,
+    CardId.MASTER_PLANNER : 2,
+    CardId.MURDER : 3,
+    CardId.NIGHTMARE : 3,
+    CardId.SHADOW_STEP : 1,
+    CardId.SHADOWMELD : 1,
+    CardId.TOOLS_OF_THE_TRADE : 1,
+    CardId.TRACKING : 2,
+    CardId.WELL_LAID_PLANS : 2,
+
 }
 
 # keyword an upgrade removes (Exhaust)
 UPGRADE_REMOVED_KEYWORD = {CardId.SECRET_TECHNIQUE : 1, CardId.SECRET_WEAPON : 1, CardId.THINKING_AHEAD : 1, CardId.PROLONG : 1, CardId.DISCOVERY : 1, CardId.APPARITION : 2, CardId.MIRAGE : 1}      # Exhaust x5, Ethereal for Apparition
 
 # keyword an upgrade adds
-UPGRADE_KEYWORD = {CardId.HELLO_WORLD : 4, CardId.MAD_SCIENCE : 4, CardId.SCRAWL : 16, CardId.GOLD_AXE : 16, CardId.ANOINTED : 16, CardId.ENTROPY : 4, CardId.WISH : 16, CardId.AGGRESSION : 4, CardId.JUGGLING : 4, CardId.CALCULATED_GAMBLE : 16, CardId.INFINITE_BLADES : 4, CardId.SPEEDSTER : 4}       # Retain, Retain, Retain, Innate (Entropy, Aggression, Juggling), Retain
+UPGRADE_KEYWORD = {CardId.HELLO_WORLD : 4, CardId.MAD_SCIENCE : 4, CardId.SCRAWL : 16, CardId.GOLD_AXE : 16, CardId.ANOINTED : 16, CardId.ENTROPY : 4, CardId.WISH : 16, CardId.AGGRESSION : 4, CardId.JUGGLING : 4, CardId.CALCULATED_GAMBLE : 16, CardId.INFINITE_BLADES : 4, CardId.SPEEDSTER : 4, CardId.AFTERIMAGE : 4}       # Retain, Retain, Retain, Innate (Entropy, Aggression, Juggling), Retain
 
 CONFUSED_MAX_COST = 3
 
 _EXHAUST, _ETHEREAL, _INNATE, _UNPLAYABLE, _RETAIN, _SLY, _ETERNAL, _REPLAY = 1, 2, 4, 8, 16, 32, 64, 128
 
 # cards with the Exhaust keyword
-EXHAUSTING_CARDS = frozenset({CardId.BACKSTAB, CardId.CALCULATED_GAMBLE, CardId.EXPOSE, CardId.MIRAGE, CardId.SLIMED, CardId.TREMBLE, CardId.IMPERVIOUS, CardId.MOLTEN_FIST,
+EXHAUSTING_CARDS = frozenset({CardId.ADRENALINE, CardId.ASSASSINATE, CardId.MALAISE, CardId.NIGHTMARE, CardId.THE_HUNT, CardId.BACKSTAB, CardId.CALCULATED_GAMBLE, CardId.EXPOSE, CardId.MIRAGE, CardId.SLIMED, CardId.TREMBLE, CardId.IMPERVIOUS, CardId.MOLTEN_FIST,
                               CardId.TOXIC, CardId.FEED, CardId.DOMINATE, CardId.FIEND_FIRE, CardId.FORGOTTEN_RITUAL,
                               CardId.INFERNAL_BLADE, CardId.NOT_YET, CardId.OFFERING, CardId.SPORE_MIND,
                               CardId.PRODUCTION, CardId.MASTER_OF_STRATEGY, CardId.DRAMATIC_ENTRANCE, CardId.SHOCKWAVE,
@@ -300,9 +345,9 @@ ETHEREAL_CARDS = frozenset({CardId.APPARITION, CardId.DAZED, CardId.CLUMSY, Card
 RETAINING_CARDS = frozenset({CardId.POOR_SLEEP, CardId.RESTLESSNESS, CardId.PURITY, CardId.LUMINESCE, CardId.SNAKEBITE})
 
 # cards with the Sly keyword: discarded by an effect, they play themselves for free (CardCmd.DiscardAndDraw)
-SLY_CARDS = frozenset({CardId.FLICK_FLACK, CardId.RICOCHET, CardId.UNTOUCHABLE, CardId.REFLEX, CardId.TACTICIAN})
+SLY_CARDS = frozenset({CardId.FLICK_FLACK, CardId.RICOCHET, CardId.UNTOUCHABLE, CardId.REFLEX, CardId.TACTICIAN, CardId.ABRASIVE})
 
-INNATE_CARDS = frozenset({CardId.BACKSTAB, CardId.APOTHEOSIS, CardId.WRITHE, CardId.FOLLY, CardId.DRAMATIC_ENTRANCE, CardId.MIND_BLAST})
+INNATE_CARDS = frozenset({CardId.ASSASSINATE, CardId.BACKSTAB, CardId.APOTHEOSIS, CardId.WRITHE, CardId.FOLLY, CardId.DRAMATIC_ENTRANCE, CardId.MIND_BLAST})
 
 ETERNAL_CARDS = frozenset({CardId.BAD_LUCK, CardId.ASCENDERS_BANE, CardId.CURSE_OF_THE_BELL, CardId.GREED, CardId.FOLLY, CardId.ENTHRALLED})
 

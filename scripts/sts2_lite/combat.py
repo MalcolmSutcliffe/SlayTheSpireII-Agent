@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 from sts2_lite.creature import Creature
 from sts2_lite.player import Player
 from sts2_lite.enemy import Enemy
-from sts2_lite.card import TargetType, CardType, Card, CardId, CardKeyword, STRIKE_CARDS, NORMALITY_CARD_LIMIT, CHANGED_ON_PLAY, MAX_HAND_SIZE, RETURNING_CARDS, transform_options
+from sts2_lite.card import TargetType, CardType, Card, CardId, CardKeyword, EnchantmentId, STRIKE_CARDS, NORMALITY_CARD_LIMIT, CHANGED_ON_PLAY, MAX_HAND_SIZE, RETURNING_CARDS, transform_options
 from sts2_lite.damage import modify_damage, base_from_displayed, bases_from_displayed, EPSILON
 from sts2_lite import rng
 from sts2_lite.hooks import HookType
@@ -217,6 +217,9 @@ class CombatState:
             return
         old, new = previous.player, self.player
         new.attacks_played_this_turn = old.attacks_played_this_turn
+        new.skills_played_this_turn = old.skills_played_this_turn          # Pinpoint
+        new.shivs_played_this_turn = old.shivs_played_this_turn            # Phantom Blades
+        new.discards_this_turn = old.discards_this_turn                    # Memento Mori
         new.plays_started_this_turn = old.plays_started_this_turn
         new.returning = list(old.returning)
         new.card_blocks_this_turn = old.card_blocks_this_turn
@@ -302,6 +305,9 @@ class CombatState:
         if not self.hp_loss_read:
             new.hp_loss_events = max(new.hp_loss_events, old.hp_loss_events)
         new.cards_played_total = max(new.cards_played_total, old.cards_played_total)
+        new.cards_drawn = max(new.cards_drawn, old.cards_drawn)        # Murder
+        if StatusId.NIGHTMARE in new.status and old.nightmares:
+            new.nightmares = list(old.nightmares)                       # the bridge shows only the amount, not the card picked
         for relic_id, relic in new.relics.items():
             kept = old.relics.get(relic_id)
             if kept is not None and kept.used and relic_id not in PER_TURN_FLAG and relic_id not in ALWAYS_REPORTED:
@@ -610,13 +616,17 @@ class CombatSimulator:
         if sly:
             self._run_autoplay(sly)
 
-    def create_shivs(self, count : int, upgraded : bool = False):
-        """Shiv.CreateInHand (a full hand sends them to the discard pile); with Phantom Blades they have Retain."""
+    def create_shivs(self, count : int, upgraded : bool = False, enchantment : EnchantmentId | None = None):
+        """Shiv.CreateInHand (a full hand sends them to the discard pile); with Phantom Blades they have Retain, with Fan of Knives they hit every enemy."""
         player = self.combat_state.player
         for _ in range(count):
             shiv = Card.create_generated(CardId.SHIV, upgraded)
             if StatusId.PHANTOM_BLADES in player.status:
                 shiv = shiv.with_keyword(CardKeyword.RETAIN)
+            if StatusId.FAN_OF_KNIVES in player.status:
+                shiv.target_type = TargetType.AllEnemies
+            if enchantment is not None:
+                shiv.enchantment, shiv.enchant_amount = enchantment, 1     # Blade of Ink: Inky
             player.add_to_hand(shiv)
 
     def request_discovery(self, offers : list[Card]):
@@ -737,6 +747,9 @@ class CombatSimulator:
                 self.request_choice("discard_any", list(range(len(player.hand))), "hand", choice.amount + 1)
             else:
                 player.draw_cards(choice.amount + 1)
+        elif choice.kind == "nightmare":           # Nightmare: 3 copies of the pick join the hand before the next hand draw
+            player.nightmares = player.nightmares + [(Card.create_copy(card), 3)]
+            player.apply_status(StatusId.NIGHTMARE, 3)
         elif choice.kind == "sly":                 # Hand Trick: a Skill in hand gets Sly this turn
             player.hand[index] = card.with_turn_keyword(CardKeyword.SLY)
         elif choice.kind == "free_card":            # Touch of Insanity: free for the rest of the combat
@@ -870,6 +883,11 @@ class CombatSimulator:
     def _card_drawn(self, card : Card, from_hand_draw : bool = False):
         """Automation counts every card drawn; Hellraiser plays a Strike the moment it is drawn; Speedster hits every enemy for a draw outside the hand draw."""
         player = self.combat_state.player
+        wave = player.status.get(StatusId.CORROSIVE_WAVE)
+        if wave is not None:                # CorrosiveWavePower.AfterCardDrawn: Poison on every enemy
+            for enemy in self.combat_state.enemies:
+                if enemy.current_hp > 0:
+                    enemy.apply_status(StatusId.POISON, wave.amount)
         speedster = player.status.get(StatusId.SPEEDSTER)
         if speedster is not None and not from_hand_draw:
             for enemy in self.combat_state.enemies:
@@ -935,6 +953,8 @@ class CombatSimulator:
     def _finish_card_play(self, card : Card, hp_loss_mark : int, force_exhaust : bool = False, dupe : bool = False, to_top : bool = False):
         player = self.combat_state.player
         self.card_played_hooks(card)
+        if card.type == CardType.Skill and StatusId.MASTER_PLANNER in player.status:
+            card = card.with_keyword(CardKeyword.SLY)       # MasterPlannerPower.AfterCardPlayed: Sly for good
         if player.relics:
             card = upgraded_after_play(player, card)        # Razor Tooth
         if not dupe:
@@ -944,8 +964,8 @@ class CombatSimulator:
         self.resolve_deaths()
         self._check_is_over()
 
-    def auto_play(self, card : Card, force_exhaust : bool = False, dupe : bool = False, x_value : int | None = None):
-        """Play a card from any pile for free, at a random target if it needs one. A dupe (CardModel.CreateDupe) is
+    def auto_play(self, card : Card, force_exhaust : bool = False, dupe : bool = False, x_value : int | None = None, target_index : int | None = None):
+        """Play a card from any pile for free, at `target_index` (Knife Trap) or a random target if it needs one. A dupe (CardModel.CreateDupe) is
         in no pile afterwards."""
         cs = self.combat_state
         player = cs.player
@@ -953,7 +973,7 @@ class CombatSimulator:
         if card.target_type == TargetType.AnyEnemy:
             if not living:
                 return
-            target = rng.pick_target(living)
+            target = target_index if target_index in living else rng.pick_target(living)
         else:
             target = 0
         self._face_target(card, target)
@@ -1055,7 +1075,7 @@ class CombatSimulator:
                 from sts2_lite.relic.combat_start import request_opening_choice
                 request_opening_choice(self, args[0])
             elif kind == "enchant":
-                args[0]._enchantment_on_play(self)
+                args[0]._enchantment_on_play(self, *args[1:])
             elif kind == "random":
                 self.play_random_from_draw_pile(args[0])
             elif kind == "draw":
@@ -1229,7 +1249,7 @@ class CombatSimulator:
                 self.fire(HookType.CARD_EXHAUSTED, card)
                 self.ethereal_exhaust = False
                 exhausted += 1
-        keeps_hand = RelicId.RUNIC_PYRAMID in player.relics or StatusId.RETAIN_HAND in player.status or (
+        keeps_hand = RelicId.RUNIC_PYRAMID in player.relics or StatusId.RETAIN_HAND in player.status or StatusId.WELL_LAID_PLANS in player.status or (
             RelicId.RINGING_TRIANGLE in player.relics and self.combat_state.player_turn <= 1)    # Hook.ShouldFlush
         if not keeps_hand:
             player.discard_pile.extend(c for c in player.hand if not c.retains)    # Ringing Triangle keeps the hand after the first turn
@@ -1494,4 +1514,6 @@ class CombatSimulator:
         block = initial_block + owner.status_amount(StatusId.DEXTERITY) + (dexterity_bonus(owner) if owner.relics else 0)
         if StatusId.FRAIL in owner.status:
             block *= 0.75
+        if StatusId.SHADOWMELD in owner.status:
+            block *= 2 ** owner.status[StatusId.SHADOWMELD].amount      # ShadowmeldPower.ModifyBlockMultiplicative
         return max(0, int(block * multiplier + EPSILON))

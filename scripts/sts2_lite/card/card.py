@@ -532,7 +532,8 @@ class Card:
         from sts2_lite.card.plays.registry import GET_CARD_FUNCTION
         play = GET_CARD_FUNCTION[self.card_id]
         saved = snapshot(player) if player.relics else None
-        punch = player.status.get(StatusId.ONE_TWO_PUNCH) if self.type == CardType.Attack else None
+        punch = (player.status.get(StatusId.ONE_TWO_PUNCH) if self.type == CardType.Attack
+                 else player.status.get(StatusId.BURST) if self.type == CardType.Skill else None)      # BurstPower: Skills, like One-Two Punch for Attacks
         x = None
         counted = self.type == CardType.Attack or self.type == CardType.Skill
         if counted:
@@ -551,7 +552,7 @@ class Card:
                 if not free:
                     combat.combat_state.energy = 0
                 play(self, combat, target_index, self.is_upgraded, x)
-                self._enchantment_on_play(combat)
+                self._enchantment_on_play(combat, target_index)
             else:
                 spent = cost
                 if free_attack_amount > 0:
@@ -562,7 +563,7 @@ class Card:
                     before_card_played(combat, self, spent)
                 combat.combat_state.energy -= cost
                 play(self, combat, target_index, self.is_upgraded)
-                self._enchantment_on_play(combat)
+                self._enchantment_on_play(combat, target_index)
         except ValueError:
             combat.combat_state.energy = energy
             if self.bound:
@@ -576,7 +577,7 @@ class Card:
             combat.vigor_pending = None
             if punch is not None:
                 punch.amount += 1
-                player.status[StatusId.ONE_TWO_PUNCH] = punch
+                player.status[punch.status_id] = punch
             raise
         combat.finish_vigor()
 
@@ -597,14 +598,14 @@ class Card:
             self._replay(combat, target_index, x)
             combat.finish_vigor()           # each play is its own attack command
 
-    def _enchantment_on_play(self, combat : CombatSimulator):
+    def _enchantment_on_play(self, combat : CombatSimulator, target_index : int = 0):
         """EnchantmentModel.OnPlay: after the card's own effects, once for every play (replays included)."""
         enchantment = self.enchantment
         if enchantment is None:
             return
         cs = combat.combat_state
         if cs.pending_choice is not None:        # the card's own choice is still open (Secret Weapon): the enchantment comes after the answer, before the after-play step
-            cs.continuations = [("enchant", self)] + cs.continuations
+            cs.continuations = [("enchant", self, target_index)] + cs.continuations
             return
         player = cs.player
         amount = self.enchant_amount
@@ -616,6 +617,14 @@ class Card:
             self.enchant_bonus += amount
         elif enchantment == EnchantmentId.GLAM:
             self._keywords = self._mask & ~_REPLAY          # Replay is spent
+        elif enchantment == EnchantmentId.INKY:             # Inky.OnPlay: 1 Weak on the target (every enemy for an all-enemies card)
+            from sts2_lite.card.effects import _weak
+            from sts2_lite.helpers import living_enemies
+            enemies = cs.enemies
+            targets = living_enemies(combat) if self.target_type == TargetType.AllEnemies else \
+                [enemies[target_index]] if 0 <= target_index < len(enemies) and enemies[target_index].current_hp > 0 else []
+            for target in targets:
+                _weak(combat, target, 1)
         elif enchantment == EnchantmentId.GOOPY:
             self.enchant_amount += 1                        # the amount is the card's permanent block gain + 1
         elif enchantment in CONSUMED_ON_PLAY and amount > 0:    # spent: the game keeps the enchantment with amount 0
@@ -632,7 +641,7 @@ class Card:
             extra += 1
             punch.amount -= 1
             if punch.amount <= 0:
-                del player.status[StatusId.ONE_TWO_PUNCH]
+                del player.status[punch.status_id]
         extra += self.replay
         if StatusId.DUPLICATION in player.status:        # Duplicator Potion: the next card this turn, once
             extra += 1
@@ -656,7 +665,7 @@ class Card:
             GET_CARD_FUNCTION[self.card_id](self, combat, target_index, self.is_upgraded)
         else:
             GET_CARD_FUNCTION[self.card_id](self, combat, target_index, self.is_upgraded, x)
-        self._enchantment_on_play(combat)
+        self._enchantment_on_play(combat, target_index)
 
     def can_play_card(self, combat : CombatSimulator, target_index):
         """Whether the card can be played now. The target is not read: a card is playable at every enemy or at none."""
@@ -667,6 +676,8 @@ class Card:
         ctype = self.type
         if self.card_id is _CLASH and any(c.type is not _ATTACK for c in player.hand):
             return False            # Clash: only while the hand holds nothing but Attacks
+        if self.card_id is CardId.GRAND_FINALE and player.draw_pile:
+            return False            # Grand Finale: only with an empty draw pile
         if ctype is _SKILL and player.smogged:
             return False            # Smoggy: afflicted with Smog
         if self.bound and player.bound_played:

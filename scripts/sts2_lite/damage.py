@@ -59,6 +59,10 @@ def modify_damage(base : int, attacker : Creature, target : Creature, card : Car
         damage *= SOAR_MULTIPLIER
     if StatusId.SURROUNDED in target.status and attacks_from_behind(attacker, target):
         damage *= SURROUND_MULTIPLIER
+    if card is not None and StatusId.DOUBLE_DAMAGE in attacker.status:
+        damage *= 2                         # DoubleDamagePower (Shadow Step)
+    if card is not None and StatusId.TRACKING in attacker.status and StatusId.WEAK in target.status:
+        damage *= 1 + attacker.status[StatusId.TRACKING].amount / 100       # TrackingPower
     if StatusId.GIGANTIFICATION in attacker.status and card is not None and card.type.name == "Attack":
         damage *= GIGANTIFICATION_MULTIPLIER
     if StatusId.SHRINK in attacker.status:

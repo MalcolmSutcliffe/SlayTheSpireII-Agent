@@ -206,6 +206,31 @@ SILENT_CARDS = {
     CardId.STRANGLE : ("Strangle", CardType.Attack, 1, A),
     CardId.TACTICIAN : ("Tactician", CardType.Skill, 3, S),
     CardId.UP_MY_SLEEVE : ("Up My Sleeve", CardType.Skill, 2, S),
+    CardId.ABRASIVE : ("Abrasive", CardType.Power, 3, S),
+    CardId.ADRENALINE : ("Adrenaline", CardType.Skill, 0, S),
+    CardId.AFTERIMAGE : ("Afterimage", CardType.Power, 1, S),
+    CardId.ASSASSINATE : ("Assassinate", CardType.Attack, 0, A),
+    CardId.BLADE_OF_INK : ("Blade of Ink", CardType.Skill, 1, S),
+    CardId.BULLET_TIME : ("Bullet Time", CardType.Skill, 3, S),
+    CardId.BURST : ("Burst", CardType.Skill, 1, S),
+    CardId.CORROSIVE_WAVE : ("Corrosive Wave", CardType.Skill, 1, S),
+    CardId.ENVENOM : ("Envenom", CardType.Power, 2, S),
+    CardId.FAN_OF_KNIVES : ("Fan of Knives", CardType.Power, 2, S),
+    CardId.GRAND_FINALE : ("Grand Finale", CardType.Attack, 0, ALL),
+    CardId.KNIFE_TRAP : ("Knife Trap", CardType.Skill, 2, A),
+    CardId.MALAISE : ("Malaise", CardType.Skill, 'X', A),
+    CardId.MASTER_PLANNER : ("Master Planner", CardType.Power, 2, S),
+    CardId.MURDER : ("Murder", CardType.Attack, 3, A),
+    CardId.NIGHTMARE : ("Nightmare", CardType.Skill, 3, S),
+    CardId.OUTBREAK : ("Outbreak", CardType.Skill, 3, ALL),
+    CardId.SERPENT_FORM : ("Serpent Form", CardType.Power, 3, S),
+    CardId.SHADOW_STEP : ("Shadow Step", CardType.Skill, 1, S),
+    CardId.SHADOWMELD : ("Shadowmeld", CardType.Skill, 1, S),
+    CardId.STORM_OF_STEEL : ("Storm of Steel", CardType.Skill, 1, S),
+    CardId.THE_HUNT : ("The Hunt", CardType.Attack, 1, A),
+    CardId.TOOLS_OF_THE_TRADE : ("Tools of the Trade", CardType.Power, 1, S),
+    CardId.TRACKING : ("Tracking", CardType.Power, 2, S),
+    CardId.WELL_LAID_PLANS : ("Well-Laid Plans", CardType.Power, 2, S),
 }
 
 # Ancient cards the sim could not read from the decompiled source (name, type, cost, target)
@@ -268,6 +293,7 @@ _RARITY_NAMES = {
         "FORGOTTEN_RITUAL HOWL_FROM_BEYOND INFERNAL_BLADE INFERNO PILLAGE RAMPAGE STOMP SALVO CRUELTY STRATAGEM"
     ),
     CardRarity.Rare : (
+        "ABRASIVE ADRENALINE AFTERIMAGE ASSASSINATE BLADE_OF_INK BULLET_TIME BURST CORROSIVE_WAVE ENVENOM FAN_OF_KNIVES GRAND_FINALE KNIFE_TRAP MALAISE MASTER_PLANNER MURDER NIGHTMARE OUTBREAK SERPENT_FORM SHADOW_STEP SHADOWMELD STORM_OF_STEEL THE_HUNT TOOLS_OF_THE_TRADE TRACKING WELL_LAID_PLANS "
         "CRIMSON_MANTLE IMPERVIOUS FEED AGGRESSION MASTER_OF_STRATEGY SCRAWL GOLD_AXE REND ETERNAL_ARMOR HAND_OF_GREED SECRET_TECHNIQUE "
         "SECRET_WEAPON ROLLING_BOULDER THE_GAMBIT MAYHEM NOSTALGIA BOLAS JACKPOT CALAMITY BEAT_DOWN ANOINTED ENTROPY HIDDEN_GEM ALCHEMIZE "
         "BARRICADE DOMINATE DARK_EMBRACE DEMON_FORM JUGGERNAUT ONE_TWO_PUNCH PYRE UNMOVABLE CASCADE CONFLAGRATION FIEND_FIRE NOT_YET "

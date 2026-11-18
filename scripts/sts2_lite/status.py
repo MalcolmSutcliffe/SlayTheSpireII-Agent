@@ -161,6 +161,21 @@ class StatusId(Enum):
     PHANTOM_BLADES = auto()         # Shivs have Retain; the first Shiv played each turn deals this much more damage
     SPEEDSTER = auto()              # every card drawn outside the hand draw: this much damage to every enemy (Unpowered)
     FREE_SKILL = auto()             # Pounce: the next Skill played costs 0
+    AFTERIMAGE = auto()             # after each card played: this much block (what it had when the play began)
+    BURST = auto()                  # the next this-many Skills this turn are played twice
+    CORROSIVE_WAVE = auto()         # this turn, every card drawn: this much Poison on every enemy
+    ENVENOM = auto()                # attack damage that gets through block also Poisons, this much
+    FAN_OF_KNIVES = auto()          # Shivs hit every enemy
+    MASTER_PLANNER = auto()         # a Skill played gains Sly for good
+    NIGHTMARE = auto()              # before the next hand draw: copies of the picked card (Player.nightmares) join the hand
+    SERPENT_FORM = auto()           # after each card played: this much damage to a random enemy (Unpowered)
+    SHADOW_STEP = auto()            # at the start of the next turn: this much Double Damage
+    SHADOWMELD = auto()             # this turn, block gained is doubled (x2 per stack)
+    TOOLS_OF_THE_TRADE = auto()     # draw this many more each turn, then discard as many
+    TRACKING = auto()               # attacks on a Weak enemy deal (100 + this)% damage
+    WELL_LAID_PLANS = auto()        # the hand is not discarded at the end of the turn
+    THE_HUNT = auto()               # The Hunt killed: an extra card reward (marker)
+    DOUBLE_DAMAGE = auto()          # attacks from cards deal double damage; 1 less at the end of each of the owner's turns
 
 INFESTED_SPAWNS = 4
 CRAB_RAGE_STRENGTH, CRAB_RAGE_BLOCK = 6, 99
@@ -346,13 +361,10 @@ def _smoggy_on_player_turn_ended(combat : CombatSimulator, owner : Creature, amo
 
 def _strangle_on_card_played(combat : CombatSimulator, owner : Creature, amount : int, card):
     """StranglePower.AfterCardPlayed: the owner loses (Unblockable | Unpowered) the amount it had when the play began, so the card that applied
-    or stacked it does not count what it added (apply_strangle notes that in records)."""
-    inst = owner.status.get(StatusId.STRANGLE)
-    fresh = inst.records[0][0] if inst is not None and inst.records else 0
-    if inst is not None and inst.records:
-        inst.records = []
-    if amount - fresh > 0:
-        owner.lose_hp(amount - fresh)
+    or stacked it does not count what it added (apply_fresh notes that in records)."""
+    loss = amount - fresh_amount(owner.status.get(StatusId.STRANGLE))
+    if loss > 0:
+        owner.lose_hp(loss)
 
 def _strangle_on_player_turn_ended(combat : CombatSimulator, owner : Creature, amount : int):
     owner.status.pop(StatusId.STRANGLE, None)
@@ -698,6 +710,64 @@ def _poison_on_player_turn(combat : CombatSimulator, owner : Creature, amount : 
     if _own(combat, owner):
         poison_trigger(owner)
 
+def fresh_amount(inst) -> int:
+    """What the card being played added to a power that skips that card (Strangle, Afterimage, Serpent Form: they note the amount at BeforeCardPlayed);
+    spent once read."""
+    if inst is None or not inst.records:
+        return 0
+    fresh = inst.records[0][0]
+    inst.records = []
+    return fresh
+
+def _afterimage_on_card_played(combat : CombatSimulator, owner : Creature, amount : int, card):
+    """AfterimagePower.AfterCardPlayed: Unpowered block (no Dexterity or Frail; Shadowmeld still doubles it)."""
+    block = amount - fresh_amount(owner.status.get(StatusId.AFTERIMAGE))
+    if block > 0 and _own(combat, owner):
+        combat.gain_block(owner, block * 2 ** owner.status_amount(StatusId.SHADOWMELD))
+
+def _serpent_form_on_card_played(combat : CombatSimulator, owner : Creature, amount : int, card):
+    """SerpentFormPower.AfterCardPlayed: Unpowered damage to a random enemy (Rng.CombatTargets)."""
+    damage = amount - fresh_amount(owner.status.get(StatusId.SERPENT_FORM))
+    living = [e for e in combat.combat_state.enemies if e.current_hp > 0]
+    if damage > 0 and living and _own(combat, owner):
+        from sts2_lite import rng
+        rng.pick_target(living).apply_damage(damage, owner)
+
+def _this_turn_only(status : StatusId):
+    def handler(combat : CombatSimulator, owner : Creature, amount : int):
+        owner.status.pop(status, None)
+    return handler
+
+def _double_damage_on_turn_end(combat : CombatSimulator, owner : Creature, amount : int):
+    inst = owner.status[StatusId.DOUBLE_DAMAGE]
+    inst.amount -= 1
+    if inst.amount <= 0:
+        del owner.status[StatusId.DOUBLE_DAMAGE]
+
+def _shadow_step_on_turn_start(combat : CombatSimulator, owner : Creature, amount : int):
+    """ShadowStepPower.AfterSideTurnStart: Double Damage, then gone."""
+    if _own(combat, owner):
+        del owner.status[StatusId.SHADOW_STEP]
+        owner.apply_status(StatusId.DOUBLE_DAMAGE, amount)
+
+def _tools_of_the_trade_on_turn_start(combat : CombatSimulator, owner : Creature, amount : int):
+    """ToolsOfTheTradePower.AfterPlayerTurnStart: discard as many as it drew extra."""
+    if _own(combat, owner):
+        combat.request_discard(amount)
+
+def _nightmare_before_hand_draw(combat : CombatSimulator, owner : Creature, amount : int):
+    """NightmarePower.BeforeHandDraw: 3 clones of each picked card join the hand, then the power is gone."""
+    if not _own(combat, owner):
+        return
+    from sts2_lite.card import Card
+    picks, owner.nightmares = owner.nightmares, []
+    del owner.status[StatusId.NIGHTMARE]
+    for picked, copies in picks:
+        for _ in range(copies):
+            clone = Card.create_copy(picked)
+            clone.generated = True
+            owner.add_to_hand(clone)
+
 def _infinite_blades_before_hand_draw(combat : CombatSimulator, owner : Creature, amount : int):
     """InfiniteBladesPower.BeforeHandDraw: Shivs into the hand (after the block is cleared, before the draw)."""
     if _own(combat, owner):
@@ -846,6 +916,15 @@ STATUS_HANDLERS : dict[tuple[StatusId, HookType], Callable] = HandlerTable({
     (StatusId.SMOGGY, HookType.PLAYER_TURN_ENDED) : _smoggy_on_player_turn_ended,
     (StatusId.STRANGLE, HookType.CARD_PLAYED) : _strangle_on_card_played,
     (StatusId.INFINITE_BLADES, HookType.BLOCK_CLEARED) : _infinite_blades_before_hand_draw,
+    (StatusId.NIGHTMARE, HookType.BLOCK_CLEARED) : _nightmare_before_hand_draw,
+    (StatusId.AFTERIMAGE, HookType.CARD_PLAYED) : _afterimage_on_card_played,
+    (StatusId.SERPENT_FORM, HookType.CARD_PLAYED) : _serpent_form_on_card_played,
+    (StatusId.BURST, HookType.PLAYER_TURN_ENDED) : _this_turn_only(StatusId.BURST),
+    (StatusId.CORROSIVE_WAVE, HookType.PLAYER_TURN_ENDED) : _this_turn_only(StatusId.CORROSIVE_WAVE),
+    (StatusId.SHADOWMELD, HookType.PLAYER_TURN_ENDED) : _this_turn_only(StatusId.SHADOWMELD),
+    (StatusId.DOUBLE_DAMAGE, HookType.PLAYER_TURN_ENDED) : _double_damage_on_turn_end,
+    (StatusId.SHADOW_STEP, HookType.PLAYER_TURN_START) : _shadow_step_on_turn_start,
+    (StatusId.TOOLS_OF_THE_TRADE, HookType.PLAYER_TURN_START) : _tools_of_the_trade_on_turn_start,
     (StatusId.NOXIOUS_FUMES, HookType.PLAYER_TURN_START) : _noxious_fumes_on_turn_start,
     (StatusId.STRANGLE, HookType.PLAYER_TURN_ENDED) : _strangle_on_player_turn_ended,
     (StatusId.REBOUND, HookType.PLAYER_TURN_ENDED) : _rebound_on_player_turn_ended,

@@ -129,6 +129,8 @@ class Creature:
             broken = True
         if damage > 0:
             self._lose_hp_from_damage(damage, dealer, powered)
+            if powered and dealer is not None and dealer is not self and StatusId.ENVENOM in dealer.status:
+                self.apply_status(StatusId.POISON, dealer.status[StatusId.ENVENOM].amount)       # EnvenomPower.AfterDamageGiven
         if dealer is not None and dealer.relics and dealer is not self:
             after_damage_given(dealer, self, broken)
         if powered and dealer is not None and hp_before > self.current_hp and StatusId.PAPER_CUTS in dealer.status:

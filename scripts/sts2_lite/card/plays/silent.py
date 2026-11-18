@@ -7,8 +7,8 @@ from sts2_lite.helpers import enemy_at, living_enemies
 from sts2_lite.status import StatusId
 
 from sts2_lite.card.card import Card
-from sts2_lite.card.effects import PLAIN_DAMAGE, _attack, _debuff, _gain_block, _weak, apply_strangle, temp_strength
-from sts2_lite.card.ids import CardId, CardKeyword, CardType
+from sts2_lite.card.effects import PLAIN_DAMAGE, _attack, _debuff, _gain_block, _weak, apply_fresh, apply_strangle, temp_strength
+from sts2_lite.card.ids import CardId, CardKeyword, CardType, EnchantmentId, TargetType
 
 if TYPE_CHECKING:
     from sts2_lite.combat import CombatSimulator
@@ -298,11 +298,125 @@ def play_up_my_sleeve(card : Card, combat : CombatSimulator, target_index=0, is_
     if isinstance(card.restore_cost, int) and card.restore_cost > 0:
         card.restore_cost -= 1
 
+# ------------------------------------------------------------ Shiv, Rare
+
+def play_shiv(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    """With Fan of Knives the Shiv targets every enemy (its target type is AllEnemies then)."""
+    if card.target_type is TargetType.AllEnemies:
+        _hit_all(combat, _damage(card, is_upgraded))
+    else:
+        _attack(combat, _damage(card, is_upgraded), enemy_at(combat, target_index))
+
+def play_abrasive(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    player = combat.combat_state.player
+    player.apply_status(StatusId.DEXTERITY, 1)
+    player.apply_status(StatusId.THORNS, 6 if is_upgraded else 4)
+
+def play_adrenaline(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    combat.gain_energy(2 if is_upgraded else 1)
+    combat.combat_state.player.draw_cards(2)
+
+def play_afterimage(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    apply_fresh(combat, combat.combat_state.player, StatusId.AFTERIMAGE, 1)
+
+def play_assassinate(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    target = enemy_at(combat, target_index)
+    _attack(combat, 13 if is_upgraded else 10, target)
+    _debuff(combat, target, StatusId.VULNERABLE, 2 if is_upgraded else 1)
+
+def play_blade_of_ink(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    combat.create_shivs(3 if is_upgraded else 2, enchantment=EnchantmentId.INKY)
+
+def play_bullet_time(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    """Every card in the hand is free this turn (not X cards); no more draws this turn."""
+    player = combat.combat_state.player
+    player.hand[:] = [c.free_this_turn() for c in player.hand]
+    player.apply_status(StatusId.NO_DRAW, 1)
+
+def play_fan_of_knives(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    player = combat.combat_state.player
+    player.apply_status(StatusId.FAN_OF_KNIVES, 1)
+    player.fan_shivs()
+    combat.create_shivs(5 if is_upgraded else 4)
+
+def play_grand_finale(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    _hit_all(combat, 75 if is_upgraded else 60)
+
+def play_knife_trap(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    """Every Shiv in the exhaust pile is played at the target (upgraded first, when this is)."""
+    enemy_at(combat, target_index)
+    player = combat.combat_state.player
+    shivs = [c for c in player.exhaust_pile if c.card_id is CardId.SHIV]
+    for shiv in shivs:
+        if combat.is_over:
+            break
+        if is_upgraded and not shiv.is_upgraded:
+            i = next(i for i, c in enumerate(player.exhaust_pile) if c is shiv)
+            shiv = Card.create_copy(shiv)            # CardCmd.Upgrade: a Shiv's upgrade is only its damage
+            shiv.is_upgraded = True
+            player.exhaust_pile[i] = shiv
+        combat.auto_play(shiv, target_index=target_index)
+
+def play_malaise(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False, x=0):
+    """X (+1 upgraded): the target loses that much Strength and gets that much Weak."""
+    target = enemy_at(combat, target_index)
+    amount = x + (1 if is_upgraded else 0)
+    if amount > 0:
+        _debuff(combat, target, StatusId.STRENGTH, -amount)
+        _weak(combat, target, amount)
+
+def play_murder(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    """1 damage, plus 1 for every card drawn this combat."""
+    _attack(combat, 1 + combat.combat_state.player.cards_drawn, enemy_at(combat, target_index))
+
+def play_nightmare(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    hand = combat.combat_state.player.hand
+    if hand:
+        combat.request_choice("nightmare", list(range(len(hand))), "hand", 1)
+
+def play_outbreak(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    """Poison every enemy, then their Poison triggers at once (PoisonPower.Trigger, Accelerant included)."""
+    from sts2_lite.status import poison_trigger
+    for target in living_enemies(combat):
+        _debuff(combat, target, StatusId.POISON, 12 if is_upgraded else 9)
+    accelerant = combat.combat_state.player.status_amount(StatusId.ACCELERANT)
+    for target in living_enemies(combat):
+        poison_trigger(target, accelerant)
+    combat.resolve_deaths()
+
+def play_serpent_form(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    apply_fresh(combat, combat.combat_state.player, StatusId.SERPENT_FORM, 6 if is_upgraded else 4)
+
+def play_shadow_step(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    """Discard the hand (Sly cards play); next turn, Double Damage."""
+    player = combat.combat_state.player
+    player.apply_status(StatusId.SHADOW_STEP, 1)
+    if player.hand:
+        combat.discard_cards(list(player.hand))
+
+def play_storm_of_steel(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    """Discard the hand, then a Shiv (upgraded when this is) for every card discarded."""
+    player = combat.combat_state.player
+    count = len(player.hand)
+    if count:
+        combat.discard_cards(list(player.hand))
+    if combat.combat_state.pending_choice is not None:
+        combat.combat_state.continuations = combat.combat_state.continuations + [("shivs", count, is_upgraded)]
+    else:
+        combat.create_shivs(count, is_upgraded)
+
+def play_the_hunt(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    """A kill (not of a minion) earns an extra card reward after the fight: marked with The Hunt (the reward itself is not modelled)."""
+    target = enemy_at(combat, target_index)
+    _attack(combat, 15 if is_upgraded else 10, target)
+    if target.current_hp <= 0 and not target.is_minion:
+        combat.combat_state.player.apply_status(StatusId.THE_HUNT, 1)
+
 
 SILENT_PLAYS = {
     CardId.DEFEND_SILENT : play_defend_silent,
     CardId.NEUTRALIZE : play_neutralize,
-    CardId.SHIV : _plain_attack,
+    CardId.SHIV : play_shiv,
     CardId.STRIKE_SILENT : _plain_attack,
     CardId.SURVIVOR : play_survivor,
     CardId.ANTICIPATE : play_anticipate,
@@ -360,4 +474,29 @@ SILENT_PLAYS = {
     CardId.STRANGLE : play_strangle,
     CardId.TACTICIAN : play_tactician,
     CardId.UP_MY_SLEEVE : play_up_my_sleeve,
+    CardId.ABRASIVE : play_abrasive,
+    CardId.ADRENALINE : play_adrenaline,
+    CardId.AFTERIMAGE : play_afterimage,
+    CardId.ASSASSINATE : play_assassinate,
+    CardId.BLADE_OF_INK : play_blade_of_ink,
+    CardId.BULLET_TIME : play_bullet_time,
+    CardId.BURST : _power(StatusId.BURST, 1, 2),
+    CardId.CORROSIVE_WAVE : _power(StatusId.CORROSIVE_WAVE, 2, 3),
+    CardId.ENVENOM : _power(StatusId.ENVENOM, 1, 2),
+    CardId.FAN_OF_KNIVES : play_fan_of_knives,
+    CardId.GRAND_FINALE : play_grand_finale,
+    CardId.KNIFE_TRAP : play_knife_trap,
+    CardId.MALAISE : play_malaise,
+    CardId.MASTER_PLANNER : _power(StatusId.MASTER_PLANNER, 1, 1),
+    CardId.MURDER : play_murder,
+    CardId.NIGHTMARE : play_nightmare,
+    CardId.OUTBREAK : play_outbreak,
+    CardId.SERPENT_FORM : play_serpent_form,
+    CardId.SHADOW_STEP : play_shadow_step,
+    CardId.SHADOWMELD : _power(StatusId.SHADOWMELD, 1, 1),
+    CardId.STORM_OF_STEEL : play_storm_of_steel,
+    CardId.THE_HUNT : play_the_hunt,
+    CardId.TOOLS_OF_THE_TRADE : _power(StatusId.TOOLS_OF_THE_TRADE, 1, 1),
+    CardId.TRACKING : _power(StatusId.TRACKING, 50, 50),
+    CardId.WELL_LAID_PLANS : _power(StatusId.WELL_LAID_PLANS, 1, 1),
 }

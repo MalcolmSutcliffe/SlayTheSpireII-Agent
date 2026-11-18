@@ -330,7 +330,10 @@ UNTARGETED_COLORLESS = (CardId.FINESSE, CardId.PRODUCTION, CardId.MASTER_OF_STRA
                                               'FLICK_FLACK', 'PIERCING_WAIL', 'PREPARED', 'RICOCHET', 'UNTOUCHABLE',
                                               'ACCELERANT', 'ACCURACY', 'ACROBATICS', 'BLUR', 'BOUNCING_FLASK', 'CALCULATED_GAMBLE', 'ECHOING_SLASH',
                                               'ESCAPE_PLAN', 'EXPERTISE', 'SIDESTEP', 'FOOTWORK', 'HAND_TRICK', 'HAZE', 'HIDDEN_DAGGERS', 'INFINITE_BLADES',
-                                              'MIRAGE', 'NOXIOUS_FUMES', 'PHANTOM_BLADES', 'REFLEX', 'SPEEDSTER', 'TACTICIAN', 'UP_MY_SLEEVE')))
+                                              'MIRAGE', 'NOXIOUS_FUMES', 'PHANTOM_BLADES', 'REFLEX', 'SPEEDSTER', 'TACTICIAN', 'UP_MY_SLEEVE',
+                                              'ABRASIVE', 'ADRENALINE', 'AFTERIMAGE', 'BLADE_OF_INK', 'BULLET_TIME', 'BURST', 'CORROSIVE_WAVE', 'ENVENOM',
+                                              'FAN_OF_KNIVES', 'GRAND_FINALE', 'MASTER_PLANNER', 'NIGHTMARE', 'OUTBREAK', 'SERPENT_FORM', 'SHADOW_STEP',
+                                              'SHADOWMELD', 'STORM_OF_STEEL', 'TOOLS_OF_THE_TRADE', 'TRACKING', 'WELL_LAID_PLANS')))
 
 def test_every_single_target_card_rejects_a_bad_target():
     from sts2_lite.card import GET_CARD_FUNCTION
@@ -536,7 +539,9 @@ def test_cards_that_get_cheaper_when_upgraded(card_id):
     base = {CardId.BARRICADE: 3, CardId.CORRUPTION: 3, CardId.DARK_EMBRACE: 2, CardId.STAMPEDE: 2, CardId.UNMOVABLE: 2, CardId.HAVOC: 1,
             CardId.EXPECT_A_FIGHT: 2, CardId.INFERNAL_BLADE: 1, CardId.BODY_SLAM: 1, CardId.HELLRAISER: 2, CardId.MIND_BLAST: 1,
             CardId.AUTOMATION: 1, CardId.MAYHEM: 2, CardId.NOSTALGIA: 1, CardId.CALAMITY: 3,
-                CardId.APOTHEOSIS: 2, CardId.ABUNDANCE: 1, CardId.ALCHEMIZE: 1, CardId.ENTRENCH: 2, CardId.DISTRACTION: 1, CardId.STRATAGEM: 1}[card_id]
+                CardId.APOTHEOSIS: 2, CardId.ABUNDANCE: 1, CardId.ALCHEMIZE: 1, CardId.ENTRENCH: 2, CardId.DISTRACTION: 1, CardId.STRATAGEM: 1,
+                CardId.BULLET_TIME: 3, CardId.MASTER_PLANNER: 2, CardId.MURDER: 3, CardId.NIGHTMARE: 3, CardId.SHADOW_STEP: 1, CardId.SHADOWMELD: 1,
+                CardId.TOOLS_OF_THE_TRADE: 1, CardId.TRACKING: 2, CardId.WELL_LAID_PLANS: 2}[card_id]
     assert power(card_id, base).upgraded_copy().energy_cost == base - 1
 
 def test_cost_never_goes_below_zero():

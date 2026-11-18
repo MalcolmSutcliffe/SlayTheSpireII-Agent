@@ -6,7 +6,7 @@ if TYPE_CHECKING:
 
 from sts2_lite import rng
 from sts2_lite.creature import Creature
-from sts2_lite.card import Card, CardId, CardType, CardKeyword, CONFUSED_MAX_COST, EnchantmentId, SLITHER_MAX_COST, PLAIN_DAMAGE, GENERATABLE_CARDS
+from sts2_lite.card import Card, CardId, CardType, CardKeyword, TargetType, CONFUSED_MAX_COST, EnchantmentId, SLITHER_MAX_COST, PLAIN_DAMAGE, GENERATABLE_CARDS
 
 BASIC_ATTACK_COSTS = {CardId.STRIKE_IRONCLAD: 1, CardId.BASH: 2, CardId.STRIKE_SILENT: 1}      # the starter Attacks are not in the generated-card table
 from sts2_lite.status import StatusInstance, StatusId, INSTANCED
@@ -58,6 +58,7 @@ class Player(Creature):
         self.skills_played_this_turn = 0  # Pinpoint
         self.shivs_played_this_turn = 0   # Phantom Blades
         self.discards_this_turn = 0       # cards discarded by effects this turn (Memento Mori)
+        self.nightmares = []              # (card, copies) Nightmare picked: they join the hand before the next hand draw
         self.plays_started_this_turn = 0  # Attack and Skill plays begun this turn, replays and auto-plays included (Nostalgia)
         self.returning = []               # (card id, upgraded) of the Bolas and Thrumming Hatchets played this turn: back in the hand next turn
         self.card_blocks_this_turn = 0    # block gains from cards, for Unmovable
@@ -125,6 +126,8 @@ class Player(Creature):
                 c.is_unplayable = False         # only the Smog: the simulator knows that itself
         if StatusId.FREE_ATTACK in pl.status:
             pl._read_free_attack_costs()
+        if StatusId.FAN_OF_KNIVES in pl.status:
+            pl.fan_shivs()
         if RelicId.BRILLIANT_SCARF in pl.relics and free_by_relic(pl):
             pl._read_scarf_costs()
         return pl
@@ -249,6 +252,7 @@ class Player(Creature):
         new_pl.skills_played_this_turn = player.skills_played_this_turn
         new_pl.shivs_played_this_turn = player.shivs_played_this_turn
         new_pl.discards_this_turn = player.discards_this_turn
+        new_pl.nightmares = list(player.nightmares)
         new_pl.plays_started_this_turn = player.plays_started_this_turn
         new_pl.returning = list(player.returning)
         new_pl.card_blocks_this_turn = player.card_blocks_this_turn
@@ -294,7 +298,8 @@ class Player(Creature):
             clarity.amount -= 1
             if clarity.amount <= 0:
                 del self.status[StatusId.CLARITY_EXTRACT]
-        count = max(0, (5 + hand_draw_bonus(self) if self.relics else 5) + (extra_draw.amount if extra_draw else 0) + (1 if clarity else 0) - self.status_amount(StatusId.MIND_ROT))
+        count = max(0, (5 + hand_draw_bonus(self) if self.relics else 5) + (extra_draw.amount if extra_draw else 0) + (1 if clarity else 0) - self.status_amount(StatusId.MIND_ROT)
+                    + self.status_amount(StatusId.TOOLS_OF_THE_TRADE))
         if self.opening_hook is not None:       # a fight built from a deck: first-turn relics and Innate cards (relic/combat_start.py)
             hook, self.opening_hook = self.opening_hook, None
             count = hook(self, count)
@@ -432,6 +437,15 @@ class Player(Creature):
             for i, c in enumerate(pile):
                 if c.card_id == card_id and c.energy_cost != 0:
                     pile[i] = c.cheaper_this_turn(1)
+
+    def fan_shivs(self):
+        """Fan of Knives: every Shiv targets all enemies (Shiv.TargetType)."""
+        for pile in (self.hand, self.draw_pile, self.discard_pile, self.exhaust_pile):
+            for i, c in enumerate(pile):
+                if c.card_id is CardId.SHIV and c.target_type is not TargetType.AllEnemies:
+                    fanned = Card.create_copy(c)
+                    fanned.target_type = TargetType.AllEnemies
+                    pile[i] = fanned
 
     def clear_turn_keywords(self):
         """PlayerCombatState.EndOfTurnCleanup: Retain and Sly given for this turn only (Expertise, Hand Trick) are gone after the hand is flushed."""

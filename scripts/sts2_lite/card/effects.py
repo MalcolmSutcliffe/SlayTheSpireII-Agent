@@ -37,14 +37,21 @@ def shiv_bonus(player) -> int:
         bonus += player.status_amount(StatusId.PHANTOM_BLADES)
     return bonus
 
-def apply_strangle(combat : CombatSimulator, target : Creature, amount : int):
-    """StranglePower: the card being played does not trigger what it added (BeforeCardPlayed noted the amount before it); records[0][0] holds that much."""
-    before = target.status_amount(StatusId.STRANGLE)
-    _debuff(combat, target, StatusId.STRANGLE, amount)
-    inst = target.status.get(StatusId.STRANGLE)
-    added = target.status_amount(StatusId.STRANGLE) - before
+def apply_fresh(combat : CombatSimulator, target : Creature, status : StatusId, amount : int, debuff : bool = False):
+    """A power that the card being played does not trigger (Strangle, Afterimage, Serpent Form note the amount at BeforeCardPlayed):
+    records[0][0] holds what this play added (status.fresh_amount)."""
+    before = target.status_amount(status)
+    if debuff:
+        _debuff(combat, target, status, amount)
+    else:
+        target.apply_status(status, amount)
+    inst = target.status.get(status)
+    added = target.status_amount(status) - before
     if inst is not None and added > 0 and combat.card_in_play is not None:
         inst.records = [[(inst.records[0][0] if inst.records else 0) + added]]
+
+def apply_strangle(combat : CombatSimulator, target : Creature, amount : int):
+    apply_fresh(combat, target, StatusId.STRANGLE, amount, debuff=True)
 
 def _enchanted_damage(card : Card, base):
     """A card's damage enchantment, before Strength and the other modifiers (a float: Corrupted halves are kept)."""
