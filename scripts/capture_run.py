@@ -141,12 +141,17 @@ def describe(state : dict) -> list[str]:
     elif d == "hand_select" or d == "card_select":
         lines.append(f"Prompt: {state.get('prompt')}")
         lines.append("Cards: " + ", ".join(card_text(c) for c in state.get("cards") or []))
+        if state.get("selected_cards"):
+            lines.append("Selected: " + ", ".join(card_text(c) for c in state["selected_cards"]))
     elif d == "card_reward":
         lines.append("Cards: " + ", ".join(card_text(c) for c in state.get("cards") or []))
     elif d == "combat_rewards":
         lines.append("Rewards: " + ", ".join(label(i) for i in state.get("items") or []))
     elif d == "map_select":
-        lines.append("Next: " + ", ".join(label(c) for c in state.get("choices") or []))
+        pos = state.get("current_position") or {}
+        if pos:
+            lines.append(f"At: {label(pos)} (row {pos.get('row')}, col {pos.get('col')})")
+        lines.append("Next: " + ", ".join(f"{label(c)} (row {c.get('row')}, col {c.get('col')})" for c in state.get("choices") or []))
     elif d == "event_choice":
         lines.append(f"Event: {state.get('event_name')} ({state.get('event_id')})")
         lines.append("Options: " + " | ".join(label(o) for o in state.get("options") or []))
@@ -186,12 +191,28 @@ def changes(prev : dict | None, state : dict) -> list[str]:
                 out.append(f"{name} -{', -'.join(removed)}")
     if p0.get("status") is not None and statuses(p0) != statuses(p1):
         out.append(f"powers [{statuses(p0)}] → [{statuses(p1)}]")
+    if prev.get("decision") == state.get("decision"):
+        if prev.get("selected_cards") != state.get("selected_cards"):
+            added, removed = _multiset_diff(prev.get("selected_cards"), state.get("selected_cards"))
+            out += [f"selected {c}" for c in added] + [f"unselected {c}" for c in removed]
+        if (prev.get("current_position") or {}) != (state.get("current_position") or {}):
+            pos = state.get("current_position") or {}
+            out.append(f"moved to {label(pos)} (row {pos.get('row')}, col {pos.get('col')})")
+        elif prev.get("choices") != state.get("choices"):
+            out.append("map options changed")
+        if prev.get("cards") != state.get("cards") and prev.get("decision") != "combat_play":
+            out.append("cards on screen changed")
+        if prev.get("can_confirm") != state.get("can_confirm") and state.get("can_confirm") is not None:
+            out.append("confirm " + ("enabled" if state.get("can_confirm") else "disabled"))
     if prev.get("decision") == "combat_play" and state.get("decision") == "combat_play":
         added, removed = _multiset_diff(prev.get("hand"), state.get("hand"))
         if removed:
             out.append(f"left hand: {', '.join(removed)}")
         if added:
             out.append(f"joined hand: {', '.join(added)}")
+        for pile in ("draw_pile_count", "discard_pile_count", "exhaust_pile_count"):
+            if prev.get(pile) != state.get(pile):
+                out.append(f"{pile[:-11]} pile {prev.get(pile)} → {state.get(pile)}")
         if prev.get("turn") != state.get("turn") or prev.get("round") != state.get("round"):
             out.append(f"round {prev.get('round')} {prev.get('turn')} → round {state.get('round')} {state.get('turn')}")
         before = {e.get("entity_id") or e.get("name"): e for e in prev.get("enemies") or []}
