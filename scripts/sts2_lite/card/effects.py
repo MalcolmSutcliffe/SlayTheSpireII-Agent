@@ -148,7 +148,7 @@ PLAIN_DAMAGE = {        # id : (damage, damage upgraded) of the cards that print
     CardId.PHOTON_CUT : (10, 13), CardId.SOLAR_STRIKE : (9, 10), CardId.WROUGHT_IN_WAR : (7, 9), CardId.MINION_DIVE_BOMB : (13, 16),
     CardId.DEVASTATE : (35, 45), CardId.GAMMA_BLAST : (13, 18), CardId.HEGEMONY : (15, 18), CardId.KINGLY_KICK : (27, 35), CardId.KINGLY_PUNCH : (8, 10),
     CardId.LUNAR_BLAST : (4, 5), CardId.RADIATE : (3, 4), CardId.SHINING_STRIKE : (8, 11), CardId.STARDUST : (5, 7), CardId.SUPERMASSIVE : (5, 5),
-    CardId.BEAT_INTO_SHAPE : (5, 7), CardId.BOMBARDMENT : (18, 24), CardId.COMET : (33, 44), CardId.CRASH_LANDING : (21, 26), CardId.DYING_STAR : (9, 11),
+    CardId.BEAT_INTO_SHAPE : (5, 7), CardId.BOMBARDMENT : (18, 24), CardId.COMET : (33, 44), CardId.METEOR_SHOWER : (14, 21), CardId.CRASH_LANDING : (21, 26), CardId.DYING_STAR : (9, 11),
     CardId.HEAVENLY_DRILL : (8, 10), CardId.HEIRLOOM_HAMMER : (20, 25), CardId.MAKE_IT_SO : (6, 9), CardId.SEVEN_STARS : (7, 7), CardId.KNOCKOUT_BLOW : (30, 38), CardId.NEUTRALIZE : (3, 4), CardId.SHIV : (4, 6),
     CardId.DAGGER_SPRAY : (4, 6), CardId.DAGGER_THROW : (9, 12), CardId.FLICK_FLACK : (7, 9), CardId.LEADING_STRIKE : (3, 6),
     CardId.POISONED_STAB : (6, 8), CardId.PREDATOR : (15, 20), CardId.RICOCHET : (3, 3), CardId.SLICE : (6, 9), CardId.SUCKER_PUNCH : (8, 10),

@@ -98,6 +98,7 @@ class StatusId(Enum):
     SWORD_SAGE = auto()             # the Sovereign Blade is played this many more times
     TYRANNY = auto()                # draw more at the turn's start, then exhaust as many cards
     VOID_FORM = auto()              # the first cards played each turn are free (records: [[cards played this turn]])
+    THE_SEALED_THRONE = auto()      # Stars for each card played
     CRUSH_UNDER = auto()            # Crush Under (TemporaryStrengthPower, negative): the Strength it took comes back when the owner's turn ends
     DRAW_CARDS_NEXT_TURN = auto()   # Relax: cards added to the next turn's hand draw
     FASTEN = auto()
@@ -1001,10 +1002,17 @@ def _void_form_on_turn_start(combat : CombatSimulator, owner : Creature, amount 
     if _own(combat, owner):
         owner.status[StatusId.VOID_FORM].records = [[0]]
 
+def _sealed_throne_on_card_played(combat : CombatSimulator, owner : Creature, amount : int, card):
+    """TheSealedThronePower.BeforeCardPlayed: Stars for every card played after it (the card that played it gives none)."""
+    amount -= fresh_amount(owner.status.get(StatusId.THE_SEALED_THRONE))
+    if amount > 0 and _own(combat, owner):
+        combat.gain_stars(amount)
+
 ORBIT_ENERGY = 4
 PALE_BLUE_DOT_CARDS = 5
 
 STATUS_HANDLERS : dict[tuple[StatusId, HookType], Callable] = HandlerTable({
+    (StatusId.THE_SEALED_THRONE, HookType.CARD_PLAYED) : _sealed_throne_on_card_played,
     (StatusId.ARSENAL, HookType.CARD_GENERATED) : _arsenal_on_generated,
     (StatusId.FOREGONE_CONCLUSION, HookType.PLAYER_TURN_START) : _foregone_conclusion_on_turn_start,
     (StatusId.TYRANNY, HookType.PLAYER_TURN_START) : _tyranny_on_turn_start,

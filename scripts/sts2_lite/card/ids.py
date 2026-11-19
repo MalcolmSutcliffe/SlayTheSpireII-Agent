@@ -335,6 +335,8 @@ class CardId(Enum):
     SPOILS_OF_BATTLE = auto()
     WROUGHT_IN_WAR = auto()
     MINION_DIVE_BOMB = auto()     # token: Charge's transform
+    METEOR_SHOWER = auto()        # Regent Ancient cards
+    THE_SEALED_THRONE = auto()
     MINION_SACRIFICE = auto()     # token: Guards' transform
     ARSENAL = auto()
     BEAT_INTO_SHAPE = auto()

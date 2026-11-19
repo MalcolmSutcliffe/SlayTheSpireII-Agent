@@ -434,7 +434,22 @@ def play_void_form(card : Card, combat : CombatSimulator, target_index=0, is_upg
     combat.end_turn_requested = True
 
 
+# ------------------------------------------------------------ Ancient
+
+def play_meteor_shower(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    enemies = living_enemies(combat)
+    _hit_all(combat, _damage(card, is_upgraded))
+    for enemy in enemies:
+        if enemy.current_hp > 0:
+            _weak(combat, enemy, 2)
+            _vulnerable(combat, enemy, 2)
+
+def play_the_sealed_throne(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    apply_fresh(combat, combat.combat_state.player, StatusId.THE_SEALED_THRONE, 1)
+
 REGENT_PLAYS = {
+    CardId.METEOR_SHOWER : play_meteor_shower,
+    CardId.THE_SEALED_THRONE : play_the_sealed_throne,
     CardId.STRIKE_REGENT : play_strike_regent,
     CardId.DEFEND_REGENT : play_defend_regent,
     CardId.FALLING_STAR : play_falling_star,

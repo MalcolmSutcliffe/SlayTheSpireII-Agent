@@ -342,6 +342,8 @@ CARD_ENERGY_COST_AND_TARGET : dict[CardId, tuple[int | str, TargetType]] = {
     CardId.WHIRLWIND : ('X', _ALL),
     CardId.WHISTLE : (2, _A),
     CardId.WISH : (0, _S),
+    CardId.METEOR_SHOWER : (0, _ALL),
+    CardId.THE_SEALED_THRONE : (1, _S),
 }
 
 INFECTION_DAMAGE = 3
@@ -356,7 +358,7 @@ TOXIC_DAMAGE = 5
 
 # energy cost change when upgraded (the rest of an upgrade is read from is_upgraded when the card is played)
 UPGRADE_COST_CHANGE = {
-    CardId.SOVEREIGN_BLADE : -1, CardId.ORBIT : -1, CardId.SPECTRUM_SHIFT : -1, CardId.MONARCHS_GAZE : -1, CardId.SEVEN_STARS : -1, CardId.SWORD_SAGE : -1,
+    CardId.SOVEREIGN_BLADE : -1, CardId.THE_SEALED_THRONE : -1, CardId.ORBIT : -1, CardId.SPECTRUM_SHIFT : -1, CardId.MONARCHS_GAZE : -1, CardId.SEVEN_STARS : -1, CardId.SWORD_SAGE : -1,
     CardId.BARRICADE : -1, CardId.CORRUPTION : -1, CardId.DARK_EMBRACE : -1, CardId.STAMPEDE : -1,
     CardId.UNMOVABLE : -1, CardId.HAVOC : -1, CardId.INFERNAL_BLADE : -1,
     CardId.BODY_SLAM : -1, CardId.HELLRAISER : -1, CardId.MIND_BLAST : -1,
@@ -381,13 +383,13 @@ STAR_COST : dict[CardId, int | str] = {
     CardId.FALLING_STAR : 2, CardId.ASTRAL_PULSE : 3, CardId.CLOAK_OF_STARS : 1, CardId.CRESCENT_SPEAR : 1, CardId.GUIDING_STAR : 1,
     CardId.ALIGNMENT : 2, CardId.DEVASTATE : 4, CardId.GAMMA_BLAST : 3, CardId.PARTICLE_WALL : 2, CardId.QUASAR : 2, CardId.REFLECT : 3,
     CardId.RESONANCE : 2, CardId.ROYAL_GAMBLE : 5, CardId.STARDUST : "X",
-    CardId.COMET : 5, CardId.DECISIONS_DECISIONS : 6, CardId.DYING_STAR : 3, CardId.NEUTRON_AEGIS : 5, CardId.SEVEN_STARS : 7, CardId.THE_SMITH : 4,
+    CardId.METEOR_SHOWER : 2, CardId.THE_SEALED_THRONE : 3, CardId.COMET : 5, CardId.DECISIONS_DECISIONS : 6, CardId.DYING_STAR : 3, CardId.NEUTRON_AEGIS : 5, CardId.SEVEN_STARS : 7, CardId.THE_SMITH : 4,
 }
 # Star cost an upgrade changes: (new Star cost upgraded) for the cards whose upgrade does it
 UPGRADE_STAR_COST : dict[CardId, int] = {}
 
 UPGRADE_BASE_COST = {
-    CardId.SOVEREIGN_BLADE : 2, CardId.ORBIT : 2, CardId.SPECTRUM_SHIFT : 2, CardId.MONARCHS_GAZE : 2, CardId.SEVEN_STARS : 2, CardId.SWORD_SAGE : 2,
+    CardId.SOVEREIGN_BLADE : 2, CardId.THE_SEALED_THRONE : 1, CardId.ORBIT : 2, CardId.SPECTRUM_SHIFT : 2, CardId.MONARCHS_GAZE : 2, CardId.SEVEN_STARS : 2, CardId.SWORD_SAGE : 2,
     CardId.BARRICADE : 3, CardId.CORRUPTION : 3, CardId.DARK_EMBRACE : 2, CardId.STAMPEDE : 2,
     CardId.UNMOVABLE : 2, CardId.HAVOC : 1, CardId.INFERNAL_BLADE : 1,
     CardId.BODY_SLAM : 1, CardId.HELLRAISER : 2, CardId.MIND_BLAST : 1,

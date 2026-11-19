@@ -243,6 +243,7 @@ ANCIENT_CARDS = {
     CardId.APPARITION : ("Apparition", CardType.Skill, 1, S), CardId.BRIGHTEST_FLAME : ("Brightest Flame", CardType.Skill, 0, S),
     CardId.MAUL : ("Maul", CardType.Attack, 1, A), CardId.RELAX : ("Relax", CardType.Skill, 3, S),
     CardId.WHISTLE : ("Whistle", CardType.Attack, 2, A), CardId.WISH : ("Wish", CardType.Skill, 0, S),
+    CardId.METEOR_SHOWER : ("Meteor Shower", CardType.Attack, 0, ALL), CardId.THE_SEALED_THRONE : ("The Sealed Throne", CardType.Power, 1, S),
 }
 
 # the Regent's cards (RegentCardPool), Basic ones included; the Star cost of each is in constants.STAR_COST
@@ -403,7 +404,7 @@ _RARITY_NAMES = {
         "OFFERING PACTS_END BRAND HELLRAISER MANGLE PRIMAL_FORCE STOKE TEAR_ASUNDER THRASH"
     ),
     CardRarity.Ancient : (
-        "BREAK NEOWS_FURY CORRUPTION ABUNDANCE APOTHEOSIS APPARITION BRIGHTEST_FLAME MAUL RELAX WHISTLE WISH"
+        "BREAK NEOWS_FURY CORRUPTION ABUNDANCE APOTHEOSIS APPARITION BRIGHTEST_FLAME MAUL RELAX WHISTLE WISH METEOR_SHOWER THE_SEALED_THRONE"
     ),
     CardRarity.Event : (
         "BYRD_SWOOP EXTERMINATE PECK SQUASH ENLIGHTENMENT METAMORPHOSIS TORIC_TOUGHNESS FEEDING_FRENZY MAD_SCIENCE "

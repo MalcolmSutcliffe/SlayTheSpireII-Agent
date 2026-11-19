@@ -255,7 +255,7 @@ def _touch_of_orobas(c):
 
 def _archaic_tooth(c):
     """A starter card becomes its Ancient version (Bash: Break), keeping its upgrade and enchantment."""
-    transcend = {"BASH": "BREAK"}
+    transcend = {"BASH": "BREAK", "FALLING_STAR": "METEOR_SHOWER"}
     for i, card in enumerate(c.run.deck):
         if card["id"] in transcend:
             new = card_entry(transcend[card["id"]], bool(card.get("is_upgraded")))

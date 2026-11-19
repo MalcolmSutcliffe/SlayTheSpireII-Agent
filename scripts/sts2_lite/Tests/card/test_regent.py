@@ -357,11 +357,11 @@ import re
 from pathlib import Path
 
 from sts2_lite.card.constants import STAR_COST
-from sts2_lite.card.tables import REGENT_CARDS, TOKEN_CARDS, CARD_RARITY
+from sts2_lite.card.tables import ANCIENT_CARDS, REGENT_CARDS, TOKEN_CARDS, CARD_RARITY
 from sts2_lite.card.ids import TargetType
 
 CARD_SOURCES = Path(__file__).resolve().parents[4] / "sts2_decompiled" / "Core" / "Models" / "Cards"
-REGENT_TOKENS = [CardId.SOVEREIGN_BLADE, CardId.MINION_STRIKE, CardId.DEBRIS, CardId.MINION_DIVE_BOMB, CardId.MINION_SACRIFICE]
+REGENT_TOKENS = [CardId.SOVEREIGN_BLADE, CardId.MINION_STRIKE, CardId.DEBRIS, CardId.MINION_DIVE_BOMB, CardId.MINION_SACRIFICE, CardId.METEOR_SHOWER, CardId.THE_SEALED_THRONE]
 
 def _class_of(card_id):
     return "".join(part.capitalize() for part in card_id.name.split("_"))
@@ -371,7 +371,7 @@ def _class_of(card_id):
 def test_regent_card_matches_the_decompiled_class(card_id):
     source = (CARD_SOURCES / f"{_class_of(card_id)}.cs").read_text()
     energy, ctype, rarity, target = re.search(r": base\((-?\d+|[^,]+), CardType\.(\w+), CardRarity\.(\w+), TargetType\.(\w+)\)", source).groups()
-    table = REGENT_CARDS.get(card_id) or TOKEN_CARDS.get(card_id) or {CardId.DEBRIS: ("Debris", CardType.Status, 1, TargetType.NONE)}[card_id]
+    table = REGENT_CARDS.get(card_id) or TOKEN_CARDS.get(card_id) or ANCIENT_CARDS.get(card_id) or {CardId.DEBRIS: ("Debris", CardType.Status, 1, TargetType.NONE)}[card_id]
     expected_cost = "X" if "HasEnergyCostX => true" in source else int(energy)
     assert (table[2], table[1].name, table[3].name.lower()) == (expected_cost, ctype, target.lower()), card_id
     assert CARD_RARITY[card_id].name == rarity, card_id
@@ -928,3 +928,26 @@ def test_cosmic_concoction_adds_three_upgraded_colorless_cards():
     cs = one_enemy([])
     drink_potion(cs, PotionId.COSMIC_CONCOCTION)
     assert len(cs.player.hand) == 3 and all(c.is_upgraded for c in cs.player.hand)
+
+
+# ------------------------------------------------------------ Ancient cards
+def test_meteor_shower_hits_all_and_debuffs():
+    cs = make_state([gen(CardId.METEOR_SHOWER, True)], enemy_count=2, enemy_hp=100)
+    cs.player.stars, cs.player.character = 2, "REGENT"
+    play(cs)
+    assert [e.current_hp for e in cs.enemies] == [79, 79] and cs.player.stars == 0
+    assert all(e.status_amount(StatusId.WEAK) == 2 and e.status_amount(StatusId.VULNERABLE) == 2 for e in cs.enemies)
+
+def test_the_sealed_throne_gives_a_star_per_card_played_after_it():
+    cs = one_enemy([gen(CardId.THE_SEALED_THRONE, True), gen(CardId.DEFEND_REGENT), gen(CardId.DEFEND_REGENT)], stars=3)
+    sim = play(cs)
+    assert cs.player.stars == 0 and cs.energy == 3 - 0
+    sim.play_card(0, 0)
+    sim.play_card(0, 0)
+    assert cs.player.stars == 2
+
+def test_ancient_rewards_follow_the_character():
+    import random
+    from sts2_lite.campaign.ancients import _dusty_tome_card, _transcend_card
+    class Run: character = "REGENT"; deck = [{"id": "FALLING_STAR"}]
+    assert _dusty_tome_card(Run, random.Random(1)) == "THE_SEALED_THRONE" and _transcend_card(Run) == "FALLING_STAR"
