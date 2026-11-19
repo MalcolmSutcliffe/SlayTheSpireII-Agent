@@ -951,3 +951,29 @@ def test_ancient_rewards_follow_the_character():
     from sts2_lite.campaign.ancients import _dusty_tome_card, _transcend_card
     class Run: character = "REGENT"; deck = [{"id": "FALLING_STAR"}]
     assert _dusty_tome_card(Run, random.Random(1)) == "THE_SEALED_THRONE" and _transcend_card(Run) == "FALLING_STAR"
+
+
+# ------------------------------------------------------------ the Silent's Ancient cards
+def test_suppress_is_innate_and_weakens():
+    card = gen(CardId.SUPPRESS, True)
+    from sts2_lite.card.constants import INNATE_CARDS
+    assert CardId.SUPPRESS in INNATE_CARDS
+    cs = one_enemy([card])
+    play(cs)
+    assert cs.enemies[0].current_hp == 83 and cs.enemies[0].status_amount(StatusId.WEAK) == 5 and cs.energy == 3
+
+def test_wraith_form_gives_intangible_and_costs_dexterity_each_turn():
+    cs = one_enemy([gen(CardId.WRAITH_FORM, True)])
+    cs.player.draw_pile = [gen(CardId.DEFEND_REGENT) for _ in range(10)]
+    sim = play(cs)
+    assert cs.player.status_amount(StatusId.INTANGIBLE) == 3 and cs.energy == 0
+    sim.end_turn()
+    assert cs.player.status_amount(StatusId.DEXTERITY) == -1
+    sim.end_turn()
+    assert cs.player.status_amount(StatusId.DEXTERITY) == -2
+
+def test_silent_ancient_rewards():
+    import random
+    from sts2_lite.campaign.ancients import _dusty_tome_card
+    class Run: character = "SILENT"; deck = []
+    assert _dusty_tome_card(Run, random.Random(1)) == "WRAITH_FORM"

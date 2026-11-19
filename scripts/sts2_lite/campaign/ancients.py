@@ -26,7 +26,7 @@ TANX = ("CLAWS", "CROSSBOW", "IRON_CLUB", "MEAT_CLEAVER", "SAI", "SPIKED_GAUNTLE
 VAKUU = (("BLOOD_SOAKED_ROSE", "WHISPERING_EARRING", "FIDDLE"), ("PRESERVED_FOG", "SERE_TALON", "DISTINGUISHED_CAPE"), ("CHOICES_PARADOX", "MUSIC_BOX", "LORDS_PARASOL", "JEWELED_MASK"))
 DARV_ANY = (("ASTROLABE",), ("BLACK_STAR",), ("CALLING_BELL",), ("EMPTY_CAGE",), ("PANDORAS_BOX",), ("RUNIC_PYRAMID",), ("SNECKO_EYE",))
 DARV_ACT_2, DARV_ACT_2_ON = (("ECTOPLASM",), ("SOZU",)), (("PHILOSOPHERS_STONE",), ("VELVET_CHOKER",))      # act 2 only / act 2 and later
-TRANSCENDENCE = {"BASH": "BREAK", "FALLING_STAR": "METEOR_SHOWER"}                 # the starter cards Archaic Tooth turns into an Ancient card (the Ironclad's)
+TRANSCENDENCE = {"BASH": "BREAK", "FALLING_STAR": "METEOR_SHOWER", "NEUTRALIZE": "SUPPRESS"}                 # the starter cards Archaic Tooth turns into an Ancient card (the Ironclad's)
 STARTER_RELIC_UPGRADE = {"BURNING_BLOOD": "BLACK_BLOOD", "RING_OF_THE_SNAKE": "RING_OF_THE_DRAKE"}
 SHARED = ("DARV",)
 ACT_ANCIENTS = {"OROBAS", "PAEL", "TEZCATARA", "NONUPEIPE", "TANX", "VAKUU"}
@@ -72,7 +72,7 @@ def _transcend_card(run) -> str | None:
     return next((c["id"] for c in run.deck if c["id"] in TRANSCENDENCE), None)
 
 
-ANCIENT_CARDS_OF = {"IRONCLAD": ("BREAK", "CORRUPTION"), "REGENT": ("METEOR_SHOWER", "THE_SEALED_THRONE")}        # the Ancient cards of each pool
+ANCIENT_CARDS_OF = {"IRONCLAD": ("BREAK", "CORRUPTION"), "REGENT": ("METEOR_SHOWER", "THE_SEALED_THRONE"), "SILENT": ("SUPPRESS", "WRAITH_FORM")}        # the Ancient cards of each pool
 IRONCLAD_ANCIENT_CARDS = ANCIENT_CARDS_OF["IRONCLAD"]
 
 

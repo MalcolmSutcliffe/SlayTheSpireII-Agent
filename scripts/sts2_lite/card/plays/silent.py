@@ -413,7 +413,21 @@ def play_the_hunt(card : Card, combat : CombatSimulator, target_index=0, is_upgr
         combat.combat_state.player.apply_status(StatusId.THE_HUNT, 1)
 
 
+def play_suppress(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    target = enemy_at(combat, target_index)
+    _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], target)
+    if target.current_hp > 0:
+        _weak(combat, target, 5 if is_upgraded else 3)
+
+def play_wraith_form(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    """Intangible 2 (3) for this turn's enemy attacks, and 1 Dexterity less every turn from now on."""
+    player = combat.combat_state.player
+    player.apply_status(StatusId.INTANGIBLE, 3 if is_upgraded else 2)
+    player.apply_status(StatusId.WRAITH_FORM, 1)
+
 SILENT_PLAYS = {
+    CardId.SUPPRESS : play_suppress,
+    CardId.WRAITH_FORM : play_wraith_form,
     CardId.DEFEND_SILENT : play_defend_silent,
     CardId.NEUTRALIZE : play_neutralize,
     CardId.SHIV : play_shiv,

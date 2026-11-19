@@ -343,6 +343,8 @@ CARD_ENERGY_COST_AND_TARGET : dict[CardId, tuple[int | str, TargetType]] = {
     CardId.WHISTLE : (2, _A),
     CardId.WISH : (0, _S),
     CardId.METEOR_SHOWER : (0, _ALL),
+    CardId.SUPPRESS : (0, _A),
+    CardId.WRAITH_FORM : (3, _S),
     CardId.THE_SEALED_THRONE : (1, _S),
 }
 
@@ -450,7 +452,7 @@ RETAINING_CARDS = frozenset({CardId.SOVEREIGN_BLADE, CardId.POOR_SLEEP, CardId.R
 # cards with the Sly keyword: discarded by an effect, they play themselves for free (CardCmd.DiscardAndDraw)
 SLY_CARDS = frozenset({CardId.FLICK_FLACK, CardId.RICOCHET, CardId.UNTOUCHABLE, CardId.REFLEX, CardId.TACTICIAN, CardId.ABRASIVE})
 
-INNATE_CARDS = frozenset({CardId.ASSASSINATE, CardId.BACKSTAB, CardId.APOTHEOSIS, CardId.WRITHE, CardId.FOLLY, CardId.DRAMATIC_ENTRANCE, CardId.MIND_BLAST})
+INNATE_CARDS = frozenset({CardId.SUPPRESS, CardId.ASSASSINATE, CardId.BACKSTAB, CardId.APOTHEOSIS, CardId.WRITHE, CardId.FOLLY, CardId.DRAMATIC_ENTRANCE, CardId.MIND_BLAST})
 
 ETERNAL_CARDS = frozenset({CardId.BAD_LUCK, CardId.ASCENDERS_BANE, CardId.CURSE_OF_THE_BELL, CardId.GREED, CardId.FOLLY, CardId.ENTHRALLED})
 
