@@ -28,6 +28,8 @@ def _only_unaffordable(reason : str | None) -> bool:
     return bool(reason) and all(part.strip() in _UNAFFORDABLE for part in reason.split(","))
 
 
+MINION_CARDS = frozenset({CardId.MINION_STRIKE, CardId.MINION_DIVE_BOMB, CardId.MINION_SACRIFICE})       # CardTag.Minion
+
 def _void_form_free(void_form) -> bool:
     """The first `amount` cards played each turn cost nothing (VoidFormPower)."""
     return (void_form.records[0][0] if void_form.records else 0) < void_form.amount
@@ -529,6 +531,10 @@ class Card:
         (the fields create_copy carries over, minus name/type/target which follow from the id)."""
         return (self.card_id, self.is_upgraded, self.energy_cost, self.star_cost, self.is_unplayable, self.restore_cost, self.until_played,
                 self.bonus_damage, self.replay, self.enchantment, self.enchant_amount, self.enchant_bonus, self._mask, self.generated, self.dampened_from is not None, self.wither_level, self.bound, self.rider, self.turn_keywords)
+
+    @property
+    def is_minion(self) -> bool:
+        return self.card_id in MINION_CARDS
 
     def current_cost(self, player) -> int | str:
         """Energy cost now: the base cost plus Tangled on attacks."""

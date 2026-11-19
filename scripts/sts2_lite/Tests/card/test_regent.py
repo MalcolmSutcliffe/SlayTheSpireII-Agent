@@ -840,3 +840,91 @@ def test_void_form_makes_the_first_cards_free_and_ends_the_turn():
     energy = cs.energy
     sim.play_card(bulwark, 0)
     assert cs.energy == energy
+
+
+# ------------------------------------------------------------ relics
+from sts2_lite.relic import RelicId, RelicInstance
+
+
+def with_relic(cs, relic_id):
+    cs.player.relics[relic_id] = RelicInstance(relic_id)
+    return cs
+
+def test_fencing_manual_forges_when_the_fight_opens():
+    cs = one_enemy([])
+    sim = CombatSimulator(cs)
+    Opening([{"id": "FENCING_MANUAL"}], "monster").after_draw(sim)
+    blades = [c for c in cs.player.hand if c.card_id is CardId.SOVEREIGN_BLADE]
+    assert len(blades) == 1 and blades[0].bonus_damage == 10
+
+def test_galactic_dust_gives_block_for_every_ten_stars_spent():
+    cs = with_relic(one_enemy([gen(CardId.DEVASTATE), gen(CardId.DEVASTATE), gen(CardId.DEVASTATE)], stars=12), RelicId.GALACTIC_DUST)
+    sim = play(cs)
+    sim.play_card(0, 0)
+    assert cs.player.block == 0
+    cs.player.stars = 4
+    sim.play_card(0, 0)               # 12 stars spent so far: 10 Block, 2 left over
+    assert cs.player.block == 10 and cs.player.relics[RelicId.GALACTIC_DUST].counter == 2
+
+def test_lunar_pastry_gives_a_star_at_the_end_of_the_turn():
+    cs = with_relic(one_enemy([]), RelicId.LUNAR_PASTRY)
+    cs.player.draw_pile = [gen(CardId.DEFEND_REGENT) for _ in range(10)]
+    CombatSimulator(cs).end_turn()
+    assert cs.player.stars == 1
+
+def test_mini_regent_gives_strength_for_the_first_stars_spent_each_turn():
+    cs = with_relic(one_enemy([gen(CardId.FALLING_STAR), gen(CardId.FALLING_STAR)], stars=4), RelicId.MINI_REGENT)
+    sim = play(cs)
+    sim.play_card(0, 0)
+    assert cs.player.status_amount(StatusId.STRENGTH) == 1
+
+def test_regalite_gives_block_for_the_first_card_made_each_turn():
+    cs = with_relic(one_enemy([gen(CardId.REFINE_BLADE), gen(CardId.BUNDLE_OF_JOY)]), RelicId.REGALITE)
+    sim = play(cs)
+    assert cs.player.block == 4
+    sim.play_card(0, 0)
+    assert cs.player.block == 4
+
+def test_vitruvian_minion_doubles_minion_cards():
+    cs = with_relic(one_enemy([gen(CardId.MINION_STRIKE), gen(CardId.MINION_SACRIFICE), gen(CardId.STRIKE_REGENT)]), RelicId.VITRUVIAN_MINION)
+    cs.player.draw_pile = [gen(CardId.DEFEND_REGENT)]
+    sim = play(cs)
+    sim.play_card(0, 0)
+    assert cs.player.block == 14
+    sim.play_card(0, 0)
+    assert cs.enemies[0].current_hp == 100 - 12 - 6
+
+
+# ------------------------------------------------------------ potions
+def test_the_regents_potions():
+    from sts2_lite.potion import Potion, PotionId, PotionRarity
+    from sts2_lite.potion_pool import potion_pool
+    regent = potion_pool("REGENT")
+    assert {PotionId.STAR_POTION, PotionId.KINGS_COURAGE, PotionId.COSMIC_CONCOCTION} <= set(regent)
+    assert PotionId.STAR_POTION not in potion_pool("SILENT") and PotionId.POISON_POTION not in regent
+    assert (PotionId.STAR_POTION.rarity, PotionId.KINGS_COURAGE.rarity, PotionId.COSMIC_CONCOCTION.rarity) == (PotionRarity.COMMON, PotionRarity.UNCOMMON, PotionRarity.RARE)
+
+def drink_potion(cs, potion_id):
+    from sts2_lite.potion import Potion
+    cs.player.potions = [Potion(potion_id, 0)]
+    sim = CombatSimulator(cs)
+    sim.perform_action({"action": "use_potion", "slot": 0, "target": 0})
+    return sim
+
+def test_star_potion_gives_three_stars():
+    from sts2_lite.potion import PotionId
+    cs = one_enemy([])
+    drink_potion(cs, PotionId.STAR_POTION)
+    assert cs.player.stars == 3
+
+def test_kings_courage_forges_fifteen():
+    from sts2_lite.potion import PotionId
+    cs = one_enemy([])
+    drink_potion(cs, PotionId.KINGS_COURAGE)
+    assert [c.bonus_damage for c in cs.player.hand if c.card_id is CardId.SOVEREIGN_BLADE] == [15]
+
+def test_cosmic_concoction_adds_three_upgraded_colorless_cards():
+    from sts2_lite.potion import PotionId
+    cs = one_enemy([])
+    drink_potion(cs, PotionId.COSMIC_CONCOCTION)
+    assert len(cs.player.hand) == 3 and all(c.is_upgraded for c in cs.player.hand)

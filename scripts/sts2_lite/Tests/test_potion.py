@@ -38,10 +38,10 @@ def zero_cost(card):
 def test_every_potion_is_described_and_has_an_effect():
     assert set(EFFECTS) == set(PotionId) == set(POTION_INFO)
 
-def test_the_list_is_the_wikis_ironclad_and_silent_list():
+def test_the_list_is_the_wikis_ironclad_silent_and_regent_list():
     counts = {r: sum(1 for p in PotionId if p.rarity == r) for r in PotionRarity}
-    assert counts == {PotionRarity.COMMON : 17, PotionRarity.UNCOMMON : 17, PotionRarity.RARE : 17, PotionRarity.SPECIAL : 4}
-    assert len(PotionId) == 55
+    assert counts == {PotionRarity.COMMON : 18, PotionRarity.UNCOMMON : 18, PotionRarity.RARE : 18, PotionRarity.SPECIAL : 4}
+    assert len(PotionId) == 58
 
 @pytest.mark.parametrize("game_id, expected", [
     ("FAIRY_IN_A_BOTTLE", PotionId.FAIRY_IN_A_BOTTLE), ("fairy_in_a_bottle", PotionId.FAIRY_IN_A_BOTTLE), ("REGEN_POTION", PotionId.REGEN_POTION),

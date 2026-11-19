@@ -107,6 +107,11 @@ class RelicId(Enum):
     SNECKO_SKULL = auto()
     TINGSHA = auto()
     TOUGH_BANDAGES = auto()
+    GALACTIC_DUST = auto()         # the Regent's relics (the others act when the fight starts, see combat_start.py)
+    LUNAR_PASTRY = auto()
+    MINI_REGENT = auto()
+    REGALITE = auto()
+    VITRUVIAN_MINION = auto()
 
 # What the bridge calls a relic's state (if it reports one) when `used` is true.
 # The game marks Vambrace, Unsettling Lamp and Burning Sticks "Active" until they trigger, and a spent Lizard Tail "Disabled".
@@ -127,7 +132,7 @@ USED_STATUS : dict[RelicId, frozenset[str]] = {
 
 # `used` of these means "this turn" (it is cleared when the next turn starts), so it is only carried within a turn.
 PER_TURN_FLAG = frozenset({RelicId.ART_OF_WAR, RelicId.RIPPLE_BASIN, RelicId.RAINBOW_RING, RelicId.DEMON_TONGUE,
-                           RelicId.MUSIC_BOX})
+                           RelicId.MUSIC_BOX, RelicId.MINI_REGENT, RelicId.REGALITE})
 
 # The bridge reports these every time, so a state that was read is never overruled by one the simulator remembers.
 ALWAYS_REPORTED = frozenset({RelicId.RED_SKULL})

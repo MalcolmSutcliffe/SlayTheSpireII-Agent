@@ -96,6 +96,9 @@ class PotionId(Enum):
     POISON_POTION = auto()              # common
     CUNNING_POTION = auto()             # uncommon
     GHOST_IN_A_JAR = auto()             # rare
+    STAR_POTION = auto()                # the Regent's potions: common
+    KINGS_COURAGE = auto()              # uncommon
+    COSMIC_CONCOCTION = auto()          # rare
 
     @property
     def info(self) -> PotionInfo:
@@ -155,6 +158,7 @@ POTION_INFO : dict[PotionId, PotionInfo] = {
     PotionId.GLOWWATER_POTION : PotionInfo("Glowwater Potion", S, ME), PotionId.POTION_SHAPED_ROCK : PotionInfo("Potion-Shaped Rock", S, ONE),
     PotionId.POISON_POTION : PotionInfo("Poison Potion", C, ONE), PotionId.CUNNING_POTION : PotionInfo("Cunning Potion", U, ME),
     PotionId.GHOST_IN_A_JAR : PotionInfo("Ghost in a Jar", R, ME),
+    PotionId.STAR_POTION : PotionInfo("Star Potion", C, ME), PotionId.KINGS_COURAGE : PotionInfo("King's Courage", U, ME), PotionId.COSMIC_CONCOCTION : PotionInfo("Cosmic Concoction", R, ME),
 }
 _BY_NORMALISED_NAME = {_normalise(p.name): p for p in PotionId}
 _BY_NORMALISED_NAME.update({_normalise(info.name): p for p, info in POTION_INFO.items()})
@@ -282,6 +286,20 @@ POISON_POTION, CUNNING_POTION_SHIVS, GHOST_IN_A_JAR = 6, 3, 1
 
 def _poison_potion(combat, t): _target(combat, t).apply_status(StatusId.POISON, poison_given(player_of(combat), POISON_POTION))
 def _ghost_in_a_jar(combat, t): player_of(combat).apply_status(StatusId.INTANGIBLE, GHOST_IN_A_JAR)
+
+STAR_POTION_STARS, KINGS_COURAGE_FORGE, COSMIC_CONCOCTION_CARDS = 3, 15, 3
+
+def _star_potion(combat, t):
+    combat.gain_stars(STAR_POTION_STARS)
+
+def _kings_courage(combat, t):
+    combat.forge(KINGS_COURAGE_FORGE)
+
+def _cosmic_concoction(combat, t):
+    """Distinct colorless cards, each upgraded, join the hand."""
+    from sts2_lite import rng
+    for card_id in rng.sample(list(COLORLESS_CARDS), COSMIC_CONCOCTION_CARDS):
+        player_of(combat).add_to_hand(Card.create_generated(card_id, upgraded=True))
 
 def _cunning_potion(combat, t):
     """Shiv.CreateInHand, then each is upgraded."""
@@ -439,6 +457,7 @@ EFFECTS : dict[PotionId, Callable] = {
     PotionId.SNECKO_OIL : _snecko_oil, PotionId.SOLDIERS_STEW : _soldiers_stew, PotionId.AMBERGRIS : _ambergris, PotionId.FOUL_POTION : _foul_potion,
     PotionId.GLOWWATER_POTION : _glowwater_potion, PotionId.POTION_SHAPED_ROCK : _potion_shaped_rock,
     PotionId.POISON_POTION : _poison_potion, PotionId.CUNNING_POTION : _cunning_potion, PotionId.GHOST_IN_A_JAR : _ghost_in_a_jar,
+    PotionId.STAR_POTION : _star_potion, PotionId.KINGS_COURAGE : _kings_courage, PotionId.COSMIC_CONCOCTION : _cosmic_concoction,
 }
 assert set(EFFECTS) == set(PotionId) == set(POTION_INFO)
 
