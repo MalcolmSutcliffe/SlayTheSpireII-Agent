@@ -306,6 +306,12 @@ class CardId(Enum):
     TRACKING = auto()
     WELL_LAID_PLANS = auto()
     SPLASH = auto()
+    # the Regent
+    STRIKE_REGENT = auto()
+    DEFEND_REGENT = auto()
+    FALLING_STAR = auto()
+    VENERATE = auto()
+    SOVEREIGN_BLADE = auto()      # token: Forge makes it
 
 class CardKeyword(Enum):
     """Entities.Cards.CardKeyword (None omitted). Values are bits: cards store keywords as an int mask (Enum hashing is slow)."""

@@ -138,6 +138,14 @@ POOL = [
     ('TINGSHA', 'Uncommon', True, False, 'silent'),
     ('TOUGH_BANDAGES', 'Rare', True, False, 'silent'),
     ('TWISTED_FUNNEL', 'Uncommon', True, False, 'silent'),
+    ('DIVINE_RIGHT', 'Starter', True, False, 'regent'),          # RegentRelicPool
+    ('FENCING_MANUAL', 'Common', True, False, 'regent'),
+    ('GALACTIC_DUST', 'Uncommon', True, False, 'regent'),
+    ('LUNAR_PASTRY', 'Rare', True, False, 'regent'),
+    ('MINI_REGENT', 'Rare', True, False, 'regent'),
+    ('ORANGE_DOUGH', 'Rare', True, False, 'regent'),
+    ('REGALITE', 'Uncommon', True, False, 'regent'),
+    ('VITRUVIAN_MINION', 'Shop', True, False, 'regent'),
 ]
 
 # MerchantCost overrides (a relic class that sets its own price)

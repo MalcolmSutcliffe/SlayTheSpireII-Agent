@@ -53,6 +53,11 @@ CARD_ENERGY_COST_AND_TARGET : dict[CardId, tuple[int | str, TargetType]] = {
     CardId.SHIV : (0, _A),
     CardId.STRIKE_SILENT : (1, _A),
     CardId.SURVIVOR : (1, _S),
+    CardId.STRIKE_REGENT : (1, _A),
+    CardId.DEFEND_REGENT : (1, _S),
+    CardId.FALLING_STAR : (0, _A),
+    CardId.VENERATE : (1, _S),
+    CardId.SOVEREIGN_BLADE : (2, _A),
     CardId.ANTICIPATE : (0, _S),
     CardId.BACKFLIP : (1, _S),
     CardId.BLADE_DANCE : (1, _S),
@@ -267,6 +272,7 @@ TOXIC_DAMAGE = 5
 
 # energy cost change when upgraded (the rest of an upgrade is read from is_upgraded when the card is played)
 UPGRADE_COST_CHANGE = {
+    CardId.SOVEREIGN_BLADE : -1,
     CardId.BARRICADE : -1, CardId.CORRUPTION : -1, CardId.DARK_EMBRACE : -1, CardId.STAMPEDE : -1,
     CardId.UNMOVABLE : -1, CardId.HAVOC : -1, CardId.INFERNAL_BLADE : -1,
     CardId.BODY_SLAM : -1, CardId.HELLRAISER : -1, CardId.MIND_BLAST : -1,
@@ -286,7 +292,15 @@ UPGRADE_COST_CHANGE = {
 }
 
 # CardModel base cost of the cards above (an upgrade caps a rolled Confused cost at base + change)
+# the Regent's Star costs (CanonicalStarCost; "X" spends every Star): what a card costs in Stars before upgrades
+STAR_COST : dict[CardId, int | str] = {
+    CardId.FALLING_STAR : 2,
+}
+# Star cost an upgrade changes: (new Star cost upgraded) for the cards whose upgrade does it
+UPGRADE_STAR_COST : dict[CardId, int] = {}
+
 UPGRADE_BASE_COST = {
+    CardId.SOVEREIGN_BLADE : 2,
     CardId.BARRICADE : 3, CardId.CORRUPTION : 3, CardId.DARK_EMBRACE : 2, CardId.STAMPEDE : 2,
     CardId.UNMOVABLE : 2, CardId.HAVOC : 1, CardId.INFERNAL_BLADE : 1,
     CardId.BODY_SLAM : 1, CardId.HELLRAISER : 2, CardId.MIND_BLAST : 1,
@@ -342,7 +356,7 @@ UNPLAYABLE_CARDS = frozenset({CardId.SPOILS_MAP, CardId.LANTERN_KEY, CardId.BYRD
 ETHEREAL_CARDS = frozenset({CardId.APPARITION, CardId.DAZED, CardId.CLUMSY, CardId.FOLLY, CardId.ASCENDERS_BANE})
 
 # Retain / Innate / Eternal: only Retain acts in combat (Innate and Eternal are deck-level)
-RETAINING_CARDS = frozenset({CardId.POOR_SLEEP, CardId.RESTLESSNESS, CardId.PURITY, CardId.LUMINESCE, CardId.SNAKEBITE})
+RETAINING_CARDS = frozenset({CardId.SOVEREIGN_BLADE, CardId.POOR_SLEEP, CardId.RESTLESSNESS, CardId.PURITY, CardId.LUMINESCE, CardId.SNAKEBITE})
 
 # cards with the Sly keyword: discarded by an effect, they play themselves for free (CardCmd.DiscardAndDraw)
 SLY_CARDS = frozenset({CardId.FLICK_FLACK, CardId.RICOCHET, CardId.UNTOUCHABLE, CardId.REFLEX, CardId.TACTICIAN, CardId.ABRASIVE})

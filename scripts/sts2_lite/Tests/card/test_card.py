@@ -325,7 +325,7 @@ UNTARGETED_COLORLESS = (CardId.FINESSE, CardId.PRODUCTION, CardId.MASTER_OF_STRA
                         CardId.CALAMITY, CardId.JACK_OF_ALL_TRADES, CardId.CATASTROPHE, CardId.BEAT_DOWN, CardId.ANOINTED,
                         CardId.DISCOVERY, CardId.SPLASH, CardId.ENTROPY, CardId.HIDDEN_GEM, CardId.ALCHEMIZE, CardId.LUMINESCE,
                         CardId.TOXIC, CardId.FRANTIC_ESCAPE, CardId.DISINTEGRATION, CardId.MIND_ROT, CardId.SLOTH, CardId.WASTE_AWAY,
-                        CardId.STRATAGEM, CardId.ENTHRALLED, CardId.DEFEND_SILENT, CardId.SURVIVOR,
+                        CardId.STRATAGEM, CardId.ENTHRALLED, CardId.DEFEND_SILENT, CardId.SURVIVOR, CardId.DEFEND_REGENT, CardId.VENERATE,
                         *(CardId[n] for n in ('ANTICIPATE', 'BACKFLIP', 'BLADE_DANCE', 'CLOAK_AND_DAGGER', 'DAGGER_SPRAY', 'DEFLECT', 'DODGE_AND_ROLL',
                                               'FLICK_FLACK', 'PIERCING_WAIL', 'PREPARED', 'RICOCHET', 'UNTOUCHABLE',
                                               'ACCELERANT', 'ACCURACY', 'ACROBATICS', 'BLUR', 'BOUNCING_FLASK', 'CALCULATED_GAMBLE', 'ECHOING_SLASH',
@@ -541,7 +541,7 @@ def test_cards_that_get_cheaper_when_upgraded(card_id):
             CardId.AUTOMATION: 1, CardId.MAYHEM: 2, CardId.NOSTALGIA: 1, CardId.CALAMITY: 3,
                 CardId.APOTHEOSIS: 2, CardId.ABUNDANCE: 1, CardId.ALCHEMIZE: 1, CardId.ENTRENCH: 2, CardId.DISTRACTION: 1, CardId.STRATAGEM: 1,
                 CardId.BULLET_TIME: 3, CardId.MASTER_PLANNER: 2, CardId.MURDER: 3, CardId.NIGHTMARE: 3, CardId.SHADOW_STEP: 1, CardId.SHADOWMELD: 1,
-                CardId.TOOLS_OF_THE_TRADE: 1, CardId.TRACKING: 2, CardId.WELL_LAID_PLANS: 2}[card_id]
+                CardId.TOOLS_OF_THE_TRADE: 1, CardId.TRACKING: 2, CardId.WELL_LAID_PLANS: 2, CardId.SOVEREIGN_BLADE: 2}[card_id]
     assert power(card_id, base).upgraded_copy().energy_cost == base - 1
 
 def test_cost_never_goes_below_zero():

@@ -511,6 +511,7 @@ class CombatSimulator:
         self.vigor_pending = None       # Vigor the current attack command adds (VigorPower.BeforeAttack)
         self.auto_playing = False       # CardPlay.IsAutoPlay of the play being resolved
         self.card_x = 0                 # the X of the X-cost card last played
+        self.last_stars_spent = 0       # the Stars the card last played was paid with (CardModel.LastStarsSpent)
         combat_state.player.draw_hook = self._card_drawn
         combat_state.player.draw_pause_hook = self._pause_draw
         combat_state.player.shuffle_hook = self._shuffled
@@ -526,6 +527,37 @@ class CombatSimulator:
         if StatusId.NO_ENERGY_GAIN in self.combat_state.player.status:
             return
         self.combat_state.energy += amount
+
+    def gain_stars(self, amount : int):
+        """PlayerCmd.GainStars."""
+        if amount > 0:
+            self.combat_state.player.stars += amount
+            self.fire(HookType.STARS_GAINED, amount)
+
+    def spend_stars(self, amount : int):
+        """CardModel.SpendStars: the Stars a card was paid for with (AfterStarsSpent)."""
+        player = self.combat_state.player
+        self.last_stars_spent = amount
+        if amount > 0:
+            player.stars = max(0, player.stars - amount)
+            player.stars_spent_this_turn += amount
+            self.fire(HookType.STARS_SPENT, amount)
+
+    def forge(self, amount : int, source=None):
+        """ForgeCmd.Forge: a Sovereign Blade joins the hand if none is left unexhausted, then every Blade (an exhausted one too) gains `amount` damage."""
+        if self.is_over or amount <= 0:
+            return
+        player = self.combat_state.player
+        piles = (player.hand, player.draw_pile, player.discard_pile)
+        if not any(c.card_id is CardId.SOVEREIGN_BLADE for pile in piles for c in pile):
+            player.add_to_hand(Card.create_generated(CardId.SOVEREIGN_BLADE))
+        for pile in (*piles, player.exhaust_pile):
+            for i, c in enumerate(pile):
+                if c.card_id is CardId.SOVEREIGN_BLADE:
+                    grown = Card.create_copy(c)
+                    grown.bonus_damage += amount
+                    pile[i] = grown
+        self.fire(HookType.FORGED, amount)
 
     def fire(self, event : HookType, *args):
         """Call the status handler for each (status, event) pair in the state."""

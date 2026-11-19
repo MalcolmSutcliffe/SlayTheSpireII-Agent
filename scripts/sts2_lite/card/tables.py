@@ -97,7 +97,8 @@ GENERATABLE_CARDS = {
 
 TOKEN_CARDS = {CardId.GIANT_ROCK : ("Giant Rock", CardType.Attack, 1, A),      # made by Primal Force
                CardId.SHIV : ("Shiv", CardType.Attack, 0, A),                 # the Silent's Blade Dance, Cloak and Dagger, Cunning Potion...
-               CardId.LUMINESCE : ("Luminesce", CardType.Skill, 0, S)}          # Radiant Pearl: Retain. Gain 2 Energy (3 upgraded). Exhaust.
+               CardId.LUMINESCE : ("Luminesce", CardType.Skill, 0, S),
+               CardId.SOVEREIGN_BLADE : ("Sovereign Blade", CardType.Attack, 2, A)}      # the Regent's Forge makes it          # Radiant Pearl: Retain. Gain 2 Energy (3 upgraded). Exhaust.
 
 # event cards (CardRarity.Event): never generated in combat; listed so tests and transforms can build them
 EVENT_CARDS = {
@@ -241,7 +242,13 @@ ANCIENT_CARDS = {
     CardId.WHISTLE : ("Whistle", CardType.Attack, 2, A), CardId.WISH : ("Wish", CardType.Skill, 0, S),
 }
 
-CHARACTER_CARDS = {"IRONCLAD": GENERATABLE_CARDS, "SILENT": SILENT_CARDS}      # each character's card table (its pool, Basic cards included for the Silent)
+# the Regent's cards (RegentCardPool), Basic ones included; the Star cost of each is in constants.STAR_COST
+REGENT_CARDS = {
+    CardId.STRIKE_REGENT : ("Strike", CardType.Attack, 1, A), CardId.DEFEND_REGENT : ("Defend", CardType.Skill, 1, S),
+    CardId.FALLING_STAR : ("Falling Star", CardType.Attack, 0, A), CardId.VENERATE : ("Venerate", CardType.Skill, 1, S),
+}
+
+CHARACTER_CARDS = {"IRONCLAD": GENERATABLE_CARDS, "SILENT": SILENT_CARDS, "REGENT": REGENT_CARDS}      # each character's card table (its pool, Basic cards included for the Silent)
 
 # what Jack of All Trades can make: Hand of Greed (and Alchemize and Hidden Gem) cannot be generated in combat, and it makes no Jack of All Trades
 NOT_GENERATED_COLORLESS = frozenset({CardId.HAND_OF_GREED, CardId.HIDDEN_GEM, CardId.JACK_OF_ALL_TRADES, CardId.ALCHEMIZE})
@@ -280,7 +287,7 @@ class CardRarity(Enum):
 # table is complete). The true game rarity is stored: a policy that treats Bash like a Common does that itself.
 _RARITY_NAMES = {
     CardRarity.Basic : (
-        "STRIKE_IRONCLAD DEFEND_IRONCLAD BASH STRIKE_SILENT DEFEND_SILENT NEUTRALIZE SURVIVOR"
+        "STRIKE_IRONCLAD DEFEND_IRONCLAD BASH STRIKE_SILENT DEFEND_SILENT NEUTRALIZE SURVIVOR STRIKE_REGENT DEFEND_REGENT FALLING_STAR VENERATE"
     ),
     CardRarity.Common : (
         "BLOOD_WALL PERFECTED_STRIKE BREAKTHROUGH SHRUG_IT_OFF POMMEL_STRIKE IRON_WAVE THUNDERCLAP TREMBLE ANGER BODY_SLAM TWIN_STRIKE "
@@ -311,7 +318,7 @@ _RARITY_NAMES = {
         "CLASH DUAL_WIELD ENTRENCH CALTROPS DISTRACTION OUTMANEUVER HELLO_WORLD REBOUND RIP_AND_TEAR STACK"
     ),
     CardRarity.Token : (
-        "GIANT_ROCK LUMINESCE SHIV"
+        "GIANT_ROCK LUMINESCE SHIV SOVEREIGN_BLADE"
     ),
     CardRarity.Status : (
         "SLIMED INFECTION BURN BECKON WITHER DAZED WOUND SOOT TOXIC FRANTIC_ESCAPE DISINTEGRATION MIND_ROT SLOTH WASTE_AWAY"
@@ -345,6 +352,7 @@ _GENERATED_RARITIES = (CardRarity.Common, CardRarity.Uncommon, CardRarity.Rare)
 COMBAT_CARDS = {
     "IRONCLAD": GENERATABLE_CARDS,
     "SILENT": {cid: v for cid, v in SILENT_CARDS.items() if CARD_RARITY[cid] in _GENERATED_RARITIES and cid not in NOT_GENERATED_IN_COMBAT},
+    "REGENT": {cid: v for cid, v in REGENT_CARDS.items() if CARD_RARITY[cid] in _GENERATED_RARITIES and cid not in NOT_GENERATED_IN_COMBAT},
 }
 
 
@@ -376,10 +384,10 @@ def splash_pool(character : str = "IRONCLAD") -> list[CardId]:
 RETURNING_CARDS = frozenset({CardId.BOLAS, CardId.THRUMMING_HATCHET})
 
 # cards with the Defend tag (Fasten)
-DEFEND_CARDS = frozenset({CardId.DEFEND_IRONCLAD, CardId.ULTIMATE_DEFEND, CardId.DEFEND_SILENT})
+DEFEND_CARDS = frozenset({CardId.DEFEND_IRONCLAD, CardId.ULTIMATE_DEFEND, CardId.DEFEND_SILENT, CardId.DEFEND_REGENT})
 
 # cards with the Strike tag (Hellraiser plays them when they are drawn)
-STRIKE_CARDS = frozenset({CardId.STRIKE_SILENT, CardId.LEADING_STRIKE, CardId.ULTIMATE_STRIKE, CardId.SEEKER_STRIKE, CardId.STRIKE_IRONCLAD, CardId.PERFECTED_STRIKE, CardId.POMMEL_STRIKE, CardId.TWIN_STRIKE,
+STRIKE_CARDS = frozenset({CardId.STRIKE_SILENT, CardId.STRIKE_REGENT, CardId.LEADING_STRIKE, CardId.ULTIMATE_STRIKE, CardId.SEEKER_STRIKE, CardId.STRIKE_IRONCLAD, CardId.PERFECTED_STRIKE, CardId.POMMEL_STRIKE, CardId.TWIN_STRIKE,
                           CardId.ASHEN_STRIKE, CardId.SETUP_STRIKE})
 
 def _curse_debuff(player, status : StatusId):

@@ -5,10 +5,10 @@ import re
 from sts2_lite.relic import before_card_played, blocks_play, extra_plays, free_by_relic, restore, snapshot, x_bonus
 from sts2_lite.status import StatusId
 
-from sts2_lite.card.constants import MAD_SCIENCE_BLOCK, MAD_SCIENCE_DAMAGE, mad_science_rider, BECKON_HP_LOSS, BURN_DAMAGE, CONSUMED_ON_PLAY, CURSE_NAMES, ENCHANT_CORRUPTED_HP_LOSS, ENCHANT_SOWN_ENERGY, INFECTION_DAMAGE, NORMALITY_CARD_LIMIT, PLAYABLE_CURSES, QUEST_NAMES, TOXIC_DAMAGE, UPGRADE_BASE_COST, UPGRADE_COST_CHANGE, UPGRADE_KEYWORD, UPGRADE_REMOVED_KEYWORD, WITHER_DAMAGE, _AXE, _CHOKER, _ETHEREAL, _EXHAUST, _INNATE, _REPLAY, _RETAIN, _SCARF, _SLY, _UNPLAYABLE, QUEST_CARDS, _unknown_cards, _unknown_enchantments, keyword_mask
+from sts2_lite.card.constants import STAR_COST, UPGRADE_STAR_COST, MAD_SCIENCE_BLOCK, MAD_SCIENCE_DAMAGE, mad_science_rider, BECKON_HP_LOSS, BURN_DAMAGE, CONSUMED_ON_PLAY, CURSE_NAMES, ENCHANT_CORRUPTED_HP_LOSS, ENCHANT_SOWN_ENERGY, INFECTION_DAMAGE, NORMALITY_CARD_LIMIT, PLAYABLE_CURSES, QUEST_NAMES, TOXIC_DAMAGE, UPGRADE_BASE_COST, UPGRADE_COST_CHANGE, UPGRADE_KEYWORD, UPGRADE_REMOVED_KEYWORD, WITHER_DAMAGE, _AXE, _CHOKER, _ETHEREAL, _EXHAUST, _INNATE, _REPLAY, _RETAIN, _SCARF, _SLY, _UNPLAYABLE, QUEST_CARDS, _unknown_cards, _unknown_enchantments, keyword_mask
 from sts2_lite.card.effects import _gain_block
 from sts2_lite.card.ids import CardId, CardKeyword, CardType, EnchantmentId, TargetType
-from sts2_lite.card.tables import ANCIENT_CARDS, COLORLESS_CARDS, EVENT_CARDS, GENERATABLE_CARDS, SILENT_CARDS, HAND_CURSE_EFFECTS, STRIKE_CARDS, TOKEN_CARDS
+from sts2_lite.card.tables import ANCIENT_CARDS, COLORLESS_CARDS, EVENT_CARDS, GENERATABLE_CARDS, REGENT_CARDS, SILENT_CARDS, HAND_CURSE_EFFECTS, STRIKE_CARDS, TOKEN_CARDS
 
 if TYPE_CHECKING:
     from sts2_lite.combat import CombatSimulator
@@ -20,11 +20,19 @@ _CORRUPTION, _FREE_ATTACK, _TANGLED, _RINGING, _SLOTH = StatusId.CORRUPTION, Sta
 _FREE_SKILL = StatusId.FREE_SKILL
 
 
+_UNAFFORDABLE = frozenset({"EnergyCostTooHigh", "StarCostTooHigh"})
+
+def _only_unaffordable(reason : str | None) -> bool:
+    """The bridge's UnplayableReason flags ("EnergyCostTooHigh, StarCostTooHigh"): only what is left to spend right now, which the simulator decides itself."""
+    return bool(reason) and all(part.strip() in _UNAFFORDABLE for part in reason.split(","))
+
+
 class Card:
     card_id : CardId
     name : str
     type : CardType
     energy_cost : int | str
+    star_cost : int | str | None = None        # the Regent's Star cost ("X" spends every Star); None: the card costs no Stars
     target_type : TargetType
     is_upgraded : bool
     is_unplayable : bool
@@ -129,11 +137,14 @@ class Card:
         new_card.name = card["name"]
         # "EnergyCostTooHigh" is only the energy left right now: the simulator decides that itself, so the flag must not follow the card
         # into the discard pile (it made every card the player could not afford at the moment unplayable for the rest of a search)
-        new_card.is_unplayable = not card["can_play"] and card.get("unplayable_reason") != "EnergyCostTooHigh"
+        new_card.is_unplayable = not card["can_play"] and not _only_unaffordable(card.get("unplayable_reason"))
         if card["cost"] == "X":
             new_card.energy_cost = card["cost"]
         else:
             new_card.energy_cost = int(card["cost"])
+        shown_stars = card.get("star_cost")
+        if shown_stars is not None:
+            new_card.star_cost = shown_stars if shown_stars == "X" else int(shown_stars)
         new_card.is_upgraded = card["is_upgraded"]
         new_card.generated = bool(card.get("generated"))
         if card.get("card_keywords") is not None:       # CardModel.Keywords; older bridges only send hover tips
@@ -328,11 +339,12 @@ class Card:
     @classmethod
     def create_generated(cls, card_id : CardId, upgraded : bool = False) -> Card:
         """A fresh copy of a card that a card effect adds to the player's piles (Infernal Blade, Stoke)."""
-        name, card_type, cost, target = (GENERATABLE_CARDS.get(card_id) or SILENT_CARDS.get(card_id) or COLORLESS_CARDS.get(card_id) or EVENT_CARDS.get(card_id) or ANCIENT_CARDS.get(card_id)
+        name, card_type, cost, target = (GENERATABLE_CARDS.get(card_id) or SILENT_CARDS.get(card_id) or REGENT_CARDS.get(card_id) or COLORLESS_CARDS.get(card_id) or EVENT_CARDS.get(card_id) or ANCIENT_CARDS.get(card_id)
                                          or TOKEN_CARDS[card_id])
         c = cls()
         c.card_id, c.name, c.type = card_id, name, card_type
         c.energy_cost, c.target_type = cost, target
+        c.star_cost = STAR_COST.get(card_id)
         c.is_upgraded = c.is_unplayable = False
         c.generated = True
         return c.upgraded_copy() if upgraded else c
@@ -417,6 +429,8 @@ class Card:
             new_card.energy_cost = max(0, self.energy_cost - change)
             if self.restore_cost is not None:
                 new_card.restore_cost = max(0, self.restore_cost - change)
+        if self.card_id in UPGRADE_STAR_COST:
+            new_card.star_cost = STAR_COST[self.card_id]
         keyword = UPGRADE_KEYWORD.get(self.card_id)
         if keyword:
             new_card._keywords = new_card._mask & ~keyword
@@ -441,6 +455,8 @@ class Card:
             new_card.energy_cost = max(0, self.energy_cost - (kept - upgraded))
             if self.restore_cost is not None:
                 new_card.restore_cost = upgraded
+        if self.card_id in UPGRADE_STAR_COST:
+            new_card.star_cost = UPGRADE_STAR_COST[self.card_id]
         keyword = UPGRADE_KEYWORD.get(self.card_id)
         if keyword:
             new_card._keywords = new_card._mask | keyword
@@ -472,6 +488,7 @@ class Card:
         new_card.type = card.type
         new_card.name = card.name
         new_card.energy_cost = card.energy_cost
+        new_card.star_cost = card.star_cost
         new_card.target_type = card.target_type
         new_card.is_upgraded = card.is_upgraded
         new_card.is_unplayable = card.is_unplayable
@@ -493,7 +510,7 @@ class Card:
     def signature(self) -> tuple:
         """Everything that decides how this card plays: two cards with equal signatures are interchangeable
         (the fields create_copy carries over, minus name/type/target which follow from the id)."""
-        return (self.card_id, self.is_upgraded, self.energy_cost, self.is_unplayable, self.restore_cost, self.until_played,
+        return (self.card_id, self.is_upgraded, self.energy_cost, self.star_cost, self.is_unplayable, self.restore_cost, self.until_played,
                 self.bonus_damage, self.replay, self.enchantment, self.enchant_amount, self.enchant_bonus, self._mask, self.generated, self.dampened_from is not None, self.wither_level, self.bound, self.rider, self.turn_keywords)
 
     def current_cost(self, player) -> int | str:
@@ -527,7 +544,9 @@ class Card:
         if self.bound:
             player.bound_played = True      # BeforeCardPlayed
         energy = combat.combat_state.energy
+        stars = player.stars
         cost = 0 if free else self.current_cost(player)
+        star_cost = 0 if free or self.star_cost is None else stars if self.star_cost == "X" else self.star_cost
         free_attack = (player.status.get(StatusId.FREE_ATTACK) if self.type == CardType.Attack
                        else player.status.get(StatusId.FREE_SKILL) if self.type == CardType.Skill else None)    # FreeAttackPower / FreeSkillPower: the next one is free
         free_attack_amount = free_attack.amount if free_attack else 0
@@ -553,6 +572,7 @@ class Card:
                     before_card_played(combat, self, spent)
                 if not free:
                     combat.combat_state.energy = 0
+                combat.spend_stars(star_cost)
                 play(self, combat, target_index, self.is_upgraded, x)
                 self._enchantment_on_play(combat, target_index)
             else:
@@ -564,10 +584,12 @@ class Card:
                 if saved:
                     before_card_played(combat, self, spent)
                 combat.combat_state.energy -= cost
+                combat.spend_stars(star_cost)
                 play(self, combat, target_index, self.is_upgraded)
                 self._enchantment_on_play(combat, target_index)
         except ValueError:
             combat.combat_state.energy = energy
+            player.stars = stars
             if self.bound:
                 player.bound_played = False
             if counted:
@@ -696,6 +718,8 @@ class Card:
             return False            # Enthralled.ShouldPlay: only Enthralled itself while it is in hand (autoplay skips this check)
         if player.relics and _CHOKER in player.relics and blocks_play(player):
             return False            # Velvet Choker
+        if type(self.star_cost) is int and self.star_cost > player.stars:
+            return False            # the Regent's Star cost ("X" takes what there is)
         if type(self.energy_cost) is str and self.energy_cost == "X":
             return True
         if ctype is _ATTACK:

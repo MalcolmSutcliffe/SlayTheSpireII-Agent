@@ -143,7 +143,7 @@ PLAIN_DAMAGE = {        # id : (damage, damage upgraded) of the cards that print
     CardId.POUNCE : (14, 20),
     CardId.SKEWER : (8, 11),
     CardId.STRANGLE : (8, 10),
-    CardId.STRIKE_SILENT : (6, 9), CardId.NEUTRALIZE : (3, 4), CardId.SHIV : (4, 6),
+    CardId.STRIKE_SILENT : (6, 9), CardId.STRIKE_REGENT : (6, 9), CardId.FALLING_STAR : (8, 12), CardId.SOVEREIGN_BLADE : (10, 10), CardId.NEUTRALIZE : (3, 4), CardId.SHIV : (4, 6),
     CardId.DAGGER_SPRAY : (4, 6), CardId.DAGGER_THROW : (9, 12), CardId.FLICK_FLACK : (7, 9), CardId.LEADING_STRIKE : (3, 6),
     CardId.POISONED_STAB : (6, 8), CardId.PREDATOR : (15, 20), CardId.RICOCHET : (3, 3), CardId.SLICE : (6, 9), CardId.SUCKER_PUNCH : (8, 10),
     CardId.BYRD_SWOOP : (14, 18), CardId.CLASH : (14, 18), CardId.REBOUND : (9, 12), CardId.RIP_AND_TEAR : (7, 9), CardId.PECK : (2, 2), CardId.EXTERMINATE : (3, 4), CardId.SQUASH : (10, 12),
@@ -187,6 +187,8 @@ def _printed_damage(card : Card, combat : CombatSimulator) -> int:
         return (6 if up else 5) + card.bonus_damage
     if card.card_id == CardId.THRASH:
         return (6 if up else 4) + card.bonus_damage
+    if card.card_id == CardId.SOVEREIGN_BLADE:
+        return 10 + card.bonus_damage
     if card.card_id == CardId.MIND_BLAST:
         return len(player.draw_pile)
     if card.card_id == CardId.GOLD_AXE:

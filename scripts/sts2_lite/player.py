@@ -14,6 +14,7 @@ from sts2_lite.status import StatusInstance, StatusId, INSTANCED
 from sts2_lite.relic import RelicId, RelicInstance, strength_received, lizard_tail_revive, hand_draw_bonus, blocks_draw, free_by_relic
 from sts2_lite.potion import Potion, PotionId, DEFAULT_POTION_SLOTS, FAIRY_HEAL
 
+SOVEREIGN_BLADE_DAMAGE = 10
 GHOST_SEED_CARDS = frozenset({CardId.STRIKE_IRONCLAD, CardId.DEFEND_IRONCLAD})     # Basic rarity, Strike or Defend tag
 
 from operator import attrgetter
@@ -59,6 +60,8 @@ class Player(Creature):
         self.skills_played_this_turn = 0  # Pinpoint
         self.shivs_played_this_turn = 0   # Phantom Blades
         self.discards_this_turn = 0       # cards discarded by effects this turn (Memento Mori)
+        self.stars = 0                    # the Regent's resource (PlayerCombatState.Stars): kept between turns, spent by cards
+        self.stars_spent_this_turn = 0    # Stars spent this turn (cards that count them)
         self.character = "IRONCLAD"       # whose card pool combat effects generate from (Character.CardPool)
         self.nightmares = []              # (card, copies) Nightmare picked: they join the hand before the next hand draw
         self.plays_started_this_turn = 0  # Attack and Skill plays begun this turn, replays and auto-plays included (Nostalgia)
@@ -85,6 +88,7 @@ class Player(Creature):
         pl.current_hp = player["hp"]
         pl.block = player["block"]
         pl.gold = player.get("gold", 0)
+        pl.stars = int(player.get("stars") or 0)
         pl.potions = [Potion(potion_id, p.get("slot", i)) for i, p in enumerate(player.get("potions") or [])
                       if (potion_id := PotionId.from_game_id(p.get("id"))) is not None]
         pl.potion_slots = max(player.get("potion_slots", DEFAULT_POTION_SLOTS), 1 + max((p.slot for p in pl.potions), default=-1))
@@ -191,7 +195,7 @@ class Player(Creature):
                     self.cards_played_total = max(self.cards_played_total, base_from_displayed(shown, self, Creature()) if pile is self.hand else shown)
                     continue
                 momentum = card.enchantment == EnchantmentId.MOMENTUM and card.card_id in PLAIN_DAMAGE
-                if card.shown_damage is None or not (momentum or card.card_id in (CardId.RAMPAGE, CardId.THRASH, CardId.MAUL)):
+                if card.shown_damage is None or not (momentum or card.card_id in (CardId.RAMPAGE, CardId.THRASH, CardId.MAUL, CardId.SOVEREIGN_BLADE)):
                     continue
                 shown = card.shown_damage
                 if pile is self.hand:
@@ -203,6 +207,8 @@ class Player(Creature):
                     card.bonus_damage = max(0, round((shown - 10) / step)) * step
                 elif card.card_id == CardId.MAUL:
                     card.bonus_damage = max(0, shown - (6 if card.is_upgraded else 5))
+                elif card.card_id == CardId.SOVEREIGN_BLADE:       # Forge adds to its 10
+                    card.bonus_damage = max(0, shown - SOVEREIGN_BLADE_DAMAGE)
                 else:
                     card.bonus_damage = max(0, shown - (6 if card.is_upgraded else 4))
 
@@ -256,6 +262,7 @@ class Player(Creature):
         new_pl.skills_played_this_turn = player.skills_played_this_turn
         new_pl.shivs_played_this_turn = player.shivs_played_this_turn
         new_pl.discards_this_turn = player.discards_this_turn
+        new_pl.stars, new_pl.stars_spent_this_turn = player.stars, player.stars_spent_this_turn
         new_pl.nightmares = list(player.nightmares)
         new_pl.character = player.character
         new_pl.plays_started_this_turn = player.plays_started_this_turn
@@ -290,6 +297,7 @@ class Player(Creature):
         self.skills_played_this_turn = 0
         self.shivs_played_this_turn = 0
         self.discards_this_turn = 0
+        self.stars_spent_this_turn = 0
         self.plays_started_this_turn = 0
         self.card_blocks_this_turn = 0
         self.block_play, self.block_play_gains = None, 0

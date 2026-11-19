@@ -1190,7 +1190,7 @@ def test_generated_cards_have_the_right_upgraded_cost():
 
 def test_strike_tag_cards():
     assert STRIKE_CARDS == {CardId.STRIKE_IRONCLAD, CardId.PERFECTED_STRIKE, CardId.POMMEL_STRIKE, CardId.TWIN_STRIKE,
-                            CardId.ASHEN_STRIKE, CardId.SETUP_STRIKE, CardId.ULTIMATE_STRIKE, CardId.SEEKER_STRIKE, CardId.STRIKE_SILENT, CardId.LEADING_STRIKE}
+                            CardId.ASHEN_STRIKE, CardId.SETUP_STRIKE, CardId.ULTIMATE_STRIKE, CardId.SEEKER_STRIKE, CardId.STRIKE_SILENT, CardId.LEADING_STRIKE, CardId.STRIKE_REGENT}
 
 
 # ---------------------------------------------------------------- Hellraiser

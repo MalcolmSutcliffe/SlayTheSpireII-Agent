@@ -29,6 +29,7 @@ PLAYER_STATUS = {"VAJRA": (StatusId.STRENGTH, 1), "SWORD_OF_JADE": (StatusId.STR
                  "AKABEKO": (StatusId.VIGOR, 8), "GORGET": (StatusId.PLATING, 4), "BRONZE_SCALES": (StatusId.THORNS, 3),
                  "DIAMOND_DIADEM": (StatusId.BLUR, 1)}
 NINJA_SCROLL_SHIVS = 3
+DIVINE_RIGHT_STARS = 3
 TWISTED_FUNNEL_POISON = 4
 ENEMY_STATUS_TURN_1 = {"BAG_OF_MARBLES": (StatusId.VULNERABLE, 1), "RED_MASK": (StatusId.WEAK, 1)}
 BLOCK = {"ANCHOR": 10, "FAKE_ANCHOR": 4, "DIAMOND_DIADEM": 20}      # Diamond Diadem also gives Blur 1 (PLAYER_STATUS)
@@ -75,6 +76,8 @@ class Opening:
         for relic, (status, amount) in PLAYER_STATUS.items():
             if self.has(relic):
                 player.apply_status(status, amount)
+        if self.has("DIVINE_RIGHT"):
+            player.stars += DIVINE_RIGHT_STARS          # AfterRoomEntered
         if self.has("FAKE_SNECKO_EYE"):
             player.apply_status(StatusId.CONFUSED, 1)
         if self.has("SLING_OF_COURAGE") and self.elite:
