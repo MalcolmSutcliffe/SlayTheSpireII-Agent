@@ -161,6 +161,8 @@ PLAIN_DAMAGE = {        # id : (damage, damage upgraded) of the cards that print
     CardId.TWIN_STRIKE : (5, 7), CardId.UNRELENTING : (14, 20), CardId.UPPERCUT : (13, 13), CardId.WHIRLWIND : (5, 8),
 }
 
+SILENT_FIXED_DAMAGE = {CardId.ASSASSINATE : (10, 13), CardId.GRAND_FINALE : (60, 75), CardId.THE_HUNT : (10, 15)}      # damage of the Rares that print one number
+
 def _strikes(player : Player, in_play : Card | None = None) -> int:
     """Perfected Strike counts every Strike the player has in the fight: hand, draw, discard and exhaust piles
     (so generated and exhausted Strikes count), plus the card being played, which is out of the hand."""
@@ -193,6 +195,15 @@ def _printed_damage(card : Card, combat : CombatSimulator) -> int:
         return 12 if up else 10
     if card.card_id == CardId.MAD_SCIENCE:      # an Attack Mad Science: 12 a hit whatever its rider
         return MAD_SCIENCE_DAMAGE
+    # the Silent's Attacks whose damage is worked out (CalculatedDamage.Calculate(null)) or printed once
+    if card.card_id == CardId.MURDER:
+        return 1 + player.cards_drawn
+    if card.card_id == CardId.MEMENTO_MORI:
+        return (11 + 5 * player.discards_this_turn) if up else (9 + 4 * player.discards_this_turn)
+    if card.card_id == CardId.PRECISE_CUT:
+        return max(0, (16 if up else 13) - 2 * len(player.hand))
+    if card.card_id in SILENT_FIXED_DAMAGE:
+        return SILENT_FIXED_DAMAGE[card.card_id][up]
     return PLAIN_DAMAGE[card.card_id][up]
 
 ###

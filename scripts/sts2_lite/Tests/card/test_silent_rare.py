@@ -288,3 +288,29 @@ def test_silent_reward_pool_has_rares():
 def test_powers_load_from_bridge_ids(status):
     from sts2_lite.status import status_id_of
     assert status_id_of(status + "_POWER") is StatusId[status]
+
+
+# ------------------------------------------------------------ Thrash exhausts any Attack in the hand (found when the agent played a Silent run)
+def test_printed_damage_exists_for_every_attack():
+    """Thrash adds the damage of the Attack it exhausts: no Attack in any card table may be missing from _printed_damage."""
+    from sts2_lite.card import _printed_damage
+    from sts2_lite.card import tables
+    sim = CombatSimulator(state([gen(CardId.STRIKE_SILENT)]))
+    for table in (tables.GENERATABLE_CARDS, tables.SILENT_CARDS, tables.COLORLESS_CARDS, tables.EVENT_CARDS, tables.TOKEN_CARDS, tables.ANCIENT_CARDS):
+        for card_id, (_, card_type, _, _) in table.items():
+            if card_type == CardType.Attack:
+                assert _printed_damage(gen(card_id), sim) >= 0, card_id
+
+def test_thrash_takes_murders_damage():
+    cs = state([gen(CardId.THRASH), gen(CardId.MURDER)])
+    cs.player.cards_drawn = 6
+    play(cs)
+    thrash_done = next(c for c in cs.player.discard_pile if c.card_id == CardId.THRASH)
+    assert thrash_done.bonus_damage == 7 and [c.card_id for c in cs.player.exhaust_pile] == [CardId.MURDER]
+
+@pytest.mark.parametrize("card_id, upgraded, damage", [(CardId.ASSASSINATE, False, 10), (CardId.ASSASSINATE, True, 13), (CardId.GRAND_FINALE, False, 60),
+                                                       (CardId.THE_HUNT, True, 15)])
+def test_thrash_takes_fixed_damage_rares(card_id, upgraded, damage):
+    from sts2_lite.card import _printed_damage
+    cs = state([gen(card_id, upgraded)])
+    assert _printed_damage(cs.player.hand[0], CombatSimulator(cs)) == damage
