@@ -121,6 +121,12 @@ class Creature:
             damage = min(damage, self.status[StatusId.HARD_TO_KILL].amount)       # ModifyDamageCap; also caps what block absorbs
         if StatusId.INTANGIBLE in self.status:
             damage = 1                                                          # IntangiblePower: ModifyDamageCap 1, and HP lost at most 1
+        if powered and dealer is not None and dealer is not self:
+            if getattr(dealer, "counts_hits", False) and hasattr(self, "enemy_id"):
+                self.apply_status(StatusId.HIT_THIS_TURN, 1)        # Beat into Shape counts the Attacks that hit
+            if StatusId.MONARCHS_GAZE in dealer.status:
+                from sts2_lite.card.effects import temp_strength
+                temp_strength(self, StatusId.MONARCHS_GAZE_STRENGTH_DOWN, dealer.status[StatusId.MONARCHS_GAZE].amount, -1)
         hp_before = self.current_hp
         broken = False
         if self.block > 0:

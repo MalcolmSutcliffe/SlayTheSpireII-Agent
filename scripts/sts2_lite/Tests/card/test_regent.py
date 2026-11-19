@@ -361,7 +361,7 @@ from sts2_lite.card.tables import REGENT_CARDS, TOKEN_CARDS, CARD_RARITY
 from sts2_lite.card.ids import TargetType
 
 CARD_SOURCES = Path(__file__).resolve().parents[4] / "sts2_decompiled" / "Core" / "Models" / "Cards"
-REGENT_TOKENS = [CardId.SOVEREIGN_BLADE, CardId.MINION_STRIKE, CardId.DEBRIS, CardId.MINION_DIVE_BOMB]
+REGENT_TOKENS = [CardId.SOVEREIGN_BLADE, CardId.MINION_STRIKE, CardId.DEBRIS, CardId.MINION_DIVE_BOMB, CardId.MINION_SACRIFICE]
 
 def _class_of(card_id):
     return "".join(part.capitalize() for part in card_id.name.split("_"))
@@ -372,7 +372,8 @@ def test_regent_card_matches_the_decompiled_class(card_id):
     source = (CARD_SOURCES / f"{_class_of(card_id)}.cs").read_text()
     energy, ctype, rarity, target = re.search(r": base\((-?\d+|[^,]+), CardType\.(\w+), CardRarity\.(\w+), TargetType\.(\w+)\)", source).groups()
     table = REGENT_CARDS.get(card_id) or TOKEN_CARDS.get(card_id) or {CardId.DEBRIS: ("Debris", CardType.Status, 1, TargetType.NONE)}[card_id]
-    assert (table[2], table[1].name, table[3].name.lower()) == (int(energy), ctype, target.lower()), card_id
+    expected_cost = "X" if "HasEnergyCostX => true" in source else int(energy)
+    assert (table[2], table[1].name, table[3].name.lower()) == (expected_cost, ctype, target.lower()), card_id
     assert CARD_RARITY[card_id].name == rarity, card_id
     star = re.search(r"CanonicalStarCost => (-?\d+)", source)
     expected = int(star.group(1)) if star else "X" if "HasStarCostX => true" in source else None
@@ -646,4 +647,196 @@ def test_terraforming_gives_vigor():
 def test_the_regent_reward_pool_holds_its_uncommons():
     from sts2_lite.rewards.cards import card_pool
     pool = card_pool("REGENT")
-    assert len(pool["Uncommon"]) == 34 and CardId.BLACK_HOLE in pool["Uncommon"]
+    assert len(pool["Uncommon"]) == 35 and CardId.BLACK_HOLE in pool["Uncommon"]
+
+
+# ------------------------------------------------------------ Rares
+def test_knockout_blow_gives_stars_on_a_kill():
+    cs = one_enemy([gen(CardId.KNOCKOUT_BLOW, True)], hp=38)
+    play(cs)
+    assert cs.player.stars == 5
+    cs = one_enemy([gen(CardId.KNOCKOUT_BLOW)], hp=100)
+    play(cs)
+    assert cs.player.stars == 0 and cs.enemies[0].current_hp == 70
+
+def test_arsenal_gives_strength_for_each_card_made():
+    cs = one_enemy([gen(CardId.ARSENAL), gen(CardId.REFINE_BLADE)])
+    sim = play(cs)
+    sim.play_card(0, 0)
+    assert cs.player.status_amount(StatusId.STRENGTH) == 1
+
+def test_beat_into_shape_forges_more_for_each_earlier_hit_this_turn():
+    cs = one_enemy([gen(CardId.STRIKE_REGENT), gen(CardId.STRIKE_REGENT), gen(CardId.BEAT_INTO_SHAPE)])
+    cs.player.counts_hits = True
+    sim = play(cs)
+    sim.play_card(0, 0)
+    sim.play_card(0, 0)
+    blade = next(c for c in cs.player.hand if c.card_id is CardId.SOVEREIGN_BLADE)
+    assert blade.bonus_damage == 5 + 5 * 2 and cs.enemies[0].current_hp == 100 - 6 - 6 - 5
+
+def test_big_bang():
+    cs = one_enemy([gen(CardId.BIG_BANG)])
+    cs.player.draw_pile = [gen(CardId.DEFEND_REGENT)]
+    play(cs)
+    assert cs.player.stars == 1 and cs.energy == 4 and cs.player.exhaust_pile and len(cs.player.hand) == 2
+    assert cs.player.hand[0].card_id is CardId.DEFEND_REGENT or cs.player.hand[1].card_id is CardId.DEFEND_REGENT
+
+def test_bombardment_plays_itself_from_the_exhaust_pile_each_turn():
+    cs = one_enemy([gen(CardId.BOMBARDMENT, True)])
+    cs.energy = 3
+    cs.player.draw_pile = [gen(CardId.DEFEND_REGENT) for _ in range(10)]
+    sim = play(cs)
+    assert cs.enemies[0].current_hp == 76 and cs.player.exhaust_pile[0].card_id is CardId.BOMBARDMENT
+    sim.end_turn()
+    assert cs.enemies[0].current_hp == 52
+
+def test_bundle_of_joy_adds_distinct_colorless_cards():
+    cs = one_enemy([gen(CardId.BUNDLE_OF_JOY, True)])
+    play(cs)
+    assert len(cs.player.hand) == 4 and len({c.card_id for c in cs.player.hand}) == 4
+
+def test_comet_costs_five_stars():
+    cs = one_enemy([gen(CardId.COMET)], stars=5)
+    play(cs)
+    enemy = cs.enemies[0]
+    assert cs.player.stars == 0 and cs.energy == 3 and enemy.current_hp == 67
+    assert enemy.status_amount(StatusId.WEAK) == 3 and enemy.status_amount(StatusId.VULNERABLE) == 3
+
+def test_crash_landing_fills_the_hand_with_debris():
+    cs = one_enemy([gen(CardId.CRASH_LANDING), gen(CardId.DEFEND_REGENT)])
+    play(cs)
+    assert cs.enemies[0].current_hp == 79
+    assert len(cs.player.hand) == 10 and sum(c.card_id is CardId.DEBRIS for c in cs.player.hand) == 9
+
+def test_decisions_decisions_plays_a_skill_three_times():
+    cs = one_enemy([gen(CardId.DECISIONS_DECISIONS), gen(CardId.DEFEND_REGENT)], stars=6)
+    cs.player.draw_pile = [gen(CardId.STRIKE_REGENT)] * 3
+    play(cs)                  # the only Skill is picked without asking
+    assert cs.pending_choice is None and cs.player.block == 15 and sum(c.card_id is CardId.DEFEND_REGENT for c in cs.player.discard_pile) == 1
+
+def test_dying_star_hits_all_and_takes_strength_until_their_turn_ends():
+    cs = make_state([gen(CardId.DYING_STAR, True)], enemy_count=2, enemy_hp=100)
+    cs.player.stars, cs.player.character = 3, "REGENT"
+    sim = play(cs)
+    assert [e.current_hp for e in cs.enemies] == [89, 89]
+    assert [e.status_amount(StatusId.STRENGTH) for e in cs.enemies] == [-11, -11]
+    sim._return_temporary_strength(cs.enemies[0])
+    assert cs.enemies[0].status_amount(StatusId.STRENGTH) == 0
+
+def test_foregone_conclusion_picks_cards_next_turn():
+    cs = one_enemy([gen(CardId.FOREGONE_CONCLUSION, True)])
+    cs.player.draw_pile = [gen(CardId.VENERATE)] + [gen(CardId.DEFEND_REGENT) for _ in range(8)] + [gen(CardId.STRIKE_REGENT)]
+    sim = play(cs)
+    sim.end_turn()
+    assert cs.pending_choice is not None and StatusId.FOREGONE_CONCLUSION not in cs.player.status
+
+def test_genesis_gives_stars_each_turn():
+    cs = one_enemy([gen(CardId.GENESIS)])
+    cs.energy = 2
+    cs.player.draw_pile = [gen(CardId.DEFEND_REGENT) for _ in range(10)]
+    sim = play(cs)
+    sim.end_turn()
+    assert cs.player.stars == 2 and cs.player.stars_gained_this_turn == 2
+
+def test_guards_turns_cards_into_minion_sacrifices():
+    cs = one_enemy([gen(CardId.GUARDS, True), gen(CardId.STRIKE_REGENT), gen(CardId.VENERATE), gen(CardId.DEFEND_REGENT)])
+    sim = play(cs)
+    assert cs.pending_choice.kind == "guards"
+    sim.choose_card(cs.pending_choice.indices[0])
+    sim.confirm_choice()
+    sacrifices = [c for c in cs.player.hand if c.card_id is CardId.MINION_SACRIFICE]
+    assert len(sacrifices) == 1 and sacrifices[0].is_upgraded and sacrifices[0].exhausts
+    sim.play_card(cs.player.hand.index(sacrifices[0]), 0)
+    assert cs.player.block == 10
+
+def test_heavenly_drill_hits_twice_as_often_with_four_energy():
+    cs = one_enemy([gen(CardId.HEAVENLY_DRILL)])
+    cs.energy = 4
+    play(cs)
+    assert cs.enemies[0].current_hp == 100 - 8 * 8 and cs.energy == 0
+    cs = one_enemy([gen(CardId.HEAVENLY_DRILL, True)])
+    play(cs)
+    assert cs.enemies[0].current_hp == 100 - 10 * 3
+
+def test_heirloom_hammer_copies_a_colorless_card():
+    cs = one_enemy([gen(CardId.HEIRLOOM_HAMMER), gen(CardId.FINESSE)])
+    sim = play(cs)
+    assert cs.enemies[0].current_hp == 80
+    assert sum(c.card_id is CardId.FINESSE for c in cs.player.hand) == 2
+
+def test_i_am_invincible_plays_itself_from_the_top_of_the_draw_pile():
+    cs = one_enemy([gen(CardId.DEFEND_REGENT)])
+    cs.player.draw_pile = [gen(CardId.DEFEND_REGENT) for _ in range(9)] + [gen(CardId.I_AM_INVINCIBLE, True)]
+    sim = CombatSimulator(cs)
+    sim.end_turn()
+    assert any(c.card_id is CardId.I_AM_INVINCIBLE for c in cs.player.discard_pile)
+
+def test_make_it_so_returns_after_every_third_skill():
+    cs = one_enemy([gen(CardId.DEFEND_REGENT)] * 3)
+    cs.player.discard_pile = [gen(CardId.MAKE_IT_SO)]
+    sim = play(cs)
+    sim.play_card(0, 0)
+    assert not any(c.card_id is CardId.MAKE_IT_SO for c in cs.player.hand)
+    sim.play_card(0, 0)
+    assert any(c.card_id is CardId.MAKE_IT_SO for c in cs.player.hand)
+
+def test_monarchs_gaze_takes_strength_from_what_it_hits():
+    cs = one_enemy([gen(CardId.MONARCHS_GAZE, True), gen(CardId.STRIKE_REGENT)])
+    sim = play(cs)
+    sim.play_card(0, 0)
+    assert cs.enemies[0].status_amount(StatusId.STRENGTH) == -1
+    sim._return_temporary_strength(cs.enemies[0])
+    assert cs.enemies[0].status_amount(StatusId.STRENGTH) == 0
+
+def test_neutron_aegis_gives_plating():
+    cs = one_enemy([gen(CardId.NEUTRON_AEGIS, True)], stars=5)
+    play(cs)
+    assert cs.player.status_amount(StatusId.PLATING) == 11 and cs.player.stars == 0
+
+def test_seeking_edge_makes_the_blade_hit_everyone():
+    cs = make_state([gen(CardId.SEEKING_EDGE)], enemy_count=2, enemy_hp=100)
+    cs.player.character = "REGENT"
+    sim = play(cs)
+    blade = next(c for c in cs.player.hand if c.card_id is CardId.SOVEREIGN_BLADE)
+    assert blade.bonus_damage == 7
+    sim.play_card(cs.player.hand.index(blade), 0)
+    assert [e.current_hp for e in cs.enemies] == [100 - 17, 100 - 17]
+
+def test_seven_stars_hits_seven_times():
+    cs = make_state([gen(CardId.SEVEN_STARS)], enemy_count=2, enemy_hp=100)
+    cs.player.stars, cs.player.character = 7, "REGENT"
+    play(cs)
+    assert [e.current_hp for e in cs.enemies] == [51, 51] and cs.player.stars == 0
+
+def test_sword_sage_plays_the_blade_again():
+    cs = one_enemy([gen(CardId.SWORD_SAGE, True), gen(CardId.SOVEREIGN_BLADE)])
+    cs.energy = 4
+    sim = play(cs)
+    sim.play_card(0, 0)
+    assert cs.enemies[0].current_hp == 80
+
+def test_the_smith_forges_thirty():
+    cs = one_enemy([gen(CardId.THE_SMITH)], stars=4)
+    play(cs)
+    blade = next(c for c in cs.player.hand if c.card_id is CardId.SOVEREIGN_BLADE)
+    assert blade.bonus_damage == 30 and cs.player.stars == 0
+
+def test_tyranny_draws_more_and_exhausts_cards():
+    cs = one_enemy([gen(CardId.TYRANNY)])
+    cs.player.draw_pile = [gen(CardId.DEFEND_REGENT) for _ in range(12)]
+    sim = play(cs)
+    sim.end_turn()          # 6 cards are drawn, then one is exhausted (the cards are all the same: no asking)
+    assert len(cs.player.exhaust_pile) == 1 and len(cs.player.hand) == 5
+
+def test_void_form_makes_the_first_cards_free_and_ends_the_turn():
+    cs = one_enemy([gen(CardId.VOID_FORM, True)])
+    cs.energy = 3
+    cs.player.draw_pile = [gen(CardId.BULWARK) for _ in range(10)]
+    sim = play(cs)
+    assert StatusId.VOID_FORM in cs.player.status
+    assert cs.turn_number >= 2 and len(cs.player.hand) == 5
+    # new turn: the first 2 cards are free
+    bulwark = next(i for i, c in enumerate(cs.player.hand) if c.card_id is CardId.BULWARK)
+    energy = cs.energy
+    sim.play_card(bulwark, 0)
+    assert cs.energy == energy

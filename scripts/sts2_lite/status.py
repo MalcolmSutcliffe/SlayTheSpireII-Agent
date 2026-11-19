@@ -86,6 +86,18 @@ class StatusId(Enum):
     PILLAR_OF_CREATION = auto()     # Block when a card is generated
     REFLECT = auto()                # blocked damage from Attacks is dealt back (ticks down at turn start)
     SPECTRUM_SHIFT = auto()         # colorless cards before each hand draw
+    ARSENAL = auto()                # Strength for each card generated
+    DYING_STAR = auto()             # on an enemy (TemporaryStrength, negative): the Strength it took comes back when its turn ends
+    FOREGONE_CONCLUSION = auto()    # next turn: pick cards of the draw pile into the hand, once
+    GENESIS = auto()                # Stars at each turn's start
+    HIT_THIS_TURN = auto()          # on an enemy: the Attacks that hit it this turn (Beat into Shape; hidden, not a game power)
+    MONARCHS_GAZE = auto()          # an enemy hit by an Attack loses Strength until the end of its turn
+    MONARCHS_GAZE_STRENGTH_DOWN = auto()    # marker of that loss
+    ROYALTIES = auto()              # Gold when the fight is won
+    SEEKING_EDGE = auto()           # the Sovereign Blade hits every enemy
+    SWORD_SAGE = auto()             # the Sovereign Blade is played this many more times
+    TYRANNY = auto()                # draw more at the turn's start, then exhaust as many cards
+    VOID_FORM = auto()              # the first cards played each turn are free (records: [[cards played this turn]])
     CRUSH_UNDER = auto()            # Crush Under (TemporaryStrengthPower, negative): the Strength it took comes back when the owner's turn ends
     DRAW_CARDS_NEXT_TURN = auto()   # Relax: cards added to the next turn's hand draw
     FASTEN = auto()
@@ -210,7 +222,7 @@ TICKS_DOWN = frozenset({
 })
 RESETS_EACH_TURN = frozenset({StatusId.SLOW})
 
-DEBUFFS = frozenset({StatusId.CONQUEROR, StatusId.POISON, StatusId.PIERCING_WAIL, StatusId.CRUSH_UNDER, StatusId.WEAK, StatusId.VULNERABLE, StatusId.FRAIL, StatusId.SHRINK,
+DEBUFFS = frozenset({StatusId.DYING_STAR, StatusId.MONARCHS_GAZE_STRENGTH_DOWN, StatusId.CONQUEROR, StatusId.POISON, StatusId.PIERCING_WAIL, StatusId.CRUSH_UNDER, StatusId.WEAK, StatusId.VULNERABLE, StatusId.FRAIL, StatusId.SHRINK,
                      StatusId.CONSTRICT, StatusId.TANGLED, StatusId.RINGING,
                      StatusId.NO_DRAW, StatusId.NO_ENERGY_GAIN, StatusId.MANGLE, StatusId.CONFUSED,
                      StatusId.NO_BLOCK, StatusId.THE_GAMBIT, StatusId.DARK_SHACKLES,
@@ -965,10 +977,39 @@ def _spectrum_shift_before_turn(combat : CombatSimulator, owner : Creature, amou
         for card_id in rng.sample(list(COLORLESS_POOL), amount):
             owner.add_to_hand(Card.create_generated(card_id))
 
+def _arsenal_on_generated(combat : CombatSimulator, owner : Creature, amount : int, card):
+    if _own(combat, owner):
+        owner.apply_status(StatusId.STRENGTH, amount)
+
+def _foregone_conclusion_on_turn_start(combat : CombatSimulator, owner : Creature, amount : int):
+    """ForegoneConclusionPower.BeforeHandDraw (here after the draw): pick that many cards of the draw pile into the hand; it is then used up."""
+    if _own(combat, owner):
+        del owner.status[StatusId.FOREGONE_CONCLUSION]
+        combat.request_stratagem(amount)
+
+def _tyranny_on_turn_start(combat : CombatSimulator, owner : Creature, amount : int):
+    """TyrannyPower.AfterPlayerTurnStart: exhaust that many cards of the hand."""
+    if _own(combat, owner) and owner.hand:
+        combat.request_choice("tyranny", list(range(len(owner.hand))), "hand", amount)
+
+def _void_form_on_card_played(combat : CombatSimulator, owner : Creature, amount : int, card):
+    if _own(combat, owner):
+        inst = owner.status[StatusId.VOID_FORM]
+        inst.records = [[(inst.records[0][0] if inst.records else 0) + 1]]
+
+def _void_form_on_turn_start(combat : CombatSimulator, owner : Creature, amount : int):
+    if _own(combat, owner):
+        owner.status[StatusId.VOID_FORM].records = [[0]]
+
 ORBIT_ENERGY = 4
 PALE_BLUE_DOT_CARDS = 5
 
 STATUS_HANDLERS : dict[tuple[StatusId, HookType], Callable] = HandlerTable({
+    (StatusId.ARSENAL, HookType.CARD_GENERATED) : _arsenal_on_generated,
+    (StatusId.FOREGONE_CONCLUSION, HookType.PLAYER_TURN_START) : _foregone_conclusion_on_turn_start,
+    (StatusId.TYRANNY, HookType.PLAYER_TURN_START) : _tyranny_on_turn_start,
+    (StatusId.VOID_FORM, HookType.CARD_PLAYED) : _void_form_on_card_played,
+    (StatusId.VOID_FORM, HookType.BEFORE_PLAYER_TURN) : _void_form_on_turn_start,
     (StatusId.BLACK_HOLE, HookType.STARS_GAINED) : _black_hole_on_stars_gained,
     (StatusId.BLACK_HOLE, HookType.CARD_PLAYED) : _black_hole_on_card_played,
     (StatusId.CHILD_OF_THE_STARS, HookType.STARS_SPENT) : _child_of_the_stars_on_stars_spent,

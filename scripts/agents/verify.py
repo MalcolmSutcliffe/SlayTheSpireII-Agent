@@ -22,7 +22,7 @@ RANDOM_UNLESS_UPGRADED = frozenset({CardId.TRUE_GRIT})
 
 
 def _statuses(creature) -> dict[str, int]:
-    return {s.name: inst.shown_amount for s, inst in creature.status.items()}
+    return {s.name: inst.shown_amount for s, inst in creature.status.items() if s is not StatusId.HIT_THIS_TURN}      # a count of the sim's own, not a game power
 
 def _cards(pile) -> Counter:
     return Counter((c.card_id.name + (f"[{c.enchantment.name}]" if c.enchantment else ""), c.is_upgraded) for c in pile)

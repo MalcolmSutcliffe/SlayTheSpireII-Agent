@@ -28,6 +28,12 @@ def _only_unaffordable(reason : str | None) -> bool:
     return bool(reason) and all(part.strip() in _UNAFFORDABLE for part in reason.split(","))
 
 
+def _void_form_free(void_form) -> bool:
+    """The first `amount` cards played each turn cost nothing (VoidFormPower)."""
+    return (void_form.records[0][0] if void_form.records else 0) < void_form.amount
+
+_VOID_FORM = StatusId.VOID_FORM
+
 class Card:
     card_id : CardId
     name : str
@@ -530,6 +536,8 @@ class Card:
         if energy_cost == "X":
             return energy_cost
         ctype, status = self.type, player.status
+        if _VOID_FORM in status and _void_form_free(status[_VOID_FORM]):
+            return 0                # VoidFormPower.TryModifyEnergyCostInCombatLate
         if ctype is _SKILL:
             if _CORRUPTION in status:
                 return 0
@@ -558,6 +566,8 @@ class Card:
         stars = player.stars
         cost = 0 if free else self.current_cost(player)
         star_cost = 0 if free or self.star_cost is None else stars if self.star_cost == "X" else self.star_cost
+        if star_cost and _VOID_FORM in player.status and _void_form_free(player.status[_VOID_FORM]):
+            star_cost = 0           # VoidFormPower.TryModifyStarCost
         free_attack = (player.status.get(StatusId.FREE_ATTACK) if self.type == CardType.Attack
                        else player.status.get(StatusId.FREE_SKILL) if self.type == CardType.Skill else None)    # FreeAttackPower / FreeSkillPower: the next one is free
         free_attack_amount = free_attack.amount if free_attack else 0
@@ -680,6 +690,8 @@ class Card:
             if punch.amount <= 0:
                 del player.status[punch.status_id]
         extra += self.replay
+        if self.card_id is CardId.SOVEREIGN_BLADE and StatusId.SWORD_SAGE in player.status:
+            extra += player.status[StatusId.SWORD_SAGE].amount      # SwordSagePower: the Blade is played that many more times
         if StatusId.DUPLICATION in player.status:        # Duplicator Potion: the next card this turn, once
             extra += 1
             del player.status[StatusId.DUPLICATION]
@@ -731,7 +743,7 @@ class Card:
             return False            # Enthralled.ShouldPlay: only Enthralled itself while it is in hand (autoplay skips this check)
         if player.relics and _CHOKER in player.relics and blocks_play(player):
             return False            # Velvet Choker
-        if type(self.star_cost) is int and self.star_cost > player.stars:
+        if type(self.star_cost) is int and self.star_cost > player.stars and not (_VOID_FORM in player.status and _void_form_free(player.status[_VOID_FORM])):
             return False            # the Regent's Star cost ("X" takes what there is)
         if type(self.energy_cost) is str and self.energy_cost == "X":
             return True

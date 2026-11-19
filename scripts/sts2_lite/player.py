@@ -35,6 +35,7 @@ class Player(Creature):
     shuffle_hook = None      # called when the discard pile is shuffled into the draw pile (set by the simulator)
     draw_hook = None         # called with each card drawn into the hand (set by the simulator for Hellraiser)
     draw_pause_hook = None   # called after each card drawn with the draws still to make: True when a card choice is waiting, so the rest of the draw waits for it (set by the simulator)
+    counts_hits = False         # a Beat into Shape is in the deck: enemies keep count of the Attacks that hit them this turn
     generated_hook = None       # called with each card made up in the fight (AfterCardGeneratedForCombat)
     block_cleared_hook = None    # called after block is cleared, before the hand draw (AfterBlockCleared)
     known_top : int         # how many cards at the end of draw_pile (the top) the agent knows the identity and order of
@@ -125,6 +126,10 @@ class Player(Creature):
         # copies inferred from block amount (8 or 10 each)
         pl.crimson_mantle_plays = max(1, round(pl.status_amount(StatusId.CRIMSON_MANTLE) / 9)) if StatusId.CRIMSON_MANTLE in pl.status else 0
         pl._read_growing_cards()
+        pl.counts_hits = any(c.card_id is CardId.BEAT_INTO_SHAPE for pile in (pl.hand, pl.draw_pile, pl.discard_pile, pl.exhaust_pile) for c in pile)
+        for counter_status in (StatusId.ORBIT, StatusId.PALE_BLUE_DOT, StatusId.MONOLOGUE):
+            if counter_status in pl.status:       # these show a count of their own, not the power's amount (1)
+                pl.status[counter_status].amount = 1
         if StatusId.CHAINS_OF_BINDING in pl.status:         # mid-turn: the cards bound so far are the ones in hand, and the one already played
             pl.binding = True
             pl.bound_played = any(c.bound and c.card_id is not None and raw.get("unplayable_reason") == "BlockedByHook" for c, raw in zip(pl.hand, player["hand"]))
@@ -269,6 +274,7 @@ class Player(Creature):
         new_pl.discards_this_turn = player.discards_this_turn
         new_pl.stars, new_pl.stars_spent_this_turn = player.stars, player.stars_spent_this_turn
         new_pl.stars_gained_this_turn, new_pl.cards_generated = player.stars_gained_this_turn, player.cards_generated
+        new_pl.counts_hits = player.counts_hits
         new_pl.nightmares = list(player.nightmares)
         new_pl.character = player.character
         new_pl.plays_started_this_turn = player.plays_started_this_turn
@@ -303,8 +309,6 @@ class Player(Creature):
         self.skills_played_this_turn = 0
         self.shivs_played_this_turn = 0
         self.discards_this_turn = 0
-        self.stars_spent_this_turn = 0
-        self.stars_gained_this_turn = 0
         self.plays_started_this_turn = 0
         self.card_blocks_this_turn = 0
         self.block_play, self.block_play_gains = None, 0
@@ -319,7 +323,7 @@ class Player(Creature):
             if clarity.amount <= 0:
                 del self.status[StatusId.CLARITY_EXTRACT]
         count = max(0, (5 + hand_draw_bonus(self) if self.relics else 5) + (extra_draw.amount if extra_draw else 0) + (1 if clarity else 0) - self.status_amount(StatusId.MIND_ROT)
-                    + self.status_amount(StatusId.TOOLS_OF_THE_TRADE))
+                    + self.status_amount(StatusId.TOOLS_OF_THE_TRADE) + self.status_amount(StatusId.TYRANNY))
         if self.opening_hook is not None:       # a fight built from a deck: first-turn relics and Innate cards (relic/combat_start.py)
             hook, self.opening_hook = self.opening_hook, None
             count = hook(self, count)
@@ -450,6 +454,8 @@ class Player(Creature):
             self.discard_pile.append(card)
         if card.generated:
             self.cards_generated += 1
+            if card.card_id is CardId.BEAT_INTO_SHAPE:
+                self.counts_hits = True
             if self.generated_hook is not None:
                 self.generated_hook(card)
 

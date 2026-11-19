@@ -76,7 +76,7 @@ def test_splash_offers_three_other_attacks_and_the_pick_is_free(upgraded):
     assert all(c.card_id in set(splash_pool("SILENT")) and c.type == CardType.Attack and c.is_upgraded == upgraded for c in offers)
     sim.choose_card(cs.pending_choice.indices[0])
     picked = cs.player.hand[-1]
-    assert picked.card_id in GENERATABLE_CARDS and picked.current_cost(cs.player) in (0, "X")
+    assert picked.card_id in set(splash_pool("SILENT")) and picked.current_cost(cs.player) in (0, "X")
 
 def test_splash_can_be_skipped():
     cs = silent_state([Card.create_generated(CardId.SPLASH)])
