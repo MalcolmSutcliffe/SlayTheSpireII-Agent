@@ -876,12 +876,42 @@ public static partial class BridgeMod
             };
         }
 
+        else if (overlay is NChooseABundleSelectionScreen bundleScreen)
+        {
+            var bundles = BundlesOf(bundleScreen);
+            if (index < 0 || index >= bundles.Count)
+                return Error($"Pack index {index} out of range ({bundles.Count} packs available)");
+            if (bundleScreen.GetNodeOrNull<Godot.Control>("%BundlePreviewContainer")?.Visible == true)
+                return Error("A pack is already open - confirm it, or cancel to go back to the packs");
+
+            bundles[index].Hitbox.ForceClick();
+            return new Dictionary<string, object?>
+            {
+                ["status"] = "ok",
+                ["message"] = $"Opening pack {index + 1}"
+            };
+        }
+
         return Error("No card selection screen is open");
     }
 
     private static Dictionary<string, object?> ExecuteConfirmSelection()
     {
         var overlay = NOverlayStack.Instance?.Peek();
+        if (overlay is NChooseABundleSelectionScreen bundleScreen)
+        {
+            var bundleConfirm = bundleScreen.GetNodeOrNull<NConfirmButton>("%Confirm");
+            if (bundleConfirm is { IsEnabled: true })
+            {
+                bundleConfirm.ForceClick();
+                return new Dictionary<string, object?>
+                {
+                    ["status"] = "ok",
+                    ["message"] = "Taking the open pack"
+                };
+            }
+            return Error("No pack is open - select a pack first");
+        }
         if (overlay is NChooseACardSelectionScreen)
             return Error("Choose-a-card screen requires no confirmation — use select_card(index) to pick directly");
         if (overlay is not NCardGridSelectionScreen screen)
@@ -944,6 +974,21 @@ public static partial class BridgeMod
     private static Dictionary<string, object?> ExecuteCancelSelection()
     {
         var overlay = NOverlayStack.Instance?.Peek();
+
+        if (overlay is NChooseABundleSelectionScreen bundleScreen)
+        {
+            var bundleCancel = bundleScreen.GetNodeOrNull<NBackButton>("%Cancel");
+            if (bundleCancel is { IsEnabled: true })
+            {
+                bundleCancel.ForceClick();
+                return new Dictionary<string, object?>
+                {
+                    ["status"] = "ok",
+                    ["message"] = "Closing the pack - back to the packs"
+                };
+            }
+            return Error("No pack is open - a pack must be chosen");
+        }
 
         // Handle choose-a-card screen (skip button)
         if (overlay is NChooseACardSelectionScreen chooseScreen)

@@ -2,7 +2,7 @@
 import pytest
 
 from sts2_lite.card import Card, CardId, CardKeyword, CardType, EnchantmentId, TargetType
-from sts2_lite.combat import CombatSimulator
+from sts2_lite.combat import CombatSimulator, CombatState
 from sts2_lite.status import StatusId
 from sts2_lite.Tests.card.test_card import make_state
 
@@ -314,3 +314,37 @@ def test_thrash_takes_fixed_damage_rares(card_id, upgraded, damage):
     from sts2_lite.card import _printed_damage
     cs = state([gen(card_id, upgraded)])
     assert _printed_damage(cs.player.hand[0], CombatSimulator(cs)) == damage
+
+
+# ------------------------------------------------------------ found replaying silent-a0-1 (mismatches.jsonl)
+def murder_state(description, status=()):
+    from sts2_lite.Tests.captures import raw
+    state = raw("nibbit", "butt")
+    card = dict(state["hand"][0])
+    card.update({"id": "MURDER", "name": "Murder", "type": "Attack", "cost": "3", "target_type": "AnyEnemy", "description": description})
+    state["hand"] = [card] + state["hand"][1:]
+    state["player"]["status"] = list(state["player"].get("status") or []) + list(status)
+    return state
+
+@pytest.mark.parametrize("status, text, drawn", [
+    ((), "Deal 30 damage. Deals 1 additional damage for each card drawn this combat.", 29),
+    (({"id": "STRENGTH_POWER", "name": "Strength", "amount": -1, "type": "Debuff"},), "Deal 17 damage.", 17),
+    (({"id": "WEAK_POWER", "name": "Weak", "amount": 1, "type": "Debuff"},), "Deal 47 damage.", 62),     # 63 * 0.75 = 47.25
+])
+def test_murder_text_gives_the_cards_drawn_this_fight(status, text, drawn):
+    """The bridge shows no draw count, but Murder's text is the game's own damage (Strength and Weak included)."""
+    cs = CombatState.from_dict(murder_state(text, status))
+    assert cs.player.cards_drawn == drawn
+    earlier = CombatState.deepcopy(cs)
+    earlier.player.cards_drawn = 5000
+    cs.carry_combat_counters(earlier)
+    assert cs.player.cards_drawn == drawn               # a larger simulated count does not win over the text
+
+def test_spent_sown_loads_as_spent():
+    """Sown keeps its enchantment (amount 1) once played, but its text no longer says "Gain [energy]"."""
+    from sts2_lite.card import Card
+    def flask(description):
+        return Card.from_dict({"index": 0, "id": "BOUNCING_FLASK", "name": "Bouncing Flask", "type": "Skill", "cost": "2", "target_type": "AnyEnemy", "is_upgraded": False, "can_play": True,
+                               "description": description, "enchantment": {"id": "SOWN", "amount": 1}})
+    assert flask("Apply 3 Poison to a random enemy 3 times. Gain [silent_energy_icon.png].").enchant_amount == 1
+    assert flask("Apply 3 Poison to a random enemy 3 times.").enchant_amount == 0

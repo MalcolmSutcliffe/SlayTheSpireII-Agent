@@ -403,3 +403,12 @@ def test_player_block_clears_at_start_of_next_turn():
     cs.player.block = 9
     cs.player.turn_start()
     assert cs.player.block == 0
+
+def test_slippery_caps_poison_too_and_counts_down_on_it():
+    """Found replaying silent-a0-1 (Vantom): a Poison tick of 7 took 1 HP and Slippery went 8 -> 7."""
+    c = make_creature(hp=50)
+    c.apply_status(StatusId.SLIPPERY, 2)
+    c.apply_status(StatusId.POISON, 7)
+    from sts2_lite.status import poison_trigger
+    poison_trigger(c)
+    assert c.current_hp == 49 and c.status_amount(StatusId.SLIPPERY) == 1 and c.status_amount(StatusId.POISON) == 6

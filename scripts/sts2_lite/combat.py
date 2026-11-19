@@ -72,6 +72,7 @@ class CombatState:
         self.dormant = []       # Decimillipede segments that were killed and will reattach: out of the fight, not dead
         self.pending_choice = None
         self.hp_loss_read = False   # the times HP was lost were read off a Tear Asunder in hand, so the earlier simulated count is not trusted
+        self.cards_drawn_read = False   # the cards drawn were read off a Murder in hand
         self.won = False         # victory heals applied
 
     @classmethod
@@ -100,6 +101,7 @@ class CombatState:
                 cs.cards_played = max(cs.cards_played, raw_status["amount"])        # Sloth shows the cards played this turn
                 cs.sloth_played = raw_status["amount"]
         cs._read_hp_loss_count(combat_state)
+        cs._read_cards_drawn(combat_state)
         cs._infer_surround_facing(combat_state["enemies"])
         for enemy, raw in zip(cs.enemies, combat_state["enemies"]):
             if enemy.num_attacks > 0 and not Enemy.reads_base_damage(raw["intents"]):
@@ -299,6 +301,17 @@ class CombatState:
                     self.hp_loss_read = True
                     return
 
+    def _read_cards_drawn(self, combat_state : dict):
+        """Murder's text shows its damage (1 + the cards drawn this fight, with Strength and Weak applied): the game's own count of draws, which the bridge does not give otherwise."""
+        hand = combat_state.get("hand") or combat_state["player"].get("hand") or []
+        for card in hand:
+            if card.get("id") == "MURDER":
+                found = re.search(r"Deal (\d+) damage", card.get("description") or "")
+                if found:
+                    self.player.cards_drawn = max(0, base_from_displayed(int(found.group(1)), self.player, Creature()) - 1)       # the text includes Strength and Weak
+                    self.cards_drawn_read = True
+                    return
+
     def carry_combat_counters(self, previous : CombatState | None):
         """Counters that last the whole fight and that the bridge does not report: the times the player has lost
         HP (Tear Asunder) and the times Inferno and Crimson Mantle were played. Unlike the turn counters they carry across turns."""
@@ -308,7 +321,8 @@ class CombatState:
         if not self.hp_loss_read:
             new.hp_loss_events = max(new.hp_loss_events, old.hp_loss_events)
         new.cards_played_total = max(new.cards_played_total, old.cards_played_total)
-        new.cards_drawn = max(new.cards_drawn, old.cards_drawn)        # Murder
+        if not self.cards_drawn_read:
+            new.cards_drawn = max(new.cards_drawn, old.cards_drawn)        # Murder
         if StatusId.NIGHTMARE in new.status and old.nightmares:
             new.nightmares = list(old.nightmares)                       # the bridge shows only the amount, not the card picked
         for relic_id, relic in new.relics.items():

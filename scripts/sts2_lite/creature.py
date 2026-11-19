@@ -58,6 +58,12 @@ class Creature:
             return
         if hp_loss >= 1 and StatusId.INTANGIBLE in self.status:
             hp_loss = 1                     # IntangiblePower.ModifyHpLostAfterOsty: any HP loss (Offering, Bloodletting, poison...), not only damage
+        slippery = self.status.get(StatusId.SLIPPERY)
+        if hp_loss >= 1 and slippery is not None:       # SlipperyPower caps any HP loss (poison too) at 1 and counts down on it
+            hp_loss = 1
+            slippery.amount -= 1
+            if slippery.amount <= 0:
+                del self.status[StatusId.SLIPPERY]
         if hp_loss > 0 and self.relics:
             hp_loss = modify_hp_loss(self, hp_loss)
         if hp_loss > 0:

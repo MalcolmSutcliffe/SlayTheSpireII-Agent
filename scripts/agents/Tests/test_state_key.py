@@ -190,7 +190,7 @@ KEYED_OR_IGNORED = {
               "hp_lost_log", "damage_taken", "after_stun", "off_balance", "counter"},
     "CombatState": {"player", "enemies", "energy", "max_energy", "turn_number", "extra_turns", "ascension", "cards_played", "sloth_played", "revivals",
                     "pending_choice", "won", "dormant", "continuations",
-                    "hp_loss_read"},      # ignored: set while loading, before any action
+                    "hp_loss_read", "cards_drawn_read"},      # ignored: set while loading, before any action
     "RelicInstance": {"relic_id", "counter", "used", "value", "triggering"},
 }
 

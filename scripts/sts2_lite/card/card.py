@@ -140,6 +140,8 @@ class Card:
             new_card._keywords = keyword_mask(CardKeyword[k.upper()] for k in card["card_keywords"] if k.upper() in CardKeyword.__members__)
         if card.get("enchantment"):
             new_card._read_enchantment(card["enchantment"])
+            if new_card.enchantment == EnchantmentId.SOWN and "Gain" not in (card.get("description") or ""):
+                new_card.enchant_amount = 0     # spent: the game keeps the enchantment (amount 1) but drops its text
         new_card.bound = any(k.get("name") == "Bound" for k in card.get("keywords") or ())      # Chains of Binding shows as a keyword
         if new_card.bound and card.get("unplayable_reason") == "BlockedByHook":
             new_card.is_unplayable = False              # only because a Bound card was played this turn: the simulator knows that itself
