@@ -80,6 +80,41 @@ CARD_ENERGY_COST_AND_TARGET : dict[CardId, tuple[int | str, TargetType]] = {
     CardId.SOLAR_STRIKE : (1, _A),
     CardId.SPOILS_OF_BATTLE : (1, _S),
     CardId.WROUGHT_IN_WAR : (1, _A),
+    CardId.MINION_DIVE_BOMB : (0, _A),
+    CardId.ALIGNMENT : (0, _S),
+    CardId.BLACK_HOLE : (1, _S),
+    CardId.BULWARK : (2, _S),
+    CardId.CHARGE : (1, _S),
+    CardId.CHILD_OF_THE_STARS : (1, _S),
+    CardId.CONQUEROR : (1, _A),
+    CardId.CONVERGENCE : (1, _S),
+    CardId.DEVASTATE : (1, _A),
+    CardId.FURNACE : (1, _S),
+    CardId.GAMMA_BLAST : (0, _A),
+    CardId.GLIMMER : (1, _S),
+    CardId.HEGEMONY : (2, _A),
+    CardId.KINGLY_KICK : (4, _A),
+    CardId.KINGLY_PUNCH : (1, _A),
+    CardId.LUNAR_BLAST : (0, _A),
+    CardId.MANIFEST_AUTHORITY : (1, _S),
+    CardId.MONOLOGUE : (0, _S),
+    CardId.ORBIT : (2, _S),
+    CardId.PALE_BLUE_DOT : (1, _S),
+    CardId.PARRY : (1, _S),
+    CardId.PARTICLE_WALL : (0, _S),
+    CardId.PILLAR_OF_CREATION : (1, _S),
+    CardId.PROPHESIZE : (2, _S),
+    CardId.QUASAR : (0, _S),
+    CardId.RADIATE : (0, _ALL),
+    CardId.REFLECT : (1, _S),
+    CardId.RESONANCE : (1, _ALL),
+    CardId.ROYAL_GAMBLE : (0, _S),
+    CardId.SHINING_STRIKE : (1, _A),
+    CardId.SPECTRUM_SHIFT : (2, _S),
+    CardId.STARDUST : (0, _RAND),
+    CardId.SUMMON_FORTH : (1, _S),
+    CardId.SUPERMASSIVE : (1, _A),
+    CardId.TERRAFORMING : (1, _S),
     CardId.ANTICIPATE : (0, _S),
     CardId.BACKFLIP : (1, _S),
     CardId.BLADE_DANCE : (1, _S),
@@ -294,7 +329,7 @@ TOXIC_DAMAGE = 5
 
 # energy cost change when upgraded (the rest of an upgrade is read from is_upgraded when the card is played)
 UPGRADE_COST_CHANGE = {
-    CardId.SOVEREIGN_BLADE : -1,
+    CardId.SOVEREIGN_BLADE : -1, CardId.ORBIT : -1, CardId.SPECTRUM_SHIFT : -1,
     CardId.BARRICADE : -1, CardId.CORRUPTION : -1, CardId.DARK_EMBRACE : -1, CardId.STAMPEDE : -1,
     CardId.UNMOVABLE : -1, CardId.HAVOC : -1, CardId.INFERNAL_BLADE : -1,
     CardId.BODY_SLAM : -1, CardId.HELLRAISER : -1, CardId.MIND_BLAST : -1,
@@ -317,12 +352,14 @@ UPGRADE_COST_CHANGE = {
 # the Regent's Star costs (CanonicalStarCost; "X" spends every Star): what a card costs in Stars before upgrades
 STAR_COST : dict[CardId, int | str] = {
     CardId.FALLING_STAR : 2, CardId.ASTRAL_PULSE : 3, CardId.CLOAK_OF_STARS : 1, CardId.CRESCENT_SPEAR : 1, CardId.GUIDING_STAR : 1,
+    CardId.ALIGNMENT : 2, CardId.DEVASTATE : 4, CardId.GAMMA_BLAST : 3, CardId.PARTICLE_WALL : 2, CardId.QUASAR : 2, CardId.REFLECT : 3,
+    CardId.RESONANCE : 2, CardId.ROYAL_GAMBLE : 5, CardId.STARDUST : "X",
 }
 # Star cost an upgrade changes: (new Star cost upgraded) for the cards whose upgrade does it
 UPGRADE_STAR_COST : dict[CardId, int] = {}
 
 UPGRADE_BASE_COST = {
-    CardId.SOVEREIGN_BLADE : 2,
+    CardId.SOVEREIGN_BLADE : 2, CardId.ORBIT : 2, CardId.SPECTRUM_SHIFT : 2,
     CardId.BARRICADE : 3, CardId.CORRUPTION : 3, CardId.DARK_EMBRACE : 2, CardId.STAMPEDE : 2,
     CardId.UNMOVABLE : 2, CardId.HAVOC : 1, CardId.INFERNAL_BLADE : 1,
     CardId.BODY_SLAM : 1, CardId.HELLRAISER : 2, CardId.MIND_BLAST : 1,
@@ -345,14 +382,14 @@ UPGRADE_BASE_COST = {
 UPGRADE_REMOVED_KEYWORD = {CardId.KNOW_THY_PLACE : 1, CardId.SECRET_TECHNIQUE : 1, CardId.SECRET_WEAPON : 1, CardId.THINKING_AHEAD : 1, CardId.PROLONG : 1, CardId.DISCOVERY : 1, CardId.APPARITION : 2, CardId.MIRAGE : 1}      # Exhaust x5, Ethereal for Apparition
 
 # keyword an upgrade adds
-UPGRADE_KEYWORD = {CardId.HELLO_WORLD : 4, CardId.MAD_SCIENCE : 4, CardId.SCRAWL : 16, CardId.GOLD_AXE : 16, CardId.ANOINTED : 16, CardId.ENTROPY : 4, CardId.WISH : 16, CardId.AGGRESSION : 4, CardId.JUGGLING : 4, CardId.CALCULATED_GAMBLE : 16, CardId.INFINITE_BLADES : 4, CardId.SPEEDSTER : 4, CardId.AFTERIMAGE : 4}       # Retain, Retain, Retain, Innate (Entropy, Aggression, Juggling), Retain
+UPGRADE_KEYWORD = {CardId.MONOLOGUE : 16, CardId.ROYAL_GAMBLE : 16, CardId.HELLO_WORLD : 4, CardId.MAD_SCIENCE : 4, CardId.SCRAWL : 16, CardId.GOLD_AXE : 16, CardId.ANOINTED : 16, CardId.ENTROPY : 4, CardId.WISH : 16, CardId.AGGRESSION : 4, CardId.JUGGLING : 4, CardId.CALCULATED_GAMBLE : 16, CardId.INFINITE_BLADES : 4, CardId.SPEEDSTER : 4, CardId.AFTERIMAGE : 4}       # Retain, Retain, Retain, Innate (Entropy, Aggression, Juggling), Retain
 
 CONFUSED_MAX_COST = 3
 
 _EXHAUST, _ETHEREAL, _INNATE, _UNPLAYABLE, _RETAIN, _SLY, _ETERNAL, _REPLAY = 1, 2, 4, 8, 16, 32, 64, 128
 
 # cards with the Exhaust keyword
-EXHAUSTING_CARDS = frozenset({CardId.KNOW_THY_PLACE, CardId.MINION_STRIKE, CardId.DEBRIS, CardId.ADRENALINE, CardId.ASSASSINATE, CardId.MALAISE, CardId.NIGHTMARE, CardId.THE_HUNT, CardId.BACKSTAB, CardId.CALCULATED_GAMBLE, CardId.EXPOSE, CardId.MIRAGE, CardId.SLIMED, CardId.TREMBLE, CardId.IMPERVIOUS, CardId.MOLTEN_FIST,
+EXHAUSTING_CARDS = frozenset({CardId.MINION_DIVE_BOMB, CardId.ROYAL_GAMBLE, CardId.KNOW_THY_PLACE, CardId.MINION_STRIKE, CardId.DEBRIS, CardId.ADRENALINE, CardId.ASSASSINATE, CardId.MALAISE, CardId.NIGHTMARE, CardId.THE_HUNT, CardId.BACKSTAB, CardId.CALCULATED_GAMBLE, CardId.EXPOSE, CardId.MIRAGE, CardId.SLIMED, CardId.TREMBLE, CardId.IMPERVIOUS, CardId.MOLTEN_FIST,
                               CardId.TOXIC, CardId.FEED, CardId.DOMINATE, CardId.FIEND_FIRE, CardId.FORGOTTEN_RITUAL,
                               CardId.INFERNAL_BLADE, CardId.NOT_YET, CardId.OFFERING, CardId.SPORE_MIND,
                               CardId.PRODUCTION, CardId.MASTER_OF_STRATEGY, CardId.DRAMATIC_ENTRANCE, CardId.SHOCKWAVE,

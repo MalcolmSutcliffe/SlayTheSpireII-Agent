@@ -127,10 +127,12 @@ class Creature:
             if self.block > damage:
                 self.block -= damage
                 self.damage_taken += damage
+                self._reflect(damage, powered, dealer)
                 self._after_damage(0, False, powered, dealer)
                 return
             damage -= self.block
             self.damage_taken += self.block
+            self._reflect(self.block, powered, dealer)
             self.block = 0
             broken = True
         if damage > 0:
@@ -143,6 +145,11 @@ class Creature:
             self.lose_max_hp(dealer.status[StatusId.PAPER_CUTS].amount)      # PaperCutsPower.AfterDamageGiven
         if self.current_hp > 0:
             self._after_damage(hp_before - self.current_hp, broken, powered, dealer)
+
+    def _reflect(self, blocked : int, powered : bool, dealer : Creature | None):
+        """ReflectPower.AfterDamageReceived: what the Block took from an Attack is dealt back (Unpowered)."""
+        if powered and blocked > 0 and dealer is not None and dealer is not self and StatusId.REFLECT in self.status:
+            dealer.apply_damage(blocked, self)
 
     def _after_damage(self, unblocked : int, block_broken : bool, powered : bool, dealer : Creature | None):
         """AfterDamageReceived / AfterBlockBroken / AfterDamageGiven: runs for fully blocked hits too, never for a kill."""

@@ -6,7 +6,7 @@ from sts2_lite.helpers import enemy_at, living_enemies
 from sts2_lite.status import StatusId
 
 from sts2_lite.card.card import Card
-from sts2_lite.card.effects import PLAIN_DAMAGE, _attack, _gain_block, _vulnerable, _weak, crescent_spear_damage, temp_strength
+from sts2_lite.card.effects import PLAIN_DAMAGE, _attack, _debuff, _gain_block, _vulnerable, _weak, apply_fresh, crescent_spear_damage, temp_strength
 from sts2_lite.card.ids import CardId
 from sts2_lite.card.plays.silent import _hit_all
 
@@ -40,6 +40,9 @@ def play_venerate(card : Card, combat : CombatSimulator, target_index=0, is_upgr
 def play_sovereign_blade(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     """10 damage plus everything Forge has added (SeekingEdge hits every enemy, Parry adds Block: later)."""
     _attack(combat, 10 + card.bonus_damage, enemy_at(combat, target_index))
+    parry = combat.combat_state.player.status_amount(StatusId.PARRY)
+    if parry > 0:
+        _gain_block(combat, parry)
 
 
 def play_minion_strike(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
@@ -143,6 +146,162 @@ def play_wrought_in_war(card : Card, combat : CombatSimulator, target_index=0, i
     combat.forge(9 if is_upgraded else 7, card)
 
 
+# ------------------------------------------------------------ Uncommon
+
+def play_alignment(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    combat.gain_energy(3 if is_upgraded else 2)
+
+def play_black_hole(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    combat.combat_state.player.apply_status(StatusId.BLACK_HOLE, 4 if is_upgraded else 3)
+
+def play_bulwark(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    _gain_block(combat, 15 if is_upgraded else 12)
+    combat.forge(13 if is_upgraded else 10, card)
+
+def play_charge(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    """Two cards of the draw pile become Minion Dive Bombs (upgraded when Charge is)."""
+    pile = combat.combat_state.player.draw_pile
+    combat.request_choice("charge", list(range(len(pile))), "draw", 2, source=card)
+
+def play_child_of_the_stars(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    combat.combat_state.player.apply_status(StatusId.CHILD_OF_THE_STARS, 3 if is_upgraded else 2)
+
+def play_conqueror(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    _debuff(combat, enemy_at(combat, target_index), StatusId.CONQUEROR, 1)
+    combat.forge(5 if is_upgraded else 3, card)
+
+def play_convergence(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    player = combat.combat_state.player
+    player.apply_status(StatusId.RETAIN_HAND, 1)
+    player.apply_status(StatusId.ENERGY_NEXT_TURN, 1)
+    player.apply_status(StatusId.STAR_NEXT_TURN, 2 if is_upgraded else 1)
+
+def play_devastate(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    _attack(combat, _damage(card, is_upgraded), enemy_at(combat, target_index))
+
+def play_furnace(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    combat.combat_state.player.apply_status(StatusId.FURNACE, 7 if is_upgraded else 5)
+
+def play_gamma_blast(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    target = enemy_at(combat, target_index)
+    _attack(combat, _damage(card, is_upgraded), target)
+    if target.current_hp > 0:
+        _weak(combat, target, 2)
+        _vulnerable(combat, target, 2)
+
+def play_glimmer(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    player = combat.combat_state.player
+    player.draw_cards(4 if is_upgraded else 3)
+    combat.request_choice("to_draw_pile", list(range(len(player.hand))), pile="hand")
+
+def play_hegemony(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    _attack(combat, _damage(card, is_upgraded), enemy_at(combat, target_index))
+    combat.combat_state.player.apply_status(StatusId.ENERGY_NEXT_TURN, 3 if is_upgraded else 2)
+
+def play_kingly_kick(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    _attack(combat, _damage(card, is_upgraded), enemy_at(combat, target_index))
+
+def play_kingly_punch(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    _attack(combat, _damage(card, is_upgraded) + card.bonus_damage, enemy_at(combat, target_index))
+
+def play_lunar_blast(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    """One hit for each Skill played this turn."""
+    target = enemy_at(combat, target_index)
+    hits = combat.combat_state.player.skills_played_this_turn
+    if hits > 0:
+        _attack(combat, _damage(card, is_upgraded), target, hits)
+
+def play_manifest_authority(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    from sts2_lite import rng
+    from sts2_lite.event.run import COLORLESS_POOL
+    _gain_block(combat, 8 if is_upgraded else 7)
+    combat.combat_state.player.add_to_hand(Card.create_generated(rng.choice(COLORLESS_POOL), is_upgraded))
+
+def play_monologue(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    apply_fresh(combat, combat.combat_state.player, StatusId.MONOLOGUE, 1)
+
+def play_orbit(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    combat.combat_state.player.apply_status(StatusId.ORBIT, 1)
+
+def play_pale_blue_dot(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    combat.combat_state.player.apply_status(StatusId.PALE_BLUE_DOT, 2 if is_upgraded else 1)
+
+def play_parry(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    combat.combat_state.player.apply_status(StatusId.PARRY, 14 if is_upgraded else 10)
+
+def play_particle_wall(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    _gain_block(combat, 12 if is_upgraded else 9)
+
+def play_pillar_of_creation(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    combat.combat_state.player.apply_status(StatusId.PILLAR_OF_CREATION, 3 if is_upgraded else 2)
+
+def play_prophesize(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    combat.combat_state.player.draw_cards(9 if is_upgraded else 6)
+
+def play_quasar(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    """Choose one of three colorless cards (upgraded when Quasar is); it joins the hand."""
+    from sts2_lite import rng
+    from sts2_lite.event.run import COLORLESS_POOL
+    offers = [Card.create_generated(cid, is_upgraded) for cid in rng.sample(list(COLORLESS_POOL), 3)]
+    combat.request_pick_to_hand(offers)
+
+def play_radiate(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    """Hits every enemy once for each Star gained this turn."""
+    hits = combat.combat_state.player.stars_gained_this_turn
+    if hits > 0:
+        _hit_all(combat, _damage(card, is_upgraded), hits)
+
+def play_reflect(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    _gain_block(combat, 20 if is_upgraded else 15)
+    combat.combat_state.player.apply_status(StatusId.REFLECT, 1)
+
+def play_resonance(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    combat.combat_state.player.apply_status(StatusId.STRENGTH, 2 if is_upgraded else 1)
+    for enemy in living_enemies(combat):
+        _debuff(combat, enemy, StatusId.STRENGTH, -1)
+
+def play_royal_gamble(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    combat.gain_stars(9)
+
+def play_shining_strike(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    _attack(combat, _damage(card, is_upgraded), enemy_at(combat, target_index))
+    combat.gain_stars(2)
+
+def play_spectrum_shift(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    combat.combat_state.player.apply_status(StatusId.SPECTRUM_SHIFT, 2)
+
+def play_stardust(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    """One hit at a random enemy for each Star it was paid with."""
+    from sts2_lite import rng
+    for _ in range(combat.last_stars_spent):
+        living = living_enemies(combat)
+        if not living:
+            break
+        _attack(combat, _damage(card, is_upgraded), rng.pick_target(living))
+        combat.resolve_deaths()
+
+def play_summon_forth(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    """Every Sovereign Blade that is not in the hand joins it (a Blade that was exhausted too), then Forge."""
+    player = combat.combat_state.player
+    for pile in (player.draw_pile, player.discard_pile, player.exhaust_pile):
+        for blade in [c for c in pile if c.card_id is CardId.SOVEREIGN_BLADE]:
+            if len(player.hand) >= 10:
+                break
+            pile[:] = [c for c in pile if c is not blade]
+            player.hand.append(blade)
+    combat.forge(11 if is_upgraded else 8, card)
+
+def play_supermassive(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    """5 plus 3 (4) for every card made up in this fight."""
+    _attack(combat, 5 + (4 if is_upgraded else 3) * combat.combat_state.player.cards_generated, enemy_at(combat, target_index))
+
+def play_terraforming(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    combat.combat_state.player.apply_status(StatusId.VIGOR, 10 if is_upgraded else 7)
+
+def play_minion_dive_bomb(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    _attack(combat, _damage(card, is_upgraded), enemy_at(combat, target_index))
+
+
 REGENT_PLAYS = {
     CardId.STRIKE_REGENT : play_strike_regent,
     CardId.DEFEND_REGENT : play_defend_regent,
@@ -171,4 +330,39 @@ REGENT_PLAYS = {
     CardId.SOLAR_STRIKE : play_solar_strike,
     CardId.SPOILS_OF_BATTLE : play_spoils_of_battle,
     CardId.WROUGHT_IN_WAR : play_wrought_in_war,
+    CardId.ALIGNMENT : play_alignment,
+    CardId.BLACK_HOLE : play_black_hole,
+    CardId.BULWARK : play_bulwark,
+    CardId.CHARGE : play_charge,
+    CardId.CHILD_OF_THE_STARS : play_child_of_the_stars,
+    CardId.CONQUEROR : play_conqueror,
+    CardId.CONVERGENCE : play_convergence,
+    CardId.DEVASTATE : play_devastate,
+    CardId.FURNACE : play_furnace,
+    CardId.GAMMA_BLAST : play_gamma_blast,
+    CardId.GLIMMER : play_glimmer,
+    CardId.HEGEMONY : play_hegemony,
+    CardId.KINGLY_KICK : play_kingly_kick,
+    CardId.KINGLY_PUNCH : play_kingly_punch,
+    CardId.LUNAR_BLAST : play_lunar_blast,
+    CardId.MANIFEST_AUTHORITY : play_manifest_authority,
+    CardId.MONOLOGUE : play_monologue,
+    CardId.ORBIT : play_orbit,
+    CardId.PALE_BLUE_DOT : play_pale_blue_dot,
+    CardId.PARRY : play_parry,
+    CardId.PARTICLE_WALL : play_particle_wall,
+    CardId.PILLAR_OF_CREATION : play_pillar_of_creation,
+    CardId.PROPHESIZE : play_prophesize,
+    CardId.QUASAR : play_quasar,
+    CardId.RADIATE : play_radiate,
+    CardId.REFLECT : play_reflect,
+    CardId.RESONANCE : play_resonance,
+    CardId.ROYAL_GAMBLE : play_royal_gamble,
+    CardId.SHINING_STRIKE : play_shining_strike,
+    CardId.SPECTRUM_SHIFT : play_spectrum_shift,
+    CardId.STARDUST : play_stardust,
+    CardId.SUMMON_FORTH : play_summon_forth,
+    CardId.SUPERMASSIVE : play_supermassive,
+    CardId.TERRAFORMING : play_terraforming,
+    CardId.MINION_DIVE_BOMB : play_minion_dive_bomb,
 }

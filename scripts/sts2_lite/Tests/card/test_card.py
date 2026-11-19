@@ -319,7 +319,10 @@ UNTARGETED_EVENT = (CardId.EXTERMINATE, CardId.ENLIGHTENMENT, CardId.METAMORPHOS
                     CardId.DUAL_WIELD, CardId.ENTRENCH, CardId.CALTROPS, CardId.DISTRACTION, CardId.OUTMANEUVER, CardId.HELLO_WORLD, CardId.STACK, CardId.RIP_AND_TEAR)
 # the Regent's cards that never look at the target (Self, or every enemy)
 REGENT_UNTARGETED = tuple(CardId[n] for n in ("DEFEND_REGENT", "VENERATE", "DEBRIS", "ASTRAL_PULSE", "BEGONE", "CLOAK_OF_STARS", "COSMIC_INDIFFERENCE", "CRUSH_UNDER",
-                                              "GATHER_LIGHT", "GLITTERSTREAM", "GLOW", "HIDDEN_CACHE", "PATTER", "REFINE_BLADE", "SPOILS_OF_BATTLE"))
+                                              "GATHER_LIGHT", "GLITTERSTREAM", "GLOW", "HIDDEN_CACHE", "PATTER", "REFINE_BLADE", "SPOILS_OF_BATTLE",
+                                              "ALIGNMENT", "BLACK_HOLE", "BULWARK", "CHARGE", "CHILD_OF_THE_STARS", "CONVERGENCE", "FURNACE", "GLIMMER", "MANIFEST_AUTHORITY", "MONOLOGUE", "ORBIT",
+                                              "PALE_BLUE_DOT", "PARRY", "PARTICLE_WALL", "PILLAR_OF_CREATION", "PROPHESIZE", "QUASAR", "RADIATE", "REFLECT", "RESONANCE", "ROYAL_GAMBLE",
+                                              "SPECTRUM_SHIFT", "STARDUST", "SUMMON_FORTH", "TERRAFORMING"))
 
 UNTARGETED_COLORLESS = (CardId.FINESSE, CardId.PRODUCTION, CardId.MASTER_OF_STRATEGY, CardId.DRAMATIC_ENTRANCE, CardId.SHOCKWAVE,
                         CardId.PROWESS, CardId.IMPATIENCE, CardId.RESTLESSNESS, CardId.SCRAWL, CardId.ETERNAL_ARMOR, CardId.PURITY,
@@ -545,7 +548,7 @@ def test_cards_that_get_cheaper_when_upgraded(card_id):
             CardId.AUTOMATION: 1, CardId.MAYHEM: 2, CardId.NOSTALGIA: 1, CardId.CALAMITY: 3,
                 CardId.APOTHEOSIS: 2, CardId.ABUNDANCE: 1, CardId.ALCHEMIZE: 1, CardId.ENTRENCH: 2, CardId.DISTRACTION: 1, CardId.STRATAGEM: 1,
                 CardId.BULLET_TIME: 3, CardId.MASTER_PLANNER: 2, CardId.MURDER: 3, CardId.NIGHTMARE: 3, CardId.SHADOW_STEP: 1, CardId.SHADOWMELD: 1,
-                CardId.TOOLS_OF_THE_TRADE: 1, CardId.TRACKING: 2, CardId.WELL_LAID_PLANS: 2, CardId.SOVEREIGN_BLADE: 2}[card_id]
+                CardId.TOOLS_OF_THE_TRADE: 1, CardId.TRACKING: 2, CardId.WELL_LAID_PLANS: 2, CardId.ORBIT: 2, CardId.SPECTRUM_SHIFT: 2, CardId.SOVEREIGN_BLADE: 2}[card_id]
     assert power(card_id, base).upgraded_copy().energy_cost == base - 1
 
 def test_cost_never_goes_below_zero():

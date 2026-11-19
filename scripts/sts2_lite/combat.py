@@ -518,6 +518,7 @@ class CombatSimulator:
         combat_state.player.draw_pause_hook = self._pause_draw
         combat_state.player.shuffle_hook = self._shuffled
         combat_state.player.block_cleared_hook = self._block_cleared
+        combat_state.player.generated_hook = self._card_generated
         self._check_is_over()
 
     ###
@@ -534,6 +535,7 @@ class CombatSimulator:
         """PlayerCmd.GainStars."""
         if amount > 0:
             self.combat_state.player.stars += amount
+            self.combat_state.player.stars_gained_this_turn += amount
             self.fire(HookType.STARS_GAINED, amount)
 
     def spend_stars(self, amount : int):
@@ -809,6 +811,13 @@ class CombatSimulator:
             if len(player.hand) < MAX_HAND_SIZE:
                 player.discard_pile.remove(card)
                 player.hand.append(card.free_this_turn())
+        elif choice.kind == "charge":               # Charge: the picked cards of the draw pile become Minion Dive Bombs
+            bomb = Card.create_generated(CardId.MINION_DIVE_BOMB, choice.source is not None and choice.source.is_upgraded)
+            player.draw_pile[index] = bomb
+            picked = choice.picked + [index]
+            rest = [i for i, c in enumerate(player.draw_pile) if i not in picked and c.card_id is not CardId.MINION_DIVE_BOMB]
+            if choice.amount > 1 and rest:
+                self.request_choice("charge", rest, "draw", choice.amount - 1, source=choice.source, picked=picked)
         elif choice.kind == "begone":               # Begone: the pick becomes a Minion Strike in the same place of the hand
             strike = Card.create_generated(CardId.MINION_STRIKE, bool(choice.amount))
             player.hand[index] = strike
@@ -919,6 +928,9 @@ class CombatSimulator:
         self.fire(HookType.SHUFFLED)
         return self.combat_state.pending_choice is not None
 
+    def _card_generated(self, card : Card):
+        self.fire(HookType.CARD_GENERATED, card)
+
     def _block_cleared(self):
         self.fire(HookType.BLOCK_CLEARED)
 
@@ -937,6 +949,8 @@ class CombatSimulator:
     def _card_drawn(self, card : Card, from_hand_draw : bool = False):
         """Automation counts every card drawn; Hellraiser plays a Strike the moment it is drawn; Speedster hits every enemy for a draw outside the hand draw."""
         player = self.combat_state.player
+        if card.card_id is CardId.KINGLY_KICK or card.card_id is CardId.KINGLY_PUNCH:
+            self._kingly_draw(card)
         wave = player.status.get(StatusId.CORROSIVE_WAVE)
         if wave is not None:                # CorrosiveWavePower.AfterCardDrawn: Poison on every enemy
             for enemy in self.combat_state.enemies:
@@ -959,6 +973,21 @@ class CombatSimulator:
         if StatusId.HELLRAISER in player.status and card.card_id in STRIKE_CARDS and not self.is_over \
                 and any(c is card for c in player.hand):
             self.auto_play(card)
+
+    def _kingly_draw(self, card : Card):
+        """KinglyKick.AfterCardDrawn: it costs 1 less for the rest of the fight; KinglyPunch: it gains damage for good."""
+        hand = self.combat_state.player.hand
+        for i, c in enumerate(hand):
+            if c is card:
+                changed = Card.create_copy(c)
+                if c.card_id is CardId.KINGLY_KICK:
+                    if c.energy_cost == "X" or c.energy_cost <= 0:
+                        return
+                    changed.energy_cost = c.energy_cost - 1
+                else:
+                    changed.bonus_damage += 6 if c.is_upgraded else 4
+                hand[i] = changed
+                return
 
     def _pause_draw(self, left : int, from_hand_draw : bool) -> bool:
         """A card drawn played itself and asked for a card choice (Hellraiser's Seeker Strike): the cards still to draw wait for the answer, as the game's do, because
@@ -1196,8 +1225,10 @@ class CombatSimulator:
         if card.exhausts or force_exhaust or corrupted:
             player.exhaust_card(card)
             self.fire(HookType.CARD_EXHAUSTED, card)
-        elif to_top:
-            player.put_on_top(card)         # Nostalgia
+        elif to_top or card.card_id is CardId.SHINING_STRIKE:
+            player.put_on_top(card)         # Nostalgia; Shining Strike
+        elif card.card_id is CardId.PARTICLE_WALL:
+            player.add_to_hand(card)        # Particle Wall comes back to the hand (a full hand sends it to the discard pile)
         else:
             player.discard_pile.append(card)
 
@@ -1271,7 +1302,7 @@ class CombatSimulator:
     @staticmethod
     def _return_temporary_strength(creature : Creature):
         """Setup Strike, Mangle and Dark Shackles: the Strength they gave or took is returned when the creature's turn ends."""
-        for marker, sign in ((StatusId.SETUP_STRIKE, 1), (StatusId.MANGLE, -1), (StatusId.PIERCING_WAIL, -1), (StatusId.CRUSH_UNDER, -1), (StatusId.DARK_SHACKLES, -1), (StatusId.FLEX_POTION, 1), (StatusId.REPTILE_TRINKET, 1), (StatusId.FEEDING_FRENZY, 1)):
+        for marker, sign in ((StatusId.SETUP_STRIKE, 1), (StatusId.MANGLE, -1), (StatusId.PIERCING_WAIL, -1), (StatusId.CRUSH_UNDER, -1), (StatusId.MONOLOGUE_STRENGTH, 1), (StatusId.DARK_SHACKLES, -1), (StatusId.FLEX_POTION, 1), (StatusId.REPTILE_TRINKET, 1), (StatusId.FEEDING_FRENZY, 1)):
             amount = creature.status.pop(marker, None)
             if amount is not None:
                 creature.apply_status(StatusId.STRENGTH, -sign * amount.amount, bypass_artifact=True)

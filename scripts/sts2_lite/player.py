@@ -35,6 +35,7 @@ class Player(Creature):
     shuffle_hook = None      # called when the discard pile is shuffled into the draw pile (set by the simulator)
     draw_hook = None         # called with each card drawn into the hand (set by the simulator for Hellraiser)
     draw_pause_hook = None   # called after each card drawn with the draws still to make: True when a card choice is waiting, so the rest of the draw waits for it (set by the simulator)
+    generated_hook = None       # called with each card made up in the fight (AfterCardGeneratedForCombat)
     block_cleared_hook = None    # called after block is cleared, before the hand draw (AfterBlockCleared)
     known_top : int         # how many cards at the end of draw_pile (the top) the agent knows the identity and order of
     cards_exhausted_this_turn : int
@@ -62,6 +63,8 @@ class Player(Creature):
         self.discards_this_turn = 0       # cards discarded by effects this turn (Memento Mori)
         self.stars = 0                    # the Regent's resource (PlayerCombatState.Stars): kept between turns, spent by cards
         self.stars_spent_this_turn = 0    # Stars spent this turn (cards that count them)
+        self.stars_gained_this_turn = 0   # Radiate
+        self.cards_generated = 0          # cards made up in this fight (Supermassive)
         self.character = "IRONCLAD"       # whose card pool combat effects generate from (Character.CardPool)
         self.nightmares = []              # (card, copies) Nightmare picked: they join the hand before the next hand draw
         self.plays_started_this_turn = 0  # Attack and Skill plays begun this turn, replays and auto-plays included (Nostalgia)
@@ -195,7 +198,7 @@ class Player(Creature):
                     self.cards_played_total = max(self.cards_played_total, base_from_displayed(shown, self, Creature()) if pile is self.hand else shown)
                     continue
                 momentum = card.enchantment == EnchantmentId.MOMENTUM and card.card_id in PLAIN_DAMAGE
-                if card.shown_damage is None or not (momentum or card.card_id in (CardId.RAMPAGE, CardId.THRASH, CardId.MAUL, CardId.SOVEREIGN_BLADE)):
+                if card.shown_damage is None or not (momentum or card.card_id in (CardId.RAMPAGE, CardId.THRASH, CardId.MAUL, CardId.SOVEREIGN_BLADE, CardId.KINGLY_PUNCH)):
                     continue
                 shown = card.shown_damage
                 if pile is self.hand:
@@ -207,6 +210,8 @@ class Player(Creature):
                     card.bonus_damage = max(0, round((shown - 10) / step)) * step
                 elif card.card_id == CardId.MAUL:
                     card.bonus_damage = max(0, shown - (6 if card.is_upgraded else 5))
+                elif card.card_id == CardId.KINGLY_PUNCH:          # +4 (+6) each draw
+                    card.bonus_damage = max(0, shown - (10 if card.is_upgraded else 8))
                 elif card.card_id == CardId.SOVEREIGN_BLADE:       # Forge adds to its 10
                     card.bonus_damage = max(0, shown - SOVEREIGN_BLADE_DAMAGE)
                 else:
@@ -263,6 +268,7 @@ class Player(Creature):
         new_pl.shivs_played_this_turn = player.shivs_played_this_turn
         new_pl.discards_this_turn = player.discards_this_turn
         new_pl.stars, new_pl.stars_spent_this_turn = player.stars, player.stars_spent_this_turn
+        new_pl.stars_gained_this_turn, new_pl.cards_generated = player.stars_gained_this_turn, player.cards_generated
         new_pl.nightmares = list(player.nightmares)
         new_pl.character = player.character
         new_pl.plays_started_this_turn = player.plays_started_this_turn
@@ -298,6 +304,7 @@ class Player(Creature):
         self.shivs_played_this_turn = 0
         self.discards_this_turn = 0
         self.stars_spent_this_turn = 0
+        self.stars_gained_this_turn = 0
         self.plays_started_this_turn = 0
         self.card_blocks_this_turn = 0
         self.block_play, self.block_play_gains = None, 0
@@ -441,6 +448,10 @@ class Player(Creature):
             self.hand.append(card)
         else:
             self.discard_pile.append(card)
+        if card.generated:
+            self.cards_generated += 1
+            if self.generated_hook is not None:
+                self.generated_hook(card)
 
     def reduce_stomp_costs(self, card_id : CardId = CardId.STOMP):
         """Every Stomp, wherever it is, costs 1 less this turn each time an Attack is played (Pinpoint: each time a Skill is played)."""
@@ -490,6 +501,10 @@ class Player(Creature):
         if index >= len(self.draw_pile) - self.known_top:
             self.known_top = len(self.draw_pile) - index
         self.draw_pile.insert(index, card)
+        if card.generated:
+            self.cards_generated += 1
+            if self.generated_hook is not None:
+                self.generated_hook(card)
 
     def remove_from_draw_pile(self, card : Card):
         """Remove a card from the draw pile, forgetting a known top card if it was one."""

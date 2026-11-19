@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 import re
 from sts2_lite.relic import before_card_played, blocks_play, extra_plays, free_by_relic, restore, snapshot, x_bonus
 from sts2_lite.status import StatusId
+from sts2_lite.hooks import HookType
 
 from sts2_lite.card.constants import STAR_COST, UPGRADE_STAR_COST, MAD_SCIENCE_BLOCK, MAD_SCIENCE_DAMAGE, mad_science_rider, BECKON_HP_LOSS, BURN_DAMAGE, CONSUMED_ON_PLAY, CURSE_NAMES, ENCHANT_CORRUPTED_HP_LOSS, ENCHANT_SOWN_ENERGY, INFECTION_DAMAGE, NORMALITY_CARD_LIMIT, PLAYABLE_CURSES, QUEST_NAMES, TOXIC_DAMAGE, UPGRADE_BASE_COST, UPGRADE_COST_CHANGE, UPGRADE_KEYWORD, UPGRADE_REMOVED_KEYWORD, WITHER_DAMAGE, _AXE, _CHOKER, _ETHEREAL, _EXHAUST, _INNATE, _REPLAY, _RETAIN, _SCARF, _SLY, _UNPLAYABLE, QUEST_CARDS, _unknown_cards, _unknown_enchantments, keyword_mask
 from sts2_lite.card.effects import _gain_block
@@ -614,6 +615,8 @@ class Card:
                 player.status[punch.status_id] = punch
             raise
         combat.finish_vigor()
+        if spent > 0:
+            combat.fire(HookType.ENERGY_SPENT, spent)
 
         self.run_extra_plays(combat, target_index, x, extra, saved, spent)
 
