@@ -137,6 +137,8 @@ class CombatState:
                 kind = "to_draw_pile"
             elif "card to Exhaust" in prompt:       # Brand, Burning Pact, True Grit+: the prompt is the same, so the pick is taken without Burning Pact's draw
                 kind = "exhaust"
+            elif "to Transform" in prompt and StatusId.ENTROPY not in self.player.status:     # Begone: one card, into a Minion Strike (whether Begone was upgraded is not shown)
+                kind = "begone"
             elif "to Transform" in prompt:      # Entropy: as many cards as it has stacks
                 kind, amount = "transform", max(1, self.player.status_amount(StatusId.ENTROPY) - len(state.get("selected_cards") or []))
         prompt = state.get("prompt") or ""
@@ -807,6 +809,9 @@ class CombatSimulator:
             if len(player.hand) < MAX_HAND_SIZE:
                 player.discard_pile.remove(card)
                 player.hand.append(card.free_this_turn())
+        elif choice.kind == "begone":               # Begone: the pick becomes a Minion Strike in the same place of the hand
+            strike = Card.create_generated(CardId.MINION_STRIKE, bool(choice.amount))
+            player.hand[index] = strike
         elif choice.kind == "to_draw_pile":
             self._pile(choice.pile).remove(card)
             player.put_on_top(card)                 # the end of the list is the top
@@ -1266,7 +1271,7 @@ class CombatSimulator:
     @staticmethod
     def _return_temporary_strength(creature : Creature):
         """Setup Strike, Mangle and Dark Shackles: the Strength they gave or took is returned when the creature's turn ends."""
-        for marker, sign in ((StatusId.SETUP_STRIKE, 1), (StatusId.MANGLE, -1), (StatusId.PIERCING_WAIL, -1), (StatusId.DARK_SHACKLES, -1), (StatusId.FLEX_POTION, 1), (StatusId.REPTILE_TRINKET, 1), (StatusId.FEEDING_FRENZY, 1)):
+        for marker, sign in ((StatusId.SETUP_STRIKE, 1), (StatusId.MANGLE, -1), (StatusId.PIERCING_WAIL, -1), (StatusId.CRUSH_UNDER, -1), (StatusId.DARK_SHACKLES, -1), (StatusId.FLEX_POTION, 1), (StatusId.REPTILE_TRINKET, 1), (StatusId.FEEDING_FRENZY, 1)):
             amount = creature.status.pop(marker, None)
             if amount is not None:
                 creature.apply_status(StatusId.STRENGTH, -sign * amount.amount, bypass_artifact=True)
@@ -1317,6 +1322,9 @@ class CombatSimulator:
         pending_energy = player.status.pop(StatusId.ENERGY_NEXT_TURN, None)
         if pending_energy is not None:
             self.gain_energy(pending_energy.amount)        # Relax: after the energy reset
+        pending_stars = player.status.pop(StatusId.STAR_NEXT_TURN, None)
+        if pending_stars is not None:
+            self.gain_stars(pending_stars.amount)           # StarNextTurnPower.AfterEnergyReset
         radiant = player.status.get(StatusId.RADIANT_TINCTURE)
         if radiant is not None:                            # Radiant Tincture: 1 Energy a turn for a few turns
             self.gain_energy(1)

@@ -73,6 +73,8 @@ class StatusId(Enum):
     NO_BLOCK = auto()
     BLOCK_NEXT_TURN = auto()
     ENERGY_NEXT_TURN = auto()       # Relax: energy after the next turn's reset
+    STAR_NEXT_TURN = auto()         # Hidden Cache: Stars after the next turn's energy reset
+    CRUSH_UNDER = auto()            # Crush Under (TemporaryStrengthPower, negative): the Strength it took comes back when the owner's turn ends
     DRAW_CARDS_NEXT_TURN = auto()   # Relax: cards added to the next turn's hand draw
     FASTEN = auto()
     PREP_TIME = auto()
@@ -195,7 +197,7 @@ TICKS_DOWN = frozenset({
 })
 RESETS_EACH_TURN = frozenset({StatusId.SLOW})
 
-DEBUFFS = frozenset({StatusId.POISON, StatusId.PIERCING_WAIL, StatusId.WEAK, StatusId.VULNERABLE, StatusId.FRAIL, StatusId.SHRINK,
+DEBUFFS = frozenset({StatusId.POISON, StatusId.PIERCING_WAIL, StatusId.CRUSH_UNDER, StatusId.WEAK, StatusId.VULNERABLE, StatusId.FRAIL, StatusId.SHRINK,
                      StatusId.CONSTRICT, StatusId.TANGLED, StatusId.RINGING,
                      StatusId.NO_DRAW, StatusId.NO_ENERGY_GAIN, StatusId.MANGLE, StatusId.CONFUSED,
                      StatusId.NO_BLOCK, StatusId.THE_GAMBIT, StatusId.DARK_SHACKLES,

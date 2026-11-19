@@ -98,7 +98,8 @@ GENERATABLE_CARDS = {
 TOKEN_CARDS = {CardId.GIANT_ROCK : ("Giant Rock", CardType.Attack, 1, A),      # made by Primal Force
                CardId.SHIV : ("Shiv", CardType.Attack, 0, A),                 # the Silent's Blade Dance, Cloak and Dagger, Cunning Potion...
                CardId.LUMINESCE : ("Luminesce", CardType.Skill, 0, S),
-               CardId.SOVEREIGN_BLADE : ("Sovereign Blade", CardType.Attack, 2, A)}      # the Regent's Forge makes it          # Radiant Pearl: Retain. Gain 2 Energy (3 upgraded). Exhaust.
+               CardId.SOVEREIGN_BLADE : ("Sovereign Blade", CardType.Attack, 2, A),
+               CardId.MINION_STRIKE : ("Minion Strike", CardType.Attack, 0, A)}      # the Regent's Forge makes it          # Radiant Pearl: Retain. Gain 2 Energy (3 upgraded). Exhaust.
 
 # event cards (CardRarity.Event): never generated in combat; listed so tests and transforms can build them
 EVENT_CARDS = {
@@ -246,6 +247,27 @@ ANCIENT_CARDS = {
 REGENT_CARDS = {
     CardId.STRIKE_REGENT : ("Strike", CardType.Attack, 1, A), CardId.DEFEND_REGENT : ("Defend", CardType.Skill, 1, S),
     CardId.FALLING_STAR : ("Falling Star", CardType.Attack, 0, A), CardId.VENERATE : ("Venerate", CardType.Skill, 1, S),
+    # Common
+    CardId.ASTRAL_PULSE : ("Astral Pulse", CardType.Attack, 0, ALL),
+    CardId.BEGONE : ("Begone!", CardType.Skill, 1, S),
+    CardId.CELESTIAL_MIGHT : ("Celestial Might", CardType.Attack, 2, A),
+    CardId.CLOAK_OF_STARS : ("Cloak of Stars", CardType.Skill, 0, S),
+    CardId.COLLISION_COURSE : ("Collision Course", CardType.Attack, 0, A),
+    CardId.COSMIC_INDIFFERENCE : ("Cosmic Indifference", CardType.Skill, 1, S),
+    CardId.CRESCENT_SPEAR : ("Crescent Spear", CardType.Attack, 1, A),
+    CardId.CRUSH_UNDER : ("Crush Under", CardType.Attack, 1, ALL),
+    CardId.GATHER_LIGHT : ("Gather Light", CardType.Skill, 1, S),
+    CardId.GLITTERSTREAM : ("Glitterstream", CardType.Skill, 2, S),
+    CardId.GLOW : ("Glow", CardType.Skill, 1, S),
+    CardId.GUIDING_STAR : ("Guiding Star", CardType.Attack, 1, A),
+    CardId.HIDDEN_CACHE : ("Hidden Cache", CardType.Skill, 1, S),
+    CardId.KNOW_THY_PLACE : ("Know Thy Place", CardType.Skill, 0, A),
+    CardId.PATTER : ("Patter", CardType.Skill, 1, S),
+    CardId.PHOTON_CUT : ("Photon Cut", CardType.Attack, 1, A),
+    CardId.REFINE_BLADE : ("Refine Blade", CardType.Skill, 1, S),
+    CardId.SOLAR_STRIKE : ("Solar Strike", CardType.Attack, 1, A),
+    CardId.SPOILS_OF_BATTLE : ("Spoils of Battle", CardType.Skill, 1, S),
+    CardId.WROUGHT_IN_WAR : ("Wrought in War", CardType.Attack, 1, A),
 }
 
 CHARACTER_CARDS = {"IRONCLAD": GENERATABLE_CARDS, "SILENT": SILENT_CARDS, "REGENT": REGENT_CARDS}      # each character's card table (its pool, Basic cards included for the Silent)
@@ -290,6 +312,8 @@ _RARITY_NAMES = {
         "STRIKE_IRONCLAD DEFEND_IRONCLAD BASH STRIKE_SILENT DEFEND_SILENT NEUTRALIZE SURVIVOR STRIKE_REGENT DEFEND_REGENT FALLING_STAR VENERATE"
     ),
     CardRarity.Common : (
+        "ASTRAL_PULSE BEGONE CELESTIAL_MIGHT CLOAK_OF_STARS COLLISION_COURSE COSMIC_INDIFFERENCE CRESCENT_SPEAR CRUSH_UNDER GATHER_LIGHT GLITTERSTREAM GLOW GUIDING_STAR "
+        "HIDDEN_CACHE KNOW_THY_PLACE PATTER PHOTON_CUT REFINE_BLADE SOLAR_STRIKE SPOILS_OF_BATTLE WROUGHT_IN_WAR "
         "BLOOD_WALL PERFECTED_STRIKE BREAKTHROUGH SHRUG_IT_OFF POMMEL_STRIKE IRON_WAVE THUNDERCLAP TREMBLE ANGER BODY_SLAM TWIN_STRIKE "
         "MOLTEN_FIST SWORD_BOOMERANG CINDER TAUNT ARMAMENTS HEADBUTT TRUE_GRIT HAVOC SETUP_STRIKE "
         "ANTICIPATE BACKFLIP BLADE_DANCE CLOAK_AND_DAGGER DAGGER_SPRAY DAGGER_THROW DEADLY_POISON DEFLECT DODGE_AND_ROLL FLICK_FLACK LEADING_STRIKE PIERCING_WAIL POISONED_STAB PREDATOR PREPARED RICOCHET SLICE SNAKEBITE SUCKER_PUNCH UNTOUCHABLE"
@@ -318,10 +342,10 @@ _RARITY_NAMES = {
         "CLASH DUAL_WIELD ENTRENCH CALTROPS DISTRACTION OUTMANEUVER HELLO_WORLD REBOUND RIP_AND_TEAR STACK"
     ),
     CardRarity.Token : (
-        "GIANT_ROCK LUMINESCE SHIV SOVEREIGN_BLADE"
+        "GIANT_ROCK LUMINESCE SHIV SOVEREIGN_BLADE MINION_STRIKE"
     ),
     CardRarity.Status : (
-        "SLIMED INFECTION BURN BECKON WITHER DAZED WOUND SOOT TOXIC FRANTIC_ESCAPE DISINTEGRATION MIND_ROT SLOTH WASTE_AWAY"
+        "SLIMED INFECTION BURN BECKON WITHER DAZED WOUND SOOT TOXIC FRANTIC_ESCAPE DISINTEGRATION MIND_ROT SLOTH WASTE_AWAY DEBRIS"
     ),
     CardRarity.Curse : (
         "REGRET DECAY SHAME DOUBT NORMALITY INJURY POOR_SLEEP GREED CLUMSY CURSE_OF_THE_BELL WRITHE FOLLY BAD_LUCK DEBT GUILTY SPORE_MIND "
@@ -387,7 +411,7 @@ RETURNING_CARDS = frozenset({CardId.BOLAS, CardId.THRUMMING_HATCHET})
 DEFEND_CARDS = frozenset({CardId.DEFEND_IRONCLAD, CardId.ULTIMATE_DEFEND, CardId.DEFEND_SILENT, CardId.DEFEND_REGENT})
 
 # cards with the Strike tag (Hellraiser plays them when they are drawn)
-STRIKE_CARDS = frozenset({CardId.STRIKE_SILENT, CardId.STRIKE_REGENT, CardId.LEADING_STRIKE, CardId.ULTIMATE_STRIKE, CardId.SEEKER_STRIKE, CardId.STRIKE_IRONCLAD, CardId.PERFECTED_STRIKE, CardId.POMMEL_STRIKE, CardId.TWIN_STRIKE,
+STRIKE_CARDS = frozenset({CardId.STRIKE_SILENT, CardId.STRIKE_REGENT, CardId.SOLAR_STRIKE, CardId.MINION_STRIKE, CardId.LEADING_STRIKE, CardId.ULTIMATE_STRIKE, CardId.SEEKER_STRIKE, CardId.STRIKE_IRONCLAD, CardId.PERFECTED_STRIKE, CardId.POMMEL_STRIKE, CardId.TWIN_STRIKE,
                           CardId.ASHEN_STRIKE, CardId.SETUP_STRIKE})
 
 def _curse_debuff(player, status : StatusId):

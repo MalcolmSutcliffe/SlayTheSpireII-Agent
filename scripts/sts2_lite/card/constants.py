@@ -58,6 +58,28 @@ CARD_ENERGY_COST_AND_TARGET : dict[CardId, tuple[int | str, TargetType]] = {
     CardId.FALLING_STAR : (0, _A),
     CardId.VENERATE : (1, _S),
     CardId.SOVEREIGN_BLADE : (2, _A),
+    CardId.MINION_STRIKE : (0, _A),
+    CardId.DEBRIS : (1, _NONE),
+    CardId.ASTRAL_PULSE : (0, _ALL),
+    CardId.BEGONE : (1, _S),
+    CardId.CELESTIAL_MIGHT : (2, _A),
+    CardId.CLOAK_OF_STARS : (0, _S),
+    CardId.COLLISION_COURSE : (0, _A),
+    CardId.COSMIC_INDIFFERENCE : (1, _S),
+    CardId.CRESCENT_SPEAR : (1, _A),
+    CardId.CRUSH_UNDER : (1, _ALL),
+    CardId.GATHER_LIGHT : (1, _S),
+    CardId.GLITTERSTREAM : (2, _S),
+    CardId.GLOW : (1, _S),
+    CardId.GUIDING_STAR : (1, _A),
+    CardId.HIDDEN_CACHE : (1, _S),
+    CardId.KNOW_THY_PLACE : (0, _A),
+    CardId.PATTER : (1, _S),
+    CardId.PHOTON_CUT : (1, _A),
+    CardId.REFINE_BLADE : (1, _S),
+    CardId.SOLAR_STRIKE : (1, _A),
+    CardId.SPOILS_OF_BATTLE : (1, _S),
+    CardId.WROUGHT_IN_WAR : (1, _A),
     CardId.ANTICIPATE : (0, _S),
     CardId.BACKFLIP : (1, _S),
     CardId.BLADE_DANCE : (1, _S),
@@ -294,7 +316,7 @@ UPGRADE_COST_CHANGE = {
 # CardModel base cost of the cards above (an upgrade caps a rolled Confused cost at base + change)
 # the Regent's Star costs (CanonicalStarCost; "X" spends every Star): what a card costs in Stars before upgrades
 STAR_COST : dict[CardId, int | str] = {
-    CardId.FALLING_STAR : 2,
+    CardId.FALLING_STAR : 2, CardId.ASTRAL_PULSE : 3, CardId.CLOAK_OF_STARS : 1, CardId.CRESCENT_SPEAR : 1, CardId.GUIDING_STAR : 1,
 }
 # Star cost an upgrade changes: (new Star cost upgraded) for the cards whose upgrade does it
 UPGRADE_STAR_COST : dict[CardId, int] = {}
@@ -320,7 +342,7 @@ UPGRADE_BASE_COST = {
 }
 
 # keyword an upgrade removes (Exhaust)
-UPGRADE_REMOVED_KEYWORD = {CardId.SECRET_TECHNIQUE : 1, CardId.SECRET_WEAPON : 1, CardId.THINKING_AHEAD : 1, CardId.PROLONG : 1, CardId.DISCOVERY : 1, CardId.APPARITION : 2, CardId.MIRAGE : 1}      # Exhaust x5, Ethereal for Apparition
+UPGRADE_REMOVED_KEYWORD = {CardId.KNOW_THY_PLACE : 1, CardId.SECRET_TECHNIQUE : 1, CardId.SECRET_WEAPON : 1, CardId.THINKING_AHEAD : 1, CardId.PROLONG : 1, CardId.DISCOVERY : 1, CardId.APPARITION : 2, CardId.MIRAGE : 1}      # Exhaust x5, Ethereal for Apparition
 
 # keyword an upgrade adds
 UPGRADE_KEYWORD = {CardId.HELLO_WORLD : 4, CardId.MAD_SCIENCE : 4, CardId.SCRAWL : 16, CardId.GOLD_AXE : 16, CardId.ANOINTED : 16, CardId.ENTROPY : 4, CardId.WISH : 16, CardId.AGGRESSION : 4, CardId.JUGGLING : 4, CardId.CALCULATED_GAMBLE : 16, CardId.INFINITE_BLADES : 4, CardId.SPEEDSTER : 4, CardId.AFTERIMAGE : 4}       # Retain, Retain, Retain, Innate (Entropy, Aggression, Juggling), Retain
@@ -330,7 +352,7 @@ CONFUSED_MAX_COST = 3
 _EXHAUST, _ETHEREAL, _INNATE, _UNPLAYABLE, _RETAIN, _SLY, _ETERNAL, _REPLAY = 1, 2, 4, 8, 16, 32, 64, 128
 
 # cards with the Exhaust keyword
-EXHAUSTING_CARDS = frozenset({CardId.ADRENALINE, CardId.ASSASSINATE, CardId.MALAISE, CardId.NIGHTMARE, CardId.THE_HUNT, CardId.BACKSTAB, CardId.CALCULATED_GAMBLE, CardId.EXPOSE, CardId.MIRAGE, CardId.SLIMED, CardId.TREMBLE, CardId.IMPERVIOUS, CardId.MOLTEN_FIST,
+EXHAUSTING_CARDS = frozenset({CardId.KNOW_THY_PLACE, CardId.MINION_STRIKE, CardId.DEBRIS, CardId.ADRENALINE, CardId.ASSASSINATE, CardId.MALAISE, CardId.NIGHTMARE, CardId.THE_HUNT, CardId.BACKSTAB, CardId.CALCULATED_GAMBLE, CardId.EXPOSE, CardId.MIRAGE, CardId.SLIMED, CardId.TREMBLE, CardId.IMPERVIOUS, CardId.MOLTEN_FIST,
                               CardId.TOXIC, CardId.FEED, CardId.DOMINATE, CardId.FIEND_FIRE, CardId.FORGOTTEN_RITUAL,
                               CardId.INFERNAL_BLADE, CardId.NOT_YET, CardId.OFFERING, CardId.SPORE_MIND,
                               CardId.PRODUCTION, CardId.MASTER_OF_STRATEGY, CardId.DRAMATIC_ENTRANCE, CardId.SHOCKWAVE,

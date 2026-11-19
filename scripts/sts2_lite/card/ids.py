@@ -312,6 +312,28 @@ class CardId(Enum):
     FALLING_STAR = auto()
     VENERATE = auto()
     SOVEREIGN_BLADE = auto()      # token: Forge makes it
+    MINION_STRIKE = auto()        # token: Begone's transform
+    DEBRIS = auto()               # status: Collision Course
+    ASTRAL_PULSE = auto()
+    BEGONE = auto()
+    CELESTIAL_MIGHT = auto()
+    CLOAK_OF_STARS = auto()
+    COLLISION_COURSE = auto()
+    COSMIC_INDIFFERENCE = auto()
+    CRESCENT_SPEAR = auto()
+    CRUSH_UNDER = auto()
+    GATHER_LIGHT = auto()
+    GLITTERSTREAM = auto()
+    GLOW = auto()
+    GUIDING_STAR = auto()
+    HIDDEN_CACHE = auto()
+    KNOW_THY_PLACE = auto()
+    PATTER = auto()
+    PHOTON_CUT = auto()
+    REFINE_BLADE = auto()
+    SOLAR_STRIKE = auto()
+    SPOILS_OF_BATTLE = auto()
+    WROUGHT_IN_WAR = auto()
 
 class CardKeyword(Enum):
     """Entities.Cards.CardKeyword (None omitted). Values are bits: cards store keywords as an int mask (Enum hashing is slow)."""

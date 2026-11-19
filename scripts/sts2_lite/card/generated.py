@@ -15,6 +15,7 @@ GENERATED_CARDS = {
     CardId.SOOT : Card.create_soot,
     CardId.TOXIC : Card.create_toxic,
     CardId.FRANTIC_ESCAPE : Card.create_frantic_escape,
+    CardId.DEBRIS : Card.create_debris,
 }
 
 for _curse in (CardId.DISINTEGRATION, CardId.MIND_ROT, CardId.SLOTH, CardId.WASTE_AWAY):

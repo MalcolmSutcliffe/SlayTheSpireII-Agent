@@ -265,6 +265,16 @@ class Card:
         return c
 
     @classmethod
+    def create_debris(cls) -> Card:
+        """Collision Course's Debris: a Status that costs 1 to play and does nothing (Exhaust)."""
+        c = cls()
+        c.card_id, c.name, c.type = CardId.DEBRIS, "Debris", CardType.Status
+        c.energy_cost, c.target_type = 1, TargetType.NONE
+        c.is_upgraded = False
+        c.is_unplayable = False
+        return c
+
+    @classmethod
     def create_not_implemented(cls, name : str = "Not implemented") -> Card:
         """A card the sim does not know: a Wound, so that the agent neither plays it nor counts on it."""
         c = cls.create_wound()
