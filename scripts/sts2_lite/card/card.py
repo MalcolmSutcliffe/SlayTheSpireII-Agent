@@ -175,7 +175,7 @@ class Card:
             damage = re.search(r"(\d+)\s+damage", card.get("description") or "")
             new_card.wither_level = max(0, int(damage.group(1)) // WITHER_DAMAGE - 1) if damage else 0
         replay = re.search(r"Replay (\d+)\.", card.get("description") or "")       # Hidden Gem (Glam prints "Replay 1." too, but it is the keyword)
-        new_card.replay = int(replay.group(1)) if replay and new_card.card_id != CardId.HIDDEN_GEM and new_card.enchantment != EnchantmentId.GLAM else 0
+        new_card.replay = int(replay.group(1)) if replay and new_card.card_id not in (CardId.HIDDEN_GEM, CardId.SOVEREIGN_BLADE, CardId.SWORD_SAGE) and new_card.enchantment != EnchantmentId.GLAM else 0
         if new_card.enchantment == EnchantmentId.SPIRAL:
             new_card.replay = max(new_card.replay, 1)       # EnchantPlayCount: one more play (the bridge's text may already print "Replay 1.")
         if card["target_type"] == "None":

@@ -977,3 +977,41 @@ def test_silent_ancient_rewards():
     from sts2_lite.campaign.ancients import _dusty_tome_card
     class Run: character = "SILENT"; deck = []
     assert _dusty_tome_card(Run, random.Random(1)) == "WRAITH_FORM"
+
+
+# ------------------------------------------------------------ found replaying regent-a0-1 (mismatches.jsonl)
+def test_begone_counts_as_creating_a_card():
+    """CardCmd.Transform fires AfterCardGeneratedForCombat: Regalite pays its Block."""
+    from sts2_lite.relic import RelicId, RelicInstance
+    cs = one_enemy([gen(CardId.BEGONE), gen(CardId.DEFEND_REGENT)])
+    cs.player.relics[RelicId.REGALITE] = RelicInstance(RelicId.REGALITE)
+    sim = play(cs)
+    if cs.pending_choice is not None:
+        sim.choose_card(cs.pending_choice.indices[0])
+    assert cs.player.block == 4 and cs.player.relics[RelicId.REGALITE].used
+
+def test_a_melted_wax_relic_is_not_loaded():
+    from sts2_lite.relic import RelicInstance
+    melted = {"id": "REGALITE", "name": "Wax Regalite", "counter": None, "status": "Disabled"}
+    assert RelicInstance.from_dict(melted) is None
+    assert RelicInstance.from_dict({**melted, "status": "Normal"}) is not None
+
+def test_orbit_shows_the_energy_still_to_spend():
+    """OrbitPower.DisplayAmount is 4 - spent % 4: shown 1 means the next Energy spent pays one back."""
+    from sts2_lite.Tests.captures import raw
+    state = raw("nibbit", "butt")
+    state["player"]["status"] = list(state["player"].get("status") or []) + [{"id": "ORBIT_POWER", "name": "Orbit", "amount": 1, "type": "Buff"}]
+    cs = CombatState.from_dict(state)
+    assert cs.player.status[StatusId.ORBIT].records == [[3, 0]]
+    cs.player.status[StatusId.ORBIT].records[0][0] += 0
+    CombatSimulator(cs).fire(__import__("sts2_lite.hooks", fromlist=["HookType"]).HookType.ENERGY_SPENT, 1)
+    assert cs.energy == state["energy"] + 1
+
+def test_sword_sage_text_is_not_a_replay_of_its_own():
+    """"Sovereign Blade gains Replay 1." (Sword Sage) and the Blade's own "Replay 1." come from the power, not from the card's play count."""
+    from sts2_lite.Tests.captures import raw
+    state = raw("nibbit", "butt")
+    card = dict(state["hand"][0])
+    card.update({"id": "SWORD_SAGE", "name": "Sword Sage", "type": "Power", "cost": "2", "target_type": "Self", "description": "Sovereign Blade gains Replay 1."})
+    state["hand"] = [card] + state["hand"][1:]
+    assert CombatState.from_dict(state).player.hand[0].replay == 0

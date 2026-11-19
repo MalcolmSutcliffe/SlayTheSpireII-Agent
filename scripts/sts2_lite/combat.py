@@ -709,7 +709,14 @@ class CombatSimulator:
     def _transform(self, indices : list[int]):
         hand = self.combat_state.player.hand
         for i in indices:
-            hand[i] = Card.create_generated(rng.choice(transform_options(hand[i])))
+            self._replace_in_hand(i, Card.create_generated(rng.choice(transform_options(hand[i]))))
+
+    def _replace_in_hand(self, index : int, card : Card):
+        """CardCmd.Transform: the new card takes the old one's place and counts as made up in the fight (Regalite, Pillar of Creation...)."""
+        player = self.combat_state.player
+        player.hand[index] = card
+        player.cards_generated += 1
+        self._card_generated(card)
 
     def request_choice(self, kind : str, indices : list[int], pile : str = "hand", amount : int = 0, source : Card | None = None, hidden : bool = False,
                        picked : list[int] | None = None):
@@ -840,7 +847,7 @@ class CombatSimulator:
                     self.auto_play(card)
         elif choice.kind == "begone":               # Begone: the pick becomes a Minion Strike in the same place of the hand
             strike = Card.create_generated(CardId.MINION_STRIKE, bool(choice.amount))
-            player.hand[index] = strike
+            self._replace_in_hand(index, strike)
         elif choice.kind == "to_draw_pile":
             self._pile(choice.pile).remove(card)
             player.put_on_top(card)                 # the end of the list is the top

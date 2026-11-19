@@ -157,6 +157,8 @@ class RelicInstance:
         relic_id = RelicId.__members__.get(relic["id"])
         if relic_id is None:
             return None
+        if relic.get("melted") or (relic.get("status") == "Disabled" and str(relic.get("name", "")).startswith("Wax ")):
+            return None         # a melted wax relic does nothing any more
         used = relic.get("status") in USED_STATUS.get(relic_id, ()) or bool(relic.get("spent"))
         counter = relic.get("counter")
         if relic_id is RelicId.BRILLIANT_SCARF and counter is None:
@@ -185,4 +187,5 @@ LETTER_OPENER_EVERY, LETTER_OPENER_DAMAGE = 3, 5
 HAPPY_FLOWER_TURNS = {RelicId.HAPPY_FLOWER : 3, RelicId.FAKE_HAPPY_FLOWER : 5}
 
 FLASHES_AT_FULL_COUNT = {**HAPPY_FLOWER_TURNS, RelicId.LETTER_OPENER : LETTER_OPENER_EVERY, RelicId.PENDULUM : 3, RelicId.NUNCHAKU : NUNCHAKU_EVERY, RelicId.PEN_NIB : 10,
-                         RelicId.KUNAI : KUNAI_EVERY, RelicId.SHURIKEN : SHURIKEN_EVERY, RelicId.ORNAMENTAL_FAN : FAN_EVERY}    # Pendulum: DisplayAmount is Turns while it activates; Nunchaku and Pen Nib show 10 after the tenth Attack, which has already paid out; Kunai, Shuriken and Ornamental Fan show 3 while they activate (IsActivating)
+                         RelicId.KUNAI : KUNAI_EVERY, RelicId.SHURIKEN : SHURIKEN_EVERY, RelicId.ORNAMENTAL_FAN : FAN_EVERY,
+                         RelicId.KUSARIGAMA : KUSARIGAMA_EVERY}    # Pendulum: DisplayAmount is Turns while it activates; Nunchaku and Pen Nib show 10 after the tenth Attack, which has already paid out; Kunai, Shuriken and Ornamental Fan show 3 while they activate (IsActivating)

@@ -127,9 +127,12 @@ class Player(Creature):
         pl.crimson_mantle_plays = max(1, round(pl.status_amount(StatusId.CRIMSON_MANTLE) / 9)) if StatusId.CRIMSON_MANTLE in pl.status else 0
         pl._read_growing_cards()
         pl.counts_hits = any(c.card_id is CardId.BEAT_INTO_SHAPE for pile in (pl.hand, pl.draw_pile, pl.discard_pile, pl.exhaust_pile) for c in pile)
-        for counter_status in (StatusId.ORBIT, StatusId.PALE_BLUE_DOT, StatusId.MONOLOGUE):
+        for counter_status in (StatusId.PALE_BLUE_DOT, StatusId.MONOLOGUE):
             if counter_status in pl.status:       # these show a count of their own, not the power's amount (1)
                 pl.status[counter_status].amount = 1
+        if StatusId.ORBIT in pl.status:           # OrbitPower.DisplayAmount: the Energy still to spend until the next one, 4 - spent % 4
+            shown = min(4, max(1, pl.status[StatusId.ORBIT].amount))
+            pl.status[StatusId.ORBIT] = StatusInstance(StatusId.ORBIT, 1, [[4 - shown, 0]])
         if StatusId.CHAINS_OF_BINDING in pl.status:         # mid-turn: the cards bound so far are the ones in hand, and the one already played
             pl.binding = True
             pl.bound_played = any(c.bound and c.card_id is not None and raw.get("unplayable_reason") == "BlockedByHook" for c, raw in zip(pl.hand, player["hand"]))
