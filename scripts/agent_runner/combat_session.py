@@ -103,7 +103,7 @@ def cards_look_locked(combat_state : CombatState) -> bool:
     in its play phase (the sim already clears the flag for Ringing and Normality)."""
     energy = combat_state.energy
     affordable = [c for c in combat_state.player.hand
-                  if not c.unplayable and c.type not in (CardType.Status, CardType.Curse) and (c.energy_cost == "X" or c.energy_cost <= energy)]
+                  if not c.unplayable and c.type not in (CardType.Status, CardType.Curse, CardType.Quest) and (c.energy_cost == "X" or c.energy_cost <= energy)]
     return bool(affordable) and all(c.is_unplayable for c in affordable)
 
 ###

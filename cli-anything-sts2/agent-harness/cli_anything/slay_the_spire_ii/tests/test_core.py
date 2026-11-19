@@ -65,6 +65,12 @@ class TestStateAdapter(unittest.TestCase):
         self.assertEqual(normalized["hand"][0]["name"], "Strike")
         self.assertEqual(normalized["enemies"][0]["id"], "slime_0")
 
+    def test_normalize_shop_state_keeps_the_fake_merchant_flag(self) -> None:
+        raw_state = {"state_type": "shop", "run": {}, "shop": {"items": [{"category": "relic"}], "is_fake_merchant": True}}
+        self.assertTrue(normalize_state(raw_state)["is_fake_merchant"])
+        raw_state["shop"].pop("is_fake_merchant")
+        self.assertNotIn("is_fake_merchant", normalize_state(raw_state))
+
     def test_normalize_shop_state_groups_items(self) -> None:
         raw_state = {
             "state_type": "shop",

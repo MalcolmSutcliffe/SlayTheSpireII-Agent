@@ -150,6 +150,33 @@ class StatusId(Enum):
     FEEDING_FRENZY = auto()         # Feeding Frenzy: the Strength it gave is lost when the turn ends
     FLEX_POTION = auto()            # Flex Potion: the Strength it gave is lost when the turn ends
     SPEED_POTION = auto()           # Speed Potion: the Dexterity it gave is lost when the turn ends
+    STRATAGEM = auto()              # Stratagem: whenever the draw pile is shuffled, put `amount` cards of your choice from it into the hand
+    POISON = auto()                 # at the start of its owner's turn: loses that much HP (unblockable), then 1 less Poison
+    HELICAL_DART = auto()           # Helical Dart (TemporaryDexterityPower): the Dexterity it gave is lost when the turn ends
+    ANTICIPATE = auto()             # Anticipate (TemporaryDexterityPower): the Dexterity it gave is lost when the turn ends
+    PIERCING_WAIL = auto()          # Piercing Wail (TemporaryStrengthPower, negative): the Strength it took comes back when the owner's turn ends
+    ACCELERANT = auto()             # Poison on the enemies triggers this many extra times (PoisonPower.TriggerCount)
+    ACCURACY = auto()               # Shivs deal this much more damage
+    INFINITE_BLADES = auto()        # before the hand draw: this many Shivs into the hand
+    NOXIOUS_FUMES = auto()          # at the start of the player's turn: this much Poison on every enemy
+    PHANTOM_BLADES = auto()         # Shivs have Retain; the first Shiv played each turn deals this much more damage
+    SPEEDSTER = auto()              # every card drawn outside the hand draw: this much damage to every enemy (Unpowered)
+    FREE_SKILL = auto()             # Pounce: the next Skill played costs 0
+    AFTERIMAGE = auto()             # after each card played: this much block (what it had when the play began)
+    BURST = auto()                  # the next this-many Skills this turn are played twice
+    CORROSIVE_WAVE = auto()         # this turn, every card drawn: this much Poison on every enemy
+    ENVENOM = auto()                # attack damage that gets through block also Poisons, this much
+    FAN_OF_KNIVES = auto()          # Shivs hit every enemy
+    MASTER_PLANNER = auto()         # a Skill played gains Sly for good
+    NIGHTMARE = auto()              # before the next hand draw: copies of the picked card (Player.nightmares) join the hand
+    SERPENT_FORM = auto()           # after each card played: this much damage to a random enemy (Unpowered)
+    SHADOW_STEP = auto()            # at the start of the next turn: this much Double Damage
+    SHADOWMELD = auto()             # this turn, block gained is doubled (x2 per stack)
+    TOOLS_OF_THE_TRADE = auto()     # draw this many more each turn, then discard as many
+    TRACKING = auto()               # attacks on a Weak enemy deal (100 + this)% damage
+    WELL_LAID_PLANS = auto()        # the hand is not discarded at the end of the turn
+    THE_HUNT = auto()               # The Hunt killed: an extra card reward (marker)
+    DOUBLE_DAMAGE = auto()          # attacks from cards deal double damage; 1 less at the end of each of the owner's turns
 
 INFESTED_SPAWNS = 4
 CRAB_RAGE_STRENGTH, CRAB_RAGE_BLOCK = 6, 99
@@ -168,7 +195,7 @@ TICKS_DOWN = frozenset({
 })
 RESETS_EACH_TURN = frozenset({StatusId.SLOW})
 
-DEBUFFS = frozenset({StatusId.WEAK, StatusId.VULNERABLE, StatusId.FRAIL, StatusId.SHRINK,
+DEBUFFS = frozenset({StatusId.POISON, StatusId.PIERCING_WAIL, StatusId.WEAK, StatusId.VULNERABLE, StatusId.FRAIL, StatusId.SHRINK,
                      StatusId.CONSTRICT, StatusId.TANGLED, StatusId.RINGING,
                      StatusId.NO_DRAW, StatusId.NO_ENERGY_GAIN, StatusId.MANGLE, StatusId.CONFUSED,
                      StatusId.NO_BLOCK, StatusId.THE_GAMBIT, StatusId.DARK_SHACKLES,
@@ -334,8 +361,11 @@ def _smoggy_on_player_turn_ended(combat : CombatSimulator, owner : Creature, amo
     owner.smogged = False           # SmoggyPower.AfterSideTurnEnd
 
 def _strangle_on_card_played(combat : CombatSimulator, owner : Creature, amount : int, card):
-    # Mad Science (Choking): every card the player plays this turn costs the owner HP (assumed: unpowered damage that block absorbs, and the card that applied it triggers it too)
-    owner.apply_damage(amount)
+    """StranglePower.AfterCardPlayed: the owner loses (Unblockable | Unpowered) the amount it had when the play began, so the card that applied
+    or stacked it does not count what it added (apply_fresh notes that in records)."""
+    loss = amount - fresh_amount(owner.status.get(StatusId.STRANGLE))
+    if loss > 0:
+        owner.lose_hp(loss)
 
 def _strangle_on_player_turn_ended(combat : CombatSimulator, owner : Creature, amount : int):
     owner.status.pop(StatusId.STRANGLE, None)
@@ -598,8 +628,8 @@ def _hello_world_on_turn_start(combat : CombatSimulator, owner : Creature, amoun
     """HelloWorldPower: a random common card of the character's pool joins the hand."""
     if _own(combat, owner):
         from sts2_lite.card import Card
-        from sts2_lite.card.tables import CARD_RARITY, GENERATABLE_CARDS, CardRarity
-        commons = [cid for cid in GENERATABLE_CARDS if CARD_RARITY[cid] == CardRarity.Common]
+        from sts2_lite.card.tables import CardRarity, combat_pool
+        commons = combat_pool(owner.character, rarity=CardRarity.Common)
         for _ in range(amount):
             owner.add_to_hand(Card.create_generated(rng.choice(commons)))
 
@@ -653,12 +683,113 @@ def _the_bomb_on_end_turn(combat : CombatSimulator, owner : Creature, amount : i
 def _mayhem_on_auto_pre_play(combat : CombatSimulator, owner : Creature, amount : int):
     combat.auto_play_from_top(amount)
 
+def _stratagem_on_shuffle(combat : CombatSimulator, owner : Creature, amount : int):
+    if _own(combat, owner):
+        combat.request_stratagem(amount)
+
+def poison_trigger(owner : Creature, accelerant : int = 0):
+    """PoisonPower.Trigger: lose the Poison's amount in HP (Unblockable | Unpowered, so Intangible still caps it), then one less if the
+    owner lives; TriggerCount times: 1 plus the living opponents' Accelerant, at most the Poison's amount."""
+    poison = owner.status.get(StatusId.POISON)
+    if poison is None or owner.current_hp <= 0:
+        return
+    for _ in range(min(poison.amount, 1 + accelerant)):
+        owner.lose_hp(poison.amount)
+        if owner.current_hp <= 0:
+            return
+        poison.amount -= 1
+        if poison.amount <= 0:
+            del owner.status[StatusId.POISON]
+            return
+
+def _poison_on_enemy_turn(combat : CombatSimulator, owner : Creature, amount : int):
+    if not _own(combat, owner):
+        player = combat.combat_state.player
+        poison_trigger(owner, player.status_amount(StatusId.ACCELERANT) if player.current_hp > 0 else 0)
+
+def _poison_on_player_turn(combat : CombatSimulator, owner : Creature, amount : int):
+    if _own(combat, owner):
+        poison_trigger(owner)
+
+def fresh_amount(inst) -> int:
+    """What the card being played added to a power that skips that card (Strangle, Afterimage, Serpent Form: they note the amount at BeforeCardPlayed);
+    spent once read."""
+    if inst is None or not inst.records:
+        return 0
+    fresh = inst.records[0][0]
+    inst.records = []
+    return fresh
+
+def _afterimage_on_card_played(combat : CombatSimulator, owner : Creature, amount : int, card):
+    """AfterimagePower.AfterCardPlayed: Unpowered block (no Dexterity or Frail; Shadowmeld still doubles it)."""
+    block = amount - fresh_amount(owner.status.get(StatusId.AFTERIMAGE))
+    if block > 0 and _own(combat, owner):
+        combat.gain_block(owner, block * 2 ** owner.status_amount(StatusId.SHADOWMELD))
+
+def _serpent_form_on_card_played(combat : CombatSimulator, owner : Creature, amount : int, card):
+    """SerpentFormPower.AfterCardPlayed: Unpowered damage to a random enemy (Rng.CombatTargets)."""
+    damage = amount - fresh_amount(owner.status.get(StatusId.SERPENT_FORM))
+    living = [e for e in combat.combat_state.enemies if e.current_hp > 0]
+    if damage > 0 and living and _own(combat, owner):
+        from sts2_lite import rng
+        rng.pick_target(living).apply_damage(damage, owner)
+
+def _this_turn_only(status : StatusId):
+    def handler(combat : CombatSimulator, owner : Creature, amount : int):
+        owner.status.pop(status, None)
+    return handler
+
+def _double_damage_on_turn_end(combat : CombatSimulator, owner : Creature, amount : int):
+    inst = owner.status[StatusId.DOUBLE_DAMAGE]
+    inst.amount -= 1
+    if inst.amount <= 0:
+        del owner.status[StatusId.DOUBLE_DAMAGE]
+
+def _shadow_step_on_turn_start(combat : CombatSimulator, owner : Creature, amount : int):
+    """ShadowStepPower.AfterSideTurnStart: Double Damage, then gone."""
+    if _own(combat, owner):
+        del owner.status[StatusId.SHADOW_STEP]
+        owner.apply_status(StatusId.DOUBLE_DAMAGE, amount)
+
+def _tools_of_the_trade_on_turn_start(combat : CombatSimulator, owner : Creature, amount : int):
+    """ToolsOfTheTradePower.AfterPlayerTurnStart: discard as many as it drew extra."""
+    if _own(combat, owner):
+        combat.request_discard(amount)
+
+def _nightmare_before_hand_draw(combat : CombatSimulator, owner : Creature, amount : int):
+    """NightmarePower.BeforeHandDraw: 3 clones of each picked card join the hand, then the power is gone."""
+    if not _own(combat, owner):
+        return
+    from sts2_lite.card import Card
+    picks, owner.nightmares = owner.nightmares, []
+    del owner.status[StatusId.NIGHTMARE]
+    for picked, copies in picks:
+        for _ in range(copies):
+            clone = Card.create_copy(picked)
+            clone.generated = True
+            owner.add_to_hand(clone)
+
+def _infinite_blades_before_hand_draw(combat : CombatSimulator, owner : Creature, amount : int):
+    """InfiniteBladesPower.BeforeHandDraw: Shivs into the hand (after the block is cleared, before the draw)."""
+    if _own(combat, owner):
+        combat.create_shivs(amount)
+
+def _noxious_fumes_on_turn_start(combat : CombatSimulator, owner : Creature, amount : int):
+    """NoxiousFumesPower.AfterSideTurnStart: Poison on every enemy."""
+    if _own(combat, owner):
+        from sts2_lite.relic import poison_given      # the relic package imports this module
+        for enemy in combat.combat_state.enemies:
+            if enemy.current_hp > 0:
+                enemy.apply_status(StatusId.POISON, poison_given(owner, amount))
+
 def _calamity_on_card_played(combat : CombatSimulator, owner : Creature, amount : int, card):
     # every Attack played adds random Attacks to the hand
-    from sts2_lite.card import Card, CardType, INFERNAL_BLADE_POOL     # card.py imports this module
+    from sts2_lite.card import Card, CardType     # card.py imports this module
+    from sts2_lite.card.tables import combat_pool
     if card.type == CardType.Attack:
+        attacks = combat_pool(owner.character, CardType.Attack)
         for _ in range(amount):
-            owner.add_to_hand(Card.create_generated(rng.choice(INFERNAL_BLADE_POOL)))
+            owner.add_to_hand(Card.create_generated(rng.choice(attacks)))
 
 def _entropy_on_turn_start(combat : CombatSimulator, owner : Creature, amount : int):
     if _own(combat, owner):
@@ -788,6 +919,17 @@ STATUS_HANDLERS : dict[tuple[StatusId, HookType], Callable] = HandlerTable({
     (StatusId.SMOGGY, HookType.CARD_PLAYED) : _smoggy_on_card_played,
     (StatusId.SMOGGY, HookType.PLAYER_TURN_ENDED) : _smoggy_on_player_turn_ended,
     (StatusId.STRANGLE, HookType.CARD_PLAYED) : _strangle_on_card_played,
+    (StatusId.INFINITE_BLADES, HookType.BLOCK_CLEARED) : _infinite_blades_before_hand_draw,
+    (StatusId.NIGHTMARE, HookType.BLOCK_CLEARED) : _nightmare_before_hand_draw,
+    (StatusId.AFTERIMAGE, HookType.CARD_PLAYED) : _afterimage_on_card_played,
+    (StatusId.SERPENT_FORM, HookType.CARD_PLAYED) : _serpent_form_on_card_played,
+    (StatusId.BURST, HookType.PLAYER_TURN_ENDED) : _this_turn_only(StatusId.BURST),
+    (StatusId.CORROSIVE_WAVE, HookType.PLAYER_TURN_ENDED) : _this_turn_only(StatusId.CORROSIVE_WAVE),
+    (StatusId.SHADOWMELD, HookType.PLAYER_TURN_ENDED) : _this_turn_only(StatusId.SHADOWMELD),
+    (StatusId.DOUBLE_DAMAGE, HookType.PLAYER_TURN_ENDED) : _double_damage_on_turn_end,
+    (StatusId.SHADOW_STEP, HookType.PLAYER_TURN_START) : _shadow_step_on_turn_start,
+    (StatusId.TOOLS_OF_THE_TRADE, HookType.PLAYER_TURN_START) : _tools_of_the_trade_on_turn_start,
+    (StatusId.NOXIOUS_FUMES, HookType.PLAYER_TURN_START) : _noxious_fumes_on_turn_start,
     (StatusId.STRANGLE, HookType.PLAYER_TURN_ENDED) : _strangle_on_player_turn_ended,
     (StatusId.REBOUND, HookType.PLAYER_TURN_ENDED) : _rebound_on_player_turn_ended,
     (StatusId.SURPRISE, HookType.DEATH) : _surprise_on_death,
@@ -815,6 +957,9 @@ STATUS_HANDLERS : dict[tuple[StatusId, HookType], Callable] = HandlerTable({
     (StatusId.PANACHE, HookType.PLAYER_TURN_ENDED) : _panache_on_player_turn_ended,
     (StatusId.THE_BOMB, HookType.END_TURN) : _the_bomb_on_end_turn,
     (StatusId.MAYHEM, HookType.AUTO_PRE_PLAY) : _mayhem_on_auto_pre_play,
+    (StatusId.STRATAGEM, HookType.SHUFFLED) : _stratagem_on_shuffle,
+    (StatusId.POISON, HookType.ENEMY_TURN_STARTED) : _poison_on_enemy_turn,
+    (StatusId.POISON, HookType.BLOCK_CLEARED) : _poison_on_player_turn,
     (StatusId.CALAMITY, HookType.CARD_PLAYED) : _calamity_on_card_played,
     (StatusId.ENTROPY, HookType.PLAYER_TURN_START) : _entropy_on_turn_start,
 })

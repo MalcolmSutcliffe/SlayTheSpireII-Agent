@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
 
-from sts2_lite.relic import RelicId, block_gained, block_multiplier, debuff_multiplier
+from sts2_lite.relic import RelicId, block_gained, block_multiplier, debuff_multiplier, poison_given
 from sts2_lite.status import StatusId
 
 from sts2_lite.card.constants import ENCHANT_CORRUPTED_DAMAGE, ENCHANT_EMBER_DAMAGE, ENCHANT_INSTINCT_DAMAGE, MAD_SCIENCE_DAMAGE
@@ -20,10 +20,38 @@ def _attack(combat : CombatSimulator, base : int, target : Creature, hits : int 
     if card is not None and card.enchantment is not None:
         base = _enchanted_damage(card, base)
     base += combat.vigor_bonus()
+    if card is not None and card.card_id is CardId.SHIV:
+        base += shiv_bonus(owner)
     recompute = None
     if hits > 1 and RelicId.HAND_DRILL in owner.relics:     # a broken block makes later hits Vulnerable
         recompute = lambda: combat.calculate_damage(base, owner, target)
     target.apply_attack_damage(combat.calculate_damage(base, owner, target), owner, hits, recompute)
+
+def shiv_bonus(player) -> int:
+    """AccuracyPower and PhantomBladesPower (ModifyDamageAdditive): Shivs hit harder; Phantom Blades only until a Shiv play has finished this turn."""
+    status = player.status
+    if StatusId.ACCURACY not in status and StatusId.PHANTOM_BLADES not in status:
+        return 0
+    bonus = player.status_amount(StatusId.ACCURACY)
+    if player.shivs_played_this_turn == 0:
+        bonus += player.status_amount(StatusId.PHANTOM_BLADES)
+    return bonus
+
+def apply_fresh(combat : CombatSimulator, target : Creature, status : StatusId, amount : int, debuff : bool = False):
+    """A power that the card being played does not trigger (Strangle, Afterimage, Serpent Form note the amount at BeforeCardPlayed):
+    records[0][0] holds what this play added (status.fresh_amount)."""
+    before = target.status_amount(status)
+    if debuff:
+        _debuff(combat, target, status, amount)
+    else:
+        target.apply_status(status, amount)
+    inst = target.status.get(status)
+    added = target.status_amount(status) - before
+    if inst is not None and added > 0 and combat.card_in_play is not None:
+        inst.records = [[(inst.records[0][0] if inst.records else 0) + added]]
+
+def apply_strangle(combat : CombatSimulator, target : Creature, amount : int):
+    apply_fresh(combat, target, StatusId.STRANGLE, amount, debuff=True)
 
 def _enchanted_damage(card : Card, base):
     """A card's damage enchantment, before Strength and the other modifiers (a float: Corrupted halves are kept)."""
@@ -83,6 +111,18 @@ def _vulnerable(combat : CombatSimulator, target : Creature, amount : int):
     if target.status_amount(StatusId.VULNERABLE) > before:      # Vicious: not if Artifact stopped it
         player.draw_cards(player.status_amount(StatusId.VICIOUS))
 
+def _debuff(combat : CombatSimulator, target : Creature, status : StatusId, amount : int):
+    """A debuff from the card being played (Unsettling Lamp doubles it)."""
+    player = combat.combat_state.player
+    if player.relics:
+        if status is StatusId.POISON:
+            amount = poison_given(player, amount)
+        amount *= debuff_multiplier(player, combat.card_in_play, target)
+    target.apply_status(status, amount)
+
+def _weak(combat : CombatSimulator, target : Creature, amount : int):
+    _debuff(combat, target, StatusId.WEAK, amount)
+
 def temp_strength(target : Creature, marker : StatusId, amount : int, sign : int, combat : CombatSimulator | None = None):
     """Strength that is taken back when the target's turn ends (Setup Strike, Mangle). `sign` is -1 for a loss."""
     if sign < 0 and combat is not None and combat.combat_state.player.relics:
@@ -94,6 +134,18 @@ def temp_strength(target : Creature, marker : StatusId, amount : int, sign : int
     target.apply_status(StatusId.STRENGTH, sign * amount, bypass_artifact=True)
 
 PLAIN_DAMAGE = {        # id : (damage, damage upgraded) of the cards that print one fixed number
+    CardId.BACKSTAB : (11, 15),
+    CardId.DASH : (10, 13),
+    CardId.ECHOING_SLASH : (10, 13),
+    CardId.FINISHER : (6, 8),
+    CardId.FLECHETTES : (5, 7),
+    CardId.PINPOINT : (15, 19),
+    CardId.POUNCE : (14, 20),
+    CardId.SKEWER : (8, 11),
+    CardId.STRANGLE : (8, 10),
+    CardId.STRIKE_SILENT : (6, 9), CardId.NEUTRALIZE : (3, 4), CardId.SHIV : (4, 6),
+    CardId.DAGGER_SPRAY : (4, 6), CardId.DAGGER_THROW : (9, 12), CardId.FLICK_FLACK : (7, 9), CardId.LEADING_STRIKE : (3, 6),
+    CardId.POISONED_STAB : (6, 8), CardId.PREDATOR : (15, 20), CardId.RICOCHET : (3, 3), CardId.SLICE : (6, 9), CardId.SUCKER_PUNCH : (8, 10),
     CardId.BYRD_SWOOP : (14, 18), CardId.CLASH : (14, 18), CardId.REBOUND : (9, 12), CardId.RIP_AND_TEAR : (7, 9), CardId.PECK : (2, 2), CardId.EXTERMINATE : (3, 4), CardId.SQUASH : (10, 12),
     CardId.ANGER : (6, 8), CardId.BASH : (8, 10), CardId.BLUDGEON : (32, 42), CardId.BREAK : (20, 30),
     CardId.BREAKTHROUGH : (9, 13), CardId.CINDER : (18, 24), CardId.CONFLAGRATION : (2, 2),
@@ -108,6 +160,8 @@ PLAIN_DAMAGE = {        # id : (damage, damage upgraded) of the cards that print
     CardId.SWORD_BOOMERANG : (3, 3), CardId.TEAR_ASUNDER : (5, 7), CardId.THUNDERCLAP : (4, 7),
     CardId.TWIN_STRIKE : (5, 7), CardId.UNRELENTING : (14, 20), CardId.UPPERCUT : (13, 13), CardId.WHIRLWIND : (5, 8),
 }
+
+SILENT_FIXED_DAMAGE = {CardId.ASSASSINATE : (10, 13), CardId.GRAND_FINALE : (60, 75), CardId.THE_HUNT : (10, 15)}      # damage of the Rares that print one number
 
 def _strikes(player : Player, in_play : Card | None = None) -> int:
     """Perfected Strike counts every Strike the player has in the fight: hand, draw, discard and exhaust piles
@@ -141,6 +195,15 @@ def _printed_damage(card : Card, combat : CombatSimulator) -> int:
         return 12 if up else 10
     if card.card_id == CardId.MAD_SCIENCE:      # an Attack Mad Science: 12 a hit whatever its rider
         return MAD_SCIENCE_DAMAGE
+    # the Silent's Attacks whose damage is worked out (CalculatedDamage.Calculate(null)) or printed once
+    if card.card_id == CardId.MURDER:
+        return 1 + player.cards_drawn
+    if card.card_id == CardId.MEMENTO_MORI:
+        return (11 + 5 * player.discards_this_turn) if up else (9 + 4 * player.discards_this_turn)
+    if card.card_id == CardId.PRECISE_CUT:
+        return max(0, (16 if up else 13) - 2 * len(player.hand))
+    if card.card_id in SILENT_FIXED_DAMAGE:
+        return SILENT_FIXED_DAMAGE[card.card_id][up]
     return PLAIN_DAMAGE[card.card_id][up]
 
 ###

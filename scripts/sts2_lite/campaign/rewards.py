@@ -58,10 +58,10 @@ def roll_potion_reward(run : RunState, room : str, rng) -> bool:
     return False
 
 
-def random_potion(rng) -> str:
-    """PotionFactory.CreateRandomPotionOutOfCombat: rarity roll (10% rare, 25% uncommon, else common), Ironclad + shared pools."""
+def random_potion(rng, character : str = "IRONCLAD") -> str:
+    """PotionFactory.CreateRandomPotionOutOfCombat: rarity roll (10% rare, 25% uncommon, else common), the character's + shared pools."""
     from sts2_lite.potion_pool import random_potion_id
-    return random_potion_id(rng).name
+    return random_potion_id(rng, character).name
 
 
 def generate_rewards(run : RunState, encounter : Encounter, last_act_boss : bool, game) -> list[Reward]:
@@ -74,13 +74,13 @@ def generate_rewards(run : RunState, encounter : Encounter, last_act_boss : bool
     out.append(Reward("gold", amount=game.stream("gold").randint(low, high)))
     rolled = roll_potion_reward(run, room, game.stream("potion_rewards"))
     if rolled or forces_potion_reward(run, room):
-        out.append(Reward("potion", potion=random_potion(game.stream("potion_rewards"))))
+        out.append(Reward("potion", potion=random_potion(game.stream("potion_rewards"), run.character)))
     rng = game.stream("card_rewards")
     odds = CardRarityOdds(rng, run.ascension, run.hidden.rarity_offset)
     act_index = max(0, run.act - 1)
     cards = create_reward_for_room(rng, odds, room, act_index, **_pool_options(run))
     if candy_adds_power(run):
-        cards += _candy_power(rng, odds, act_index, cards)
+        cards += _candy_power(rng, odds, act_index, cards, run.character)
     out.append(Reward("card", cards=cards, room=room))
     if room == "Elite":
         out.append(Reward("relic", relic=_pull(run)))
@@ -100,21 +100,20 @@ def _pull(run) -> str | None:
 
 
 def _pool_options(run) -> dict:
-    """Dingy Rug: the colorless cards join the pool a card reward draws from."""
+    """The character's pool; with Dingy Rug the colorless cards join it."""
     if not run.has_relic("DINGY_RUG"):
-        return {}
+        return {"character": run.character}
     from sts2_lite.card.tables import COLORLESS_CARDS
-    from sts2_lite.rewards.cards import IRONCLAD_POOL
-    pool = [c for cards in IRONCLAD_POOL.values() for c in cards] + list(COLORLESS_CARDS)
-    return {"pool": pool}
+    from sts2_lite.rewards.cards import card_pool_ids
+    return {"pool": card_pool_ids(run.character) + list(COLORLESS_CARDS)}
 
 
-def _candy_power(rng, odds, act_index : int, cards : list) -> list:
+def _candy_power(rng, odds, act_index : int, cards : list, character : str = "IRONCLAD") -> list:
     """Lasting Candy's extra option: a Power the reward does not hold yet (any Power when it holds them all)."""
     from sts2_lite.event.run import card_entry
     from sts2_lite.rewards import create_card_reward
-    from sts2_lite.rewards.cards import IRONCLAD_POOL
-    powers = [c for pool in IRONCLAD_POOL.values() for c in pool if card_entry(c)["type"] == "Power"]
+    from sts2_lite.rewards.cards import card_pool_ids
+    powers = [c for c in card_pool_ids(character) if card_entry(c)["type"] == "Power"]
     held = {o.card_id for o in cards}
     fresh = [c for c in powers if c not in held] or powers
     return create_card_reward(rng, odds, act_index, 1, pool=fresh) if fresh else []

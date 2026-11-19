@@ -11,7 +11,7 @@ from sts2_lite.card.card import Card
 from sts2_lite.card.constants import NEOWS_FURY_CARDS
 from sts2_lite.card.effects import PLAIN_DAMAGE, _attack, _gain_block, _printed_damage, _strikes, _vulnerable, temp_strength
 from sts2_lite.card.ids import CardId, CardType
-from sts2_lite.card.tables import INFERNAL_BLADE_POOL, STOKE_POOL
+from sts2_lite.card.tables import combat_pool
 
 if TYPE_CHECKING:
     from sts2_lite.combat import CombatSimulator
@@ -250,7 +250,7 @@ def play_impervious(card: Card, combat : CombatSimulator, target_index=0, is_upg
     _gain_block(combat, 40 if is_upgraded else 30)
 
 def play_infernal_blade(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
-    new_card = Card.create_generated(rng.choice(INFERNAL_BLADE_POOL)).free_this_turn()     # Whirlwind stays X
+    new_card = Card.create_generated(rng.choice(combat_pool(combat.combat_state.player.character, CardType.Attack))).free_this_turn()     # Whirlwind stays X
     combat.combat_state.player.add_to_hand(new_card)
 
 def play_inferno(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
@@ -381,7 +381,7 @@ def play_stoke(card: Card, combat : CombatSimulator, target_index=0, is_upgraded
         player.exhaust_card(victim)
         combat.fire(HookType.CARD_EXHAUSTED, victim)
     for _ in exhausted:         # a random card (repeats allowed) for each one exhausted
-        new_card = Card.create_generated(rng.choice(STOKE_POOL), is_upgraded)
+        new_card = Card.create_generated(rng.choice(combat_pool(combat.combat_state.player.character)), is_upgraded)
         if new_card.type == CardType.Power and RelicId.SPIKED_GAUNTLETS in player.relics:
             new_card.energy_cost += 1       # the bridge shows Spiked Gauntlets' +1; a card made here has to add it
         player.add_to_hand(new_card)

@@ -96,6 +96,7 @@ GENERATABLE_CARDS = {
 }
 
 TOKEN_CARDS = {CardId.GIANT_ROCK : ("Giant Rock", CardType.Attack, 1, A),      # made by Primal Force
+               CardId.SHIV : ("Shiv", CardType.Attack, 0, A),                 # the Silent's Blade Dance, Cloak and Dagger, Cunning Potion...
                CardId.LUMINESCE : ("Luminesce", CardType.Skill, 0, S)}          # Radiant Pearl: Retain. Gain 2 Energy (3 upgraded). Exhaust.
 
 # event cards (CardRarity.Event): never generated in combat; listed so tests and transforms can build them
@@ -140,8 +141,96 @@ COLORLESS_CARDS = {
     CardId.JACKPOT : ("Jackpot", CardType.Attack, 3, A), CardId.CALAMITY : ("Calamity", CardType.Power, 3, S),
     CardId.JACK_OF_ALL_TRADES : ("Jack of All Trades", CardType.Skill, 0, S), CardId.CATASTROPHE : ("Catastrophe", CardType.Skill, 2, S),
     CardId.BEAT_DOWN : ("Beat Down", CardType.Skill, 3, RAND), CardId.ANOINTED : ("Anointed", CardType.Skill, 1, S),
-    CardId.DISCOVERY : ("Discovery", CardType.Skill, 1, S), CardId.ENTROPY : ("Entropy", CardType.Power, 1, S),
+    CardId.DISCOVERY : ("Discovery", CardType.Skill, 1, S), CardId.SPLASH : ("Splash", CardType.Skill, 1, S), CardId.ENTROPY : ("Entropy", CardType.Power, 1, S),
     CardId.HIDDEN_GEM : ("Hidden Gem", CardType.Skill, 1, S), CardId.ALCHEMIZE : ("Alchemize", CardType.Skill, 1, S),
+    CardId.STRATAGEM : ("Stratagem", CardType.Power, 1, S),
+}
+
+# the Silent's cards (SilentCardPool), Basic ones included: the reward pool is the Common / Uncommon / Rare ones (rewards.cards.card_pool)
+SILENT_CARDS = {
+    CardId.STRIKE_SILENT : ("Strike", CardType.Attack, 1, A), CardId.DEFEND_SILENT : ("Defend", CardType.Skill, 1, S),
+    CardId.NEUTRALIZE : ("Neutralize", CardType.Attack, 0, A), CardId.SURVIVOR : ("Survivor", CardType.Skill, 1, S),
+    # Common
+    CardId.ANTICIPATE : ("Anticipate", CardType.Skill, 0, S),
+    CardId.BACKFLIP : ("Backflip", CardType.Skill, 1, S),
+    CardId.BLADE_DANCE : ("Blade Dance", CardType.Skill, 1, S),
+    CardId.CLOAK_AND_DAGGER : ("Cloak and Dagger", CardType.Skill, 1, S),
+    CardId.DAGGER_SPRAY : ("Dagger Spray", CardType.Attack, 1, ALL),
+    CardId.DAGGER_THROW : ("Dagger Throw", CardType.Attack, 1, A),
+    CardId.DEADLY_POISON : ("Deadly Poison", CardType.Skill, 1, A),
+    CardId.DEFLECT : ("Deflect", CardType.Skill, 0, S),
+    CardId.DODGE_AND_ROLL : ("Dodge and Roll", CardType.Skill, 1, S),
+    CardId.FLICK_FLACK : ("Flick-Flack", CardType.Attack, 1, ALL),
+    CardId.LEADING_STRIKE : ("Leading Strike", CardType.Attack, 1, A),
+    CardId.PIERCING_WAIL : ("Piercing Wail", CardType.Skill, 1, ALL),
+    CardId.POISONED_STAB : ("Poisoned Stab", CardType.Attack, 1, A),
+    CardId.PREDATOR : ("Predator", CardType.Attack, 2, A),
+    CardId.PREPARED : ("Prepared", CardType.Skill, 0, S),
+    CardId.RICOCHET : ("Ricochet", CardType.Attack, 2, RAND),
+    CardId.SLICE : ("Slice", CardType.Attack, 0, A),
+    CardId.SNAKEBITE : ("Snakebite", CardType.Skill, 2, A),
+    CardId.SUCKER_PUNCH : ("Sucker Punch", CardType.Attack, 1, A),
+    CardId.UNTOUCHABLE : ("Untouchable", CardType.Skill, 2, S),
+    CardId.ACCELERANT : ("Accelerant", CardType.Power, 1, S),
+    CardId.ACCURACY : ("Accuracy", CardType.Power, 1, S),
+    CardId.ACROBATICS : ("Acrobatics", CardType.Skill, 1, S),
+    CardId.BACKSTAB : ("Backstab", CardType.Attack, 0, A),
+    CardId.BLUR : ("Blur", CardType.Skill, 1, S),
+    CardId.BOUNCING_FLASK : ("Bouncing Flask", CardType.Skill, 2, RAND),
+    CardId.BUBBLE_BUBBLE : ("Bubble Bubble", CardType.Skill, 1, A),
+    CardId.CALCULATED_GAMBLE : ("Calculated Gamble", CardType.Skill, 0, S),
+    CardId.DASH : ("Dash", CardType.Attack, 2, A),
+    CardId.ECHOING_SLASH : ("Echoing Slash", CardType.Attack, 1, ALL),
+    CardId.ESCAPE_PLAN : ("Escape Plan", CardType.Skill, 0, S),
+    CardId.EXPERTISE : ("Expertise", CardType.Skill, 1, S),
+    CardId.EXPOSE : ("Expose", CardType.Skill, 0, A),
+    CardId.FINISHER : ("Finisher", CardType.Attack, 1, A),
+    CardId.FLECHETTES : ("Flechettes", CardType.Attack, 1, A),
+    CardId.SIDESTEP : ("Sidestep", CardType.Skill, 0, S),
+    CardId.FOOTWORK : ("Footwork", CardType.Power, 1, S),
+    CardId.HAND_TRICK : ("Hand Trick", CardType.Skill, 1, S),
+    CardId.HAZE : ("Haze", CardType.Skill, 2, ALL),
+    CardId.HIDDEN_DAGGERS : ("Hidden Daggers", CardType.Skill, 0, S),
+    CardId.INFINITE_BLADES : ("Infinite Blades", CardType.Power, 1, S),
+    CardId.LEG_SWEEP : ("Leg Sweep", CardType.Skill, 2, A),
+    CardId.MEMENTO_MORI : ("Memento Mori", CardType.Attack, 1, A),
+    CardId.MIRAGE : ("Mirage", CardType.Skill, 1, S),
+    CardId.NOXIOUS_FUMES : ("Noxious Fumes", CardType.Power, 1, S),
+    CardId.PHANTOM_BLADES : ("Phantom Blades", CardType.Power, 1, S),
+    CardId.PINPOINT : ("Pinpoint", CardType.Attack, 3, A),
+    CardId.POUNCE : ("Pounce", CardType.Attack, 2, A),
+    CardId.PRECISE_CUT : ("Precise Cut", CardType.Attack, 0, A),
+    CardId.REFLEX : ("Reflex", CardType.Skill, 3, S),
+    CardId.SKEWER : ("Skewer", CardType.Attack, 'X', A),
+    CardId.SPEEDSTER : ("Speedster", CardType.Power, 2, S),
+    CardId.STRANGLE : ("Strangle", CardType.Attack, 1, A),
+    CardId.TACTICIAN : ("Tactician", CardType.Skill, 3, S),
+    CardId.UP_MY_SLEEVE : ("Up My Sleeve", CardType.Skill, 2, S),
+    CardId.ABRASIVE : ("Abrasive", CardType.Power, 3, S),
+    CardId.ADRENALINE : ("Adrenaline", CardType.Skill, 0, S),
+    CardId.AFTERIMAGE : ("Afterimage", CardType.Power, 1, S),
+    CardId.ASSASSINATE : ("Assassinate", CardType.Attack, 0, A),
+    CardId.BLADE_OF_INK : ("Blade of Ink", CardType.Skill, 1, S),
+    CardId.BULLET_TIME : ("Bullet Time", CardType.Skill, 3, S),
+    CardId.BURST : ("Burst", CardType.Skill, 1, S),
+    CardId.CORROSIVE_WAVE : ("Corrosive Wave", CardType.Skill, 1, S),
+    CardId.ENVENOM : ("Envenom", CardType.Power, 2, S),
+    CardId.FAN_OF_KNIVES : ("Fan of Knives", CardType.Power, 2, S),
+    CardId.GRAND_FINALE : ("Grand Finale", CardType.Attack, 0, ALL),
+    CardId.KNIFE_TRAP : ("Knife Trap", CardType.Skill, 2, A),
+    CardId.MALAISE : ("Malaise", CardType.Skill, 'X', A),
+    CardId.MASTER_PLANNER : ("Master Planner", CardType.Power, 2, S),
+    CardId.MURDER : ("Murder", CardType.Attack, 3, A),
+    CardId.NIGHTMARE : ("Nightmare", CardType.Skill, 3, S),
+    CardId.OUTBREAK : ("Outbreak", CardType.Skill, 3, ALL),
+    CardId.SERPENT_FORM : ("Serpent Form", CardType.Power, 3, S),
+    CardId.SHADOW_STEP : ("Shadow Step", CardType.Skill, 1, S),
+    CardId.SHADOWMELD : ("Shadowmeld", CardType.Skill, 1, S),
+    CardId.STORM_OF_STEEL : ("Storm of Steel", CardType.Skill, 1, S),
+    CardId.THE_HUNT : ("The Hunt", CardType.Attack, 1, A),
+    CardId.TOOLS_OF_THE_TRADE : ("Tools of the Trade", CardType.Power, 1, S),
+    CardId.TRACKING : ("Tracking", CardType.Power, 2, S),
+    CardId.WELL_LAID_PLANS : ("Well-Laid Plans", CardType.Power, 2, S),
 }
 
 # Ancient cards the sim could not read from the decompiled source (name, type, cost, target)
@@ -151,6 +240,8 @@ ANCIENT_CARDS = {
     CardId.MAUL : ("Maul", CardType.Attack, 1, A), CardId.RELAX : ("Relax", CardType.Skill, 3, S),
     CardId.WHISTLE : ("Whistle", CardType.Attack, 2, A), CardId.WISH : ("Wish", CardType.Skill, 0, S),
 }
+
+CHARACTER_CARDS = {"IRONCLAD": GENERATABLE_CARDS, "SILENT": SILENT_CARDS}      # each character's card table (its pool, Basic cards included for the Silent)
 
 # what Jack of All Trades can make: Hand of Greed (and Alchemize and Hidden Gem) cannot be generated in combat, and it makes no Jack of All Trades
 NOT_GENERATED_COLORLESS = frozenset({CardId.HAND_OF_GREED, CardId.HIDDEN_GEM, CardId.JACK_OF_ALL_TRADES, CardId.ALCHEMIZE})
@@ -162,11 +253,15 @@ TRANSFORM_COLORLESS = [cid for cid in COLORLESS_CARDS if cid not in (CardId.HAND
 
 def transform_options(card : Card) -> list[CardId]:
     """CardFactory.GetFilteredTransformationOptions: Common to Rare cards of the card's own pool (Neow's Fury is colorless), never the same card.
-    Empty for Statuses and Curses, which cannot be transformed here."""
-    if card.type in (CardType.Status, CardType.Curse):
+    Empty for Statuses, Curses and Quest cards, which cannot be transformed here."""
+    if card.type in (CardType.Status, CardType.Curse, CardType.Quest):
         return []
     colorless = card.card_id in COLORLESS_CARDS or card.card_id == CardId.NEOWS_FURY or card.card_id in ANCIENT_CARDS
-    return [cid for cid in (TRANSFORM_COLORLESS if colorless else GENERATABLE_CARDS) if cid != card.card_id]
+    if colorless:
+        pool = TRANSFORM_COLORLESS
+    else:
+        pool = TRANSFORM_POOLS[CARD_POOL_OF.get(card.card_id, "IRONCLAD")]
+    return [cid for cid in pool if cid != card.card_id]
 
 class CardRarity(Enum):
     """CardRarity of the game. Basic / Ancient / Event / Token / Status / Curse cards are never in a card reward pool."""
@@ -179,26 +274,30 @@ class CardRarity(Enum):
     Token = auto()
     Status = auto()
     Curse = auto()
+    Quest = auto()
 
 # The rarity of every card, read from the `CardRarity` of each class in the decompiled Models.Cards (test_card_rarity checks the
 # table is complete). The true game rarity is stored: a policy that treats Bash like a Common does that itself.
 _RARITY_NAMES = {
     CardRarity.Basic : (
-        "STRIKE_IRONCLAD DEFEND_IRONCLAD BASH"
+        "STRIKE_IRONCLAD DEFEND_IRONCLAD BASH STRIKE_SILENT DEFEND_SILENT NEUTRALIZE SURVIVOR"
     ),
     CardRarity.Common : (
         "BLOOD_WALL PERFECTED_STRIKE BREAKTHROUGH SHRUG_IT_OFF POMMEL_STRIKE IRON_WAVE THUNDERCLAP TREMBLE ANGER BODY_SLAM TWIN_STRIKE "
-        "MOLTEN_FIST SWORD_BOOMERANG CINDER TAUNT ARMAMENTS HEADBUTT TRUE_GRIT HAVOC SETUP_STRIKE"
+        "MOLTEN_FIST SWORD_BOOMERANG CINDER TAUNT ARMAMENTS HEADBUTT TRUE_GRIT HAVOC SETUP_STRIKE "
+        "ANTICIPATE BACKFLIP BLADE_DANCE CLOAK_AND_DAGGER DAGGER_SPRAY DAGGER_THROW DEADLY_POISON DEFLECT DODGE_AND_ROLL FLICK_FLACK LEADING_STRIKE PIERCING_WAIL POISONED_STAB PREDATOR PREPARED RICOCHET SLICE SNAKEBITE SUCKER_PUNCH UNTOUCHABLE"
     ),
     CardRarity.Uncommon : (
+        "ACCELERANT ACCURACY ACROBATICS BACKSTAB BLUR BOUNCING_FLASK BUBBLE_BUBBLE CALCULATED_GAMBLE DASH ECHOING_SLASH ESCAPE_PLAN EXPERTISE EXPOSE FINISHER FLECHETTES SIDESTEP FOOTWORK HAND_TRICK HAZE HIDDEN_DAGGERS INFINITE_BLADES LEG_SWEEP MEMENTO_MORI MIRAGE NOXIOUS_FUMES PHANTOM_BLADES PINPOINT POUNCE PRECISE_CUT REFLEX SKEWER SPEEDSTER STRANGLE TACTICIAN UP_MY_SLEEVE "
         "INFLAME FIGHT_ME BLUDGEON UNRELENTING HEMOKINESIS DISMANTLE BULLY ASHEN_STRIKE UPPERCUT WHIRLWIND SPITE EVIL_EYE SECOND_WIND "
         "BLOODLETTING FINESSE FLASH_OF_STEEL ULTIMATE_STRIKE ULTIMATE_DEFEND PRODUCTION DRAMATIC_ENTRANCE SHOCKWAVE PROWESS IMPATIENCE "
         "RESTLESSNESS FISTICUFFS MIND_BLAST OMNISLICE VOLLEY PURITY SEEKER_STRIKE THINKING_AHEAD EQUILIBRIUM PANIC_BUTTON PROLONG FASTEN "
         "PREP_TIME DARK_SHACKLES AUTOMATION PANACHE THE_BOMB THRUMMING_HATCHET JACK_OF_ALL_TRADES CATASTROPHE DISCOVERY BURNING_PACT "
         "COLOSSUS FEEL_NO_PAIN FLAME_BARRIER JUGGLING RAGE RUPTURE STAMPEDE STONE_ARMOR VICIOUS BATTLE_TRANCE DRUM_OF_BATTLE EXPECT_A_FIGHT "
-        "FORGOTTEN_RITUAL HOWL_FROM_BEYOND INFERNAL_BLADE INFERNO PILLAGE RAMPAGE STOMP SALVO CRUELTY"
+        "FORGOTTEN_RITUAL HOWL_FROM_BEYOND INFERNAL_BLADE INFERNO PILLAGE RAMPAGE STOMP SALVO CRUELTY STRATAGEM"
     ),
     CardRarity.Rare : (
+        "ABRASIVE ADRENALINE AFTERIMAGE ASSASSINATE BLADE_OF_INK BULLET_TIME BURST CORROSIVE_WAVE ENVENOM FAN_OF_KNIVES GRAND_FINALE KNIFE_TRAP MALAISE MASTER_PLANNER MURDER NIGHTMARE OUTBREAK SERPENT_FORM SHADOW_STEP SHADOWMELD STORM_OF_STEEL THE_HUNT TOOLS_OF_THE_TRADE TRACKING WELL_LAID_PLANS SPLASH "
         "CRIMSON_MANTLE IMPERVIOUS FEED AGGRESSION MASTER_OF_STRATEGY SCRAWL GOLD_AXE REND ETERNAL_ARMOR HAND_OF_GREED SECRET_TECHNIQUE "
         "SECRET_WEAPON ROLLING_BOULDER THE_GAMBIT MAYHEM NOSTALGIA BOLAS JACKPOT CALAMITY BEAT_DOWN ANOINTED ENTROPY HIDDEN_GEM ALCHEMIZE "
         "BARRICADE DOMINATE DARK_EMBRACE DEMON_FORM JUGGERNAUT ONE_TWO_PUNCH PYRE UNMOVABLE CASCADE CONFLAGRATION FIEND_FIRE NOT_YET "
@@ -212,14 +311,17 @@ _RARITY_NAMES = {
         "CLASH DUAL_WIELD ENTRENCH CALTROPS DISTRACTION OUTMANEUVER HELLO_WORLD REBOUND RIP_AND_TEAR STACK"
     ),
     CardRarity.Token : (
-        "GIANT_ROCK LUMINESCE"
+        "GIANT_ROCK LUMINESCE SHIV"
     ),
     CardRarity.Status : (
         "SLIMED INFECTION BURN BECKON WITHER DAZED WOUND SOOT TOXIC FRANTIC_ESCAPE DISINTEGRATION MIND_ROT SLOTH WASTE_AWAY"
     ),
     CardRarity.Curse : (
         "REGRET DECAY SHAME DOUBT NORMALITY INJURY POOR_SLEEP GREED CLUMSY CURSE_OF_THE_BELL WRITHE FOLLY BAD_LUCK DEBT GUILTY SPORE_MIND "
-        "ASCENDERS_BANE"
+        "ASCENDERS_BANE ENTHRALLED"
+    ),
+    CardRarity.Quest : (
+        "SPOILS_MAP LANTERN_KEY BYRDONIS_EGG DOWSING"
     ),
 }
 
@@ -236,14 +338,48 @@ STOKE_POOL = list(GENERATABLE_CARDS)
 
 ZERO_COST_POOL = [cid for cid, (_, _, cost, _) in GENERATABLE_CARDS.items() if cost == 0]       # Jackpot: canonical cost 0, not X
 
+# CardFactory.FilterForCombat over Character.CardPool: what card effects generate in combat (Discovery, Attack Potion, Infernal Blade, Crossbow...).
+# Common to Rare cards of the character's pool, minus the ones with CanBeGeneratedInCombat => false.
+NOT_GENERATED_IN_COMBAT = frozenset({CardId.FEED, CardId.NOT_YET, CardId.NIGHTMARE, CardId.THE_HUNT})
+_GENERATED_RARITIES = (CardRarity.Common, CardRarity.Uncommon, CardRarity.Rare)
+COMBAT_CARDS = {
+    "IRONCLAD": GENERATABLE_CARDS,
+    "SILENT": {cid: v for cid, v in SILENT_CARDS.items() if CARD_RARITY[cid] in _GENERATED_RARITIES and cid not in NOT_GENERATED_IN_COMBAT},
+}
+
+
+def combat_cards(character : str = "IRONCLAD") -> dict:
+    """The character's combat-generatable cards (name, type, cost, target); the Ironclad's for a character the engine does not model."""
+    return COMBAT_CARDS.get(character.upper(), GENERATABLE_CARDS)
+
+
+def combat_pool(character : str = "IRONCLAD", card_type : CardType | None = None, rarity : CardRarity | None = None) -> list[CardId]:
+    return [cid for cid, (_, kind, _, _) in combat_cards(character).items()
+            if (card_type is None or kind == card_type) and (rarity is None or CARD_RARITY[cid] == rarity)]
+
+
+def zero_cost_pool(character : str = "IRONCLAD") -> list[CardId]:
+    """Jackpot: canonical cost 0, not X."""
+    return [cid for cid, (_, _, cost, _) in combat_cards(character).items() if cost == 0]
+
+
+# the character pool each card belongs to (CardModel.Pool), for transforms
+CARD_POOL_OF = {cid: name for name, table in CHARACTER_CARDS.items() for cid in table}
+TRANSFORM_POOLS = {name: [cid for cid in table if CARD_RARITY[cid] in _GENERATED_RARITIES] for name, table in CHARACTER_CARDS.items()}
+
+# Splash: Attacks of every character pool but the owner's (only the modelled characters' pools)
+def splash_pool(character : str = "IRONCLAD") -> list[CardId]:
+    others = [name for name in COMBAT_CARDS if name != character.upper()] or list(COMBAT_CARDS)
+    return [cid for name in others for cid in combat_pool(name, CardType.Attack)]
+
 # cards that return to the hand at the start of the next turn if they were played this one (BeforeHandDraw)
 RETURNING_CARDS = frozenset({CardId.BOLAS, CardId.THRUMMING_HATCHET})
 
 # cards with the Defend tag (Fasten)
-DEFEND_CARDS = frozenset({CardId.DEFEND_IRONCLAD, CardId.ULTIMATE_DEFEND})
+DEFEND_CARDS = frozenset({CardId.DEFEND_IRONCLAD, CardId.ULTIMATE_DEFEND, CardId.DEFEND_SILENT})
 
 # cards with the Strike tag (Hellraiser plays them when they are drawn)
-STRIKE_CARDS = frozenset({CardId.ULTIMATE_STRIKE, CardId.SEEKER_STRIKE, CardId.STRIKE_IRONCLAD, CardId.PERFECTED_STRIKE, CardId.POMMEL_STRIKE, CardId.TWIN_STRIKE,
+STRIKE_CARDS = frozenset({CardId.STRIKE_SILENT, CardId.LEADING_STRIKE, CardId.ULTIMATE_STRIKE, CardId.SEEKER_STRIKE, CardId.STRIKE_IRONCLAD, CardId.PERFECTED_STRIKE, CardId.POMMEL_STRIKE, CardId.TWIN_STRIKE,
                           CardId.ASHEN_STRIKE, CardId.SETUP_STRIKE})
 
 def _curse_debuff(player, status : StatusId):

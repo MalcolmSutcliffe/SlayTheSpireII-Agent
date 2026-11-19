@@ -160,7 +160,7 @@ def _claude_weight(c : CombatSimulator, actions : list[dict], p : HeuristicParam
     return weight
 
 ### The pick of a pending card choice (True Grit's card, Armaments' card, Ashwater's cards)
-REMOVING_CHOICES = ("exhaust", "exhaust_any", "discard_any")      # a card leaves the hand: the least wanted one goes
+REMOVING_CHOICES = ("exhaust", "exhaust_any", "discard_any", "discard")      # a card leaves the hand: the least wanted one goes
 
 def _pick_for_choice(c : CombatSimulator, actions : list[dict], greedy : bool, p : HeuristicParams) -> dict:
     """The heuristic's answer to a pending card choice, with the weights it plays cards by (as if each card of the hand were playable now):

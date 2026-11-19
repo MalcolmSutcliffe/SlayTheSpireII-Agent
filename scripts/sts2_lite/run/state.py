@@ -13,8 +13,6 @@ from sts2_lite.relic import RelicId
 from sts2_lite.map import ActMap, UnknownRoomOdds
 from sts2_lite.rewards.odds import BASE_RARITY_OFFSET
 
-IRONCLAD_START = {"hp": 80, "gold": 99, "potion_slots": 3, "relic": "BURNING_BLOOD",
-                  "deck": ("STRIKE_IRONCLAD",) * 5 + ("DEFEND_IRONCLAD",) * 4 + ("BASH",)}      # assumed: check against a capture of a fresh run
 ASCENDERS_BANE_ASCENSION = 5
 TIGHT_BELT_ASCENSION = 4
 WEARY_TRAVELER_ASCENSION = 2        # start at 80% of max hit points
@@ -109,14 +107,14 @@ class RunState:
 
 def new_run(ascension : int = 0, character : str = "IRONCLAD") -> RunState:
     """A fresh run at its start (before Neow and before the first act is drawn): the starter deck, relic, hit points and gold, with the ascension's changes."""
-    if character != "IRONCLAD":
-        raise NotImplementedError(f"{character}: only the Ironclad is modelled")
+    from sts2_lite.character import character as character_info
     from sts2_lite.event.run import card_entry
-    start = IRONCLAD_START
-    deck = [card_entry(c) for c in start["deck"]]
+    start = character_info(character)
+    character = start.name
+    deck = [card_entry(c) for c in start.deck]
     if ascension >= ASCENDERS_BANE_ASCENSION:
         deck.append(card_entry("ASCENDERS_BANE"))
-    slots = start["potion_slots"] - (1 if ascension >= TIGHT_BELT_ASCENSION else 0)
-    hp = int(start["hp"] * WEARY_TRAVELER_SHARE) if ascension >= WEARY_TRAVELER_ASCENSION else start["hp"]
-    return RunState(hp=hp, max_hp=start["hp"], gold=start["gold"], deck=deck, relics=[{"id": start["relic"], "name": "Burning Blood"}],
+    slots = start.potion_slots - (1 if ascension >= TIGHT_BELT_ASCENSION else 0)
+    hp = int(start.hp * WEARY_TRAVELER_SHARE) if ascension >= WEARY_TRAVELER_ASCENSION else start.hp
+    return RunState(hp=hp, max_hp=start.hp, gold=start.gold, deck=deck, relics=[{"id": start.relic, "name": start.relic_name}],
                     potion_slots=slots, act=0, floor=0, ascension=ascension, character=character, hidden=Hidden())

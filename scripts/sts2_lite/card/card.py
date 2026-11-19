@@ -5,18 +5,19 @@ import re
 from sts2_lite.relic import before_card_played, blocks_play, extra_plays, free_by_relic, restore, snapshot, x_bonus
 from sts2_lite.status import StatusId
 
-from sts2_lite.card.constants import MAD_SCIENCE_BLOCK, MAD_SCIENCE_DAMAGE, mad_science_rider, BECKON_HP_LOSS, BURN_DAMAGE, CONSUMED_ON_PLAY, CURSE_NAMES, ENCHANT_CORRUPTED_HP_LOSS, ENCHANT_SOWN_ENERGY, INFECTION_DAMAGE, NORMALITY_CARD_LIMIT, TOXIC_DAMAGE, UPGRADE_BASE_COST, UPGRADE_COST_CHANGE, UPGRADE_KEYWORD, UPGRADE_REMOVED_KEYWORD, WITHER_DAMAGE, _AXE, _CHOKER, _ETHEREAL, _EXHAUST, _INNATE, _REPLAY, _RETAIN, _SCARF, _UNPLAYABLE, QUEST_CARDS, _unknown_cards, _unknown_enchantments, keyword_mask
+from sts2_lite.card.constants import MAD_SCIENCE_BLOCK, MAD_SCIENCE_DAMAGE, mad_science_rider, BECKON_HP_LOSS, BURN_DAMAGE, CONSUMED_ON_PLAY, CURSE_NAMES, ENCHANT_CORRUPTED_HP_LOSS, ENCHANT_SOWN_ENERGY, INFECTION_DAMAGE, NORMALITY_CARD_LIMIT, PLAYABLE_CURSES, QUEST_NAMES, TOXIC_DAMAGE, UPGRADE_BASE_COST, UPGRADE_COST_CHANGE, UPGRADE_KEYWORD, UPGRADE_REMOVED_KEYWORD, WITHER_DAMAGE, _AXE, _CHOKER, _ETHEREAL, _EXHAUST, _INNATE, _REPLAY, _RETAIN, _SCARF, _SLY, _UNPLAYABLE, QUEST_CARDS, _unknown_cards, _unknown_enchantments, keyword_mask
 from sts2_lite.card.effects import _gain_block
 from sts2_lite.card.ids import CardId, CardKeyword, CardType, EnchantmentId, TargetType
-from sts2_lite.card.tables import ANCIENT_CARDS, COLORLESS_CARDS, EVENT_CARDS, GENERATABLE_CARDS, HAND_CURSE_EFFECTS, STRIKE_CARDS, TOKEN_CARDS
+from sts2_lite.card.tables import ANCIENT_CARDS, COLORLESS_CARDS, EVENT_CARDS, GENERATABLE_CARDS, SILENT_CARDS, HAND_CURSE_EFFECTS, STRIKE_CARDS, TOKEN_CARDS
 
 if TYPE_CHECKING:
     from sts2_lite.combat import CombatSimulator
 
 # hot-path aliases (enum members are singletons: `is` is their equality)
 _ATTACK, _SKILL = CardType.Attack, CardType.Skill
-_CLASH, _NORMALITY = CardId.CLASH, CardId.NORMALITY
+_CLASH, _NORMALITY, _ENTHRALLED = CardId.CLASH, CardId.NORMALITY, CardId.ENTHRALLED
 _CORRUPTION, _FREE_ATTACK, _TANGLED, _RINGING, _SLOTH = StatusId.CORRUPTION, StatusId.FREE_ATTACK, StatusId.TANGLED, StatusId.RINGING, StatusId.SLOTH
+_FREE_SKILL = StatusId.FREE_SKILL
 
 
 class Card:
@@ -41,6 +42,7 @@ class Card:
     rider : str | None = None                  # Mad Science: what Tinker Time added (SAPPING, VIOLENCE, CHOKING, ENERGIZED, WISDOM, CHAOS, EXPERTISE, CURIOUS, IMPROVEMENT)
     bound : bool = False                       # the Queen's Chains of Binding: only one Bound card can be played a turn
     _keywords : int | None = None              # keyword mask; None: the card's canonical keywords
+    turn_keywords : int = 0                    # keyword bits given for this turn only (CardCmd.ApplySingleTurnRetain / ApplySingleTurnSly)
     generated : bool = False                   # made during this fight (the game's DeckVersion is null); the Thieving Hopper cannot take it
 
     def __init__(self):
@@ -62,6 +64,22 @@ class Card:
             return self
         new_card = Card.create_copy(self)
         new_card._keywords = mask | keyword.value
+        return new_card
+
+    def with_turn_keyword(self, keyword : CardKeyword) -> Card:
+        """A copy that has `keyword` until the end of this turn (Expertise's Retain, Hand Trick's Sly)."""
+        mask = self._mask
+        if mask & keyword.value:
+            return self
+        new_card = Card.create_copy(self)
+        new_card._keywords = mask | keyword.value
+        new_card.turn_keywords = self.turn_keywords | keyword.value
+        return new_card
+
+    def without_turn_keywords(self) -> Card:
+        new_card = Card.create_copy(self)
+        new_card._keywords = self._mask & ~self.turn_keywords
+        new_card.turn_keywords = 0
         return new_card
 
     def with_replay(self, extra : int) -> Card:
@@ -87,13 +105,19 @@ class Card:
         return bool(self._mask & _UNPLAYABLE)
 
     @property
+    def sly(self) -> bool:
+        return bool(self._mask & _SLY)
+
+    @property
     def retains(self) -> bool:
         return bool(self._mask & _RETAIN)
 
     @classmethod
     def from_dict(cls, card : dict):
+        if card["id"] in QUEST_CARDS:
+            return cls.create_quest(CardId[card["id"]])
         if card["id"] not in CardId.__members__ or card["id"] == "NOT_IMPLEMENTED":
-            if card["id"] not in _unknown_cards and card["id"] not in QUEST_CARDS:
+            if card["id"] not in _unknown_cards:
                 _unknown_cards.add(card["id"])
                 print(f"card {card['id']} is not implemented in the sim: treated as a Wound")
             placeholder = cls.create_not_implemented(card.get("name") or card["id"])
@@ -116,11 +140,15 @@ class Card:
             new_card._keywords = keyword_mask(CardKeyword[k.upper()] for k in card["card_keywords"] if k.upper() in CardKeyword.__members__)
         if card.get("enchantment"):
             new_card._read_enchantment(card["enchantment"])
+            if new_card.enchantment == EnchantmentId.SOWN and "Gain" not in (card.get("description") or ""):
+                new_card.enchant_amount = 0     # spent: the game keeps the enchantment (amount 1) but drops its text
         new_card.bound = any(k.get("name") == "Bound" for k in card.get("keywords") or ())      # Chains of Binding shows as a keyword
         if new_card.bound and card.get("unplayable_reason") == "BlockedByHook":
             new_card.is_unplayable = False              # only because a Bound card was played this turn: the simulator knows that itself
         if new_card.card_id == CardId.STOMP and new_card.energy_cost < 3:
             new_card.restore_cost = 3           # the shown cost already includes this turn's Attacks
+        elif new_card.card_id == CardId.PINPOINT and new_card.energy_cost < 3:
+            new_card.restore_cost = 3           # and Pinpoint's this turn's Skills
         match = re.search(r"Deals?\s+(\d+)", card.get("description") or "")
         new_card.shown_damage = int(match.group(1)) if match else None
         if new_card.card_id == CardId.WITHER:       # "Wither+2": the damage on it is 3 for every step
@@ -269,14 +297,24 @@ class Card:
         return c
 
     @classmethod
+    def create_quest(cls, card_id : CardId) -> Card:
+        """A Quest card: unplayable and inert in combat, like a Wound, and never upgraded."""
+        c = cls()
+        c.card_id, c.name, c.type = card_id, QUEST_NAMES[card_id], CardType.Quest
+        c.energy_cost, c.target_type = 0, TargetType.NONE
+        c.is_upgraded = False
+        c.is_unplayable = True
+        return c
+
+    @classmethod
     def create_curse(cls, card_id : CardId) -> Card:
-        """A curse: cost 0 and unplayable, except Spore Mind (1 energy, Exhaust)."""
+        """A curse: cost 0 and unplayable, except Spore Mind (1 energy, Exhaust) and Enthralled (2 energy)."""
         c = cls()
         c.card_id, c.type = card_id, CardType.Curse
         c.name = CURSE_NAMES.get(card_id) or card_id.name.replace("_", " ").title()
-        c.energy_cost, c.target_type = (1 if card_id == CardId.SPORE_MIND else 0), TargetType.NONE
+        c.energy_cost, c.target_type = PLAYABLE_CURSES.get(card_id, 0), TargetType.NONE
         c.is_upgraded = False
-        c.is_unplayable = card_id != CardId.SPORE_MIND
+        c.is_unplayable = card_id not in PLAYABLE_CURSES
         return c
 
     @classmethod
@@ -290,7 +328,7 @@ class Card:
     @classmethod
     def create_generated(cls, card_id : CardId, upgraded : bool = False) -> Card:
         """A fresh copy of a card that a card effect adds to the player's piles (Infernal Blade, Stoke)."""
-        name, card_type, cost, target = (GENERATABLE_CARDS.get(card_id) or COLORLESS_CARDS.get(card_id) or EVENT_CARDS.get(card_id) or ANCIENT_CARDS.get(card_id)
+        name, card_type, cost, target = (GENERATABLE_CARDS.get(card_id) or SILENT_CARDS.get(card_id) or COLORLESS_CARDS.get(card_id) or EVENT_CARDS.get(card_id) or ANCIENT_CARDS.get(card_id)
                                          or TOKEN_CARDS[card_id])
         c = cls()
         c.card_id, c.name, c.type = card_id, name, card_type
@@ -366,7 +404,7 @@ class Card:
 
     @property
     def is_upgradable(self) -> bool:
-        return not self.is_upgraded and self.type != CardType.Status and self.type != CardType.Curse
+        return not self.is_upgraded and self.type not in (CardType.Status, CardType.Curse, CardType.Quest)
 
     def downgraded_copy(self) -> Card:
         """Dampen: the plain version of an upgraded card (what upgraded_copy undid); shared piles stay untouched."""
@@ -444,6 +482,7 @@ class Card:
         new_card.replay = card.replay
         new_card.enchantment, new_card.enchant_amount, new_card.enchant_bonus = card.enchantment, card.enchant_amount, card.enchant_bonus
         new_card._keywords = card._keywords
+        new_card.turn_keywords = card.turn_keywords
         new_card.generated = card.generated
         new_card.dampened_from = card.dampened_from
         new_card.wither_level = card.wither_level
@@ -455,7 +494,7 @@ class Card:
         """Everything that decides how this card plays: two cards with equal signatures are interchangeable
         (the fields create_copy carries over, minus name/type/target which follow from the id)."""
         return (self.card_id, self.is_upgraded, self.energy_cost, self.is_unplayable, self.restore_cost, self.until_played,
-                self.bonus_damage, self.replay, self.enchantment, self.enchant_amount, self.enchant_bonus, self._mask, self.generated, self.dampened_from is not None, self.wither_level, self.bound, self.rider)
+                self.bonus_damage, self.replay, self.enchantment, self.enchant_amount, self.enchant_bonus, self._mask, self.generated, self.dampened_from is not None, self.wither_level, self.bound, self.rider, self.turn_keywords)
 
     def current_cost(self, player) -> int | str:
         """Energy cost now: the base cost plus Tangled on attacks."""
@@ -463,8 +502,12 @@ class Card:
         if energy_cost == "X":
             return energy_cost
         ctype, status = self.type, player.status
-        if ctype is _SKILL and _CORRUPTION in status:
-            return 0
+        if ctype is _SKILL:
+            if _CORRUPTION in status:
+                return 0
+            free_skill = status.get(_FREE_SKILL)
+            if free_skill is not None and free_skill.amount > 0:
+                return 0            # FreeSkillPower.TryModifyEnergyCostInCombatLate
         if ctype is _ATTACK:
             free_attack = status.get(_FREE_ATTACK)
             if free_attack is not None and free_attack.amount > 0:
@@ -485,12 +528,14 @@ class Card:
             player.bound_played = True      # BeforeCardPlayed
         energy = combat.combat_state.energy
         cost = 0 if free else self.current_cost(player)
-        free_attack = player.status.get(StatusId.FREE_ATTACK)
+        free_attack = (player.status.get(StatusId.FREE_ATTACK) if self.type == CardType.Attack
+                       else player.status.get(StatusId.FREE_SKILL) if self.type == CardType.Skill else None)    # FreeAttackPower / FreeSkillPower: the next one is free
         free_attack_amount = free_attack.amount if free_attack else 0
         from sts2_lite.card.plays.registry import GET_CARD_FUNCTION
         play = GET_CARD_FUNCTION[self.card_id]
         saved = snapshot(player) if player.relics else None
-        punch = player.status.get(StatusId.ONE_TWO_PUNCH) if self.type == CardType.Attack else None
+        punch = (player.status.get(StatusId.ONE_TWO_PUNCH) if self.type == CardType.Attack
+                 else player.status.get(StatusId.BURST) if self.type == CardType.Skill else None)      # BurstPower: Skills, like One-Two Punch for Attacks
         x = None
         counted = self.type == CardType.Attack or self.type == CardType.Skill
         if counted:
@@ -509,10 +554,10 @@ class Card:
                 if not free:
                     combat.combat_state.energy = 0
                 play(self, combat, target_index, self.is_upgraded, x)
-                self._enchantment_on_play(combat)
+                self._enchantment_on_play(combat, target_index)
             else:
                 spent = cost
-                if self.type == CardType.Attack and free_attack_amount > 0:
+                if free_attack_amount > 0:
                     free_attack.amount -= 1
                     combat.combat_state.energy += cost
                     spent = 0
@@ -520,7 +565,7 @@ class Card:
                     before_card_played(combat, self, spent)
                 combat.combat_state.energy -= cost
                 play(self, combat, target_index, self.is_upgraded)
-                self._enchantment_on_play(combat)
+                self._enchantment_on_play(combat, target_index)
         except ValueError:
             combat.combat_state.energy = energy
             if self.bound:
@@ -534,7 +579,7 @@ class Card:
             combat.vigor_pending = None
             if punch is not None:
                 punch.amount += 1
-                player.status[StatusId.ONE_TWO_PUNCH] = punch
+                player.status[punch.status_id] = punch
             raise
         combat.finish_vigor()
 
@@ -555,14 +600,14 @@ class Card:
             self._replay(combat, target_index, x)
             combat.finish_vigor()           # each play is its own attack command
 
-    def _enchantment_on_play(self, combat : CombatSimulator):
+    def _enchantment_on_play(self, combat : CombatSimulator, target_index : int = 0):
         """EnchantmentModel.OnPlay: after the card's own effects, once for every play (replays included)."""
         enchantment = self.enchantment
         if enchantment is None:
             return
         cs = combat.combat_state
         if cs.pending_choice is not None:        # the card's own choice is still open (Secret Weapon): the enchantment comes after the answer, before the after-play step
-            cs.continuations = [("enchant", self)] + cs.continuations
+            cs.continuations = [("enchant", self, target_index)] + cs.continuations
             return
         player = cs.player
         amount = self.enchant_amount
@@ -574,6 +619,14 @@ class Card:
             self.enchant_bonus += amount
         elif enchantment == EnchantmentId.GLAM:
             self._keywords = self._mask & ~_REPLAY          # Replay is spent
+        elif enchantment == EnchantmentId.INKY:             # Inky.OnPlay: 1 Weak on the target (every enemy for an all-enemies card)
+            from sts2_lite.card.effects import _weak
+            from sts2_lite.helpers import living_enemies
+            enemies = cs.enemies
+            targets = living_enemies(combat) if self.target_type == TargetType.AllEnemies else \
+                [enemies[target_index]] if 0 <= target_index < len(enemies) and enemies[target_index].current_hp > 0 else []
+            for target in targets:
+                _weak(combat, target, 1)
         elif enchantment == EnchantmentId.GOOPY:
             self.enchant_amount += 1                        # the amount is the card's permanent block gain + 1
         elif enchantment in CONSUMED_ON_PLAY and amount > 0:    # spent: the game keeps the enchantment with amount 0
@@ -590,7 +643,7 @@ class Card:
             extra += 1
             punch.amount -= 1
             if punch.amount <= 0:
-                del player.status[StatusId.ONE_TWO_PUNCH]
+                del player.status[punch.status_id]
         extra += self.replay
         if StatusId.DUPLICATION in player.status:        # Duplicator Potion: the next card this turn, once
             extra += 1
@@ -614,7 +667,7 @@ class Card:
             GET_CARD_FUNCTION[self.card_id](self, combat, target_index, self.is_upgraded)
         else:
             GET_CARD_FUNCTION[self.card_id](self, combat, target_index, self.is_upgraded, x)
-        self._enchantment_on_play(combat)
+        self._enchantment_on_play(combat, target_index)
 
     def can_play_card(self, combat : CombatSimulator, target_index):
         """Whether the card can be played now. The target is not read: a card is playable at every enemy or at none."""
@@ -625,6 +678,8 @@ class Card:
         ctype = self.type
         if self.card_id is _CLASH and any(c.type is not _ATTACK for c in player.hand):
             return False            # Clash: only while the hand holds nothing but Attacks
+        if self.card_id is CardId.GRAND_FINALE and player.draw_pile:
+            return False            # Grand Finale: only with an empty draw pile
         if ctype is _SKILL and player.smogged:
             return False            # Smoggy: afflicted with Smog
         if self.bound and player.bound_played:
@@ -637,6 +692,8 @@ class Card:
             return False            # Sloth: at most this many cards a turn
         if cs.cards_played >= NORMALITY_CARD_LIMIT and any(c.card_id is _NORMALITY for c in player.hand):
             return False            # Normality: at most 3 cards a turn while it is in hand
+        if self.card_id is not _ENTHRALLED and any(c.card_id is _ENTHRALLED for c in player.hand):
+            return False            # Enthralled.ShouldPlay: only Enthralled itself while it is in hand (autoplay skips this check)
         if player.relics and _CHOKER in player.relics and blocks_play(player):
             return False            # Velvet Choker
         if type(self.energy_cost) is str and self.energy_cost == "X":
@@ -644,5 +701,9 @@ class Card:
         if ctype is _ATTACK:
             free_attack = status.get(_FREE_ATTACK)
             if free_attack is not None and free_attack.amount > 0:
+                return True
+        elif ctype is _SKILL:
+            free_skill = status.get(_FREE_SKILL)
+            if free_skill is not None and free_skill.amount > 0:
                 return True
         return self.current_cost(player) <= cs.energy

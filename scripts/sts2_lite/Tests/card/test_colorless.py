@@ -326,7 +326,7 @@ def test_damage_taken_counts_blocked_and_unblocked_damage():
 
 def test_every_colorless_card_has_a_play_function_and_a_table_entry():
     from sts2_lite.card import COLORLESS_CARDS, GET_CARD_FUNCTION
-    assert len(COLORLESS_CARDS) == 51
+    assert len(COLORLESS_CARDS) == 53
     for card_id in COLORLESS_CARDS:
         assert card_id in GET_CARD_FUNCTION
         assert Card.create_generated(card_id).card_id == card_id
@@ -1455,3 +1455,60 @@ def test_capture_hidden_gem_replay_is_read_from_the_card_text():
     cs.enemies[0].current_hp = 100
     play(cs)
     assert hps(cs)[0] == 100 - 3 * 6
+
+
+# ------------------------------------------------------------ Stratagem
+def _stratagem_state(n_draw=0, discard=()):
+    cs = one_enemy([card(CardId.STRATAGEM)])
+    sim = play(cs)
+    cs.player.draw_pile = [defend() for _ in range(n_draw)]
+    cs.player.discard_pile = list(discard)
+    cs.player.hand = []
+    return cs, sim
+
+def test_stratagem_cost_and_upgrade():
+    c = card(CardId.STRATAGEM)
+    assert c.type == CardType.Power and c.energy_cost == 1 and c.upgraded_copy().energy_cost == 0
+    cs = one_enemy([c]); play(cs)
+    assert status(cs.player, StatusId.STRATAGEM) == 1 and cs.energy == 2
+
+def test_stratagem_picks_a_card_when_the_draw_pile_is_shuffled():
+    cs, sim = _stratagem_state(0, [strike(), strike(), defend(), card(CardId.FINESSE)])
+    cs.player.draw_cards(2)
+    pending = cs.pending_choice
+    assert pending is not None and pending.kind == "stratagem" and len(pending.indices) == 3 and not cs.player.hand     # the draw waits for the pick
+    finesse = next(i for i in pending.indices if pending.offers[i].card_id == CardId.FINESSE)
+    sim.choose_card(finesse)
+    assert cs.player.hand[0].card_id == CardId.FINESSE and len(cs.player.hand) == 3 and len(cs.player.draw_pile) == 1
+    assert all(c.card_id != CardId.FINESSE for c in cs.player.draw_pile)
+
+def test_stratagem_lone_option_is_taken_without_asking():
+    cs, sim = _stratagem_state(0, [defend(), defend(), defend()])
+    cs.player.draw_card()
+    assert cs.pending_choice is None and len(cs.player.hand) == 2 and len(cs.player.draw_pile) == 1
+
+def test_stratagem_stacks_pick_one_card_each():
+    cs, sim = _stratagem_state(0, [strike(), defend(), card(CardId.FINESSE), card(CardId.PRODUCTION)])
+    cs.player.apply_status(StatusId.STRATAGEM, 1)
+    cs.player.draw_card()
+    for _ in range(2):
+        pending = cs.pending_choice
+        sim.choose_card(next(i for i in pending.indices if pending.offers[i].type == CardType.Skill and pending.offers[i].card_id != CardId.DEFEND_IRONCLAD))
+    assert {c.card_id for c in cs.player.hand[:2]} == {CardId.FINESSE, CardId.PRODUCTION} and len(cs.player.hand) == 3
+
+def test_stratagem_waits_for_the_start_of_turn_draw():
+    cs = one_enemy([card(CardId.STRATAGEM)])
+    play(cs)
+    cs.player.draw_pile = [defend(), defend()]
+    cs.player.discard_pile = [strike() for _ in range(4)] + [card(CardId.FINESSE)]
+    sim = end_turn(cs)
+    pending = cs.pending_choice
+    assert pending is not None and pending.kind == "stratagem" and len(cs.player.hand) == 2
+    sim.choose_card(next(i for i in pending.indices if pending.offers[i].card_id == CardId.FINESSE))
+    assert cs.pending_choice is None and len(cs.player.hand) == 6 and cs.player.hand[2].card_id == CardId.FINESSE
+
+def test_no_stratagem_no_pick():
+    cs = one_enemy([])
+    cs.player.discard_pile = [strike(), defend()]
+    CombatSimulator(cs).combat_state.player.draw_card()
+    assert cs.pending_choice is None and len(cs.player.hand) == 1

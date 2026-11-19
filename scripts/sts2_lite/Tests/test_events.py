@@ -632,5 +632,5 @@ def test_dollys_mirror_can_copy_a_quest_card_and_the_thieving_hopper_cannot_take
     run.deck.append(placeholder_entry("SPOILS_MAP", "Spoils Map", "Quest"))
     obtain_relic(Ctx(run, random.Random(0), Pick()), "DOLLYS_MIRROR")
     assert sum(c["id"] == "SPOILS_MAP" for c in run.deck) == 2
-    quest = Card.from_dict(run.deck[-1])          # in a fight it is a Wound-like Status card, which the hopper's steal skips
-    assert quest.type == CardType.Status and CARD_RARITY[quest.card_id].name == "Status"
+    quest = Card.from_dict(run.deck[-1])          # in a fight it is a dead Quest card; the hopper ranks it with Basic cards (ThievingHopper._stealPriorities)
+    assert quest.type == CardType.Quest and CARD_RARITY[quest.card_id].name == "Quest"

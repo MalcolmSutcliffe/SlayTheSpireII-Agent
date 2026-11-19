@@ -48,8 +48,93 @@ CARD_ENERGY_COST_AND_TARGET : dict[CardId, tuple[int | str, TargetType]] = {
     CardId.DARK_EMBRACE : (2, _S),
     CardId.DARK_SHACKLES : (0, _A),
     CardId.DEFEND_IRONCLAD : (1, _S),
+    CardId.DEFEND_SILENT : (1, _S),
+    CardId.NEUTRALIZE : (0, _A),
+    CardId.SHIV : (0, _A),
+    CardId.STRIKE_SILENT : (1, _A),
+    CardId.SURVIVOR : (1, _S),
+    CardId.ANTICIPATE : (0, _S),
+    CardId.BACKFLIP : (1, _S),
+    CardId.BLADE_DANCE : (1, _S),
+    CardId.CLOAK_AND_DAGGER : (1, _S),
+    CardId.DAGGER_SPRAY : (1, _ALL),
+    CardId.DAGGER_THROW : (1, _A),
+    CardId.DEADLY_POISON : (1, _A),
+    CardId.DEFLECT : (0, _S),
+    CardId.DODGE_AND_ROLL : (1, _S),
+    CardId.FLICK_FLACK : (1, _ALL),
+    CardId.LEADING_STRIKE : (1, _A),
+    CardId.PIERCING_WAIL : (1, _ALL),
+    CardId.POISONED_STAB : (1, _A),
+    CardId.PREDATOR : (2, _A),
+    CardId.PREPARED : (0, _S),
+    CardId.RICOCHET : (2, _RAND),
+    CardId.SLICE : (0, _A),
+    CardId.SNAKEBITE : (2, _A),
+    CardId.SUCKER_PUNCH : (1, _A),
+    CardId.UNTOUCHABLE : (2, _S),
+    CardId.ACCELERANT : (1, _S),
+    CardId.ACCURACY : (1, _S),
+    CardId.ACROBATICS : (1, _S),
+    CardId.BACKSTAB : (0, _A),
+    CardId.BLUR : (1, _S),
+    CardId.BOUNCING_FLASK : (2, _RAND),
+    CardId.BUBBLE_BUBBLE : (1, _A),
+    CardId.CALCULATED_GAMBLE : (0, _S),
+    CardId.DASH : (2, _A),
+    CardId.ECHOING_SLASH : (1, _ALL),
+    CardId.ESCAPE_PLAN : (0, _S),
+    CardId.EXPERTISE : (1, _S),
+    CardId.EXPOSE : (0, _A),
+    CardId.FINISHER : (1, _A),
+    CardId.FLECHETTES : (1, _A),
+    CardId.SIDESTEP : (0, _S),
+    CardId.FOOTWORK : (1, _S),
+    CardId.HAND_TRICK : (1, _S),
+    CardId.HAZE : (2, _ALL),
+    CardId.HIDDEN_DAGGERS : (0, _S),
+    CardId.INFINITE_BLADES : (1, _S),
+    CardId.LEG_SWEEP : (2, _A),
+    CardId.MEMENTO_MORI : (1, _A),
+    CardId.MIRAGE : (1, _S),
+    CardId.NOXIOUS_FUMES : (1, _S),
+    CardId.PHANTOM_BLADES : (1, _S),
+    CardId.PINPOINT : (3, _A),
+    CardId.POUNCE : (2, _A),
+    CardId.PRECISE_CUT : (0, _A),
+    CardId.REFLEX : (3, _S),
+    CardId.SKEWER : ('X', _A),
+    CardId.SPEEDSTER : (2, _S),
+    CardId.STRANGLE : (1, _A),
+    CardId.TACTICIAN : (3, _S),
+    CardId.UP_MY_SLEEVE : (2, _S),
+    CardId.ABRASIVE : (3, _S),
+    CardId.ADRENALINE : (0, _S),
+    CardId.AFTERIMAGE : (1, _S),
+    CardId.ASSASSINATE : (0, _A),
+    CardId.BLADE_OF_INK : (1, _S),
+    CardId.BULLET_TIME : (3, _S),
+    CardId.BURST : (1, _S),
+    CardId.CORROSIVE_WAVE : (1, _S),
+    CardId.ENVENOM : (2, _S),
+    CardId.FAN_OF_KNIVES : (2, _S),
+    CardId.GRAND_FINALE : (0, _ALL),
+    CardId.KNIFE_TRAP : (2, _A),
+    CardId.MALAISE : ('X', _A),
+    CardId.MASTER_PLANNER : (2, _S),
+    CardId.MURDER : (3, _A),
+    CardId.NIGHTMARE : (3, _S),
+    CardId.OUTBREAK : (3, _ALL),
+    CardId.SERPENT_FORM : (3, _S),
+    CardId.SHADOW_STEP : (1, _S),
+    CardId.SHADOWMELD : (1, _S),
+    CardId.STORM_OF_STEEL : (1, _S),
+    CardId.THE_HUNT : (1, _A),
+    CardId.TOOLS_OF_THE_TRADE : (1, _S),
+    CardId.TRACKING : (2, _S),
+    CardId.WELL_LAID_PLANS : (2, _S),
     CardId.DEMON_FORM : (3, _S),
-    CardId.DISCOVERY : (1, _S),
+    CardId.DISCOVERY : (1, _S), CardId.SPLASH : (1, _S),
     CardId.DISMANTLE : (1, _A),
     CardId.DOMINATE : (1, _A),
     CardId.DRAMATIC_ENTRANCE : (0, _ALL),
@@ -95,6 +180,7 @@ CARD_ENERGY_COST_AND_TARGET : dict[CardId, tuple[int | str, TargetType]] = {
     CardId.MASTER_OF_STRATEGY : (0, _S),
     CardId.MAUL : (1, _A),
     CardId.MAYHEM : (2, _S),
+    CardId.STRATAGEM : (1, _S),
     CardId.METAMORPHOSIS : (2, _S),
     CardId.MIND_BLAST : (1, _A),
     CardId.MOLTEN_FIST : (1, _A),
@@ -186,6 +272,17 @@ UPGRADE_COST_CHANGE = {
     CardId.BODY_SLAM : -1, CardId.HELLRAISER : -1, CardId.MIND_BLAST : -1,
     CardId.AUTOMATION : -1, CardId.MAYHEM : -1, CardId.NOSTALGIA : -1, CardId.CALAMITY : -1,
     CardId.APOTHEOSIS : -1, CardId.ABUNDANCE : -1, CardId.ALCHEMIZE : -1, CardId.ENTRENCH : -1, CardId.DISTRACTION : -1,
+    CardId.STRATAGEM : -1,
+    CardId.BULLET_TIME : -1,
+    CardId.MASTER_PLANNER : -1,
+    CardId.MURDER : -1,
+    CardId.NIGHTMARE : -1,
+    CardId.SHADOW_STEP : -1,
+    CardId.SHADOWMELD : -1,
+    CardId.TOOLS_OF_THE_TRADE : -1,
+    CardId.TRACKING : -1,
+    CardId.WELL_LAID_PLANS : -1,
+
 }
 
 # CardModel base cost of the cards above (an upgrade caps a rolled Confused cost at base + change)
@@ -195,47 +292,64 @@ UPGRADE_BASE_COST = {
     CardId.BODY_SLAM : 1, CardId.HELLRAISER : 2, CardId.MIND_BLAST : 1,
     CardId.AUTOMATION : 1, CardId.MAYHEM : 2, CardId.NOSTALGIA : 1, CardId.CALAMITY : 3,
     CardId.APOTHEOSIS : 2, CardId.ABUNDANCE : 1, CardId.ALCHEMIZE : 1, CardId.ENTRENCH : 2, CardId.DISTRACTION : 1,
+    CardId.STRATAGEM : 1,
+    CardId.BULLET_TIME : 3,
+    CardId.MASTER_PLANNER : 2,
+    CardId.MURDER : 3,
+    CardId.NIGHTMARE : 3,
+    CardId.SHADOW_STEP : 1,
+    CardId.SHADOWMELD : 1,
+    CardId.TOOLS_OF_THE_TRADE : 1,
+    CardId.TRACKING : 2,
+    CardId.WELL_LAID_PLANS : 2,
+
 }
 
 # keyword an upgrade removes (Exhaust)
-UPGRADE_REMOVED_KEYWORD = {CardId.SECRET_TECHNIQUE : 1, CardId.SECRET_WEAPON : 1, CardId.THINKING_AHEAD : 1, CardId.PROLONG : 1, CardId.DISCOVERY : 1, CardId.APPARITION : 2}      # Exhaust x5, Ethereal for Apparition
+UPGRADE_REMOVED_KEYWORD = {CardId.SECRET_TECHNIQUE : 1, CardId.SECRET_WEAPON : 1, CardId.THINKING_AHEAD : 1, CardId.PROLONG : 1, CardId.DISCOVERY : 1, CardId.APPARITION : 2, CardId.MIRAGE : 1}      # Exhaust x5, Ethereal for Apparition
 
 # keyword an upgrade adds
-UPGRADE_KEYWORD = {CardId.HELLO_WORLD : 4, CardId.MAD_SCIENCE : 4, CardId.SCRAWL : 16, CardId.GOLD_AXE : 16, CardId.ANOINTED : 16, CardId.ENTROPY : 4, CardId.WISH : 16, CardId.AGGRESSION : 4, CardId.JUGGLING : 4}       # Retain, Retain, Retain, Innate (Entropy, Aggression, Juggling), Retain
+UPGRADE_KEYWORD = {CardId.HELLO_WORLD : 4, CardId.MAD_SCIENCE : 4, CardId.SCRAWL : 16, CardId.GOLD_AXE : 16, CardId.ANOINTED : 16, CardId.ENTROPY : 4, CardId.WISH : 16, CardId.AGGRESSION : 4, CardId.JUGGLING : 4, CardId.CALCULATED_GAMBLE : 16, CardId.INFINITE_BLADES : 4, CardId.SPEEDSTER : 4, CardId.AFTERIMAGE : 4}       # Retain, Retain, Retain, Innate (Entropy, Aggression, Juggling), Retain
 
 CONFUSED_MAX_COST = 3
 
-_EXHAUST, _ETHEREAL, _INNATE, _UNPLAYABLE, _RETAIN, _ETERNAL, _REPLAY = 1, 2, 4, 8, 16, 64, 128
+_EXHAUST, _ETHEREAL, _INNATE, _UNPLAYABLE, _RETAIN, _SLY, _ETERNAL, _REPLAY = 1, 2, 4, 8, 16, 32, 64, 128
 
 # cards with the Exhaust keyword
-EXHAUSTING_CARDS = frozenset({CardId.SLIMED, CardId.TREMBLE, CardId.IMPERVIOUS, CardId.MOLTEN_FIST,
+EXHAUSTING_CARDS = frozenset({CardId.ADRENALINE, CardId.ASSASSINATE, CardId.MALAISE, CardId.NIGHTMARE, CardId.THE_HUNT, CardId.BACKSTAB, CardId.CALCULATED_GAMBLE, CardId.EXPOSE, CardId.MIRAGE, CardId.SLIMED, CardId.TREMBLE, CardId.IMPERVIOUS, CardId.MOLTEN_FIST,
                               CardId.TOXIC, CardId.FEED, CardId.DOMINATE, CardId.FIEND_FIRE, CardId.FORGOTTEN_RITUAL,
                               CardId.INFERNAL_BLADE, CardId.NOT_YET, CardId.OFFERING, CardId.SPORE_MIND,
                               CardId.PRODUCTION, CardId.MASTER_OF_STRATEGY, CardId.DRAMATIC_ENTRANCE, CardId.SHOCKWAVE,
                               CardId.SCRAWL, CardId.PURITY, CardId.SECRET_TECHNIQUE, CardId.SECRET_WEAPON, CardId.THINKING_AHEAD,
                               CardId.PANIC_BUTTON, CardId.PROLONG, CardId.DARK_SHACKLES, CardId.JACK_OF_ALL_TRADES, CardId.ANOINTED, CardId.DISCOVERY, CardId.ALCHEMIZE, CardId.LUMINESCE,
                               CardId.ENLIGHTENMENT, CardId.METAMORPHOSIS, CardId.DISTRACTION, CardId.NEOWS_FURY,
-                              CardId.ABUNDANCE, CardId.APOTHEOSIS, CardId.APPARITION, CardId.RELAX, CardId.WHISTLE, CardId.WISH})
+                              CardId.ABUNDANCE, CardId.APOTHEOSIS, CardId.APPARITION, CardId.RELAX, CardId.WHISTLE, CardId.WISH, CardId.SHIV,
+                              CardId.BLADE_DANCE, CardId.PIERCING_WAIL})
 
-# curses (Enthralled is not modelled; Debt's gold loss is not either: the sim does not track gold)
+# curses (Debt's gold loss is not modelled: the sim does not track gold)
 CURSE_CARDS = frozenset({CardId.BAD_LUCK, CardId.DEBT, CardId.REGRET, CardId.DECAY, CardId.SHAME, CardId.DOUBT, CardId.NORMALITY, CardId.INJURY,
                          CardId.POOR_SLEEP, CardId.GREED, CardId.CLUMSY, CardId.CURSE_OF_THE_BELL, CardId.WRITHE,
-                         CardId.FOLLY, CardId.GUILTY, CardId.SPORE_MIND, CardId.ASCENDERS_BANE})
+                         CardId.FOLLY, CardId.GUILTY, CardId.SPORE_MIND, CardId.ASCENDERS_BANE, CardId.ENTHRALLED})
+
+PLAYABLE_CURSES = {CardId.SPORE_MIND : 1, CardId.ENTHRALLED : 2}      # energy cost of the curses that can be played
 
 # cards with the Unplayable keyword
-UNPLAYABLE_CARDS = frozenset({CardId.DAZED, CardId.WOUND, CardId.NOT_IMPLEMENTED, CardId.INFECTION, CardId.BURN, CardId.WITHER, CardId.SOOT,
+UNPLAYABLE_CARDS = frozenset({CardId.SPOILS_MAP, CardId.LANTERN_KEY, CardId.BYRDONIS_EGG, CardId.DOWSING, CardId.DAZED, CardId.WOUND, CardId.NOT_IMPLEMENTED, CardId.INFECTION, CardId.BURN, CardId.WITHER, CardId.SOOT,
                               CardId.DISINTEGRATION, CardId.MIND_ROT, CardId.SLOTH, CardId.WASTE_AWAY}
-                             | (CURSE_CARDS - {CardId.SPORE_MIND}))
+                             | (CURSE_CARDS - PLAYABLE_CURSES.keys()))
 
 # cards with the Ethereal keyword: exhausted instead of discarded if still in hand at end of turn
 ETHEREAL_CARDS = frozenset({CardId.APPARITION, CardId.DAZED, CardId.CLUMSY, CardId.FOLLY, CardId.ASCENDERS_BANE})
 
 # Retain / Innate / Eternal: only Retain acts in combat (Innate and Eternal are deck-level)
-RETAINING_CARDS = frozenset({CardId.POOR_SLEEP, CardId.RESTLESSNESS, CardId.PURITY, CardId.LUMINESCE})
+RETAINING_CARDS = frozenset({CardId.POOR_SLEEP, CardId.RESTLESSNESS, CardId.PURITY, CardId.LUMINESCE, CardId.SNAKEBITE})
 
-INNATE_CARDS = frozenset({CardId.APOTHEOSIS, CardId.WRITHE, CardId.FOLLY, CardId.DRAMATIC_ENTRANCE, CardId.MIND_BLAST})
+# cards with the Sly keyword: discarded by an effect, they play themselves for free (CardCmd.DiscardAndDraw)
+SLY_CARDS = frozenset({CardId.FLICK_FLACK, CardId.RICOCHET, CardId.UNTOUCHABLE, CardId.REFLEX, CardId.TACTICIAN, CardId.ABRASIVE})
 
-ETERNAL_CARDS = frozenset({CardId.BAD_LUCK, CardId.ASCENDERS_BANE, CardId.CURSE_OF_THE_BELL, CardId.GREED, CardId.FOLLY})
+INNATE_CARDS = frozenset({CardId.ASSASSINATE, CardId.BACKSTAB, CardId.APOTHEOSIS, CardId.WRITHE, CardId.FOLLY, CardId.DRAMATIC_ENTRANCE, CardId.MIND_BLAST})
+
+ETERNAL_CARDS = frozenset({CardId.BAD_LUCK, CardId.ASCENDERS_BANE, CardId.CURSE_OF_THE_BELL, CardId.GREED, CardId.FOLLY, CardId.ENTHRALLED})
 
 NORMALITY_CARD_LIMIT = 3
 
@@ -252,7 +366,8 @@ def _set_canonical_keywords():
     for card_id in CardId:
         card_id.keyword_mask = ((_EXHAUST if card_id in EXHAUSTING_CARDS else 0) | (_ETHEREAL if card_id in ETHEREAL_CARDS else 0)
                                 | (_UNPLAYABLE if card_id in UNPLAYABLE_CARDS else 0) | (_RETAIN if card_id in RETAINING_CARDS else 0)
-                                | (_INNATE if card_id in INNATE_CARDS else 0) | (_ETERNAL if card_id in ETERNAL_CARDS else 0))
+                                | (_INNATE if card_id in INNATE_CARDS else 0) | (_ETERNAL if card_id in ETERNAL_CARDS else 0)
+                                | (_SLY if card_id in SLY_CARDS else 0))
 
 _set_canonical_keywords()
 
@@ -277,8 +392,10 @@ _unknown_enchantments : set[str] = set()
 
 _unknown_cards : set[str] = set()
 
-# Quest cards: unplayable like a Wound and nothing else in combat (Spoils Map, Lantern Key and Byrdonis Egg act on the map and at rest sites, which the campaign simulator models), so the combat engine loads them as the dead stand-in without calling them missing
-QUEST_CARDS = frozenset({"SPOILS_MAP", "LANTERN_KEY", "BYRDONIS_EGG", "DOWSING"})
+# Quest cards (CardType.Quest, cost -1, Unplayable, MaxUpgradeLevel 0): in combat they do nothing, like a Wound (Spoils Map, Lantern Key, Byrdonis Egg
+# and Dowsing act on the map, at events and at rest sites, which the campaign simulator models). They load as themselves (Card.create_quest).
+QUEST_NAMES = {CardId.SPOILS_MAP: "Spoils Map", CardId.LANTERN_KEY: "Lantern Key", CardId.BYRDONIS_EGG: "Byrdonis Egg", CardId.DOWSING: "Dowsing"}
+QUEST_CARDS = frozenset(cid.name for cid in QUEST_NAMES)
 DOWSING_ROOMS = 5         # Dowsing.maxRooms: ? rooms entered with it in the deck before it becomes Abundance
 
 # Mad Science: the riders Tinker Time offers for each card type, and (damage / block, rider numbers) the sim plays them with

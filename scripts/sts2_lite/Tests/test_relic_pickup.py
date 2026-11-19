@@ -70,6 +70,13 @@ def test_cursed_pearl_and_cape():
     assert len(c.run.deck) == n + 1 + 2 + 3 and c.run.max_hp == 80       # Greed; the Cape's two curses and three Apparitions
 
 
+def test_blood_soaked_rose_adds_enthralled():
+    c = ctx_with_bag()
+    obtain_relic(c, "BLOOD_SOAKED_ROSE")
+    entry = c.run.deck[-1]
+    assert entry["id"] == "ENTHRALLED" and entry["cost"] in (2, "2")
+
+
 def test_early_only_relics_leave_the_bag_late():
     c = ctx_with_bag()
     c.run.floor = 45

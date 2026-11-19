@@ -75,6 +75,12 @@ public static partial class BridgeMod
             result["state_type"] = "card_select";
             result["card_select"] = BuildChooseCardState(chooseCardScreen, runState);
         }
+        else if (topOverlay is NChooseABundleSelectionScreen bundleScreen)
+        {
+            // Scroll Boxes: "choose 1 of 2 packs". Each pack is offered as one entry of a card screen.
+            result["state_type"] = "card_select";
+            result["card_select"] = BuildBundleSelectState(bundleScreen, runState);
+        }
         else if (topOverlay is NChooseARelicSelection relicSelectScreen)
         {
             result["state_type"] = "relic_select";
@@ -1428,6 +1434,80 @@ public static partial class BridgeMod
             canConfirm = FindAll<NConfirmButton>(screen).Any(b => b.IsEnabled && b.IsVisibleInTree());
         }
         state["can_confirm"] = canConfirm;
+
+        return state;
+    }
+
+    /// <summary>The packs of a Scroll Boxes screen, left to right. A click opens a preview of the pack (confirm or cancel).</summary>
+    internal static List<NCardBundle> BundlesOf(NChooseABundleSelectionScreen screen)
+    {
+        return FindAllSortedByPosition<NCardBundle>(screen);
+    }
+
+    private static Dictionary<string, object?> BuildBundleSelectState(NChooseABundleSelectionScreen screen, RunState runState)
+    {
+        var state = new Dictionary<string, object?>();
+        state["screen_type"] = "bundle";
+
+        var player = LocalContext.GetMe(runState);
+        if (player != null)
+        {
+            state["player"] = new Dictionary<string, object?>
+            {
+                ["character"] = SafeGetText(() => player.Character.Title),
+                ["hp"] = player.Creature.CurrentHp,
+                ["max_hp"] = player.Creature.MaxHp,
+                ["gold"] = player.Gold
+            };
+        }
+
+        state["prompt"] = "Choose a card pack.";
+
+        var packs = new List<Dictionary<string, object?>>();
+        int index = 0;
+        foreach (var bundle in BundlesOf(screen))
+        {
+            var cards = new List<Dictionary<string, object?>>();
+            foreach (var card in bundle.Bundle)
+            {
+                cards.Add(new Dictionary<string, object?>
+                {
+                    ["id"] = card.Id.Entry,
+                    ["name"] = SafeGetText(() => card.Title),
+                    ["type"] = card.Type.ToString(),
+                    ["cost"] = card.EnergyCost.CostsX ? "X" : card.EnergyCost.GetAmountToSpend().ToString(),
+                    ["description"] = SafeGetCardDescription(card, PileType.None),
+                    ["rarity"] = card.Rarity.ToString(),
+                    ["is_upgraded"] = card.IsUpgraded,
+                    ["keywords"] = BuildHoverTips(card.HoverTips)
+                });
+            }
+            var names = new List<string>();
+            foreach (var card in cards) names.Add(card["name"]?.ToString() ?? "?");
+            packs.Add(new Dictionary<string, object?>
+            {
+                ["index"] = index,
+                ["id"] = "CARD_PACK",
+                ["name"] = string.Join(" + ", names),
+                ["type"] = "Pack",
+                ["cost"] = "0",
+                ["description"] = string.Join(" / ", names),
+                ["rarity"] = "Pack",
+                ["is_upgraded"] = false,
+                ["keywords"] = new List<object>(),
+                ["cards"] = cards
+            });
+            index++;
+        }
+        state["cards"] = packs;
+
+        var confirm = screen.GetNodeOrNull<NConfirmButton>("%Confirm");
+        var cancel = screen.GetNodeOrNull<NBackButton>("%Cancel");
+        var preview = screen.GetNodeOrNull<Godot.Control>("%BundlePreviewContainer");
+        state["preview_showing"] = preview?.Visible == true;
+        state["can_skip"] = false;
+        state["can_confirm"] = confirm?.IsEnabled == true;
+        state["can_cancel"] = cancel?.IsEnabled == true;
 
         return state;
     }

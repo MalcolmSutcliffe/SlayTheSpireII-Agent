@@ -105,8 +105,10 @@ PAELS_TEARS_ENERGY = 2
 
 def _crossbow(combat, relic):
     """Crossbow.AfterSideTurnStart: a random Attack from the character pool, free this turn."""
-    from sts2_lite.card import Card, INFERNAL_BLADE_POOL
-    player_of(combat).add_to_hand(Card.create_generated(rng.choice(INFERNAL_BLADE_POOL)).free_this_turn())     # X stays X
+    from sts2_lite.card import Card, CardType
+    from sts2_lite.card.tables import combat_pool
+    player = player_of(combat)
+    player.add_to_hand(Card.create_generated(rng.choice(combat_pool(player.character, CardType.Attack))).free_this_turn())     # X stays X
 
 TOASTY_MITTENS_STRENGTH = 1
 

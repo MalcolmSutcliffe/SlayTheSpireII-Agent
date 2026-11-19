@@ -217,6 +217,7 @@ def _normalize_rest_site(raw_state: JsonDict, context: JsonDict) -> JsonDict:
 def _normalize_shop(raw_state: JsonDict, context: JsonDict) -> JsonDict:
     shop = _copy_dict(raw_state.get("shop"))
     items = _copy_list(shop.get("items"))
+    fake = {"is_fake_merchant": True} if shop.get("is_fake_merchant") else {}       # the Fake Merchant's relics shop, which is an event room
     return {
         "type": "decision",
         "decision": "shop",
@@ -230,6 +231,7 @@ def _normalize_shop(raw_state: JsonDict, context: JsonDict) -> JsonDict:
         "player": _copy_dict(shop.get("player")),
         "can_proceed": shop.get("can_proceed", False),
         "shop": shop,
+        **fake,
     }
 
 

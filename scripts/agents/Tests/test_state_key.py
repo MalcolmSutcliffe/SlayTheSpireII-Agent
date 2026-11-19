@@ -128,6 +128,10 @@ def _mutations():
     yield "relic", player(lambda p: p.relics.__setitem__(RelicId.BURNING_BLOOD, RelicInstance(RelicId.BURNING_BLOOD)))
     yield "gold", player(lambda p: setattr(p, "gold", 5))
     yield "attacks played", player(lambda p: setattr(p, "attacks_played_this_turn", 2))
+    yield "skills played", player(lambda p: setattr(p, "skills_played_this_turn", 2))
+    yield "shivs played", player(lambda p: setattr(p, "shivs_played_this_turn", 1))
+    yield "discards", player(lambda p: setattr(p, "discards_this_turn", 1))
+    yield "nightmare pick", player(lambda p: setattr(p, "nightmares", [(p.hand[0], 3)] if p.hand else [(p.discard_pile[0], 3)]))
     yield "cards played total", player(lambda p: setattr(p, "cards_played_total", 4))
     yield "hp loss events", player(lambda p: setattr(p, "hp_loss_events", 1))
     yield "returning", player(lambda p: p.returning.append((CardId.STRIKE_IRONCLAD, False)))
@@ -173,20 +177,20 @@ def test_accounting_counters_are_ignored():
 # ---------------------------------------------------------------- a new field must be a decision, not an oversight
 KEYED_OR_IGNORED = {
     "Player": {"block", "current_hp", "max_hp", "status", "hand", "draw_pile", "discard_pile", "exhaust_pile", "relics", "known_top",
-               "inferno_plays", "cards_played_total", "crimson_mantle_plays", "attacks_played_this_turn", "plays_started_this_turn",
+               "inferno_plays", "cards_played_total", "crimson_mantle_plays", "attacks_played_this_turn", "skills_played_this_turn", "shivs_played_this_turn", "discards_this_turn", "nightmares", "plays_started_this_turn",
                "returning", "card_blocks_this_turn", "cards_exhausted_this_turn", "gold", "has_been_attacked_this_turn",
                "lost_hp_this_turn", "hp_loss_events", "hp_lost_log", "is_minion", "binding", "bound_cards", "bound_played", "smogged",
                "potions", "extra_turn_pending",
                # ignored: accounting that nothing reads between actions, and hooks wired by the simulator
                "cards_drawn", "unknown_draws", "damage_taken", "block_play", "block_play_gains",
                "shuffle_hook", "draw_hook", "draw_pause_hook", "block_cleared_hook", "opening_hook",   # opening_hook: one-shot, set only while a deck-built fight opens
-               "potion_slots"},           # ignored: fixed for the run; it only matters to Entropic Brew
+               "potion_slots", "character"},           # ignored: fixed for the run (potion_slots only matters to Entropic Brew, character to card generation)
     "Enemy": {"block", "current_hp", "max_hp", "status", "is_minion", "enemy_id", "slot", "attack_damage", "num_attacks", "damage_candidates",
               "moves", "move_id", "move_streak", "used_moves", "has_been_attacked_this_turn", "lost_hp_this_turn", "hp_loss_events",
               "hp_lost_log", "damage_taken", "after_stun", "off_balance", "counter"},
     "CombatState": {"player", "enemies", "energy", "max_energy", "turn_number", "extra_turns", "ascension", "cards_played", "sloth_played", "revivals",
                     "pending_choice", "won", "dormant", "continuations",
-                    "hp_loss_read"},      # ignored: set while loading, before any action
+                    "hp_loss_read", "cards_drawn_read"},      # ignored: set while loading, before any action
     "RelicInstance": {"relic_id", "counter", "used", "value", "triggering"},
 }
 

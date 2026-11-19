@@ -9,7 +9,7 @@ from sts2_lite.status import AUTOMATION_CARDS, PANACHE_CARDS, StatusId, is_debuf
 from sts2_lite.card.card import Card
 from sts2_lite.card.effects import PLAIN_DAMAGE, _attack, _gain_block, _vulnerable, temp_strength
 from sts2_lite.card.ids import CardId, CardType
-from sts2_lite.card.tables import GENERATABLE_CARDS, JACK_POOL, RARE_CARDS, ZERO_COST_POOL
+from sts2_lite.card.tables import JACK_POOL, RARE_CARDS, combat_pool, splash_pool, zero_cost_pool
 
 if TYPE_CHECKING:
     from sts2_lite.combat import CombatSimulator
@@ -59,6 +59,9 @@ def play_the_gambit(card: Card, combat : CombatSimulator, target_index=0, is_upg
 def play_mayhem(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     combat.combat_state.player.apply_status(StatusId.MAYHEM, 1)
 
+def play_stratagem(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    combat.combat_state.player.apply_status(StatusId.STRATAGEM, 1)
+
 def play_nostalgia(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     combat.combat_state.player.apply_status(StatusId.NOSTALGIA, 1)
 
@@ -71,7 +74,7 @@ def play_thrumming_hatchet(card: Card, combat : CombatSimulator, target_index=0,
 def play_jackpot(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     _attack(combat, PLAIN_DAMAGE[card.card_id][is_upgraded], enemy_at(combat, target_index))
     for _ in range(3):      # CardFactory.GetForCombat: with repeats
-        combat.combat_state.player.add_to_hand(Card.create_generated(rng.choice(ZERO_COST_POOL), is_upgraded))
+        combat.combat_state.player.add_to_hand(Card.create_generated(rng.choice(zero_cost_pool(combat.combat_state.player.character)), is_upgraded))
 
 def play_calamity(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     combat.combat_state.player.apply_status(StatusId.CALAMITY, 1)
@@ -97,7 +100,13 @@ def play_anointed(card: Card, combat : CombatSimulator, target_index=0, is_upgra
 
 def play_discovery(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     # CardFactory.GetDistinctForCombat: three different cards; the game shows its own three (see CombatState.adopt_offer)
-    combat.request_discovery([Card.create_generated(card_id) for card_id in rng.sample(list(GENERATABLE_CARDS), 3)])
+    combat.request_discovery([Card.create_generated(card_id) for card_id in rng.sample(combat_pool(combat.combat_state.player.character), 3)])
+
+def play_splash(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
+    """Splash: choose 1 of 3 different Attacks from the other characters' pools (upgraded with it), free this turn; may be skipped.
+    Only the modelled characters' pools are drawn from."""
+    pool = splash_pool(combat.combat_state.player.character)
+    combat.request_discovery([Card.create_generated(cid, is_upgraded) for cid in rng.sample(pool, min(3, len(pool)))])
 
 def play_entropy(card: Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     combat.combat_state.player.apply_status(StatusId.ENTROPY, 1)
@@ -258,6 +267,7 @@ COLORLESS_PLAYS = {
     CardId.CATASTROPHE : play_catastrophe,
     CardId.DARK_SHACKLES : play_dark_shackles,
     CardId.DISCOVERY : play_discovery,
+    CardId.SPLASH : play_splash,
     CardId.DRAMATIC_ENTRANCE : play_dramatic_entrance,
     CardId.ENTROPY : play_entropy,
     CardId.EQUILIBRIUM : play_equilibrium,
@@ -274,6 +284,7 @@ COLORLESS_PLAYS = {
     CardId.JACK_OF_ALL_TRADES : play_jack_of_all_trades,
     CardId.MASTER_OF_STRATEGY : play_master_of_strategy,
     CardId.MAYHEM : play_mayhem,
+    CardId.STRATAGEM : play_stratagem,
     CardId.MIND_BLAST : play_mind_blast,
     CardId.NOSTALGIA : play_nostalgia,
     CardId.OMNISLICE : play_omnislice,

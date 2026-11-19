@@ -99,8 +99,10 @@ class BaseAgent:
     _screen_picks = None
 
     def _picked_so_far(self, decision : Decision, picks : list[Option]) -> tuple[int, list[Option]]:
-        """(the number of cards picked on this screen, the cards still on offer): a screen is the same one while its prompt and cards are."""
-        key = (decision.state.get("prompt"), tuple(o.data.get("id") for o in picks))
+        """(the number of cards picked on this screen, the cards still on offer): a screen is the same one while its prompt and cards are.
+        The key is the screen's whole card list, not `picks`: the runner drops a card the game did not seem to react to (the first pick of two changes nothing on the screen),
+        and a key built from what is left would start the count again when the preview comes up."""
+        key = (decision.state.get("prompt"), tuple((c.get("index"), c.get("id")) for c in decision.state.get("cards") or ()) or tuple(o.data.get("id") for o in picks))
         if self._screen_picks is None or self._screen_picks[0] != key:
             self._screen_picks = (key, [])
         taken = self._screen_picks[1]

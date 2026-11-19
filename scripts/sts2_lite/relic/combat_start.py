@@ -3,8 +3,8 @@
 A live bridge state already contains these effects, so none of this is registered as a RelicId (it would count twice).
 Order follows CombatManager: room entry -> BeforeSideTurnStart -> energy reset -> BeforeHandDraw -> innate cards to the top ->
 hand draw -> AfterPlayerTurnStart -> AfterSideTurnStart. The choice relics (Toolbox, Choices Paradox, Gambling Chip) open a card choice only for an `interactive`
-Opening (a fight played for real); a deck evaluation leaves them out. Map relics (Fur Coat), Venerable Tea Set and the Poison/Soul relics (Twisted Funnel,
-Funerary Mask) are not modelled. Petrified Toad and Delicate Frond put potions on the belt before the fight (sts2_lite/campaign/combat.py).
+Opening (a fight played for real); a deck evaluation leaves them out. Map relics (Fur Coat), Venerable Tea Set and Funerary Mask
+are not modelled. Petrified Toad and Delicate Frond put potions on the belt before the fight (sts2_lite/campaign/combat.py).
 """
 from __future__ import annotations
 from typing import TYPE_CHECKING
@@ -28,6 +28,8 @@ COUNTER_RELICS = frozenset({"EMBER_TEA", "BONE_TEA", "TEA_OF_DISCOURTESY", "PUMP
 PLAYER_STATUS = {"VAJRA": (StatusId.STRENGTH, 1), "SWORD_OF_JADE": (StatusId.STRENGTH, 3), "ODDLY_SMOOTH_STONE": (StatusId.DEXTERITY, 1),
                  "AKABEKO": (StatusId.VIGOR, 8), "GORGET": (StatusId.PLATING, 4), "BRONZE_SCALES": (StatusId.THORNS, 3),
                  "DIAMOND_DIADEM": (StatusId.BLUR, 1)}
+NINJA_SCROLL_SHIVS = 3
+TWISTED_FUNNEL_POISON = 4
 ENEMY_STATUS_TURN_1 = {"BAG_OF_MARBLES": (StatusId.VULNERABLE, 1), "RED_MASK": (StatusId.WEAK, 1)}
 BLOCK = {"ANCHOR": 10, "FAKE_ANCHOR": 4, "DIAMOND_DIADEM": 20}      # Diamond Diadem also gives Blur 1 (PLAYER_STATUS)
 HEAL = {"BLOOD_VIAL": 2, "FAKE_BLOOD_VIAL": 1}
@@ -103,6 +105,9 @@ class Opening:
                 card = rng.choice(powers)
                 player.remove_from_draw_pile(card)
                 player.add_to_hand(card.free_this_turn())
+        if self.has("NINJA_SCROLL"):         # NinjaScroll.BeforeHandDraw (turn 1): Shivs into the hand
+            for _ in range(NINJA_SCROLL_SHIVS):
+                player.add_to_hand(Card.create_generated(CardId.SHIV))
         innate = [c for c in player.draw_pile if CardKeyword.INNATE in c.keywords]
         if innate:
             rest = [c for c in player.draw_pile if CardKeyword.INNATE not in c.keywords]
@@ -112,6 +117,11 @@ class Opening:
 
     # --- before the turn: enemies
     def before_turn(self, cs : CombatState):
+        if self.has("TWISTED_FUNNEL"):       # TwistedFunnel.BeforeSideTurnStart (turn 1): Poison on every enemy (Snecko Skull adds to it)
+            from sts2_lite.relic.modifiers import poison_given
+            for enemy in cs.enemies:
+                if enemy.current_hp > 0:
+                    enemy.apply_status(StatusId.POISON, poison_given(cs.player, TWISTED_FUNNEL_POISON))
         for relic, (status, amount) in ENEMY_STATUS_TURN_1.items():
             if self.has(relic):
                 for enemy in cs.enemies:
@@ -144,13 +154,13 @@ class Opening:
         if self.has("RADIANT_PEARL"):
             player.add_to_hand(Card.create_generated(CardId.LUMINESCE))
         if self.has("VEXING_PUZZLEBOX"):
-            player.add_to_hand(_class_card().free_this_turn())
+            player.add_to_hand(_class_card(player).free_this_turn())
         if self.has("ORANGE_DOUGH"):
             for _ in range(ORANGE_DOUGH_CARDS):
                 player.add_to_hand(_colorless_card())
         if self.has("BIG_HAT"):
             for _ in range(BIG_HAT_CARDS):
-                card = _ethereal_class_card()
+                card = _ethereal_class_card(player)
                 if card is None:
                     break
                 player.add_to_hand(card)
@@ -186,30 +196,27 @@ def request_opening_choice(sim : CombatSimulator, relic : str):
         offers = [Card.create_generated(cid) for cid in rng.sample(list(COLORLESS_POOL), TOOLBOX_CARDS)]
         sim.request_pick_to_hand(offers)
     elif relic == "CHOICES_PARADOX":
-        from sts2_lite.event.run import CLASS_POOL
-        offers = [Card.create_generated(cid).with_keyword(CardKeyword.RETAIN) for cid in rng.sample(_creatable(CLASS_POOL), CHOICES_PARADOX_CARDS)]
+        offers = [Card.create_generated(cid).with_keyword(CardKeyword.RETAIN) for cid in rng.sample(_creatable(player), CHOICES_PARADOX_CARDS)]
         sim.request_pick_to_hand(offers)
     elif relic == "GAMBLING_CHIP" and player.hand:
         sim.request_choice("discard_any", list(range(len(player.hand))), "hand", 0)
 
 
-def _creatable(pool) -> list:
-    """The class cards the combat sim can create (Feed and Not Yet are in the event pool but not generatable)."""
-    from sts2_lite.card.tables import GENERATABLE_CARDS
-    return [cid for cids in pool.values() for cid in cids if cid in GENERATABLE_CARDS]
+def _creatable(player) -> list:
+    """The character's cards a combat effect can create (CardFactory.FilterForCombat over Character.CardPool)."""
+    from sts2_lite.card.tables import combat_pool
+    return combat_pool(player.character)
 
 
-def _class_card() -> Card:
-    from sts2_lite.event.run import CLASS_POOL
-    return Card.create_generated(rng.choice(_creatable(CLASS_POOL)))
+def _class_card(player) -> Card:
+    return Card.create_generated(rng.choice(_creatable(player)))
 
 def _colorless_card() -> Card:
     from sts2_lite.event.run import COLORLESS_POOL
     return Card.create_generated(rng.choice(COLORLESS_POOL))
 
-def _ethereal_class_card() -> Card | None:
-    from sts2_lite.event.run import CLASS_POOL
-    pool = [cid for cid in _creatable(CLASS_POOL) if CardKeyword.ETHEREAL in Card.create_generated(cid).keywords]
+def _ethereal_class_card(player) -> Card | None:
+    pool = [cid for cid in _creatable(player) if CardKeyword.ETHEREAL in Card.create_generated(cid).keywords]
     return Card.create_generated(rng.choice(pool)) if pool else None
 
 

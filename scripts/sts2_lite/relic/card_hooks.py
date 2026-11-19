@@ -193,6 +193,26 @@ def _nunchaku(combat, relic):
     if _every(relic, NUNCHAKU_EVERY):
         combat.gain_energy(1)
 
+HELICAL_DART_DEXTERITY = 1
+TINGSHA_DAMAGE = 3
+TOUGH_BANDAGES_BLOCK = 3
+
+def _helical_dart(combat, relic, card):
+    """HelicalDart.AfterCardPlayed: a Shiv played gives 1 Dexterity for the turn (HelicalDartPower, a TemporaryDexterityPower)."""
+    from sts2_lite.card.ids import CardId
+    if card.card_id is CardId.SHIV:
+        player = player_of(combat)
+        player.apply_status(StatusId.DEXTERITY, HELICAL_DART_DEXTERITY)
+        player.apply_status(StatusId.HELICAL_DART, HELICAL_DART_DEXTERITY)
+
+def _tingsha(combat, relic, card):
+    """Tingsha.AfterCardDiscarded: 3 Unpowered damage to a random enemy."""
+    _hurt_random(combat, TINGSHA_DAMAGE)
+
+def _tough_bandages(combat, relic, card):
+    """ToughBandages.AfterCardDiscarded: 3 Unpowered block (no Dexterity)."""
+    combat.gain_block(player_of(combat), TOUGH_BANDAGES_BLOCK)
+
 def _kunai(combat, relic):
     if _every(relic, KUNAI_EVERY):
         player_of(combat).apply_status(StatusId.DEXTERITY, 1)

@@ -103,6 +103,10 @@ class RelicId(Enum):
     PAELS_LEGION = auto()
     REPTILE_TRINKET = auto()
     BELT_BUCKLE = auto()
+    HELICAL_DART = auto()
+    SNECKO_SKULL = auto()
+    TINGSHA = auto()
+    TOUGH_BANDAGES = auto()
 
 # What the bridge calls a relic's state (if it reports one) when `used` is true.
 # The game marks Vambrace, Unsettling Lamp and Burning Sticks "Active" until they trigger, and a spent Lizard Tail "Disabled".
@@ -175,4 +179,5 @@ LETTER_OPENER_EVERY, LETTER_OPENER_DAMAGE = 3, 5
 
 HAPPY_FLOWER_TURNS = {RelicId.HAPPY_FLOWER : 3, RelicId.FAKE_HAPPY_FLOWER : 5}
 
-FLASHES_AT_FULL_COUNT = {**HAPPY_FLOWER_TURNS, RelicId.LETTER_OPENER : LETTER_OPENER_EVERY, RelicId.PENDULUM : 3, RelicId.NUNCHAKU : NUNCHAKU_EVERY, RelicId.PEN_NIB : 10}    # Pendulum: DisplayAmount is Turns while it activates; Nunchaku and Pen Nib show 10 after the tenth Attack, which has already paid out
+FLASHES_AT_FULL_COUNT = {**HAPPY_FLOWER_TURNS, RelicId.LETTER_OPENER : LETTER_OPENER_EVERY, RelicId.PENDULUM : 3, RelicId.NUNCHAKU : NUNCHAKU_EVERY, RelicId.PEN_NIB : 10,
+                         RelicId.KUNAI : KUNAI_EVERY, RelicId.SHURIKEN : SHURIKEN_EVERY, RelicId.ORNAMENTAL_FAN : FAN_EVERY}    # Pendulum: DisplayAmount is Turns while it activates; Nunchaku and Pen Nib show 10 after the tenth Attack, which has already paid out; Kunai, Shuriken and Ornamental Fan show 3 while they activate (IsActivating)

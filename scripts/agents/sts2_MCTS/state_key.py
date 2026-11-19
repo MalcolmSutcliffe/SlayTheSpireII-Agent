@@ -14,6 +14,8 @@ from __future__ import annotations
 from collections import Counter
 from typing import TYPE_CHECKING
 
+from sts2_lite.card import CardId
+
 if TYPE_CHECKING:
     from sts2_lite.card import Card
     from sts2_lite.combat import CombatState
@@ -52,6 +54,10 @@ def _enemy(e) -> tuple:
             e.attack_damage, e.num_attacks, candidates, e.move_id, e.move_streak, tuple(sorted(e.used_moves)),
             e.has_been_attacked_this_turn, e.lost_hp_this_turn, e.hp_loss_events, e.after_stun, e.off_balance, e.counter)
 
+def _has_murder(p) -> bool:
+    """Murder's damage counts the cards drawn this combat; otherwise the count changes nothing."""
+    return any(c.card_id is CardId.MURDER for pile in (p.hand, p.draw_pile, p.discard_pile) for c in pile)
+
 def _player(p) -> tuple:
     n = p.known_top
     split = max(0, len(p.draw_pile) - n)
@@ -60,6 +66,8 @@ def _player(p) -> tuple:
             _multiset(p.hand), _multiset(unseen), tuple(c.signature() for c in known), _multiset(p.discard_pile), _multiset(p.exhaust_pile),
             _relics(p.relics),
             p.inferno_plays, p.cards_played_total, p.crimson_mantle_plays, p.attacks_played_this_turn, p.plays_started_this_turn,
+            p.skills_played_this_turn, p.shivs_played_this_turn, p.discards_this_turn,
+            tuple((c.signature(), n) for c, n in p.nightmares), p.cards_drawn if _has_murder(p) else 0,
             tuple(sorted(p.returning, key=repr)), p.card_blocks_this_turn, p.cards_exhausted_this_turn, p.gold,
             p.has_been_attacked_this_turn, p.lost_hp_this_turn, p.hp_loss_events, tuple(p.hp_lost_log), p.is_minion, p.binding, p.bound_cards, p.bound_played, p.smogged,
             tuple(sorted((x.slot, x.potion_id.value) for x in p.potions)), p.extra_turn_pending)

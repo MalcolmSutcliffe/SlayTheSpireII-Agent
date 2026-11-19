@@ -35,7 +35,7 @@ class RelicGrabBag:
         self.rng = rng          # the game's "relics" stream: the rarity rolls
         self.deques : dict[str, list[str]] = {r: [] for r in RARITIES}
         for rid, info in RELIC_INFO.items():
-            if info["pool"] == "shared" or (info["pool"] == "ironclad" and character == "IRONCLAD"):
+            if info["pool"] == "shared" or info["pool"] == character.lower():
                 if info["rarity"] in self.deques:
                     self.deques[info["rarity"]].append(rid)
         for deque in self.deques.values():

@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import Callable, Iterable
 
 from sts2_lite.card.ids import CardId
-from sts2_lite.card.tables import CARD_RARITY, GENERATABLE_CARDS
+from sts2_lite.card.tables import CARD_RARITY, GENERATABLE_CARDS, SILENT_CARDS
 from sts2_lite.rewards.odds import ENCOUNTER_ODDS, CardRarityOdds, OddsType, Rarity, Source, SCARCITY_ASCENSION
 
 REWARD_RARITIES = ("Common", "Uncommon", "Rare")
@@ -25,6 +25,25 @@ def _ironclad_pool() -> dict[str, tuple[CardId, ...]]:
 
 
 IRONCLAD_POOL = _ironclad_pool()
+
+
+def _table_pool(table) -> dict[str, tuple[CardId, ...]]:
+    return {rarity: tuple(cid for cid in table if CARD_RARITY[cid].name == rarity) for rarity in REWARD_RARITIES}
+
+
+CHARACTER_POOLS = {"IRONCLAD": IRONCLAD_POOL, "SILENT": _table_pool(SILENT_CARDS)}
+
+
+def card_pool(character : str = "IRONCLAD") -> dict[str, tuple[CardId, ...]]:
+    """A character's reward pool by rarity (Common, Uncommon, Rare)."""
+    pool = CHARACTER_POOLS.get(character.upper())
+    if pool is None or not any(pool.values()):
+        raise NotImplementedError(f"{character}: no reward cards are modelled yet")
+    return pool
+
+
+def card_pool_ids(character : str = "IRONCLAD") -> list[CardId]:
+    return [cid for cards in card_pool(character).values() for cid in cards]
 
 
 @dataclass(frozen=True)
@@ -77,10 +96,10 @@ def roll_for_upgrade(rng, card_id : CardId, base_chance : float, act_index : int
 
 def create_card_reward(rng, odds : CardRarityOdds, act_index : int, count : int = 3, odds_type : OddsType = OddsType.REGULAR_ENCOUNTER,
                        source : Source = Source.ENCOUNTER, pool : Iterable[CardId] | None = None, no_upgrade_roll : bool = False,
-                       force_odds_change : bool = False, blacklist : Iterable[CardId] = ()) -> list[CardOffer]:
+                       force_odds_change : bool = False, blacklist : Iterable[CardId] = (), character : str = "IRONCLAD") -> list[CardOffer]:
     """`count` different cards for one reward screen. `act_index` is 0 in the first act. A pool with a single rarity needs OddsType.UNIFORM."""
     if pool is None:
-        pool = [cid for cards in IRONCLAD_POOL.values() for cid in cards]
+        pool = card_pool_ids(character)
     pool = list(pool)
     chosen : list[CardId] = list(blacklist)
     offers = []

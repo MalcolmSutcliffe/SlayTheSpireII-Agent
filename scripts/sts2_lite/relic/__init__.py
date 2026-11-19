@@ -51,6 +51,8 @@ from sts2_lite.relic.modifiers import (
     block_multiplier,
     block_gained,
     debuff_multiplier,
+    poison_given,
+    SNECKO_SKULL_POISON,
     strength_received,
     X_BONUS,
     x_bonus,

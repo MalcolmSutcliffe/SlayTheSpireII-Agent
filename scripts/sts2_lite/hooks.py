@@ -10,6 +10,8 @@ class HookType(Enum):
     PLAYER_TURN_ENDED = auto() # the hand is discarded; the enemies have not acted yet
     ENEMY_TURN_START = auto()  # the enemies are about to act (BeforeSideTurnStart for their side)
     ENEMY_TURN_END = auto()    # after every enemy has acted
+    ENEMY_TURN_STARTED = auto()  # the enemies' block is cleared, before any acts (AfterSideTurnStart for their side: Poison)
+    CARD_DISCARDED = auto()    # args: (card,); a card discarded from the hand by an effect (not the end-of-turn discard)
     CARD_PLAYED = auto()       # args: (card,)
     CARD_EXHAUSTED = auto()    # args: (card,)
     CREATURE_KILLED = auto()   # args: (creature,); sent to every other creature's statuses

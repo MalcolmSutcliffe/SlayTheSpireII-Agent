@@ -17,9 +17,9 @@ if TYPE_CHECKING:
 
 from sts2_lite import rng
 from sts2_lite.helpers import player_of, living_enemies
-from sts2_lite.card import Card, CardType, TargetType, GENERATABLE_CARDS, COLORLESS_CARDS, STRIKE_CARDS, temp_strength
+from sts2_lite.card import Card, CardType, TargetType, COLORLESS_CARDS, STRIKE_CARDS, temp_strength
 from sts2_lite.hooks import HookType
-from sts2_lite.relic import RelicId, REPTILE_TRINKET_STRENGTH
+from sts2_lite.relic import RelicId, REPTILE_TRINKET_STRENGTH, poison_given
 from sts2_lite.status import StatusId
 
 DEFAULT_POTION_SLOTS = 3
@@ -92,6 +92,10 @@ class PotionId(Enum):
     FOUL_POTION = auto()
     GLOWWATER_POTION = auto()
     POTION_SHAPED_ROCK = auto()
+    # the Silent (Silent4Epoch.Potions); added last so the other ids keep their values
+    POISON_POTION = auto()              # common
+    CUNNING_POTION = auto()             # uncommon
+    GHOST_IN_A_JAR = auto()             # rare
 
     @property
     def info(self) -> PotionInfo:
@@ -149,6 +153,8 @@ POTION_INFO : dict[PotionId, PotionInfo] = {
     PotionId.SNECKO_OIL : PotionInfo("Snecko Oil", R, ME), PotionId.SOLDIERS_STEW : PotionInfo("Soldier's Stew", R, ME),
     PotionId.AMBERGRIS : PotionInfo("Ambergris", S, ME), PotionId.FOUL_POTION : PotionInfo("Foul Potion", S, ALL),
     PotionId.GLOWWATER_POTION : PotionInfo("Glowwater Potion", S, ME), PotionId.POTION_SHAPED_ROCK : PotionInfo("Potion-Shaped Rock", S, ONE),
+    PotionId.POISON_POTION : PotionInfo("Poison Potion", C, ONE), PotionId.CUNNING_POTION : PotionInfo("Cunning Potion", U, ME),
+    PotionId.GHOST_IN_A_JAR : PotionInfo("Ghost in a Jar", R, ME),
 }
 _BY_NORMALISED_NAME = {_normalise(p.name): p for p in PotionId}
 _BY_NORMALISED_NAME.update({_normalise(info.name): p for p, info in POTION_INFO.items()})
@@ -208,8 +214,9 @@ def _hit(combat : CombatSimulator, target : Creature, amount : int):
     """Damage that is not an attack: no Strength, Vulnerable or the like (assumed to be Unpowered, as the first game's potions are)."""
     target.apply_damage(amount, player_of(combat), False)
 
-def _type_pool(card_type : CardType) -> list:
-    return [cid for cid, (_, kind, _, _) in GENERATABLE_CARDS.items() if kind == card_type]
+def _type_pool(card_type : CardType, character : str = "IRONCLAD") -> list:
+    from sts2_lite.card.tables import combat_pool
+    return combat_pool(character, card_type)
 
 def _offer(combat : CombatSimulator, pool : list):
     """Choose 1 of 3 different random cards; the one taken is free to play this turn."""
@@ -225,14 +232,14 @@ def _all_cards(player) -> list[tuple[list, int]]:
 # ---
 # Effects: effect(combat, target_index)
 # ---
-def _attack_potion(combat, t): _offer(combat, _type_pool(CardType.Attack))
-def _skill_potion(combat, t): _offer(combat, _type_pool(CardType.Skill))
-def _power_potion(combat, t): _offer(combat, _type_pool(CardType.Power))
+def _attack_potion(combat, t): _offer(combat, _type_pool(CardType.Attack, player_of(combat).character))
+def _skill_potion(combat, t): _offer(combat, _type_pool(CardType.Skill, player_of(combat).character))
+def _power_potion(combat, t): _offer(combat, _type_pool(CardType.Power, player_of(combat).character))
 def _colorless_potion(combat, t): _offer(combat, list(COLORLESS_CARDS))
 
 def _orobic_acid(combat, t):
     for card_type in (CardType.Attack, CardType.Skill, CardType.Power):
-        _generate_free(combat, _type_pool(card_type))
+        _generate_free(combat, _type_pool(card_type, player_of(combat).character))
 
 def _block_potion(combat, t): combat.gain_block(player_of(combat), BLOCK_POTION_BLOCK)     # assumed not changed by Dexterity or Frail
 def _dexterity_potion(combat, t): player_of(combat).apply_status(StatusId.DEXTERITY, DEXTERITY_POTION_DEXTERITY)
@@ -270,6 +277,15 @@ def _foul_potion(combat, t):
 def _vulnerable_potion(combat, t): _target(combat, t).apply_status(StatusId.VULNERABLE, VULNERABLE_POTION)
 def _weak_potion(combat, t): _target(combat, t).apply_status(StatusId.WEAK, WEAK_POTION)
 def _beetle_juice(combat, t): _target(combat, t).apply_status(StatusId.SHRINK, BEETLE_JUICE_TURNS)      # assumed: the Shrink the Shrinker Beetle uses
+
+POISON_POTION, CUNNING_POTION_SHIVS, GHOST_IN_A_JAR = 6, 3, 1
+
+def _poison_potion(combat, t): _target(combat, t).apply_status(StatusId.POISON, poison_given(player_of(combat), POISON_POTION))
+def _ghost_in_a_jar(combat, t): player_of(combat).apply_status(StatusId.INTANGIBLE, GHOST_IN_A_JAR)
+
+def _cunning_potion(combat, t):
+    """Shiv.CreateInHand, then each is upgraded."""
+    combat.create_shivs(CUNNING_POTION_SHIVS, upgraded=True)
 
 def _potion_of_binding(combat, t):
     for enemy in living_enemies(combat):
@@ -422,6 +438,7 @@ EFFECTS : dict[PotionId, Callable] = {
     PotionId.OROBIC_ACID : _orobic_acid, PotionId.SHACKLING_POTION : _shackling_potion, PotionId.SHIP_IN_A_BOTTLE : _ship_in_a_bottle,
     PotionId.SNECKO_OIL : _snecko_oil, PotionId.SOLDIERS_STEW : _soldiers_stew, PotionId.AMBERGRIS : _ambergris, PotionId.FOUL_POTION : _foul_potion,
     PotionId.GLOWWATER_POTION : _glowwater_potion, PotionId.POTION_SHAPED_ROCK : _potion_shaped_rock,
+    PotionId.POISON_POTION : _poison_potion, PotionId.CUNNING_POTION : _cunning_potion, PotionId.GHOST_IN_A_JAR : _ghost_in_a_jar,
 }
 assert set(EFFECTS) == set(PotionId) == set(POTION_INFO)
 

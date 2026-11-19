@@ -6,7 +6,7 @@ if TYPE_CHECKING:
 
 from sts2_lite.status import StatusInstance, StatusId, is_debuff
 from sts2_lite.card import Card, CardId
-from sts2_lite.relic import RelicId, STURDY_CLAMP_BLOCK, modify_hp_loss, dealt_hp_loss, after_damage_given
+from sts2_lite.relic import RelicId, STURDY_CLAMP_BLOCK, modify_hp_loss, dealt_hp_loss, after_damage_given, poison_given
 
 # powers that do not stack (PowerStackType.Single)
 SINGLE_STACK = frozenset({StatusId.SMOGGY})
@@ -58,6 +58,12 @@ class Creature:
             return
         if hp_loss >= 1 and StatusId.INTANGIBLE in self.status:
             hp_loss = 1                     # IntangiblePower.ModifyHpLostAfterOsty: any HP loss (Offering, Bloodletting, poison...), not only damage
+        slippery = self.status.get(StatusId.SLIPPERY)
+        if hp_loss >= 1 and slippery is not None:       # SlipperyPower caps any HP loss (poison too) at 1 and counts down on it
+            hp_loss = 1
+            slippery.amount -= 1
+            if slippery.amount <= 0:
+                del self.status[StatusId.SLIPPERY]
         if hp_loss > 0 and self.relics:
             hp_loss = modify_hp_loss(self, hp_loss)
         if hp_loss > 0:
@@ -129,6 +135,8 @@ class Creature:
             broken = True
         if damage > 0:
             self._lose_hp_from_damage(damage, dealer, powered)
+            if powered and dealer is not None and dealer is not self and StatusId.ENVENOM in dealer.status:
+                self.apply_status(StatusId.POISON, poison_given(dealer, dealer.status[StatusId.ENVENOM].amount))       # EnvenomPower.AfterDamageGiven
         if dealer is not None and dealer.relics and dealer is not self:
             after_damage_given(dealer, self, broken)
         if powered and dealer is not None and hp_before > self.current_hp and StatusId.PAPER_CUTS in dealer.status:

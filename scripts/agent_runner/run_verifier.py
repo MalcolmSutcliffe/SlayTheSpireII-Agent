@@ -316,20 +316,25 @@ class RunVerifier:
 
     def check_card_reward(self, state : dict):
         from sts2_lite.card.tables import COLORLESS_CARDS
-        from sts2_lite.rewards.cards import IRONCLAD_POOL
+        from sts2_lite.rewards.cards import card_pool_ids
+        from sts2_lite.character import character_of_title
         cards = state.get("cards") or []
         ids = [c.get("id") for c in cards]
         if len(set(ids)) != len(ids):
             self.report("card_reward.duplicates", "warn", state, "the same card is offered twice", None, ids)
-        pool = {c.name for cards_ in IRONCLAD_POOL.values() for c in cards_}
         player = _player(state)
+        character = character_of_title(player.get("character"))
+        try:
+            pool = {c.name for c in card_pool_ids(character)}
+        except NotImplementedError:
+            pool = None             # a character the model has no reward cards for: its offers are not checked against a pool
         colorless = {c.name for c in COLORLESS_CARDS} if "DINGY_RUG" in relic_ids(player) else set()
         after_fight = self.anchor is not None and self.anchor.get("decision") == "combat_rewards"          # relics and events offer other pools and counts
         for card in cards:
             if card.get("rarity") in NOT_A_REWARD_RARITY:
                 self.report("card_reward.rarity", "error", state, f"{card.get('id')} is {card.get('rarity')}: a card reward never offers that", once=("r", card.get("id")))
-            elif after_fight and card.get("id") and card["id"] not in pool | colorless:
-                self.report("card_reward.pool", "warn", state, f"{card['id']} is not in the Ironclad pool the model draws from", once=("p", card["id"]))
+            elif after_fight and pool is not None and card.get("id") and card["id"] not in pool | colorless:
+                self.report("card_reward.pool", "warn", state, f"{card['id']} is not in the {character.title()} pool the model draws from", once=("p", card["id"]))
         held = relic_ids(player)
         expected = 3 + ("QUESTION_CARD" in held) - 2 * ("BUSTED_CROWN" in held)
         if after_fight and cards and len(cards) not in (expected, expected + 1):          # + 1: Lasting Candy's Power, a reroll

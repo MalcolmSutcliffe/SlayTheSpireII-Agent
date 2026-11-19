@@ -28,3 +28,4 @@ SlayTheSpireII-Agent.sln
 .claudeignore
 CLAUDE.md
 /docs
+/data/run_examples
