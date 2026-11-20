@@ -53,6 +53,95 @@ CARD_ENERGY_COST_AND_TARGET : dict[CardId, tuple[int | str, TargetType]] = {
     CardId.SHIV : (0, _A),
     CardId.STRIKE_SILENT : (1, _A),
     CardId.SURVIVOR : (1, _S),
+    CardId.STRIKE_REGENT : (1, _A),
+    CardId.DEFEND_REGENT : (1, _S),
+    CardId.FALLING_STAR : (0, _A),
+    CardId.VENERATE : (1, _S),
+    CardId.SOVEREIGN_BLADE : (2, _A),
+    CardId.MINION_STRIKE : (0, _A),
+    CardId.DEBRIS : (1, _NONE),
+    CardId.ASTRAL_PULSE : (0, _ALL),
+    CardId.BEGONE : (1, _S),
+    CardId.CELESTIAL_MIGHT : (2, _A),
+    CardId.CLOAK_OF_STARS : (0, _S),
+    CardId.COLLISION_COURSE : (0, _A),
+    CardId.COSMIC_INDIFFERENCE : (1, _S),
+    CardId.CRESCENT_SPEAR : (1, _A),
+    CardId.CRUSH_UNDER : (1, _ALL),
+    CardId.GATHER_LIGHT : (1, _S),
+    CardId.GLITTERSTREAM : (2, _S),
+    CardId.GLOW : (1, _S),
+    CardId.GUIDING_STAR : (1, _A),
+    CardId.HIDDEN_CACHE : (1, _S),
+    CardId.KNOW_THY_PLACE : (0, _A),
+    CardId.PATTER : (1, _S),
+    CardId.PHOTON_CUT : (1, _A),
+    CardId.REFINE_BLADE : (1, _S),
+    CardId.SOLAR_STRIKE : (1, _A),
+    CardId.SPOILS_OF_BATTLE : (1, _S),
+    CardId.WROUGHT_IN_WAR : (1, _A),
+    CardId.MINION_DIVE_BOMB : (0, _A),
+    CardId.ALIGNMENT : (0, _S),
+    CardId.BLACK_HOLE : (1, _S),
+    CardId.BULWARK : (2, _S),
+    CardId.CHARGE : (1, _S),
+    CardId.CHILD_OF_THE_STARS : (1, _S),
+    CardId.CONQUEROR : (1, _A),
+    CardId.CONVERGENCE : (1, _S),
+    CardId.DEVASTATE : (1, _A),
+    CardId.FURNACE : (1, _S),
+    CardId.GAMMA_BLAST : (0, _A),
+    CardId.GLIMMER : (1, _S),
+    CardId.HEGEMONY : (2, _A),
+    CardId.KINGLY_KICK : (4, _A),
+    CardId.KINGLY_PUNCH : (1, _A),
+    CardId.LUNAR_BLAST : (0, _A),
+    CardId.MANIFEST_AUTHORITY : (1, _S),
+    CardId.MONOLOGUE : (0, _S),
+    CardId.ORBIT : (2, _S),
+    CardId.PALE_BLUE_DOT : (1, _S),
+    CardId.PARRY : (1, _S),
+    CardId.PARTICLE_WALL : (0, _S),
+    CardId.PILLAR_OF_CREATION : (1, _S),
+    CardId.PROPHESIZE : (2, _S),
+    CardId.QUASAR : (0, _S),
+    CardId.RADIATE : (0, _ALL),
+    CardId.REFLECT : (1, _S),
+    CardId.RESONANCE : (1, _ALL),
+    CardId.ROYAL_GAMBLE : (0, _S),
+    CardId.SHINING_STRIKE : (1, _A),
+    CardId.SPECTRUM_SHIFT : (2, _S),
+    CardId.STARDUST : (0, _RAND),
+    CardId.SUMMON_FORTH : (1, _S),
+    CardId.SUPERMASSIVE : (1, _A),
+    CardId.TERRAFORMING : (1, _S),
+    CardId.MINION_SACRIFICE : (0, _S),
+    CardId.KNOCKOUT_BLOW : (3, _A),
+    CardId.ARSENAL : (1, _S),
+    CardId.BEAT_INTO_SHAPE : (1, _A),
+    CardId.BIG_BANG : (0, _S),
+    CardId.BOMBARDMENT : (3, _A),
+    CardId.BUNDLE_OF_JOY : (1, _S),
+    CardId.COMET : (0, _A),
+    CardId.CRASH_LANDING : (1, _ALL),
+    CardId.DECISIONS_DECISIONS : (0, _S),
+    CardId.DYING_STAR : (1, _ALL),
+    CardId.FOREGONE_CONCLUSION : (1, _S),
+    CardId.GENESIS : (2, _S),
+    CardId.GUARDS : (2, _S),
+    CardId.HEAVENLY_DRILL : ('X', _A),
+    CardId.HEIRLOOM_HAMMER : (2, _A),
+    CardId.I_AM_INVINCIBLE : (1, _S),
+    CardId.MAKE_IT_SO : (0, _A),
+    CardId.MONARCHS_GAZE : (2, _S),
+    CardId.NEUTRON_AEGIS : (1, _S),
+    CardId.ROYALTIES : (1, _S),
+    CardId.SEEKING_EDGE : (1, _S),
+    CardId.SEVEN_STARS : (2, _ALL),
+    CardId.SWORD_SAGE : (2, _S),
+    CardId.THE_SMITH : (1, _S),
+    CardId.TYRANNY : (1, _S),
+    CardId.VOID_FORM : (3, _S),
     CardId.ANTICIPATE : (0, _S),
     CardId.BACKFLIP : (1, _S),
     CardId.BLADE_DANCE : (1, _S),
@@ -253,6 +342,10 @@ CARD_ENERGY_COST_AND_TARGET : dict[CardId, tuple[int | str, TargetType]] = {
     CardId.WHIRLWIND : ('X', _ALL),
     CardId.WHISTLE : (2, _A),
     CardId.WISH : (0, _S),
+    CardId.METEOR_SHOWER : (0, _ALL),
+    CardId.SUPPRESS : (0, _A),
+    CardId.WRAITH_FORM : (3, _S),
+    CardId.THE_SEALED_THRONE : (1, _S),
 }
 
 INFECTION_DAMAGE = 3
@@ -267,6 +360,7 @@ TOXIC_DAMAGE = 5
 
 # energy cost change when upgraded (the rest of an upgrade is read from is_upgraded when the card is played)
 UPGRADE_COST_CHANGE = {
+    CardId.SOVEREIGN_BLADE : -1, CardId.THE_SEALED_THRONE : -1, CardId.ORBIT : -1, CardId.SPECTRUM_SHIFT : -1, CardId.MONARCHS_GAZE : -1, CardId.SEVEN_STARS : -1, CardId.SWORD_SAGE : -1,
     CardId.BARRICADE : -1, CardId.CORRUPTION : -1, CardId.DARK_EMBRACE : -1, CardId.STAMPEDE : -1,
     CardId.UNMOVABLE : -1, CardId.HAVOC : -1, CardId.INFERNAL_BLADE : -1,
     CardId.BODY_SLAM : -1, CardId.HELLRAISER : -1, CardId.MIND_BLAST : -1,
@@ -286,7 +380,18 @@ UPGRADE_COST_CHANGE = {
 }
 
 # CardModel base cost of the cards above (an upgrade caps a rolled Confused cost at base + change)
+# the Regent's Star costs (CanonicalStarCost; "X" spends every Star): what a card costs in Stars before upgrades
+STAR_COST : dict[CardId, int | str] = {
+    CardId.FALLING_STAR : 2, CardId.ASTRAL_PULSE : 3, CardId.CLOAK_OF_STARS : 1, CardId.CRESCENT_SPEAR : 1, CardId.GUIDING_STAR : 1,
+    CardId.ALIGNMENT : 2, CardId.DEVASTATE : 4, CardId.GAMMA_BLAST : 3, CardId.PARTICLE_WALL : 2, CardId.QUASAR : 2, CardId.REFLECT : 3,
+    CardId.RESONANCE : 2, CardId.ROYAL_GAMBLE : 5, CardId.STARDUST : "X",
+    CardId.METEOR_SHOWER : 2, CardId.THE_SEALED_THRONE : 3, CardId.COMET : 5, CardId.DECISIONS_DECISIONS : 6, CardId.DYING_STAR : 3, CardId.NEUTRON_AEGIS : 5, CardId.SEVEN_STARS : 7, CardId.THE_SMITH : 4,
+}
+# Star cost an upgrade changes: (new Star cost upgraded) for the cards whose upgrade does it
+UPGRADE_STAR_COST : dict[CardId, int] = {}
+
 UPGRADE_BASE_COST = {
+    CardId.SOVEREIGN_BLADE : 2, CardId.THE_SEALED_THRONE : 1, CardId.ORBIT : 2, CardId.SPECTRUM_SHIFT : 2, CardId.MONARCHS_GAZE : 2, CardId.SEVEN_STARS : 2, CardId.SWORD_SAGE : 2,
     CardId.BARRICADE : 3, CardId.CORRUPTION : 3, CardId.DARK_EMBRACE : 2, CardId.STAMPEDE : 2,
     CardId.UNMOVABLE : 2, CardId.HAVOC : 1, CardId.INFERNAL_BLADE : 1,
     CardId.BODY_SLAM : 1, CardId.HELLRAISER : 2, CardId.MIND_BLAST : 1,
@@ -306,17 +411,17 @@ UPGRADE_BASE_COST = {
 }
 
 # keyword an upgrade removes (Exhaust)
-UPGRADE_REMOVED_KEYWORD = {CardId.SECRET_TECHNIQUE : 1, CardId.SECRET_WEAPON : 1, CardId.THINKING_AHEAD : 1, CardId.PROLONG : 1, CardId.DISCOVERY : 1, CardId.APPARITION : 2, CardId.MIRAGE : 1}      # Exhaust x5, Ethereal for Apparition
+UPGRADE_REMOVED_KEYWORD = {CardId.VOID_FORM : 2, CardId.KNOW_THY_PLACE : 1, CardId.SECRET_TECHNIQUE : 1, CardId.SECRET_WEAPON : 1, CardId.THINKING_AHEAD : 1, CardId.PROLONG : 1, CardId.DISCOVERY : 1, CardId.APPARITION : 2, CardId.MIRAGE : 1}      # Exhaust x5, Ethereal for Apparition
 
 # keyword an upgrade adds
-UPGRADE_KEYWORD = {CardId.HELLO_WORLD : 4, CardId.MAD_SCIENCE : 4, CardId.SCRAWL : 16, CardId.GOLD_AXE : 16, CardId.ANOINTED : 16, CardId.ENTROPY : 4, CardId.WISH : 16, CardId.AGGRESSION : 4, CardId.JUGGLING : 4, CardId.CALCULATED_GAMBLE : 16, CardId.INFINITE_BLADES : 4, CardId.SPEEDSTER : 4, CardId.AFTERIMAGE : 4}       # Retain, Retain, Retain, Innate (Entropy, Aggression, Juggling), Retain
+UPGRADE_KEYWORD = {CardId.ARSENAL : 4, CardId.BIG_BANG : 4, CardId.TYRANNY : 4, CardId.MONOLOGUE : 16, CardId.ROYAL_GAMBLE : 16, CardId.HELLO_WORLD : 4, CardId.MAD_SCIENCE : 4, CardId.SCRAWL : 16, CardId.GOLD_AXE : 16, CardId.ANOINTED : 16, CardId.ENTROPY : 4, CardId.WISH : 16, CardId.AGGRESSION : 4, CardId.JUGGLING : 4, CardId.CALCULATED_GAMBLE : 16, CardId.INFINITE_BLADES : 4, CardId.SPEEDSTER : 4, CardId.AFTERIMAGE : 4}       # Retain, Retain, Retain, Innate (Entropy, Aggression, Juggling), Retain
 
 CONFUSED_MAX_COST = 3
 
 _EXHAUST, _ETHEREAL, _INNATE, _UNPLAYABLE, _RETAIN, _SLY, _ETERNAL, _REPLAY = 1, 2, 4, 8, 16, 32, 64, 128
 
 # cards with the Exhaust keyword
-EXHAUSTING_CARDS = frozenset({CardId.ADRENALINE, CardId.ASSASSINATE, CardId.MALAISE, CardId.NIGHTMARE, CardId.THE_HUNT, CardId.BACKSTAB, CardId.CALCULATED_GAMBLE, CardId.EXPOSE, CardId.MIRAGE, CardId.SLIMED, CardId.TREMBLE, CardId.IMPERVIOUS, CardId.MOLTEN_FIST,
+EXHAUSTING_CARDS = frozenset({CardId.MINION_SACRIFICE, CardId.BIG_BANG, CardId.BOMBARDMENT, CardId.BUNDLE_OF_JOY, CardId.GUARDS, CardId.MINION_DIVE_BOMB, CardId.ROYAL_GAMBLE, CardId.KNOW_THY_PLACE, CardId.MINION_STRIKE, CardId.DEBRIS, CardId.ADRENALINE, CardId.ASSASSINATE, CardId.MALAISE, CardId.NIGHTMARE, CardId.THE_HUNT, CardId.BACKSTAB, CardId.CALCULATED_GAMBLE, CardId.EXPOSE, CardId.MIRAGE, CardId.SLIMED, CardId.TREMBLE, CardId.IMPERVIOUS, CardId.MOLTEN_FIST,
                               CardId.TOXIC, CardId.FEED, CardId.DOMINATE, CardId.FIEND_FIRE, CardId.FORGOTTEN_RITUAL,
                               CardId.INFERNAL_BLADE, CardId.NOT_YET, CardId.OFFERING, CardId.SPORE_MIND,
                               CardId.PRODUCTION, CardId.MASTER_OF_STRATEGY, CardId.DRAMATIC_ENTRANCE, CardId.SHOCKWAVE,
@@ -339,15 +444,15 @@ UNPLAYABLE_CARDS = frozenset({CardId.SPOILS_MAP, CardId.LANTERN_KEY, CardId.BYRD
                              | (CURSE_CARDS - PLAYABLE_CURSES.keys()))
 
 # cards with the Ethereal keyword: exhausted instead of discarded if still in hand at end of turn
-ETHEREAL_CARDS = frozenset({CardId.APPARITION, CardId.DAZED, CardId.CLUMSY, CardId.FOLLY, CardId.ASCENDERS_BANE})
+ETHEREAL_CARDS = frozenset({CardId.DYING_STAR, CardId.VOID_FORM, CardId.APPARITION, CardId.DAZED, CardId.CLUMSY, CardId.FOLLY, CardId.ASCENDERS_BANE})
 
 # Retain / Innate / Eternal: only Retain acts in combat (Innate and Eternal are deck-level)
-RETAINING_CARDS = frozenset({CardId.POOR_SLEEP, CardId.RESTLESSNESS, CardId.PURITY, CardId.LUMINESCE, CardId.SNAKEBITE})
+RETAINING_CARDS = frozenset({CardId.SOVEREIGN_BLADE, CardId.POOR_SLEEP, CardId.RESTLESSNESS, CardId.PURITY, CardId.LUMINESCE, CardId.SNAKEBITE})
 
 # cards with the Sly keyword: discarded by an effect, they play themselves for free (CardCmd.DiscardAndDraw)
 SLY_CARDS = frozenset({CardId.FLICK_FLACK, CardId.RICOCHET, CardId.UNTOUCHABLE, CardId.REFLEX, CardId.TACTICIAN, CardId.ABRASIVE})
 
-INNATE_CARDS = frozenset({CardId.ASSASSINATE, CardId.BACKSTAB, CardId.APOTHEOSIS, CardId.WRITHE, CardId.FOLLY, CardId.DRAMATIC_ENTRANCE, CardId.MIND_BLAST})
+INNATE_CARDS = frozenset({CardId.SUPPRESS, CardId.ASSASSINATE, CardId.BACKSTAB, CardId.APOTHEOSIS, CardId.WRITHE, CardId.FOLLY, CardId.DRAMATIC_ENTRANCE, CardId.MIND_BLAST})
 
 ETERNAL_CARDS = frozenset({CardId.BAD_LUCK, CardId.ASCENDERS_BANE, CardId.CURSE_OF_THE_BELL, CardId.GREED, CardId.FOLLY, CardId.ENTHRALLED})
 

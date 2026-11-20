@@ -49,6 +49,8 @@ def modify_damage(base : int, attacker : Creature, target : Creature, card : Car
         if attacker.relics:
             multiplier += vulnerable_bonus(attacker)
         damage *= multiplier
+    if StatusId.CONQUEROR in target.status and card is not None and card.card_id.name == "SOVEREIGN_BLADE":
+        damage *= 2                         # ConquerorPower: the Sovereign Blade hits it for double
     if attacker.relics:
         damage *= damage_multiplier(attacker, card, in_play)        # Pen Nib
     if StatusId.COLOSSUS in target.status and StatusId.VULNERABLE in attacker.status:

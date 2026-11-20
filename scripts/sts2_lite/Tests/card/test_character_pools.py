@@ -61,8 +61,10 @@ def test_splash_table():
     assert not card.exhausts
 
 def test_splash_pool_is_the_other_characters_attacks():
-    assert set(splash_pool("SILENT")) == set(combat_pool("IRONCLAD", CardType.Attack))
-    assert set(splash_pool("IRONCLAD")) == set(combat_pool("SILENT", CardType.Attack))
+    attacks = {name: set(combat_pool(name, CardType.Attack)) for name in ("IRONCLAD", "SILENT", "REGENT")}
+    assert set(splash_pool("SILENT")) == attacks["IRONCLAD"] | attacks["REGENT"]
+    assert set(splash_pool("IRONCLAD")) == attacks["SILENT"] | attacks["REGENT"]
+    assert set(splash_pool("REGENT")) == attacks["IRONCLAD"] | attacks["SILENT"]
 
 @pytest.mark.parametrize("upgraded", [False, True])
 def test_splash_offers_three_other_attacks_and_the_pick_is_free(upgraded):
@@ -71,10 +73,10 @@ def test_splash_offers_three_other_attacks_and_the_pick_is_free(upgraded):
     sim.play_card(0, 0)
     offers = cs.pending_choice.offers
     assert len({c.card_id for c in offers}) == 3
-    assert all(c.card_id in GENERATABLE_CARDS and c.type == CardType.Attack and c.is_upgraded == upgraded for c in offers)
+    assert all(c.card_id in set(splash_pool("SILENT")) and c.type == CardType.Attack and c.is_upgraded == upgraded for c in offers)
     sim.choose_card(cs.pending_choice.indices[0])
     picked = cs.player.hand[-1]
-    assert picked.card_id in GENERATABLE_CARDS and picked.current_cost(cs.player) in (0, "X")
+    assert picked.card_id in set(splash_pool("SILENT")) and picked.current_cost(cs.player) in (0, "X")
 
 def test_splash_can_be_skipped():
     cs = silent_state([Card.create_generated(CardId.SPLASH)])

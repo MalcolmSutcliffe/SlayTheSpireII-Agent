@@ -22,7 +22,7 @@ RANDOM_UNLESS_UPGRADED = frozenset({CardId.TRUE_GRIT})
 
 
 def _statuses(creature) -> dict[str, int]:
-    return {s.name: inst.shown_amount for s, inst in creature.status.items()}
+    return {s.name: inst.shown_amount for s, inst in creature.status.items() if s is not StatusId.HIT_THIS_TURN}      # a count of the sim's own, not a game power
 
 def _cards(pile) -> Counter:
     return Counter((c.card_id.name + (f"[{c.enchantment.name}]" if c.enchantment else ""), c.is_upgraded) for c in pile)
@@ -33,10 +33,11 @@ def snapshot(cs : CombatState) -> dict:
     return {
         "round": cs.turn_number,
         "energy": cs.energy,
+        "stars": p.stars,
         "player": {"hp": p.current_hp, "max_hp": p.max_hp, "block": p.block, "status": _statuses(p)},
         "relics": {r.name: {"counter": inst.counter, "used": inst.used} for r, inst in p.relics.items()},
-        "hand": sorted(((c.card_id.name, c.is_upgraded, c.energy_cost, c.enchantment.name if c.enchantment else None) for c in p.hand),
-                       key=lambda t : (t[0], t[1], str(t[2]), t[3] or "")),          # identical cards differ in cost "X" or in an enchantment: None and a name do not compare
+        "hand": sorted(((c.card_id.name, c.is_upgraded, c.energy_cost, c.enchantment.name if c.enchantment else None, c.star_cost) for c in p.hand),
+                       key=lambda t : (t[0], t[1], str(t[2]), t[3] or "", str(t[4]))),          # identical cards differ in cost "X" or in an enchantment: None and a name do not compare
         "draw": sorted(f"{i}{'+' if u else ''}" for (i, u) in _cards(p.draw_pile).elements()),
         "discard": sorted(f"{i}{'+' if u else ''}" for (i, u) in _cards(p.discard_pile).elements()),
         "exhaust": sorted(f"{i}{'+' if u else ''}" for (i, u) in _cards(p.exhaust_pile).elements()),
@@ -169,7 +170,7 @@ def compare(predicted : CombatState, actual : CombatState, random_step : bool = 
     diffs : list[str] = []
     pp, ap = predicted.player, actual.player
     for field, a, b in (("hp", pp.current_hp, ap.current_hp), ("max hp", pp.max_hp, ap.max_hp),
-                        ("block", pp.block, ap.block), ("energy", predicted.energy, actual.energy),
+                        ("block", pp.block, ap.block), ("energy", predicted.energy, actual.energy), ("stars", pp.stars, ap.stars),
                         ("round", predicted.turn_number, actual.turn_number)):
         if a != b:
             diffs.append(f"player {field}: sim {a}, game {b}")

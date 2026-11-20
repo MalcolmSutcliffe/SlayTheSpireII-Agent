@@ -107,6 +107,11 @@ class RelicId(Enum):
     SNECKO_SKULL = auto()
     TINGSHA = auto()
     TOUGH_BANDAGES = auto()
+    GALACTIC_DUST = auto()         # the Regent's relics (the others act when the fight starts, see combat_start.py)
+    LUNAR_PASTRY = auto()
+    MINI_REGENT = auto()
+    REGALITE = auto()
+    VITRUVIAN_MINION = auto()
 
 # What the bridge calls a relic's state (if it reports one) when `used` is true.
 # The game marks Vambrace, Unsettling Lamp and Burning Sticks "Active" until they trigger, and a spent Lizard Tail "Disabled".
@@ -127,7 +132,7 @@ USED_STATUS : dict[RelicId, frozenset[str]] = {
 
 # `used` of these means "this turn" (it is cleared when the next turn starts), so it is only carried within a turn.
 PER_TURN_FLAG = frozenset({RelicId.ART_OF_WAR, RelicId.RIPPLE_BASIN, RelicId.RAINBOW_RING, RelicId.DEMON_TONGUE,
-                           RelicId.MUSIC_BOX})
+                           RelicId.MUSIC_BOX, RelicId.MINI_REGENT, RelicId.REGALITE})
 
 # The bridge reports these every time, so a state that was read is never overruled by one the simulator remembers.
 ALWAYS_REPORTED = frozenset({RelicId.RED_SKULL})
@@ -152,6 +157,8 @@ class RelicInstance:
         relic_id = RelicId.__members__.get(relic["id"])
         if relic_id is None:
             return None
+        if relic.get("melted") or (relic.get("status") == "Disabled" and str(relic.get("name", "")).startswith("Wax ")):
+            return None         # a melted wax relic does nothing any more
         used = relic.get("status") in USED_STATUS.get(relic_id, ()) or bool(relic.get("spent"))
         counter = relic.get("counter")
         if relic_id is RelicId.BRILLIANT_SCARF and counter is None:
@@ -180,4 +187,5 @@ LETTER_OPENER_EVERY, LETTER_OPENER_DAMAGE = 3, 5
 HAPPY_FLOWER_TURNS = {RelicId.HAPPY_FLOWER : 3, RelicId.FAKE_HAPPY_FLOWER : 5}
 
 FLASHES_AT_FULL_COUNT = {**HAPPY_FLOWER_TURNS, RelicId.LETTER_OPENER : LETTER_OPENER_EVERY, RelicId.PENDULUM : 3, RelicId.NUNCHAKU : NUNCHAKU_EVERY, RelicId.PEN_NIB : 10,
-                         RelicId.KUNAI : KUNAI_EVERY, RelicId.SHURIKEN : SHURIKEN_EVERY, RelicId.ORNAMENTAL_FAN : FAN_EVERY}    # Pendulum: DisplayAmount is Turns while it activates; Nunchaku and Pen Nib show 10 after the tenth Attack, which has already paid out; Kunai, Shuriken and Ornamental Fan show 3 while they activate (IsActivating)
+                         RelicId.KUNAI : KUNAI_EVERY, RelicId.SHURIKEN : SHURIKEN_EVERY, RelicId.ORNAMENTAL_FAN : FAN_EVERY,
+                         RelicId.KUSARIGAMA : KUSARIGAMA_EVERY}    # Pendulum: DisplayAmount is Turns while it activates; Nunchaku and Pen Nib show 10 after the tenth Attack, which has already paid out; Kunai, Shuriken and Ornamental Fan show 3 while they activate (IsActivating)

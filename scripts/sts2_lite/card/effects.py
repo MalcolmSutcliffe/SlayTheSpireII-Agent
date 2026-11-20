@@ -143,7 +143,13 @@ PLAIN_DAMAGE = {        # id : (damage, damage upgraded) of the cards that print
     CardId.POUNCE : (14, 20),
     CardId.SKEWER : (8, 11),
     CardId.STRANGLE : (8, 10),
-    CardId.STRIKE_SILENT : (6, 9), CardId.NEUTRALIZE : (3, 4), CardId.SHIV : (4, 6),
+    CardId.STRIKE_SILENT : (6, 9), CardId.STRIKE_REGENT : (6, 9), CardId.FALLING_STAR : (8, 12), CardId.SOVEREIGN_BLADE : (10, 10), CardId.MINION_STRIKE : (6, 9),
+    CardId.ASTRAL_PULSE : (6, 8), CardId.CELESTIAL_MIGHT : (6, 6), CardId.COLLISION_COURSE : (10, 14), CardId.CRUSH_UNDER : (8, 9), CardId.GUIDING_STAR : (12, 13),
+    CardId.PHOTON_CUT : (10, 13), CardId.SOLAR_STRIKE : (9, 10), CardId.WROUGHT_IN_WAR : (7, 9), CardId.MINION_DIVE_BOMB : (13, 16),
+    CardId.DEVASTATE : (35, 45), CardId.GAMMA_BLAST : (13, 18), CardId.HEGEMONY : (15, 18), CardId.KINGLY_KICK : (27, 35), CardId.KINGLY_PUNCH : (8, 10),
+    CardId.LUNAR_BLAST : (4, 5), CardId.RADIATE : (3, 4), CardId.SHINING_STRIKE : (8, 11), CardId.STARDUST : (5, 7), CardId.SUPERMASSIVE : (5, 5),
+    CardId.BEAT_INTO_SHAPE : (5, 7), CardId.BOMBARDMENT : (18, 24), CardId.COMET : (33, 44), CardId.METEOR_SHOWER : (14, 21), CardId.SUPPRESS : (11, 17), CardId.CRASH_LANDING : (21, 26), CardId.DYING_STAR : (9, 11),
+    CardId.HEAVENLY_DRILL : (8, 10), CardId.HEIRLOOM_HAMMER : (20, 25), CardId.MAKE_IT_SO : (6, 9), CardId.SEVEN_STARS : (7, 7), CardId.KNOCKOUT_BLOW : (30, 38), CardId.NEUTRALIZE : (3, 4), CardId.SHIV : (4, 6),
     CardId.DAGGER_SPRAY : (4, 6), CardId.DAGGER_THROW : (9, 12), CardId.FLICK_FLACK : (7, 9), CardId.LEADING_STRIKE : (3, 6),
     CardId.POISONED_STAB : (6, 8), CardId.PREDATOR : (15, 20), CardId.RICOCHET : (3, 3), CardId.SLICE : (6, 9), CardId.SUCKER_PUNCH : (8, 10),
     CardId.BYRD_SWOOP : (14, 18), CardId.CLASH : (14, 18), CardId.REBOUND : (9, 12), CardId.RIP_AND_TEAR : (7, 9), CardId.PECK : (2, 2), CardId.EXTERMINATE : (3, 4), CardId.SQUASH : (10, 12),
@@ -162,6 +168,14 @@ PLAIN_DAMAGE = {        # id : (damage, damage upgraded) of the cards that print
 }
 
 SILENT_FIXED_DAMAGE = {CardId.ASSASSINATE : (10, 13), CardId.GRAND_FINALE : (60, 75), CardId.THE_HUNT : (10, 15)}      # damage of the Rares that print one number
+
+def star_cost_cards(player : Player, in_play : Card | None = None) -> int:
+    """Cards with a Star cost in the fight (CrescentSpear counts PlayerCombatState.AllCards: every pile, and the card being played)."""
+    piles = player.hand + player.draw_pile + player.discard_pile + player.exhaust_pile
+    return sum(c.star_cost is not None for c in piles) + (1 if in_play is not None and in_play.star_cost is not None else 0)
+
+def crescent_spear_damage(player : Player, up : int, in_play : Card | None = None) -> int:
+    return 8 + (3 if up else 2) * star_cost_cards(player, in_play)
 
 def _strikes(player : Player, in_play : Card | None = None) -> int:
     """Perfected Strike counts every Strike the player has in the fight: hand, draw, discard and exhaust piles
@@ -187,6 +201,14 @@ def _printed_damage(card : Card, combat : CombatSimulator) -> int:
         return (6 if up else 5) + card.bonus_damage
     if card.card_id == CardId.THRASH:
         return (6 if up else 4) + card.bonus_damage
+    if card.card_id == CardId.SOVEREIGN_BLADE:
+        return 10 + card.bonus_damage
+    if card.card_id == CardId.CRESCENT_SPEAR:
+        return crescent_spear_damage(player, up)
+    if card.card_id == CardId.KINGLY_PUNCH:
+        return (10 if up else 8) + card.bonus_damage
+    if card.card_id == CardId.SUPERMASSIVE:
+        return 5 + (4 if up else 3) * player.cards_generated
     if card.card_id == CardId.MIND_BLAST:
         return len(player.draw_pile)
     if card.card_id == CardId.GOLD_AXE:

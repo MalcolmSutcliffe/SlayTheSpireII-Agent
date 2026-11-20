@@ -23,7 +23,7 @@ from sts2_lite.potion import use_potion, usable_potion_actions
 # what the bridge calls each kind of hand selection
 HAND_SELECT_MODES = {"upgrade_select" : "upgrade"}
 
-OPTIONAL_PICKS = frozenset({"to_hand", "exhaust_any", "discover", "discard_any"})       # Neow's Fury, Purity, Discovery (skippable), Gambler's Brew
+OPTIONAL_PICKS = frozenset({"to_hand", "exhaust_any", "discover", "discard_any", "guards"})       # Neow's Fury, Purity, Discovery (skippable), Gambler's Brew
 
 KNOWLEDGE_CURSES = {CardId.DISINTEGRATION : StatusId.DISINTEGRATION, CardId.MIND_ROT : StatusId.MIND_ROT,
                     CardId.SLOTH : StatusId.SLOTH, CardId.WASTE_AWAY : StatusId.WASTE_AWAY}
@@ -137,6 +137,8 @@ class CombatState:
                 kind = "to_draw_pile"
             elif "card to Exhaust" in prompt:       # Brand, Burning Pact, True Grit+: the prompt is the same, so the pick is taken without Burning Pact's draw
                 kind = "exhaust"
+            elif "to Transform" in prompt and StatusId.ENTROPY not in self.player.status:     # Begone: one card, into a Minion Strike (whether Begone was upgraded is not shown)
+                kind = "begone"
             elif "to Transform" in prompt:      # Entropy: as many cards as it has stacks
                 kind, amount = "transform", max(1, self.player.status_amount(StatusId.ENTROPY) - len(state.get("selected_cards") or []))
         prompt = state.get("prompt") or ""
@@ -511,10 +513,13 @@ class CombatSimulator:
         self.vigor_pending = None       # Vigor the current attack command adds (VigorPower.BeforeAttack)
         self.auto_playing = False       # CardPlay.IsAutoPlay of the play being resolved
         self.card_x = 0                 # the X of the X-cost card last played
+        self.end_turn_requested = False  # Void Form: the turn ends once the card is played
+        self.last_stars_spent = 0       # the Stars the card last played was paid with (CardModel.LastStarsSpent)
         combat_state.player.draw_hook = self._card_drawn
         combat_state.player.draw_pause_hook = self._pause_draw
         combat_state.player.shuffle_hook = self._shuffled
         combat_state.player.block_cleared_hook = self._block_cleared
+        combat_state.player.generated_hook = self._card_generated
         self._check_is_over()
 
     ###
@@ -526,6 +531,38 @@ class CombatSimulator:
         if StatusId.NO_ENERGY_GAIN in self.combat_state.player.status:
             return
         self.combat_state.energy += amount
+
+    def gain_stars(self, amount : int):
+        """PlayerCmd.GainStars."""
+        if amount > 0:
+            self.combat_state.player.stars += amount
+            self.combat_state.player.stars_gained_this_turn += amount
+            self.fire(HookType.STARS_GAINED, amount)
+
+    def spend_stars(self, amount : int):
+        """CardModel.SpendStars: the Stars a card was paid for with (AfterStarsSpent)."""
+        player = self.combat_state.player
+        self.last_stars_spent = amount
+        if amount > 0:
+            player.stars = max(0, player.stars - amount)
+            player.stars_spent_this_turn += amount
+            self.fire(HookType.STARS_SPENT, amount)
+
+    def forge(self, amount : int, source=None):
+        """ForgeCmd.Forge: a Sovereign Blade joins the hand if none is left unexhausted, then every Blade (an exhausted one too) gains `amount` damage."""
+        if self.is_over or amount <= 0:
+            return
+        player = self.combat_state.player
+        piles = (player.hand, player.draw_pile, player.discard_pile)
+        if not any(c.card_id is CardId.SOVEREIGN_BLADE for pile in piles for c in pile):
+            player.add_to_hand(Card.create_generated(CardId.SOVEREIGN_BLADE))
+        for pile in (*piles, player.exhaust_pile):
+            for i, c in enumerate(pile):
+                if c.card_id is CardId.SOVEREIGN_BLADE:
+                    grown = Card.create_copy(c)
+                    grown.bonus_damage += amount
+                    pile[i] = grown
+        self.fire(HookType.FORGED, amount)
 
     def fire(self, event : HookType, *args):
         """Call the status handler for each (status, event) pair in the state."""
@@ -672,7 +709,14 @@ class CombatSimulator:
     def _transform(self, indices : list[int]):
         hand = self.combat_state.player.hand
         for i in indices:
-            hand[i] = Card.create_generated(rng.choice(transform_options(hand[i])))
+            self._replace_in_hand(i, Card.create_generated(rng.choice(transform_options(hand[i]))))
+
+    def _replace_in_hand(self, index : int, card : Card):
+        """CardCmd.Transform: the new card takes the old one's place and counts as made up in the fight (Regalite, Pillar of Creation...)."""
+        player = self.combat_state.player
+        player.hand[index] = card
+        player.cards_generated += 1
+        self._card_generated(card)
 
     def request_choice(self, kind : str, indices : list[int], pile : str = "hand", amount : int = 0, source : Card | None = None, hidden : bool = False,
                        picked : list[int] | None = None):
@@ -775,6 +819,35 @@ class CombatSimulator:
             if len(player.hand) < MAX_HAND_SIZE:
                 player.discard_pile.remove(card)
                 player.hand.append(card.free_this_turn())
+        elif choice.kind == "charge":               # Charge: the picked cards of the draw pile become Minion Dive Bombs
+            bomb = Card.create_generated(CardId.MINION_DIVE_BOMB, choice.source is not None and choice.source.is_upgraded)
+            player.draw_pile[index] = bomb
+            picked = choice.picked + [index]
+            rest = [i for i, c in enumerate(player.draw_pile) if i not in picked and c.card_id is not CardId.MINION_DIVE_BOMB]
+            if choice.amount > 1 and rest:
+                self.request_choice("charge", rest, "draw", choice.amount - 1, source=choice.source, picked=picked)
+        elif choice.kind == "tyranny":              # Tyranny: exactly `amount` cards of the hand are exhausted
+            player.exhaust_card(card)
+            self.fire(HookType.CARD_EXHAUSTED, card)
+            if choice.amount > 1 and player.hand:
+                self.request_choice("tyranny", list(range(len(player.hand))), "hand", choice.amount - 1)
+        elif choice.kind == "guards":               # Guards: any number of cards become Minion Sacrifices
+            player.hand[index] = Card.create_generated(CardId.MINION_SACRIFICE, choice.source is not None and choice.source.is_upgraded)
+            picked = choice.picked + [index]
+            rest = [i for i in range(len(player.hand)) if i not in picked]
+            if rest:
+                self.request_choice("guards", rest, "hand", 0, source=choice.source, picked=picked)
+        elif choice.kind == "decisions":            # Decisions, Decisions: the Skill is played three times
+            for number in range(3):         # two plays of a copy that is in no pile, then the card itself, which ends where its play puts it
+                if number and self.combat_state.pending_choice is not None:
+                    break
+                if number < 2:
+                    self.auto_play(Card.create_copy(card), dupe=True)
+                else:
+                    self.auto_play(card)
+        elif choice.kind == "begone":               # Begone: the pick becomes a Minion Strike in the same place of the hand
+            strike = Card.create_generated(CardId.MINION_STRIKE, bool(choice.amount))
+            self._replace_in_hand(index, strike)
         elif choice.kind == "to_draw_pile":
             self._pile(choice.pile).remove(card)
             player.put_on_top(card)                 # the end of the list is the top
@@ -832,6 +905,10 @@ class CombatSimulator:
         self.combat_state.cards_played += 1
         self._finish_or_wait(card, hp_loss_mark, to_top=to_top)
         self._check_hand_emptied()
+        if self.end_turn_requested:
+            self.end_turn_requested = False
+            if self.combat_state.pending_choice is None and not self.is_over:
+                self.end_turn()
 
     def _face_target(self, card : Card, target_index : int):
         """SurroundedPower.BeforeCardPlayed: a card aimed at an enemy turns the player towards it."""
@@ -882,6 +959,9 @@ class CombatSimulator:
         self.fire(HookType.SHUFFLED)
         return self.combat_state.pending_choice is not None
 
+    def _card_generated(self, card : Card):
+        self.fire(HookType.CARD_GENERATED, card)
+
     def _block_cleared(self):
         self.fire(HookType.BLOCK_CLEARED)
 
@@ -900,6 +980,8 @@ class CombatSimulator:
     def _card_drawn(self, card : Card, from_hand_draw : bool = False):
         """Automation counts every card drawn; Hellraiser plays a Strike the moment it is drawn; Speedster hits every enemy for a draw outside the hand draw."""
         player = self.combat_state.player
+        if card.card_id is CardId.KINGLY_KICK or card.card_id is CardId.KINGLY_PUNCH:
+            self._kingly_draw(card)
         wave = player.status.get(StatusId.CORROSIVE_WAVE)
         if wave is not None:                # CorrosiveWavePower.AfterCardDrawn: Poison on every enemy
             for enemy in self.combat_state.enemies:
@@ -922,6 +1004,21 @@ class CombatSimulator:
         if StatusId.HELLRAISER in player.status and card.card_id in STRIKE_CARDS and not self.is_over \
                 and any(c is card for c in player.hand):
             self.auto_play(card)
+
+    def _kingly_draw(self, card : Card):
+        """KinglyKick.AfterCardDrawn: it costs 1 less for the rest of the fight; KinglyPunch: it gains damage for good."""
+        hand = self.combat_state.player.hand
+        for i, c in enumerate(hand):
+            if c is card:
+                changed = Card.create_copy(c)
+                if c.card_id is CardId.KINGLY_KICK:
+                    if c.energy_cost == "X" or c.energy_cost <= 0:
+                        return
+                    changed.energy_cost = c.energy_cost - 1
+                else:
+                    changed.bonus_damage += 6 if c.is_upgraded else 4
+                hand[i] = changed
+                return
 
     def _pause_draw(self, left : int, from_hand_draw : bool) -> bool:
         """A card drawn played itself and asked for a card choice (Hellraiser's Seeker Strike): the cards still to draw wait for the answer, as the game's do, because
@@ -947,7 +1044,23 @@ class CombatSimulator:
             player.reduce_stomp_costs(CardId.PINPOINT)          # Pinpoint.AfterCardPlayed
         if player.relics:
             after_card_played(player, card)
+        if card.type == CardType.Skill:
+            self._make_it_so(card)
         self.fire(HookType.CARD_PLAYED, card)
+
+    def _make_it_so(self, played : Card):
+        """MakeItSo.AfterCardPlayedLate: every third Skill played in a turn brings it back to the hand from any other pile."""
+        player = self.combat_state.player
+        if player.skills_played_this_turn % 3 != 0:
+            return
+        for pile in (player.draw_pile, player.discard_pile, player.exhaust_pile):
+            for card in [c for c in pile if c.card_id is CardId.MAKE_IT_SO]:
+                if len(player.hand) < 10:
+                    if pile is player.draw_pile:
+                        player.remove_from_draw_pile(card)
+                    else:
+                        pile.remove(card)
+                    player.hand.append(card)
 
     def _nostalgia_mark(self, card : Card) -> bool:
         """NostalgiaPower.ModifyCardPlayResultPileTypeAndPosition, asked before the card's plays begin: while fewer than
@@ -1159,8 +1272,10 @@ class CombatSimulator:
         if card.exhausts or force_exhaust or corrupted:
             player.exhaust_card(card)
             self.fire(HookType.CARD_EXHAUSTED, card)
-        elif to_top:
-            player.put_on_top(card)         # Nostalgia
+        elif to_top or card.card_id is CardId.SHINING_STRIKE:
+            player.put_on_top(card)         # Nostalgia; Shining Strike
+        elif card.card_id is CardId.PARTICLE_WALL:
+            player.add_to_hand(card)        # Particle Wall comes back to the hand (a full hand sends it to the discard pile)
         else:
             player.discard_pile.append(card)
 
@@ -1173,6 +1288,9 @@ class CombatSimulator:
         hp_loss_mark = self.combat_state.player.hp_loss_events
         self.fire(HookType.PLAY_PHASE_END)
         self.resolve_deaths()
+        top = self.combat_state.player.draw_pile[-1] if self.combat_state.player.draw_pile else None
+        if top is not None and top.card_id is CardId.I_AM_INVINCIBLE and not self.is_over:
+            self.auto_play(top)                 # IAmInvincible.AfterAutoPostPlayPhaseEntered: played from the top of the draw pile
         for card in [c for c in self.combat_state.player.exhaust_pile if c.card_id == CardId.HOWL_FROM_BEYOND]:
             if not self.is_over:
                 self.auto_play(card)            # Howl from Beyond plays itself from the exhaust pile
@@ -1234,7 +1352,7 @@ class CombatSimulator:
     @staticmethod
     def _return_temporary_strength(creature : Creature):
         """Setup Strike, Mangle and Dark Shackles: the Strength they gave or took is returned when the creature's turn ends."""
-        for marker, sign in ((StatusId.SETUP_STRIKE, 1), (StatusId.MANGLE, -1), (StatusId.PIERCING_WAIL, -1), (StatusId.DARK_SHACKLES, -1), (StatusId.FLEX_POTION, 1), (StatusId.REPTILE_TRINKET, 1), (StatusId.FEEDING_FRENZY, 1)):
+        for marker, sign in ((StatusId.SETUP_STRIKE, 1), (StatusId.MANGLE, -1), (StatusId.PIERCING_WAIL, -1), (StatusId.CRUSH_UNDER, -1), (StatusId.MONOLOGUE_STRENGTH, 1), (StatusId.DYING_STAR, -1), (StatusId.MONARCHS_GAZE_STRENGTH_DOWN, -1), (StatusId.DARK_SHACKLES, -1), (StatusId.FLEX_POTION, 1), (StatusId.REPTILE_TRINKET, 1), (StatusId.FEEDING_FRENZY, 1)):
             amount = creature.status.pop(marker, None)
             if amount is not None:
                 creature.apply_status(StatusId.STRENGTH, -sign * amount.amount, bypass_artifact=True)
@@ -1276,6 +1394,10 @@ class CombatSimulator:
 
     def _start_player_turn(self, enemies_start : bool = True):
         player = self.combat_state.player
+        player.stars_spent_this_turn = 0
+        player.stars_gained_this_turn = 0
+        for enemy in self.combat_state.enemies:
+            enemy.status.pop(StatusId.HIT_THIS_TURN, None)
         if player.relics:
             self.combat_state.max_energy += max_energy_gain(player, self.combat_state.player_turn)
         if RelicId.ICE_CREAM in player.relics and self.combat_state.player_turn > 1:
@@ -1285,6 +1407,12 @@ class CombatSimulator:
         pending_energy = player.status.pop(StatusId.ENERGY_NEXT_TURN, None)
         if pending_energy is not None:
             self.gain_energy(pending_energy.amount)        # Relax: after the energy reset
+        pending_stars = player.status.pop(StatusId.STAR_NEXT_TURN, None)
+        if pending_stars is not None:
+            self.gain_stars(pending_stars.amount)           # StarNextTurnPower.AfterEnergyReset
+        genesis = player.status.get(StatusId.GENESIS)
+        if genesis is not None:
+            self.gain_stars(genesis.amount)                 # GenesisPower.AfterEnergyReset
         radiant = player.status.get(StatusId.RADIANT_TINCTURE)
         if radiant is not None:                            # Radiant Tincture: 1 Energy a turn for a few turns
             self.gain_energy(1)
@@ -1333,6 +1461,9 @@ class CombatSimulator:
             self._check_is_over()           # Mercury Hourglass can end the fight
             if not self.is_over:
                 self.fire(HookType.AUTO_PRE_PLAY)
+                for card in [c for c in self.combat_state.player.exhaust_pile if c.card_id is CardId.BOMBARDMENT]:
+                    if not self.is_over:
+                        self.auto_play(card)    # Bombardment plays itself from the exhaust pile each turn
         if cs.pending_choice is not None:
             cs.continuations = cs.continuations + [("turn_start", enemies_start, 2)]
             return

@@ -73,6 +73,34 @@ class StatusId(Enum):
     NO_BLOCK = auto()
     BLOCK_NEXT_TURN = auto()
     ENERGY_NEXT_TURN = auto()       # Relax: energy after the next turn's reset
+    STAR_NEXT_TURN = auto()         # Hidden Cache: Stars after the next turn's energy reset
+    BLACK_HOLE = auto()             # damage to every enemy when Stars are gained and after a card paid with Stars
+    CHILD_OF_THE_STARS = auto()     # Block for each Star spent
+    CONQUEROR = auto()              # on an enemy: the Sovereign Blade hits it for double (ticks down)
+    FURNACE = auto()                # Forge at each turn start
+    MONOLOGUE = auto()              # each card played this turn gives Strength until the turn ends
+    MONOLOGUE_STRENGTH = auto()     # the Strength Monologue gave this turn (marker, taken back at the end of the turn)
+    ORBIT = auto()                  # 1 Energy for every 4 spent (records: [[spent, triggers]])
+    PALE_BLUE_DOT = auto()          # draw extra cards next turn after 5 cards in a turn (records: [[turn it fired]])
+    PARRY = auto()                  # the Sovereign Blade also gives Block
+    PILLAR_OF_CREATION = auto()     # Block when a card is generated
+    REFLECT = auto()                # blocked damage from Attacks is dealt back (ticks down at turn start)
+    SPECTRUM_SHIFT = auto()         # colorless cards before each hand draw
+    ARSENAL = auto()                # Strength for each card generated
+    DYING_STAR = auto()             # on an enemy (TemporaryStrength, negative): the Strength it took comes back when its turn ends
+    FOREGONE_CONCLUSION = auto()    # next turn: pick cards of the draw pile into the hand, once
+    GENESIS = auto()                # Stars at each turn's start
+    HIT_THIS_TURN = auto()          # on an enemy: the Attacks that hit it this turn (Beat into Shape; hidden, not a game power)
+    MONARCHS_GAZE = auto()          # an enemy hit by an Attack loses Strength until the end of its turn
+    MONARCHS_GAZE_STRENGTH_DOWN = auto()    # marker of that loss
+    ROYALTIES = auto()              # Gold when the fight is won
+    SEEKING_EDGE = auto()           # the Sovereign Blade hits every enemy
+    SWORD_SAGE = auto()             # the Sovereign Blade is played this many more times
+    TYRANNY = auto()                # draw more at the turn's start, then exhaust as many cards
+    VOID_FORM = auto()              # the first cards played each turn are free (records: [[cards played this turn]])
+    WRAITH_FORM = auto()            # Dexterity lost at each turn start
+    THE_SEALED_THRONE = auto()      # Stars for each card played
+    CRUSH_UNDER = auto()            # Crush Under (TemporaryStrengthPower, negative): the Strength it took comes back when the owner's turn ends
     DRAW_CARDS_NEXT_TURN = auto()   # Relax: cards added to the next turn's hand draw
     FASTEN = auto()
     PREP_TIME = auto()
@@ -191,11 +219,12 @@ TICKS_DOWN = frozenset({
     StatusId.SHRINK,        # a counter that ticks when its owner's side ends; negative is infinite (ShrinkPower)
     StatusId.PLATING, StatusId.COLOSSUS,
     StatusId.NO_BLOCK,      # ticks when the enemies' turn ends
+    StatusId.CONQUEROR,     # ticks when the enemies' turn ends
     StatusId.INTANGIBLE,    # damage taken is capped at 1; ticks at the end of the enemy turn
 })
 RESETS_EACH_TURN = frozenset({StatusId.SLOW})
 
-DEBUFFS = frozenset({StatusId.POISON, StatusId.PIERCING_WAIL, StatusId.WEAK, StatusId.VULNERABLE, StatusId.FRAIL, StatusId.SHRINK,
+DEBUFFS = frozenset({StatusId.DYING_STAR, StatusId.MONARCHS_GAZE_STRENGTH_DOWN, StatusId.CONQUEROR, StatusId.POISON, StatusId.PIERCING_WAIL, StatusId.CRUSH_UNDER, StatusId.WEAK, StatusId.VULNERABLE, StatusId.FRAIL, StatusId.SHRINK,
                      StatusId.CONSTRICT, StatusId.TANGLED, StatusId.RINGING,
                      StatusId.NO_DRAW, StatusId.NO_ENERGY_GAIN, StatusId.MANGLE, StatusId.CONFUSED,
                      StatusId.NO_BLOCK, StatusId.THE_GAMBIT, StatusId.DARK_SHACKLES,
@@ -874,7 +903,139 @@ def nemesis_toggle(combat : CombatSimulator, owner : Creature):
     else:
         owner.status.pop(StatusId.INTANGIBLE, None)
 
+def _black_hole_hit(combat : CombatSimulator, owner : Creature, amount : int):
+    """BlackHolePower.DealDamageToAllEnemies: Unpowered damage."""
+    for enemy in combat.combat_state.enemies:
+        if enemy.current_hp > 0:
+            enemy.apply_damage(amount, owner)
+    combat.resolve_deaths()
+
+def _black_hole_on_stars_gained(combat : CombatSimulator, owner : Creature, amount : int, gained : int):
+    if _own(combat, owner) and gained > 0:
+        _black_hole_hit(combat, owner, amount)
+
+def _black_hole_on_card_played(combat : CombatSimulator, owner : Creature, amount : int, card):
+    if _own(combat, owner) and combat.last_stars_spent > 0:
+        _black_hole_hit(combat, owner, amount)
+
+def _child_of_the_stars_on_stars_spent(combat : CombatSimulator, owner : Creature, amount : int, spent : int):
+    if _own(combat, owner) and spent > 0:
+        combat.gain_block(owner, amount * spent)
+
+def _furnace_on_turn_start(combat : CombatSimulator, owner : Creature, amount : int):
+    if _own(combat, owner):
+        combat.forge(amount)
+
+def _monologue_on_card_played(combat : CombatSimulator, owner : Creature, amount : int, card):
+    """MonologuePower.AfterCardPlayed: Strength for every card played after it (the card that played it adds none)."""
+    amount -= fresh_amount(owner.status.get(StatusId.MONOLOGUE))
+    if amount > 0 and _own(combat, owner):
+        from sts2_lite.card.effects import temp_strength
+        temp_strength(owner, StatusId.MONOLOGUE_STRENGTH, amount, 1)
+
+def _monologue_on_turn_ended(combat : CombatSimulator, owner : Creature, amount : int):
+    owner.status.pop(StatusId.MONOLOGUE, None)
+
+def _orbit_on_energy_spent(combat : CombatSimulator, owner : Creature, amount : int, spent : int):
+    """OrbitPower.AfterEnergySpent: every 4 Energy spent pays back `amount` Energy."""
+    if not _own(combat, owner) or spent <= 0:
+        return
+    inst = owner.status[StatusId.ORBIT]
+    record = inst.records[0] if inst.records else [0, 0]
+    record[0] += spent
+    triggers = record[0] // ORBIT_ENERGY - record[1]
+    if triggers > 0:
+        record[1] += triggers
+        combat.gain_energy(amount * triggers)
+    inst.records = [record]
+
+def _pale_blue_dot_on_card_played(combat : CombatSimulator, owner : Creature, amount : int, card):
+    """PaleBlueDotPower.AfterCardPlayed: once a turn, the fifth card played draws cards next turn."""
+    if not _own(combat, owner) or combat.combat_state.cards_played < PALE_BLUE_DOT_CARDS:
+        return
+    inst = owner.status[StatusId.PALE_BLUE_DOT]
+    turn = combat.combat_state.player_turn
+    if inst.records and inst.records[0][0] == turn:
+        return
+    inst.records = [[turn]]
+    owner.apply_status(StatusId.DRAW_CARDS_NEXT_TURN, amount)
+
+def _pillar_of_creation_on_generated(combat : CombatSimulator, owner : Creature, amount : int, card):
+    if _own(combat, owner):
+        combat.gain_block(owner, amount)
+
+def _reflect_on_turn_start(combat : CombatSimulator, owner : Creature, amount : int):
+    if _own(combat, owner):
+        owner.status[StatusId.REFLECT].amount -= 1
+        if owner.status[StatusId.REFLECT].amount <= 0:
+            del owner.status[StatusId.REFLECT]
+
+def _spectrum_shift_before_turn(combat : CombatSimulator, owner : Creature, amount : int):
+    """SpectrumShiftPower.BeforeHandDraw: that many different colorless cards join the hand."""
+    if _own(combat, owner):
+        from sts2_lite import rng
+        from sts2_lite.card.card import Card
+        from sts2_lite.event.run import COLORLESS_POOL
+        for card_id in rng.sample(list(COLORLESS_POOL), amount):
+            owner.add_to_hand(Card.create_generated(card_id))
+
+def _arsenal_on_generated(combat : CombatSimulator, owner : Creature, amount : int, card):
+    if _own(combat, owner):
+        owner.apply_status(StatusId.STRENGTH, amount)
+
+def _foregone_conclusion_on_turn_start(combat : CombatSimulator, owner : Creature, amount : int):
+    """ForegoneConclusionPower.BeforeHandDraw (here after the draw): pick that many cards of the draw pile into the hand; it is then used up."""
+    if _own(combat, owner):
+        del owner.status[StatusId.FOREGONE_CONCLUSION]
+        combat.request_stratagem(amount)
+
+def _tyranny_on_turn_start(combat : CombatSimulator, owner : Creature, amount : int):
+    """TyrannyPower.AfterPlayerTurnStart: exhaust that many cards of the hand."""
+    if _own(combat, owner) and owner.hand:
+        combat.request_choice("tyranny", list(range(len(owner.hand))), "hand", amount)
+
+def _void_form_on_card_played(combat : CombatSimulator, owner : Creature, amount : int, card):
+    if _own(combat, owner):
+        inst = owner.status[StatusId.VOID_FORM]
+        inst.records = [[(inst.records[0][0] if inst.records else 0) + 1]]
+
+def _void_form_on_turn_start(combat : CombatSimulator, owner : Creature, amount : int):
+    if _own(combat, owner):
+        owner.status[StatusId.VOID_FORM].records = [[0]]
+
+def _sealed_throne_on_card_played(combat : CombatSimulator, owner : Creature, amount : int, card):
+    """TheSealedThronePower.BeforeCardPlayed: Stars for every card played after it (the card that played it gives none)."""
+    amount -= fresh_amount(owner.status.get(StatusId.THE_SEALED_THRONE))
+    if amount > 0 and _own(combat, owner):
+        combat.gain_stars(amount)
+
+def _wraith_form_on_turn_start(combat : CombatSimulator, owner : Creature, amount : int):
+    """WraithFormPower.AfterSideTurnStart: -Dexterity."""
+    if _own(combat, owner):
+        owner.apply_status(StatusId.DEXTERITY, -amount)
+
+ORBIT_ENERGY = 4
+PALE_BLUE_DOT_CARDS = 5
+
 STATUS_HANDLERS : dict[tuple[StatusId, HookType], Callable] = HandlerTable({
+    (StatusId.THE_SEALED_THRONE, HookType.CARD_PLAYED) : _sealed_throne_on_card_played,
+    (StatusId.WRAITH_FORM, HookType.PLAYER_TURN_START) : _wraith_form_on_turn_start,
+    (StatusId.ARSENAL, HookType.CARD_GENERATED) : _arsenal_on_generated,
+    (StatusId.FOREGONE_CONCLUSION, HookType.PLAYER_TURN_START) : _foregone_conclusion_on_turn_start,
+    (StatusId.TYRANNY, HookType.PLAYER_TURN_START) : _tyranny_on_turn_start,
+    (StatusId.VOID_FORM, HookType.CARD_PLAYED) : _void_form_on_card_played,
+    (StatusId.VOID_FORM, HookType.BEFORE_PLAYER_TURN) : _void_form_on_turn_start,
+    (StatusId.BLACK_HOLE, HookType.STARS_GAINED) : _black_hole_on_stars_gained,
+    (StatusId.BLACK_HOLE, HookType.CARD_PLAYED) : _black_hole_on_card_played,
+    (StatusId.CHILD_OF_THE_STARS, HookType.STARS_SPENT) : _child_of_the_stars_on_stars_spent,
+    (StatusId.FURNACE, HookType.PLAYER_TURN_START) : _furnace_on_turn_start,
+    (StatusId.MONOLOGUE, HookType.CARD_PLAYED) : _monologue_on_card_played,
+    (StatusId.MONOLOGUE, HookType.PLAYER_TURN_ENDED) : _monologue_on_turn_ended,
+    (StatusId.ORBIT, HookType.ENERGY_SPENT) : _orbit_on_energy_spent,
+    (StatusId.PALE_BLUE_DOT, HookType.CARD_PLAYED) : _pale_blue_dot_on_card_played,
+    (StatusId.PILLAR_OF_CREATION, HookType.CARD_GENERATED) : _pillar_of_creation_on_generated,
+    (StatusId.REFLECT, HookType.PLAYER_TURN_START) : _reflect_on_turn_start,
+    (StatusId.SPECTRUM_SHIFT, HookType.BEFORE_PLAYER_TURN) : _spectrum_shift_before_turn,
     (StatusId.ENRAGE, HookType.CARD_PLAYED) : _enrage_on_card_played,
     (StatusId.WITHERING_PRESENCE, HookType.CARD_PLAYED) : _withering_presence_on_card_played,
     (StatusId.INFERNO, HookType.PLAYER_TURN_START) : _inferno_on_turn_start,

@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Callable
 from sts2_lite.status import StatusId
 
 from sts2_lite.relic.ids import RelicId, RelicInstance
+from sts2_lite.relic.regent import _vitruvian_minion_block
 
 if TYPE_CHECKING:
     from sts2_lite.card import Card
@@ -85,6 +86,7 @@ def _paels_legion_block_gained(relic : RelicInstance, card : Card | None, amount
         relic.triggering = card
 
 BLOCK_MULTIPLIER : dict[RelicId, Callable[[RelicInstance, Card | None], int]] = {
+    RelicId.VITRUVIAN_MINION : _vitruvian_minion_block,
     RelicId.VAMBRACE : _vambrace_block,
     RelicId.PAELS_LEGION : _paels_legion_block,
 }

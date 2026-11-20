@@ -25,6 +25,11 @@ class HookType(Enum):
     HP_CHANGED = auto()        # after any action, whether the player's hit points moved or not
     SHUFFLED = auto()          # the discard pile went into the draw pile
     HAND_EMPTIED = auto()      # the last card left the hand during the player's turn
+    STARS_GAINED = auto()      # args: (amount,); the Regent gained Stars
+    STARS_SPENT = auto()       # args: (amount,); a card was paid for with Stars
+    ENERGY_SPENT = auto()      # args: (amount,); a card was paid for with Energy
+    CARD_GENERATED = auto()    # args: (card,); a card was made up during the fight (AfterCardGeneratedForCombat)
+    FORGED = auto()            # args: (amount,); Forge made the Sovereign Blades stronger
     ETHEREAL_EXHAUSTED = auto()  # args: (count,); once, after the hand is discarded at end of turn
 
 

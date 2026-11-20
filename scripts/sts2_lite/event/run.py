@@ -5,9 +5,9 @@ Card entries are made from the sim's own tables, so a card an event adds has the
 from __future__ import annotations
 import random
 
-from sts2_lite.card.constants import CARD_ENERGY_COST_AND_TARGET, PLAYABLE_CURSES
+from sts2_lite.card.constants import CARD_ENERGY_COST_AND_TARGET, PLAYABLE_CURSES, STAR_COST
 from sts2_lite.card.ids import CardId, CardType
-from sts2_lite.card.tables import CARD_RARITY, CHARACTER_CARDS, COLORLESS_CARDS, GENERATABLE_CARDS, SILENT_CARDS, STRIKE_CARDS, DEFEND_CARDS
+from sts2_lite.card.tables import CARD_RARITY, CHARACTER_CARDS, COLORLESS_CARDS, GENERATABLE_CARDS, REGENT_CARDS, SILENT_CARDS, STRIKE_CARDS, DEFEND_CARDS
 from sts2_lite.run.state import RunState
 
 REST_HEAL_SHARE = 0.30          # what a rest site heals, as a share of max HP (the Dense Vegetation and Unrest Site heal match it)
@@ -30,7 +30,7 @@ def card_entry(card_id : CardId | str, upgraded : bool = False) -> dict:
         cost, target = CARD_ENERGY_COST_AND_TARGET[cid]
     else:
         cost, target = ANCIENT_CARDS[cid][2:4]
-    for table in (GENERATABLE_CARDS, SILENT_CARDS, COLORLESS_CARDS, EVENT_CARDS, TOKEN_CARDS, ANCIENT_CARDS):
+    for table in (GENERATABLE_CARDS, SILENT_CARDS, REGENT_CARDS, COLORLESS_CARDS, EVENT_CARDS, TOKEN_CARDS, ANCIENT_CARDS):
         if cid in table:
             name, ctype = table[cid][0], table[cid][1]
             break
@@ -45,6 +45,8 @@ def card_entry(card_id : CardId | str, upgraded : bool = False) -> dict:
             raise KeyError(f"no type known for card {cid.name}")
     entry = {"id": cid.name, "name": name, "type": ctype.name, "rarity": "Curse" if ctype == CardType.Curse else CARD_RARITY[cid].name if cid in CARD_RARITY else None,
              "cost": cost, "target_type": target.name if target is not None else None, "is_upgraded": bool(upgraded)}
+    if cid in STAR_COST:
+        entry["star_cost"] = STAR_COST[cid]         # the Regent's cards also cost Stars
     if upgraded:
         entry["_upgrade"] = True
     return entry

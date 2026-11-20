@@ -58,7 +58,7 @@ def _build_captured(template : FightTemplate, deck : list[dict], player : dict, 
     opening = Opening(relics, template.room_type, template.kind == "boss")
     energy = BASE_ENERGY + opening.energy_bonus()
     me.update(hp=player["hp"], max_hp=player["max_hp"], block=0, status=[], hand=[], draw_pile=cards, discard_pile=[], exhaust_pile=[],
-              relics=relics, potions=[], energy=energy, max_energy=energy,
+              relics=relics, potions=[], energy=energy, max_energy=energy, stars=0,
               draw_pile_count=len(cards), discard_pile_count=0, exhaust_pile_count=0)
     state["energy"], state["max_energy"] = energy, energy
     state.pop("battle", None)

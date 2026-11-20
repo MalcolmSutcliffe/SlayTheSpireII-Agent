@@ -29,6 +29,8 @@ CHARACTERS = {
                           ("STRIKE_IRONCLAD",) * 5 + ("DEFEND_IRONCLAD",) * 4 + ("BASH",)),
     "SILENT": Character("SILENT", "The Silent", 70, 99, 3, "RING_OF_THE_SNAKE", "Ring of the Snake",
                         ("STRIKE_SILENT",) * 5 + ("DEFEND_SILENT",) * 5 + ("NEUTRALIZE", "SURVIVOR")),       # Silent.StartingDeck; captured in silent-a0-1
+    "REGENT": Character("REGENT", "The Regent", 75, 99, 3, "DIVINE_RIGHT", "Divine Right",
+                        ("STRIKE_REGENT",) * 4 + ("DEFEND_REGENT",) * 4 + ("FALLING_STAR", "VENERATE")),       # Regent.StartingDeck
 }
 
 

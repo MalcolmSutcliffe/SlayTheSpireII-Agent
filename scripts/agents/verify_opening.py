@@ -90,6 +90,10 @@ def opening_diffs(game_state : dict) -> tuple[list[str], CombatState, CombatStat
         pocketwatch_hand = True
     else:
         pocketwatch_hand = False
+    picks = sum(1 for r in game_state["player"].get("relics") or [] if r.get("id") in ("TOOLBOX", "CHOICES_PARADOX") and r.get("status") != "Disabled")
+    if picks:       # the card the player picked is not in the sim's opening (the choice is not made in a fight built from a deck)
+        diffs = [d for d in diffs if not d.startswith("cards owned")]
+        pocketwatch_hand = pocketwatch_hand or len(actual.player.hand) - len(predicted.player.hand) == picks
     if len(predicted.player.hand) != len(actual.player.hand) and not pocketwatch_hand:
         diffs.append(f"opening hand size: sim {len(predicted.player.hand)}, game {len(actual.player.hand)}")
     sim_innate, game_innate = _innate_in_hand(predicted), _innate_in_hand(actual)

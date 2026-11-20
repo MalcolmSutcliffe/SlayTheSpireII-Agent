@@ -7,6 +7,7 @@ from sts2_lite.status import StatusId
 
 from sts2_lite.relic.ids import BRILLIANT_SCARF_CARDS, FAN_EVERY, KUNAI_EVERY, KUSARIGAMA_EVERY, LETTER_OPENER_DAMAGE, LETTER_OPENER_EVERY, NUNCHAKU_EVERY, RelicId, RelicInstance, SHURIKEN_EVERY
 from sts2_lite.relic.modifiers import PAELS_LEGION_COOLDOWN
+from sts2_lite.relic.regent import _vitruvian_minion_damage
 
 if TYPE_CHECKING:
     from sts2_lite.card import Card
@@ -145,6 +146,7 @@ def _pen_nib_damage(relic : RelicInstance, card : Card | None, in_play : bool) -
     return 2 if relic.triggering is card else 1
 
 DAMAGE_MULTIPLIER : dict[RelicId, Callable[[RelicInstance, Card | None, bool], int]] = {
+    RelicId.VITRUVIAN_MINION : _vitruvian_minion_damage,
     RelicId.PEN_NIB : _pen_nib_damage,
 }
 

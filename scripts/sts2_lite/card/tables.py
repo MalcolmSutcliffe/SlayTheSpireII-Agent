@@ -97,7 +97,11 @@ GENERATABLE_CARDS = {
 
 TOKEN_CARDS = {CardId.GIANT_ROCK : ("Giant Rock", CardType.Attack, 1, A),      # made by Primal Force
                CardId.SHIV : ("Shiv", CardType.Attack, 0, A),                 # the Silent's Blade Dance, Cloak and Dagger, Cunning Potion...
-               CardId.LUMINESCE : ("Luminesce", CardType.Skill, 0, S)}          # Radiant Pearl: Retain. Gain 2 Energy (3 upgraded). Exhaust.
+               CardId.LUMINESCE : ("Luminesce", CardType.Skill, 0, S),
+               CardId.SOVEREIGN_BLADE : ("Sovereign Blade", CardType.Attack, 2, A),
+               CardId.MINION_STRIKE : ("Minion Strike", CardType.Attack, 0, A),
+               CardId.MINION_DIVE_BOMB : ("Minion Dive Bomb", CardType.Attack, 0, A),
+               CardId.MINION_SACRIFICE : ("Minion Sacrifice", CardType.Skill, 0, S)}      # Charge's transform      # the Regent's Forge makes it          # Radiant Pearl: Retain. Gain 2 Energy (3 upgraded). Exhaust.
 
 # event cards (CardRarity.Event): never generated in combat; listed so tests and transforms can build them
 EVENT_CARDS = {
@@ -239,9 +243,100 @@ ANCIENT_CARDS = {
     CardId.APPARITION : ("Apparition", CardType.Skill, 1, S), CardId.BRIGHTEST_FLAME : ("Brightest Flame", CardType.Skill, 0, S),
     CardId.MAUL : ("Maul", CardType.Attack, 1, A), CardId.RELAX : ("Relax", CardType.Skill, 3, S),
     CardId.WHISTLE : ("Whistle", CardType.Attack, 2, A), CardId.WISH : ("Wish", CardType.Skill, 0, S),
+    CardId.SUPPRESS : ("Suppress", CardType.Attack, 0, A), CardId.WRAITH_FORM : ("Wraith Form", CardType.Power, 3, S),
+    CardId.METEOR_SHOWER : ("Meteor Shower", CardType.Attack, 0, ALL), CardId.THE_SEALED_THRONE : ("The Sealed Throne", CardType.Power, 1, S),
 }
 
-CHARACTER_CARDS = {"IRONCLAD": GENERATABLE_CARDS, "SILENT": SILENT_CARDS}      # each character's card table (its pool, Basic cards included for the Silent)
+# the Regent's cards (RegentCardPool), Basic ones included; the Star cost of each is in constants.STAR_COST
+REGENT_CARDS = {
+    CardId.STRIKE_REGENT : ("Strike", CardType.Attack, 1, A), CardId.DEFEND_REGENT : ("Defend", CardType.Skill, 1, S),
+    CardId.FALLING_STAR : ("Falling Star", CardType.Attack, 0, A), CardId.VENERATE : ("Venerate", CardType.Skill, 1, S),
+    # Common
+    CardId.ASTRAL_PULSE : ("Astral Pulse", CardType.Attack, 0, ALL),
+    CardId.BEGONE : ("Begone!", CardType.Skill, 1, S),
+    CardId.CELESTIAL_MIGHT : ("Celestial Might", CardType.Attack, 2, A),
+    CardId.CLOAK_OF_STARS : ("Cloak of Stars", CardType.Skill, 0, S),
+    CardId.COLLISION_COURSE : ("Collision Course", CardType.Attack, 0, A),
+    CardId.COSMIC_INDIFFERENCE : ("Cosmic Indifference", CardType.Skill, 1, S),
+    CardId.CRESCENT_SPEAR : ("Crescent Spear", CardType.Attack, 1, A),
+    CardId.CRUSH_UNDER : ("Crush Under", CardType.Attack, 1, ALL),
+    CardId.GATHER_LIGHT : ("Gather Light", CardType.Skill, 1, S),
+    CardId.GLITTERSTREAM : ("Glitterstream", CardType.Skill, 2, S),
+    CardId.GLOW : ("Glow", CardType.Skill, 1, S),
+    CardId.GUIDING_STAR : ("Guiding Star", CardType.Attack, 1, A),
+    CardId.HIDDEN_CACHE : ("Hidden Cache", CardType.Skill, 1, S),
+    CardId.KNOW_THY_PLACE : ("Know Thy Place", CardType.Skill, 0, A),
+    CardId.PATTER : ("Patter", CardType.Skill, 1, S),
+    CardId.PHOTON_CUT : ("Photon Cut", CardType.Attack, 1, A),
+    CardId.REFINE_BLADE : ("Refine Blade", CardType.Skill, 1, S),
+    CardId.SOLAR_STRIKE : ("Solar Strike", CardType.Attack, 1, A),
+    CardId.SPOILS_OF_BATTLE : ("Spoils of Battle", CardType.Skill, 1, S),
+    CardId.WROUGHT_IN_WAR : ("Wrought in War", CardType.Attack, 1, A),
+    # Uncommon (Constellation, Largesse and Plot are multiplayer only)
+    CardId.ALIGNMENT : ("Alignment", CardType.Skill, 0, S),
+    CardId.BLACK_HOLE : ("Black Hole", CardType.Power, 1, S),
+    CardId.BULWARK : ("Bulwark", CardType.Skill, 2, S),
+    CardId.CHARGE : ("Charge", CardType.Skill, 1, S),
+    CardId.CHILD_OF_THE_STARS : ("Child of the Stars", CardType.Power, 1, S),
+    CardId.CONQUEROR : ("Conqueror", CardType.Skill, 1, A),
+    CardId.CONVERGENCE : ("Convergence", CardType.Skill, 1, S),
+    CardId.DEVASTATE : ("Devastate", CardType.Attack, 1, A),
+    CardId.FURNACE : ("Furnace", CardType.Power, 1, S),
+    CardId.GAMMA_BLAST : ("Gamma Blast", CardType.Attack, 0, A),
+    CardId.GLIMMER : ("Glimmer", CardType.Skill, 1, S),
+    CardId.HEGEMONY : ("Hegemony", CardType.Attack, 2, A),
+    CardId.KINGLY_KICK : ("Kingly Kick", CardType.Attack, 4, A),
+    CardId.KINGLY_PUNCH : ("Kingly Punch", CardType.Attack, 1, A),
+    CardId.LUNAR_BLAST : ("Lunar Blast", CardType.Attack, 0, A),
+    CardId.MANIFEST_AUTHORITY : ("Manifest Authority", CardType.Skill, 1, S),
+    CardId.MONOLOGUE : ("Monologue", CardType.Skill, 0, S),
+    CardId.ORBIT : ("Orbit", CardType.Power, 2, S),
+    CardId.PALE_BLUE_DOT : ("Pale Blue Dot", CardType.Power, 1, S),
+    CardId.PARRY : ("Parry", CardType.Power, 1, S),
+    CardId.PARTICLE_WALL : ("Particle Wall", CardType.Skill, 0, S),
+    CardId.PILLAR_OF_CREATION : ("Pillar of Creation", CardType.Power, 1, S),
+    CardId.PROPHESIZE : ("Prophesize", CardType.Skill, 2, S),
+    CardId.QUASAR : ("Quasar", CardType.Skill, 0, S),
+    CardId.RADIATE : ("Radiate", CardType.Attack, 0, ALL),
+    CardId.REFLECT : ("Reflect", CardType.Skill, 1, S),
+    CardId.RESONANCE : ("Resonance", CardType.Skill, 1, ALL),
+    CardId.ROYAL_GAMBLE : ("Royal Gamble", CardType.Skill, 0, S),
+    CardId.SHINING_STRIKE : ("Shining Strike", CardType.Attack, 1, A),
+    CardId.SPECTRUM_SHIFT : ("Spectrum Shift", CardType.Power, 2, S),
+    CardId.STARDUST : ("Stardust", CardType.Attack, 0, RAND),
+    CardId.SUMMON_FORTH : ("Summon Forth", CardType.Skill, 1, S),
+    CardId.SUPERMASSIVE : ("Supermassive", CardType.Attack, 1, A),
+    CardId.TERRAFORMING : ("Terraforming", CardType.Skill, 1, S),
+    CardId.KNOCKOUT_BLOW : ("Knockout Blow", CardType.Attack, 3, A),
+    # Rare (Hammer Time and Tutor are multiplayer only)
+    CardId.ARSENAL : ("Arsenal", CardType.Power, 1, S),
+    CardId.BEAT_INTO_SHAPE : ("Beat into Shape", CardType.Attack, 1, A),
+    CardId.BIG_BANG : ("Big Bang", CardType.Skill, 0, S),
+    CardId.BOMBARDMENT : ("Bombardment", CardType.Attack, 3, A),
+    CardId.BUNDLE_OF_JOY : ("Bundle of Joy", CardType.Skill, 1, S),
+    CardId.COMET : ("Comet", CardType.Attack, 0, A),
+    CardId.CRASH_LANDING : ("Crash Landing", CardType.Attack, 1, ALL),
+    CardId.DECISIONS_DECISIONS : ("Decisions, Decisions", CardType.Skill, 0, S),
+    CardId.DYING_STAR : ("Dying Star", CardType.Attack, 1, ALL),
+    CardId.FOREGONE_CONCLUSION : ("Foregone Conclusion", CardType.Skill, 1, S),
+    CardId.GENESIS : ("Genesis", CardType.Power, 2, S),
+    CardId.GUARDS : ("Guards", CardType.Skill, 2, S),
+    CardId.HEAVENLY_DRILL : ("Heavenly Drill", CardType.Attack, "X", A),
+    CardId.HEIRLOOM_HAMMER : ("Heirloom Hammer", CardType.Attack, 2, A),
+    CardId.I_AM_INVINCIBLE : ("I Am Invincible", CardType.Skill, 1, S),
+    CardId.MAKE_IT_SO : ("Make It So", CardType.Attack, 0, A),
+    CardId.MONARCHS_GAZE : ("Monarch's Gaze", CardType.Power, 2, S),
+    CardId.NEUTRON_AEGIS : ("Neutron Aegis", CardType.Power, 1, S),
+    CardId.ROYALTIES : ("Royalties", CardType.Power, 1, S),
+    CardId.SEEKING_EDGE : ("Seeking Edge", CardType.Power, 1, S),
+    CardId.SEVEN_STARS : ("Seven Stars", CardType.Attack, 2, ALL),
+    CardId.SWORD_SAGE : ("Sword Sage", CardType.Power, 2, S),
+    CardId.THE_SMITH : ("The Smith", CardType.Skill, 1, S),
+    CardId.TYRANNY : ("Tyranny", CardType.Power, 1, S),
+    CardId.VOID_FORM : ("Void Form", CardType.Power, 3, S),
+}
+
+CHARACTER_CARDS = {"IRONCLAD": GENERATABLE_CARDS, "SILENT": SILENT_CARDS, "REGENT": REGENT_CARDS}      # each character's card table (its pool, Basic cards included for the Silent)
 
 # what Jack of All Trades can make: Hand of Greed (and Alchemize and Hidden Gem) cannot be generated in combat, and it makes no Jack of All Trades
 NOT_GENERATED_COLORLESS = frozenset({CardId.HAND_OF_GREED, CardId.HIDDEN_GEM, CardId.JACK_OF_ALL_TRADES, CardId.ALCHEMIZE})
@@ -280,14 +375,18 @@ class CardRarity(Enum):
 # table is complete). The true game rarity is stored: a policy that treats Bash like a Common does that itself.
 _RARITY_NAMES = {
     CardRarity.Basic : (
-        "STRIKE_IRONCLAD DEFEND_IRONCLAD BASH STRIKE_SILENT DEFEND_SILENT NEUTRALIZE SURVIVOR"
+        "STRIKE_IRONCLAD DEFEND_IRONCLAD BASH STRIKE_SILENT DEFEND_SILENT NEUTRALIZE SURVIVOR STRIKE_REGENT DEFEND_REGENT FALLING_STAR VENERATE"
     ),
     CardRarity.Common : (
+        "ASTRAL_PULSE BEGONE CELESTIAL_MIGHT CLOAK_OF_STARS COLLISION_COURSE COSMIC_INDIFFERENCE CRESCENT_SPEAR CRUSH_UNDER GATHER_LIGHT GLITTERSTREAM GLOW GUIDING_STAR "
+        "HIDDEN_CACHE KNOW_THY_PLACE PATTER PHOTON_CUT REFINE_BLADE SOLAR_STRIKE SPOILS_OF_BATTLE WROUGHT_IN_WAR "
         "BLOOD_WALL PERFECTED_STRIKE BREAKTHROUGH SHRUG_IT_OFF POMMEL_STRIKE IRON_WAVE THUNDERCLAP TREMBLE ANGER BODY_SLAM TWIN_STRIKE "
         "MOLTEN_FIST SWORD_BOOMERANG CINDER TAUNT ARMAMENTS HEADBUTT TRUE_GRIT HAVOC SETUP_STRIKE "
         "ANTICIPATE BACKFLIP BLADE_DANCE CLOAK_AND_DAGGER DAGGER_SPRAY DAGGER_THROW DEADLY_POISON DEFLECT DODGE_AND_ROLL FLICK_FLACK LEADING_STRIKE PIERCING_WAIL POISONED_STAB PREDATOR PREPARED RICOCHET SLICE SNAKEBITE SUCKER_PUNCH UNTOUCHABLE"
     ),
     CardRarity.Uncommon : (
+        "KNOCKOUT_BLOW ALIGNMENT BLACK_HOLE BULWARK CHARGE CHILD_OF_THE_STARS CONQUEROR CONVERGENCE DEVASTATE FURNACE GAMMA_BLAST GLIMMER HEGEMONY KINGLY_KICK KINGLY_PUNCH LUNAR_BLAST MANIFEST_AUTHORITY MONOLOGUE ORBIT PALE_BLUE_DOT PARRY PARTICLE_WALL PILLAR_OF_CREATION PROPHESIZE QUASAR RADIATE REFLECT RESONANCE ROYAL_GAMBLE SHINING_STRIKE SPECTRUM_SHIFT STARDUST SUMMON_FORTH SUPERMASSIVE TERRAFORMING"
+        " "
         "ACCELERANT ACCURACY ACROBATICS BACKSTAB BLUR BOUNCING_FLASK BUBBLE_BUBBLE CALCULATED_GAMBLE DASH ECHOING_SLASH ESCAPE_PLAN EXPERTISE EXPOSE FINISHER FLECHETTES SIDESTEP FOOTWORK HAND_TRICK HAZE HIDDEN_DAGGERS INFINITE_BLADES LEG_SWEEP MEMENTO_MORI MIRAGE NOXIOUS_FUMES PHANTOM_BLADES PINPOINT POUNCE PRECISE_CUT REFLEX SKEWER SPEEDSTER STRANGLE TACTICIAN UP_MY_SLEEVE "
         "INFLAME FIGHT_ME BLUDGEON UNRELENTING HEMOKINESIS DISMANTLE BULLY ASHEN_STRIKE UPPERCUT WHIRLWIND SPITE EVIL_EYE SECOND_WIND "
         "BLOODLETTING FINESSE FLASH_OF_STEEL ULTIMATE_STRIKE ULTIMATE_DEFEND PRODUCTION DRAMATIC_ENTRANCE SHOCKWAVE PROWESS IMPATIENCE "
@@ -297,6 +396,8 @@ _RARITY_NAMES = {
         "FORGOTTEN_RITUAL HOWL_FROM_BEYOND INFERNAL_BLADE INFERNO PILLAGE RAMPAGE STOMP SALVO CRUELTY STRATAGEM"
     ),
     CardRarity.Rare : (
+        "ARSENAL BEAT_INTO_SHAPE BIG_BANG BOMBARDMENT BUNDLE_OF_JOY COMET CRASH_LANDING DECISIONS_DECISIONS DYING_STAR FOREGONE_CONCLUSION GENESIS GUARDS HEAVENLY_DRILL HEIRLOOM_HAMMER I_AM_INVINCIBLE MAKE_IT_SO MONARCHS_GAZE NEUTRON_AEGIS ROYALTIES SEEKING_EDGE SEVEN_STARS SWORD_SAGE THE_SMITH TYRANNY VOID_FORM"
+        " "
         "ABRASIVE ADRENALINE AFTERIMAGE ASSASSINATE BLADE_OF_INK BULLET_TIME BURST CORROSIVE_WAVE ENVENOM FAN_OF_KNIVES GRAND_FINALE KNIFE_TRAP MALAISE MASTER_PLANNER MURDER NIGHTMARE OUTBREAK SERPENT_FORM SHADOW_STEP SHADOWMELD STORM_OF_STEEL THE_HUNT TOOLS_OF_THE_TRADE TRACKING WELL_LAID_PLANS SPLASH "
         "CRIMSON_MANTLE IMPERVIOUS FEED AGGRESSION MASTER_OF_STRATEGY SCRAWL GOLD_AXE REND ETERNAL_ARMOR HAND_OF_GREED SECRET_TECHNIQUE "
         "SECRET_WEAPON ROLLING_BOULDER THE_GAMBIT MAYHEM NOSTALGIA BOLAS JACKPOT CALAMITY BEAT_DOWN ANOINTED ENTROPY HIDDEN_GEM ALCHEMIZE "
@@ -304,17 +405,17 @@ _RARITY_NAMES = {
         "OFFERING PACTS_END BRAND HELLRAISER MANGLE PRIMAL_FORCE STOKE TEAR_ASUNDER THRASH"
     ),
     CardRarity.Ancient : (
-        "BREAK NEOWS_FURY CORRUPTION ABUNDANCE APOTHEOSIS APPARITION BRIGHTEST_FLAME MAUL RELAX WHISTLE WISH"
+        "BREAK NEOWS_FURY CORRUPTION ABUNDANCE APOTHEOSIS APPARITION BRIGHTEST_FLAME MAUL RELAX WHISTLE WISH METEOR_SHOWER THE_SEALED_THRONE SUPPRESS WRAITH_FORM"
     ),
     CardRarity.Event : (
         "BYRD_SWOOP EXTERMINATE PECK SQUASH ENLIGHTENMENT METAMORPHOSIS TORIC_TOUGHNESS FEEDING_FRENZY MAD_SCIENCE "
         "CLASH DUAL_WIELD ENTRENCH CALTROPS DISTRACTION OUTMANEUVER HELLO_WORLD REBOUND RIP_AND_TEAR STACK"
     ),
     CardRarity.Token : (
-        "GIANT_ROCK LUMINESCE SHIV"
+        "GIANT_ROCK LUMINESCE SHIV SOVEREIGN_BLADE MINION_STRIKE MINION_DIVE_BOMB MINION_SACRIFICE"
     ),
     CardRarity.Status : (
-        "SLIMED INFECTION BURN BECKON WITHER DAZED WOUND SOOT TOXIC FRANTIC_ESCAPE DISINTEGRATION MIND_ROT SLOTH WASTE_AWAY"
+        "SLIMED INFECTION BURN BECKON WITHER DAZED WOUND SOOT TOXIC FRANTIC_ESCAPE DISINTEGRATION MIND_ROT SLOTH WASTE_AWAY DEBRIS"
     ),
     CardRarity.Curse : (
         "REGRET DECAY SHAME DOUBT NORMALITY INJURY POOR_SLEEP GREED CLUMSY CURSE_OF_THE_BELL WRITHE FOLLY BAD_LUCK DEBT GUILTY SPORE_MIND "
@@ -345,6 +446,7 @@ _GENERATED_RARITIES = (CardRarity.Common, CardRarity.Uncommon, CardRarity.Rare)
 COMBAT_CARDS = {
     "IRONCLAD": GENERATABLE_CARDS,
     "SILENT": {cid: v for cid, v in SILENT_CARDS.items() if CARD_RARITY[cid] in _GENERATED_RARITIES and cid not in NOT_GENERATED_IN_COMBAT},
+    "REGENT": {cid: v for cid, v in REGENT_CARDS.items() if CARD_RARITY[cid] in _GENERATED_RARITIES and cid not in NOT_GENERATED_IN_COMBAT},
 }
 
 
@@ -376,10 +478,10 @@ def splash_pool(character : str = "IRONCLAD") -> list[CardId]:
 RETURNING_CARDS = frozenset({CardId.BOLAS, CardId.THRUMMING_HATCHET})
 
 # cards with the Defend tag (Fasten)
-DEFEND_CARDS = frozenset({CardId.DEFEND_IRONCLAD, CardId.ULTIMATE_DEFEND, CardId.DEFEND_SILENT})
+DEFEND_CARDS = frozenset({CardId.DEFEND_IRONCLAD, CardId.ULTIMATE_DEFEND, CardId.DEFEND_SILENT, CardId.DEFEND_REGENT})
 
 # cards with the Strike tag (Hellraiser plays them when they are drawn)
-STRIKE_CARDS = frozenset({CardId.STRIKE_SILENT, CardId.LEADING_STRIKE, CardId.ULTIMATE_STRIKE, CardId.SEEKER_STRIKE, CardId.STRIKE_IRONCLAD, CardId.PERFECTED_STRIKE, CardId.POMMEL_STRIKE, CardId.TWIN_STRIKE,
+STRIKE_CARDS = frozenset({CardId.SHINING_STRIKE, CardId.STRIKE_SILENT, CardId.STRIKE_REGENT, CardId.SOLAR_STRIKE, CardId.MINION_STRIKE, CardId.LEADING_STRIKE, CardId.ULTIMATE_STRIKE, CardId.SEEKER_STRIKE, CardId.STRIKE_IRONCLAD, CardId.PERFECTED_STRIKE, CardId.POMMEL_STRIKE, CardId.TWIN_STRIKE,
                           CardId.ASHEN_STRIKE, CardId.SETUP_STRIKE})
 
 def _curse_debuff(player, status : StatusId):
