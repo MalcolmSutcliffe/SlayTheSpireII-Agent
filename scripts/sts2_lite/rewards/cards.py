@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import Callable, Iterable
 
 from sts2_lite.card.ids import CardId
-from sts2_lite.card.tables import CARD_RARITY, GENERATABLE_CARDS, REGENT_CARDS, SILENT_CARDS
+from sts2_lite.card.tables import CARD_RARITY, GENERATABLE_CARDS, NECROBINDER_CARDS, REGENT_CARDS, SILENT_CARDS
 from sts2_lite.rewards.odds import ENCOUNTER_ODDS, CardRarityOdds, OddsType, Rarity, Source, SCARCITY_ASCENSION
 
 REWARD_RARITIES = ("Common", "Uncommon", "Rare")
@@ -31,7 +31,7 @@ def _table_pool(table) -> dict[str, tuple[CardId, ...]]:
     return {rarity: tuple(cid for cid in table if CARD_RARITY[cid].name == rarity) for rarity in REWARD_RARITIES}
 
 
-CHARACTER_POOLS = {"IRONCLAD": IRONCLAD_POOL, "SILENT": _table_pool(SILENT_CARDS), "REGENT": _table_pool(REGENT_CARDS)}
+CHARACTER_POOLS = {"IRONCLAD": IRONCLAD_POOL, "SILENT": _table_pool(SILENT_CARDS), "REGENT": _table_pool(REGENT_CARDS), "NECROBINDER": _table_pool(NECROBINDER_CARDS)}
 
 
 def card_pool(character : str = "IRONCLAD") -> dict[str, tuple[CardId, ...]]:

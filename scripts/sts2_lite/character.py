@@ -31,6 +31,8 @@ CHARACTERS = {
                         ("STRIKE_SILENT",) * 5 + ("DEFEND_SILENT",) * 5 + ("NEUTRALIZE", "SURVIVOR")),       # Silent.StartingDeck; captured in silent-a0-1
     "REGENT": Character("REGENT", "The Regent", 75, 99, 3, "DIVINE_RIGHT", "Divine Right",
                         ("STRIKE_REGENT",) * 4 + ("DEFEND_REGENT",) * 4 + ("FALLING_STAR", "VENERATE")),       # Regent.StartingDeck
+    "NECROBINDER": Character("NECROBINDER", "The Necrobinder", 66, 99, 3, "BOUND_PHYLACTERY", "Bound Phylactery",
+                             ("STRIKE_NECROBINDER",) * 4 + ("DEFEND_NECROBINDER",) * 4 + ("BODYGUARD", "UNLEASH")),       # Necrobinder.StartingDeck
 }
 
 

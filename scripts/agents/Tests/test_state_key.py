@@ -184,10 +184,10 @@ KEYED_OR_IGNORED = {
                "inferno_plays", "cards_played_total", "crimson_mantle_plays", "attacks_played_this_turn", "skills_played_this_turn", "shivs_played_this_turn", "discards_this_turn", "stars", "stars_spent_this_turn", "stars_gained_this_turn", "cards_generated", "nightmares", "plays_started_this_turn",
                "returning", "card_blocks_this_turn", "cards_exhausted_this_turn", "gold", "has_been_attacked_this_turn",
                "lost_hp_this_turn", "hp_loss_events", "hp_lost_log", "is_minion", "binding", "bound_cards", "bound_played", "smogged",
-               "potions", "extra_turn_pending",
+               "potions", "extra_turn_pending", "osty", "osty_attacks_this_turn", "extra_draws_this_turn", "doom_applied_this_turn", "ethereal_plays", "deck_buffs",
                # ignored: accounting that nothing reads between actions, and hooks wired by the simulator
                "cards_drawn", "unknown_draws", "damage_taken", "block_play", "block_play_gains",
-               "shuffle_hook", "draw_hook", "draw_pause_hook", "block_cleared_hook", "generated_hook", "counts_hits", "opening_hook",   # opening_hook: one-shot, set only while a deck-built fight opens
+               "osty_hurt_hook", "doom_hook", "shuffle_hook", "draw_hook", "draw_pause_hook", "block_cleared_hook", "generated_hook", "counts_hits", "opening_hook",   # opening_hook: one-shot, set only while a deck-built fight opens
                "potion_slots", "character"},           # ignored: fixed for the run (potion_slots only matters to Entropic Brew, character to card generation)
     "Enemy": {"block", "current_hp", "max_hp", "status", "is_minion", "enemy_id", "slot", "attack_damage", "num_attacks", "damage_candidates",
               "moves", "move_id", "move_streak", "used_moves", "has_been_attacked_this_turn", "lost_hp_this_turn", "hp_loss_events",

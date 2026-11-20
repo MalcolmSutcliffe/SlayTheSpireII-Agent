@@ -112,6 +112,13 @@ class RelicId(Enum):
     MINI_REGENT = auto()
     REGALITE = auto()
     VITRUVIAN_MINION = auto()
+    BOUND_PHYLACTERY = auto()      # the Necrobinder's relics
+    PHYLACTERY_UNBOUND = auto()
+    BONE_FLUTE = auto()
+    BOOK_REPAIR_KNIFE = auto()
+    BOOKMARK = auto()
+    IVORY_TILE = auto()
+    UNDYING_SIGIL = auto()
 
 # What the bridge calls a relic's state (if it reports one) when `used` is true.
 # The game marks Vambrace, Unsettling Lamp and Burning Sticks "Active" until they trigger, and a spent Lizard Tail "Disabled".

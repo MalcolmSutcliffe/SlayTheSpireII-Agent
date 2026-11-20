@@ -19,7 +19,7 @@ POTION_STEP = 0.1
 
 @dataclass
 class Reward:
-    kind : str              # "gold" | "potion" | "card" | "relic"
+    kind : str              # "gold" | "potion" | "card" | "relic" | "card_removal"
     amount : int = 0        # gold
     potion : str | None = None
     cards : list | None = None     # the cards of a card reward (CardOffer)
@@ -27,7 +27,7 @@ class Reward:
     room : str | None = None       # a card reward: the room type whose odds made it
 
     def description(self) -> str:
-        return {"gold": f"{self.amount} gold", "potion": "Add a potion to your belt", "card": "Add a card to your deck", "relic": "Obtain " + (relic_name(self.relic) if self.relic else "a relic")}[self.kind]
+        return {"card_removal": "Remove a card from your deck", "gold": f"{self.amount} gold", "potion": "Add a potion to your belt", "card": "Add a card to your deck", "relic": "Obtain " + (relic_name(self.relic) if self.relic else "a relic")}[self.kind]
 
 
 def gold_range(encounter : Encounter, ascension : int) -> tuple[int, int]:

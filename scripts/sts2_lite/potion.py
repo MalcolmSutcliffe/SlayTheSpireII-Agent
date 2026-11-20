@@ -99,6 +99,9 @@ class PotionId(Enum):
     STAR_POTION = auto()                # the Regent's potions: common
     KINGS_COURAGE = auto()              # uncommon
     COSMIC_CONCOCTION = auto()          # rare
+    POTION_OF_DOOM = auto()             # the Necrobinder's potions: common
+    BONE_BREW = auto()                  # uncommon
+    POT_OF_GHOULS = auto()              # rare
 
     @property
     def info(self) -> PotionInfo:
@@ -159,6 +162,7 @@ POTION_INFO : dict[PotionId, PotionInfo] = {
     PotionId.POISON_POTION : PotionInfo("Poison Potion", C, ONE), PotionId.CUNNING_POTION : PotionInfo("Cunning Potion", U, ME),
     PotionId.GHOST_IN_A_JAR : PotionInfo("Ghost in a Jar", R, ME),
     PotionId.STAR_POTION : PotionInfo("Star Potion", C, ME), PotionId.KINGS_COURAGE : PotionInfo("King's Courage", U, ME), PotionId.COSMIC_CONCOCTION : PotionInfo("Cosmic Concoction", R, ME),
+    PotionId.POTION_OF_DOOM : PotionInfo("Potion of Doom", C, ONE), PotionId.BONE_BREW : PotionInfo("Bone Brew", U, ME), PotionId.POT_OF_GHOULS : PotionInfo("Pot of Ghouls", R, ME),
 }
 _BY_NORMALISED_NAME = {_normalise(p.name): p for p in PotionId}
 _BY_NORMALISED_NAME.update({_normalise(info.name): p for p, info in POTION_INFO.items()})
@@ -294,6 +298,20 @@ def _star_potion(combat, t):
 
 def _kings_courage(combat, t):
     combat.forge(KINGS_COURAGE_FORGE)
+
+POTION_OF_DOOM_DOOM, BONE_BREW_SUMMON, POT_OF_GHOULS_SOULS = 33, 15, 2
+
+def _potion_of_doom(combat, t):
+    from sts2_lite.necrobinder import apply_doom
+    apply_doom(combat, _target(combat, t), POTION_OF_DOOM_DOOM)
+
+def _bone_brew(combat, t):
+    from sts2_lite.necrobinder import summon
+    summon(player_of(combat), BONE_BREW_SUMMON)
+
+def _pot_of_ghouls(combat, t):
+    from sts2_lite.necrobinder import create_souls
+    create_souls(combat, POT_OF_GHOULS_SOULS, pile="hand")
 
 def _cosmic_concoction(combat, t):
     """Distinct colorless cards, each upgraded, join the hand."""
@@ -458,6 +476,7 @@ EFFECTS : dict[PotionId, Callable] = {
     PotionId.GLOWWATER_POTION : _glowwater_potion, PotionId.POTION_SHAPED_ROCK : _potion_shaped_rock,
     PotionId.POISON_POTION : _poison_potion, PotionId.CUNNING_POTION : _cunning_potion, PotionId.GHOST_IN_A_JAR : _ghost_in_a_jar,
     PotionId.STAR_POTION : _star_potion, PotionId.KINGS_COURAGE : _kings_courage, PotionId.COSMIC_CONCOCTION : _cosmic_concoction,
+    PotionId.POTION_OF_DOOM : _potion_of_doom, PotionId.BONE_BREW : _bone_brew, PotionId.POT_OF_GHOULS : _pot_of_ghouls,
 }
 assert set(EFFECTS) == set(PotionId) == set(POTION_INFO)
 

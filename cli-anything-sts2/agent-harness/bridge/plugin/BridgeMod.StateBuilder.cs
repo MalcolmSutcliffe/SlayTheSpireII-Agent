@@ -462,6 +462,18 @@ public static partial class BridgeMod
                 state["stars"] = combatState.Stars;
             }
 
+            // Osty (The Necrobinder's pet): absent until summoned, hp 0 once it has died
+            var osty = player.Osty;
+            if (osty != null)
+            {
+                state["osty"] = new Dictionary<string, object?>
+                {
+                    ["hp"] = osty.CurrentHp,
+                    ["max_hp"] = osty.MaxHp,
+                    ["alive"] = osty.IsAlive
+                };
+            }
+
             // Hand
             var hand = new List<Dictionary<string, object?>>();
             int cardIndex = 0;
@@ -819,6 +831,14 @@ public static partial class BridgeMod
             {
                 var hitbox = ancientLayout.GetNodeOrNull<NClickableControl>("%DialogueHitbox");
                 inDialogue = hitbox != null && hitbox.Visible && hitbox.IsEnabled;
+                if (inDialogue)
+                {
+                    // Which line the dialogue is on: advancing it changes nothing else in the state, so a runner comparing states would think the click did nothing
+                    var layoutType = typeof(NAncientEventLayout);
+                    const System.Reflection.BindingFlags flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+                    state["dialogue_line"] = layoutType.GetField("_currentDialogueLine", flags)?.GetValue(ancientLayout);
+                    state["dialogue_lines"] = (layoutType.GetField("_dialogue", flags)?.GetValue(ancientLayout) as System.Collections.ICollection)?.Count;
+                }
             }
         }
         state["in_dialogue"] = inDialogue;

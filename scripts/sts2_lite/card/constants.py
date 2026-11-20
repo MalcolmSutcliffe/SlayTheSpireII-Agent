@@ -346,6 +346,95 @@ CARD_ENERGY_COST_AND_TARGET : dict[CardId, tuple[int | str, TargetType]] = {
     CardId.SUPPRESS : (0, _A),
     CardId.WRAITH_FORM : (3, _S),
     CardId.THE_SEALED_THRONE : (1, _S),
+    CardId.BODYGUARD : (1, _S),
+    CardId.DEFEND_NECROBINDER : (1, _S),
+    CardId.FORBIDDEN_GRIMOIRE : (2, _S),
+    CardId.PROTECTOR : (1, _A),
+    CardId.STRIKE_NECROBINDER : (1, _A),
+    CardId.UNLEASH : (1, _A),
+    CardId.SOUL : (0, _S),
+    CardId.SWEEPING_GAZE : (0, _RAND),
+    # the Necrobinder's
+    CardId.AFTERLIFE : (1, _S),
+    CardId.BANSHEES_CRY : (9, _ALL),
+    CardId.BLIGHT_STRIKE : (1, _A),
+    CardId.BONE_SHARDS : (1, _ALL),
+    CardId.BORROWED_TIME : (1, _S),
+    CardId.BURY : (4, _A),
+    CardId.CALCIFY : (1, _S),
+    CardId.CALL_OF_THE_VOID : (1, _S),
+    CardId.CAPTURE_SPIRIT : (1, _A),
+    CardId.CLEANSE : (1, _S),
+    CardId.COUNTDOWN : (1, _S),
+    CardId.DANSE_MACABRE : (1, _S),
+    CardId.DEATH_MARCH : (1, _A),
+    CardId.DEATHBRINGER : (2, _ALL),
+    CardId.DEATHS_DOOR : (1, _S),
+    CardId.DEBILITATE : (1, _A),
+    CardId.DEFILE : (1, _A),
+    CardId.DEFY : (1, _A),
+    CardId.DELAY : (2, _S),
+    CardId.DEMESNE : (3, _S),
+    CardId.DEVOUR_LIFE : (1, _S),
+    CardId.DIRGE : ("X", _S),
+    CardId.DRAIN_POWER : (1, _A),
+    CardId.DREDGE : (1, _S),
+    CardId.EIDOLON : (2, _S),
+    CardId.END_OF_DAYS : (3, _ALL),
+    CardId.ENFEEBLING_TOUCH : (1, _A),
+    CardId.ERADICATE : ("X", _A),
+    CardId.FEAR : (1, _A),
+    CardId.FETCH : (0, _A),
+    CardId.FLATTEN : (2, _A),
+    CardId.FRIENDSHIP : (1, _S),
+    CardId.GRAVE_WARDEN : (1, _S),
+    CardId.GRAVEBLAST : (1, _A),
+    CardId.HANG : (1, _A),
+    CardId.HAUNT : (1, _S),
+    CardId.HIGH_FIVE : (2, _ALL),
+    CardId.INVOKE : (1, _S),
+    CardId.LETHALITY : (1, _S),
+    CardId.MELANCHOLY : (3, _S),
+    CardId.MISERY : (0, _A),
+    CardId.NECRO_MASTERY : (2, _S),
+    CardId.NEGATIVE_PULSE : (1, _ALL),
+    CardId.NEUROSURGE : (0, _S),
+    CardId.NO_ESCAPE : (1, _A),
+    CardId.OBLIVION : (0, _A),
+    CardId.PAGESTORM : (1, _S),
+    CardId.PARSE : (1, _S),
+    CardId.POKE : (0, _A),
+    CardId.PULL_AGGRO : (2, _S),
+    CardId.PULL_FROM_BELOW : (1, _A),
+    CardId.PUTREFY : (1, _A),
+    CardId.RATTLE : (1, _A),
+    CardId.REANIMATE : (3, _S),
+    CardId.REAP : (3, _A),
+    CardId.REAPER_FORM : (3, _S),
+    CardId.REAVE : (1, _A),
+    CardId.RIGHT_HAND_HAND : (0, _A),
+    CardId.SACRIFICE : (1, _S),
+    CardId.SCOURGE : (1, _A),
+    CardId.SCULPTING_STRIKE : (1, _A),
+    CardId.SEANCE : (1, _S),
+    CardId.SENTRY_MODE : (2, _S),
+    CardId.SEVERANCE : (2, _A),
+    CardId.SHARED_FATE : (0, _A),
+    CardId.SHROUD : (1, _S),
+    CardId.SIC_EM : (1, _A),
+    CardId.SLEIGHT_OF_FLESH : (2, _S),
+    CardId.SNAP : (1, _A),
+    CardId.SOUL_STORM : (1, _A),
+    CardId.SOW : (1, _ALL),
+    CardId.SPIRIT_OF_ASH : (1, _S),
+    CardId.SPUR : (1, _S),
+    CardId.SQUEEZE : (3, _A),
+    CardId.THE_SCYTHE : (2, _A),
+    CardId.TIMES_UP : (2, _A),
+    CardId.TRANSFIGURE : (1, _S),
+    CardId.UNDEATH : (0, _S),
+    CardId.VEILPIERCER : (1, _A),
+    CardId.WISP : (0, _S),
 }
 
 INFECTION_DAMAGE = 3
@@ -360,6 +449,7 @@ TOXIC_DAMAGE = 5
 
 # energy cost change when upgraded (the rest of an upgrade is read from is_upgraded when the card is played)
 UPGRADE_COST_CHANGE = {
+    CardId.BANSHEES_CRY : -2, CardId.DEMESNE : -1, CardId.EIDOLON : -1, CardId.FORBIDDEN_GRIMOIRE : -1, CardId.PAGESTORM : -1, CardId.PROTECTOR : -1, CardId.SACRIFICE : -1, CardId.SEANCE : -1, CardId.SENTRY_MODE : -1,
     CardId.SOVEREIGN_BLADE : -1, CardId.THE_SEALED_THRONE : -1, CardId.ORBIT : -1, CardId.SPECTRUM_SHIFT : -1, CardId.MONARCHS_GAZE : -1, CardId.SEVEN_STARS : -1, CardId.SWORD_SAGE : -1,
     CardId.BARRICADE : -1, CardId.CORRUPTION : -1, CardId.DARK_EMBRACE : -1, CardId.STAMPEDE : -1,
     CardId.UNMOVABLE : -1, CardId.HAVOC : -1, CardId.INFERNAL_BLADE : -1,
@@ -391,6 +481,7 @@ STAR_COST : dict[CardId, int | str] = {
 UPGRADE_STAR_COST : dict[CardId, int] = {}
 
 UPGRADE_BASE_COST = {
+    CardId.BANSHEES_CRY : 9, CardId.DEMESNE : 3, CardId.EIDOLON : 2, CardId.FORBIDDEN_GRIMOIRE : 2, CardId.PAGESTORM : 1, CardId.PROTECTOR : 1, CardId.SACRIFICE : 1, CardId.SEANCE : 1, CardId.SENTRY_MODE : 2,
     CardId.SOVEREIGN_BLADE : 2, CardId.THE_SEALED_THRONE : 1, CardId.ORBIT : 2, CardId.SPECTRUM_SHIFT : 2, CardId.MONARCHS_GAZE : 2, CardId.SEVEN_STARS : 2, CardId.SWORD_SAGE : 2,
     CardId.BARRICADE : 3, CardId.CORRUPTION : 3, CardId.DARK_EMBRACE : 2, CardId.STAMPEDE : 2,
     CardId.UNMOVABLE : 2, CardId.HAVOC : 1, CardId.INFERNAL_BLADE : 1,
@@ -411,10 +502,10 @@ UPGRADE_BASE_COST = {
 }
 
 # keyword an upgrade removes (Exhaust)
-UPGRADE_REMOVED_KEYWORD = {CardId.VOID_FORM : 2, CardId.KNOW_THY_PLACE : 1, CardId.SECRET_TECHNIQUE : 1, CardId.SECRET_WEAPON : 1, CardId.THINKING_AHEAD : 1, CardId.PROLONG : 1, CardId.DISCOVERY : 1, CardId.APPARITION : 2, CardId.MIRAGE : 1}      # Exhaust x5, Ethereal for Apparition
+UPGRADE_REMOVED_KEYWORD = {CardId.GRAVEBLAST : 1, CardId.TRANSFIGURE : 1, CardId.VOID_FORM : 2, CardId.KNOW_THY_PLACE : 1, CardId.SECRET_TECHNIQUE : 1, CardId.SECRET_WEAPON : 1, CardId.THINKING_AHEAD : 1, CardId.PROLONG : 1, CardId.DISCOVERY : 1, CardId.APPARITION : 2, CardId.MIRAGE : 1}      # Exhaust x5, Ethereal for Apparition
 
 # keyword an upgrade adds
-UPGRADE_KEYWORD = {CardId.ARSENAL : 4, CardId.BIG_BANG : 4, CardId.TYRANNY : 4, CardId.MONOLOGUE : 16, CardId.ROYAL_GAMBLE : 16, CardId.HELLO_WORLD : 4, CardId.MAD_SCIENCE : 4, CardId.SCRAWL : 16, CardId.GOLD_AXE : 16, CardId.ANOINTED : 16, CardId.ENTROPY : 4, CardId.WISH : 16, CardId.AGGRESSION : 4, CardId.JUGGLING : 4, CardId.CALCULATED_GAMBLE : 16, CardId.INFINITE_BLADES : 4, CardId.SPEEDSTER : 4, CardId.AFTERIMAGE : 4}       # Retain, Retain, Retain, Innate (Entropy, Aggression, Juggling), Retain
+UPGRADE_KEYWORD = {CardId.CALL_OF_THE_VOID : 4, CardId.DREDGE : 16, CardId.MISERY : 16, CardId.REAPER_FORM : 16, CardId.TIMES_UP : 16, CardId.WISP : 16, CardId.ARSENAL : 4, CardId.BIG_BANG : 4, CardId.TYRANNY : 4, CardId.MONOLOGUE : 16, CardId.ROYAL_GAMBLE : 16, CardId.HELLO_WORLD : 4, CardId.MAD_SCIENCE : 4, CardId.SCRAWL : 16, CardId.GOLD_AXE : 16, CardId.ANOINTED : 16, CardId.ENTROPY : 4, CardId.WISH : 16, CardId.AGGRESSION : 4, CardId.JUGGLING : 4, CardId.CALCULATED_GAMBLE : 16, CardId.INFINITE_BLADES : 4, CardId.SPEEDSTER : 4, CardId.AFTERIMAGE : 4}       # Retain, Retain, Retain, Innate (Entropy, Aggression, Juggling), Retain
 
 CONFUSED_MAX_COST = 3
 
@@ -465,6 +556,14 @@ DECAY_DAMAGE = 2
 BAD_LUCK_HP_LOSS = 13
 
 CURSE_STATUS_AMOUNT = 1         # Shame (Frail), Doubt (Weak)
+
+# the Necrobinder's keywords
+EXHAUSTING_CARDS = EXHAUSTING_CARDS | frozenset({CardId.AFTERLIFE, CardId.DIRGE, CardId.DREDGE, CardId.EIDOLON, CardId.GRAVEBLAST, CardId.PUTREFY, CardId.REANIMATE, CardId.SHARED_FATE, CardId.SOUL, CardId.SWEEPING_GAZE, CardId.THE_SCYTHE, CardId.TRANSFIGURE, CardId.WISP})
+ETHEREAL_CARDS = ETHEREAL_CARDS | frozenset({CardId.DEFILE, CardId.DEFY, CardId.DEMESNE, CardId.ENFEEBLING_TOUCH, CardId.FEAR, CardId.LETHALITY, CardId.PARSE, CardId.SEANCE, CardId.SWEEPING_GAZE})
+RETAINING_CARDS = RETAINING_CARDS | frozenset({CardId.ERADICATE, CardId.REAP, CardId.SACRIFICE, CardId.SOW, CardId.SPUR})
+INNATE_CARDS = INNATE_CARDS | frozenset({})
+ETERNAL_CARDS = ETERNAL_CARDS | frozenset({CardId.FORBIDDEN_GRIMOIRE})
+OSTY_ATTACK_CARDS = frozenset({CardId.BONE_SHARDS, CardId.FETCH, CardId.FLATTEN, CardId.HIGH_FIVE, CardId.POKE, CardId.PROTECTOR, CardId.RATTLE, CardId.RIGHT_HAND_HAND, CardId.SIC_EM, CardId.SNAP, CardId.SQUEEZE, CardId.UNLEASH, CardId.SWEEPING_GAZE})      # CardTag.OstyAttack
 
 def _set_canonical_keywords():
     """CardModel.CanonicalKeywords, stored as a mask on each CardId member."""

@@ -194,5 +194,6 @@ class RunManager:
             self.rested_at = (self.run_state.act, self.run_state.floor)
         execute(self.client, option.action)
         if not self.client.wait_for_change(screen):
-            tried.add(dump(option.action))
+            if option.action["action"] != "advance_dialogue":       # a dialogue's next line may leave the state as it was (an older bridge): worth sending again
+                tried.add(dump(option.action))
             print(f"the game did not react to {option.label!r}")

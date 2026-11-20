@@ -101,7 +101,9 @@ TOKEN_CARDS = {CardId.GIANT_ROCK : ("Giant Rock", CardType.Attack, 1, A),      #
                CardId.SOVEREIGN_BLADE : ("Sovereign Blade", CardType.Attack, 2, A),
                CardId.MINION_STRIKE : ("Minion Strike", CardType.Attack, 0, A),
                CardId.MINION_DIVE_BOMB : ("Minion Dive Bomb", CardType.Attack, 0, A),
-               CardId.MINION_SACRIFICE : ("Minion Sacrifice", CardType.Skill, 0, S)}      # Charge's transform      # the Regent's Forge makes it          # Radiant Pearl: Retain. Gain 2 Energy (3 upgraded). Exhaust.
+               CardId.MINION_SACRIFICE : ("Minion Sacrifice", CardType.Skill, 0, S),
+               CardId.SOUL : ("Soul", CardType.Skill, 0, S),
+               CardId.SWEEPING_GAZE : ("Sweeping Gaze", CardType.Attack, 0, RAND)}      # Charge's transform      # the Regent's Forge makes it          # Radiant Pearl: Retain. Gain 2 Energy (3 upgraded). Exhaust.
 
 # event cards (CardRarity.Event): never generated in combat; listed so tests and transforms can build them
 EVENT_CARDS = {
@@ -245,6 +247,8 @@ ANCIENT_CARDS = {
     CardId.WHISTLE : ("Whistle", CardType.Attack, 2, A), CardId.WISH : ("Wish", CardType.Skill, 0, S),
     CardId.SUPPRESS : ("Suppress", CardType.Attack, 0, A), CardId.WRAITH_FORM : ("Wraith Form", CardType.Power, 3, S),
     CardId.METEOR_SHOWER : ("Meteor Shower", CardType.Attack, 0, ALL), CardId.THE_SEALED_THRONE : ("The Sealed Throne", CardType.Power, 1, S),
+    CardId.FORBIDDEN_GRIMOIRE : ("Forbidden Grimoire", CardType.Power, 2, S),
+    CardId.PROTECTOR : ("Protector", CardType.Attack, 1, A),
 }
 
 # the Regent's cards (RegentCardPool), Basic ones included; the Star cost of each is in constants.STAR_COST
@@ -336,7 +340,95 @@ REGENT_CARDS = {
     CardId.VOID_FORM : ("Void Form", CardType.Power, 3, S),
 }
 
-CHARACTER_CARDS = {"IRONCLAD": GENERATABLE_CARDS, "SILENT": SILENT_CARDS, "REGENT": REGENT_CARDS}      # each character's card table (its pool, Basic cards included for the Silent)
+# the Necrobinder's cards (NecrobinderCardPool), Basic ones included
+NECROBINDER_CARDS = {
+    CardId.AFTERLIFE : ("Afterlife", CardType.Skill, 1, S),
+    CardId.BANSHEES_CRY : ("Banshee's Cry", CardType.Attack, 9, ALL),
+    CardId.BLIGHT_STRIKE : ("Blight Strike", CardType.Attack, 1, A),
+    CardId.BODYGUARD : ("Bodyguard", CardType.Skill, 1, S),
+    CardId.BONE_SHARDS : ("Bone Shards", CardType.Attack, 1, ALL),
+    CardId.BORROWED_TIME : ("Borrowed Time", CardType.Skill, 1, S),
+    CardId.BURY : ("Bury", CardType.Attack, 4, A),
+    CardId.CALCIFY : ("Calcify", CardType.Power, 1, S),
+    CardId.CALL_OF_THE_VOID : ("Call Of The Void", CardType.Power, 1, S),
+    CardId.CAPTURE_SPIRIT : ("Capture Spirit", CardType.Skill, 1, A),
+    CardId.CLEANSE : ("Cleanse", CardType.Skill, 1, S),
+    CardId.COUNTDOWN : ("Countdown", CardType.Power, 1, S),
+    CardId.DANSE_MACABRE : ("Danse Macabre", CardType.Power, 1, S),
+    CardId.DEATH_MARCH : ("Death March", CardType.Attack, 1, A),
+    CardId.DEATHBRINGER : ("Deathbringer", CardType.Skill, 2, ALL),
+    CardId.DEATHS_DOOR : ("Death's Door", CardType.Skill, 1, S),
+    CardId.DEBILITATE : ("Debilitate", CardType.Attack, 1, A),
+    CardId.DEFEND_NECROBINDER : ("Defend", CardType.Skill, 1, S),
+    CardId.DEFILE : ("Defile", CardType.Attack, 1, A),
+    CardId.DEFY : ("Defy", CardType.Skill, 1, A),
+    CardId.DELAY : ("Delay", CardType.Skill, 2, S),
+    CardId.DEMESNE : ("Demesne", CardType.Power, 3, S),
+    CardId.DEVOUR_LIFE : ("Devour Life", CardType.Power, 1, S),
+    CardId.DIRGE : ("Dirge", CardType.Skill, "X", S),
+    CardId.DRAIN_POWER : ("Drain Power", CardType.Attack, 1, A),
+    CardId.DREDGE : ("Dredge", CardType.Skill, 1, S),
+    CardId.EIDOLON : ("Eidolon", CardType.Skill, 2, S),
+    CardId.END_OF_DAYS : ("End Of Days", CardType.Skill, 3, ALL),
+    CardId.ENFEEBLING_TOUCH : ("Enfeebling Touch", CardType.Skill, 1, A),
+    CardId.ERADICATE : ("Eradicate", CardType.Attack, "X", A),
+    CardId.FEAR : ("Fear", CardType.Attack, 1, A),
+    CardId.FETCH : ("Fetch", CardType.Attack, 0, A),
+    CardId.FLATTEN : ("Flatten", CardType.Attack, 2, A),
+    CardId.FRIENDSHIP : ("Friendship", CardType.Power, 1, S),
+    CardId.GRAVE_WARDEN : ("Grave Warden", CardType.Skill, 1, S),
+    CardId.GRAVEBLAST : ("Graveblast", CardType.Attack, 1, A),
+    CardId.HANG : ("Hang", CardType.Attack, 1, A),
+    CardId.HAUNT : ("Haunt", CardType.Power, 1, S),
+    CardId.HIGH_FIVE : ("High Five", CardType.Attack, 2, ALL),
+    CardId.INVOKE : ("Invoke", CardType.Skill, 1, S),
+    CardId.LETHALITY : ("Lethality", CardType.Power, 1, S),
+    CardId.MELANCHOLY : ("Melancholy", CardType.Skill, 3, S),
+    CardId.MISERY : ("Misery", CardType.Attack, 0, A),
+    CardId.NECRO_MASTERY : ("Necro Mastery", CardType.Power, 2, S),
+    CardId.NEGATIVE_PULSE : ("Negative Pulse", CardType.Skill, 1, ALL),
+    CardId.NEUROSURGE : ("Neurosurge", CardType.Power, 0, S),
+    CardId.NO_ESCAPE : ("No Escape", CardType.Skill, 1, A),
+    CardId.OBLIVION : ("Oblivion", CardType.Skill, 0, A),
+    CardId.PAGESTORM : ("Pagestorm", CardType.Power, 1, S),
+    CardId.PARSE : ("Parse", CardType.Skill, 1, S),
+    CardId.POKE : ("Poke", CardType.Attack, 0, A),
+    CardId.PULL_AGGRO : ("Pull Aggro", CardType.Skill, 2, S),
+    CardId.PULL_FROM_BELOW : ("Pull From Below", CardType.Attack, 1, A),
+    CardId.PUTREFY : ("Putrefy", CardType.Skill, 1, A),
+    CardId.RATTLE : ("Rattle", CardType.Attack, 1, A),
+    CardId.REANIMATE : ("Reanimate", CardType.Skill, 3, S),
+    CardId.REAP : ("Reap", CardType.Attack, 3, A),
+    CardId.REAPER_FORM : ("Reaper Form", CardType.Power, 3, S),
+    CardId.REAVE : ("Reave", CardType.Attack, 1, A),
+    CardId.RIGHT_HAND_HAND : ("Right Hand Hand", CardType.Attack, 0, A),
+    CardId.SACRIFICE : ("Sacrifice", CardType.Skill, 1, S),
+    CardId.SCOURGE : ("Scourge", CardType.Skill, 1, A),
+    CardId.SCULPTING_STRIKE : ("Sculpting Strike", CardType.Attack, 1, A),
+    CardId.SEANCE : ("Seance", CardType.Skill, 1, S),
+    CardId.SENTRY_MODE : ("Sentry Mode", CardType.Power, 2, S),
+    CardId.SEVERANCE : ("Severance", CardType.Attack, 2, A),
+    CardId.SHARED_FATE : ("Shared Fate", CardType.Skill, 0, A),
+    CardId.SHROUD : ("Shroud", CardType.Power, 1, S),
+    CardId.SIC_EM : ("Sic 'Em", CardType.Attack, 1, A),
+    CardId.SLEIGHT_OF_FLESH : ("Sleight Of Flesh", CardType.Power, 2, S),
+    CardId.SNAP : ("Snap", CardType.Attack, 1, A),
+    CardId.SOUL_STORM : ("Soul Storm", CardType.Attack, 1, A),
+    CardId.SOW : ("Sow", CardType.Attack, 1, ALL),
+    CardId.SPIRIT_OF_ASH : ("Spirit Of Ash", CardType.Power, 1, S),
+    CardId.SPUR : ("Spur", CardType.Skill, 1, S),
+    CardId.SQUEEZE : ("Squeeze", CardType.Attack, 3, A),
+    CardId.STRIKE_NECROBINDER : ("Strike", CardType.Attack, 1, A),
+    CardId.THE_SCYTHE : ("The Scythe", CardType.Attack, 2, A),
+    CardId.TIMES_UP : ("Time's Up", CardType.Attack, 2, A),
+    CardId.TRANSFIGURE : ("Transfigure", CardType.Skill, 1, S),
+    CardId.UNDEATH : ("Undeath", CardType.Skill, 0, S),
+    CardId.UNLEASH : ("Unleash", CardType.Attack, 1, A),
+    CardId.VEILPIERCER : ("Veilpiercer", CardType.Attack, 1, A),
+    CardId.WISP : ("Wisp", CardType.Skill, 0, S),
+}
+
+CHARACTER_CARDS = {"IRONCLAD": GENERATABLE_CARDS, "SILENT": SILENT_CARDS, "REGENT": REGENT_CARDS, "NECROBINDER": NECROBINDER_CARDS}      # each character's card table (its pool, Basic cards included for the Silent)
 
 # what Jack of All Trades can make: Hand of Greed (and Alchemize and Hidden Gem) cannot be generated in combat, and it makes no Jack of All Trades
 NOT_GENERATED_COLORLESS = frozenset({CardId.HAND_OF_GREED, CardId.HIDDEN_GEM, CardId.JACK_OF_ALL_TRADES, CardId.ALCHEMIZE})
@@ -376,6 +468,7 @@ class CardRarity(Enum):
 _RARITY_NAMES = {
     CardRarity.Basic : (
         "STRIKE_IRONCLAD DEFEND_IRONCLAD BASH STRIKE_SILENT DEFEND_SILENT NEUTRALIZE SURVIVOR STRIKE_REGENT DEFEND_REGENT FALLING_STAR VENERATE"
+        " BODYGUARD DEFEND_NECROBINDER STRIKE_NECROBINDER UNLEASH"
     ),
     CardRarity.Common : (
         "ASTRAL_PULSE BEGONE CELESTIAL_MIGHT CLOAK_OF_STARS COLLISION_COURSE COSMIC_INDIFFERENCE CRESCENT_SPEAR CRUSH_UNDER GATHER_LIGHT GLITTERSTREAM GLOW GUIDING_STAR "
@@ -383,6 +476,7 @@ _RARITY_NAMES = {
         "BLOOD_WALL PERFECTED_STRIKE BREAKTHROUGH SHRUG_IT_OFF POMMEL_STRIKE IRON_WAVE THUNDERCLAP TREMBLE ANGER BODY_SLAM TWIN_STRIKE "
         "MOLTEN_FIST SWORD_BOOMERANG CINDER TAUNT ARMAMENTS HEADBUTT TRUE_GRIT HAVOC SETUP_STRIKE "
         "ANTICIPATE BACKFLIP BLADE_DANCE CLOAK_AND_DAGGER DAGGER_SPRAY DAGGER_THROW DEADLY_POISON DEFLECT DODGE_AND_ROLL FLICK_FLACK LEADING_STRIKE PIERCING_WAIL POISONED_STAB PREDATOR PREPARED RICOCHET SLICE SNAKEBITE SUCKER_PUNCH UNTOUCHABLE"
+        " AFTERLIFE BLIGHT_STRIKE DEFILE DEFY DRAIN_POWER FEAR FLATTEN GRAVE_WARDEN GRAVEBLAST INVOKE NEGATIVE_PULSE POKE PULL_AGGRO REAP REAVE SCOURGE SCULPTING_STRIKE SNAP SOW WISP"
     ),
     CardRarity.Uncommon : (
         "KNOCKOUT_BLOW ALIGNMENT BLACK_HOLE BULWARK CHARGE CHILD_OF_THE_STARS CONQUEROR CONVERGENCE DEVASTATE FURNACE GAMMA_BLAST GLIMMER HEGEMONY KINGLY_KICK KINGLY_PUNCH LUNAR_BLAST MANIFEST_AUTHORITY MONOLOGUE ORBIT PALE_BLUE_DOT PARRY PARTICLE_WALL PILLAR_OF_CREATION PROPHESIZE QUASAR RADIATE REFLECT RESONANCE ROYAL_GAMBLE SHINING_STRIKE SPECTRUM_SHIFT STARDUST SUMMON_FORTH SUPERMASSIVE TERRAFORMING"
@@ -394,6 +488,7 @@ _RARITY_NAMES = {
         "PREP_TIME DARK_SHACKLES AUTOMATION PANACHE THE_BOMB THRUMMING_HATCHET JACK_OF_ALL_TRADES CATASTROPHE DISCOVERY BURNING_PACT "
         "COLOSSUS FEEL_NO_PAIN FLAME_BARRIER JUGGLING RAGE RUPTURE STAMPEDE STONE_ARMOR VICIOUS BATTLE_TRANCE DRUM_OF_BATTLE EXPECT_A_FIGHT "
         "FORGOTTEN_RITUAL HOWL_FROM_BEYOND INFERNAL_BLADE INFERNO PILLAGE RAMPAGE STOMP SALVO CRUELTY STRATAGEM"
+        " BONE_SHARDS BORROWED_TIME BURY CALCIFY CAPTURE_SPIRIT CLEANSE COUNTDOWN DANSE_MACABRE DEATH_MARCH DEATHBRINGER DEATHS_DOOR DEBILITATE DELAY DIRGE DREDGE ENFEEBLING_TOUCH FETCH FRIENDSHIP HAUNT HIGH_FIVE LETHALITY MELANCHOLY NO_ESCAPE PAGESTORM PARSE PULL_FROM_BELOW PUTREFY RATTLE RIGHT_HAND_HAND SEVERANCE SHROUD SIC_EM SLEIGHT_OF_FLESH SPUR VEILPIERCER"
     ),
     CardRarity.Rare : (
         "ARSENAL BEAT_INTO_SHAPE BIG_BANG BOMBARDMENT BUNDLE_OF_JOY COMET CRASH_LANDING DECISIONS_DECISIONS DYING_STAR FOREGONE_CONCLUSION GENESIS GUARDS HEAVENLY_DRILL HEIRLOOM_HAMMER I_AM_INVINCIBLE MAKE_IT_SO MONARCHS_GAZE NEUTRON_AEGIS ROYALTIES SEEKING_EDGE SEVEN_STARS SWORD_SAGE THE_SMITH TYRANNY VOID_FORM"
@@ -403,9 +498,11 @@ _RARITY_NAMES = {
         "SECRET_WEAPON ROLLING_BOULDER THE_GAMBIT MAYHEM NOSTALGIA BOLAS JACKPOT CALAMITY BEAT_DOWN ANOINTED ENTROPY HIDDEN_GEM ALCHEMIZE "
         "BARRICADE DOMINATE DARK_EMBRACE DEMON_FORM JUGGERNAUT ONE_TWO_PUNCH PYRE UNMOVABLE CASCADE CONFLAGRATION FIEND_FIRE NOT_YET "
         "OFFERING PACTS_END BRAND HELLRAISER MANGLE PRIMAL_FORCE STOKE TEAR_ASUNDER THRASH"
+        " BANSHEES_CRY CALL_OF_THE_VOID DEMESNE DEVOUR_LIFE EIDOLON END_OF_DAYS ERADICATE HANG MISERY NECRO_MASTERY NEUROSURGE OBLIVION REANIMATE REAPER_FORM SACRIFICE SEANCE SENTRY_MODE SHARED_FATE SOUL_STORM SPIRIT_OF_ASH SQUEEZE THE_SCYTHE TIMES_UP TRANSFIGURE UNDEATH"
     ),
     CardRarity.Ancient : (
         "BREAK NEOWS_FURY CORRUPTION ABUNDANCE APOTHEOSIS APPARITION BRIGHTEST_FLAME MAUL RELAX WHISTLE WISH METEOR_SHOWER THE_SEALED_THRONE SUPPRESS WRAITH_FORM"
+        " FORBIDDEN_GRIMOIRE PROTECTOR"
     ),
     CardRarity.Event : (
         "BYRD_SWOOP EXTERMINATE PECK SQUASH ENLIGHTENMENT METAMORPHOSIS TORIC_TOUGHNESS FEEDING_FRENZY MAD_SCIENCE "
@@ -413,6 +510,7 @@ _RARITY_NAMES = {
     ),
     CardRarity.Token : (
         "GIANT_ROCK LUMINESCE SHIV SOVEREIGN_BLADE MINION_STRIKE MINION_DIVE_BOMB MINION_SACRIFICE"
+        " SOUL SWEEPING_GAZE"
     ),
     CardRarity.Status : (
         "SLIMED INFECTION BURN BECKON WITHER DAZED WOUND SOOT TOXIC FRANTIC_ESCAPE DISINTEGRATION MIND_ROT SLOTH WASTE_AWAY DEBRIS"
@@ -441,11 +539,12 @@ ZERO_COST_POOL = [cid for cid, (_, _, cost, _) in GENERATABLE_CARDS.items() if c
 
 # CardFactory.FilterForCombat over Character.CardPool: what card effects generate in combat (Discovery, Attack Potion, Infernal Blade, Crossbow...).
 # Common to Rare cards of the character's pool, minus the ones with CanBeGeneratedInCombat => false.
-NOT_GENERATED_IN_COMBAT = frozenset({CardId.FEED, CardId.NOT_YET, CardId.NIGHTMARE, CardId.THE_HUNT})
+NOT_GENERATED_IN_COMBAT = frozenset({CardId.FEED, CardId.NOT_YET, CardId.NIGHTMARE, CardId.THE_HUNT, CardId.EIDOLON, CardId.TRANSFIGURE})
 _GENERATED_RARITIES = (CardRarity.Common, CardRarity.Uncommon, CardRarity.Rare)
 COMBAT_CARDS = {
     "IRONCLAD": GENERATABLE_CARDS,
     "SILENT": {cid: v for cid, v in SILENT_CARDS.items() if CARD_RARITY[cid] in _GENERATED_RARITIES and cid not in NOT_GENERATED_IN_COMBAT},
+    "NECROBINDER": {cid: v for cid, v in NECROBINDER_CARDS.items() if CARD_RARITY[cid] in _GENERATED_RARITIES and cid not in NOT_GENERATED_IN_COMBAT},
     "REGENT": {cid: v for cid, v in REGENT_CARDS.items() if CARD_RARITY[cid] in _GENERATED_RARITIES and cid not in NOT_GENERATED_IN_COMBAT},
 }
 
@@ -478,10 +577,10 @@ def splash_pool(character : str = "IRONCLAD") -> list[CardId]:
 RETURNING_CARDS = frozenset({CardId.BOLAS, CardId.THRUMMING_HATCHET})
 
 # cards with the Defend tag (Fasten)
-DEFEND_CARDS = frozenset({CardId.DEFEND_IRONCLAD, CardId.ULTIMATE_DEFEND, CardId.DEFEND_SILENT, CardId.DEFEND_REGENT})
+DEFEND_CARDS = frozenset({CardId.DEFEND_NECROBINDER, CardId.DEFEND_IRONCLAD, CardId.ULTIMATE_DEFEND, CardId.DEFEND_SILENT, CardId.DEFEND_REGENT})
 
 # cards with the Strike tag (Hellraiser plays them when they are drawn)
-STRIKE_CARDS = frozenset({CardId.SHINING_STRIKE, CardId.STRIKE_SILENT, CardId.STRIKE_REGENT, CardId.SOLAR_STRIKE, CardId.MINION_STRIKE, CardId.LEADING_STRIKE, CardId.ULTIMATE_STRIKE, CardId.SEEKER_STRIKE, CardId.STRIKE_IRONCLAD, CardId.PERFECTED_STRIKE, CardId.POMMEL_STRIKE, CardId.TWIN_STRIKE,
+STRIKE_CARDS = frozenset({CardId.STRIKE_NECROBINDER, CardId.BLIGHT_STRIKE, CardId.SCULPTING_STRIKE, CardId.SHINING_STRIKE, CardId.STRIKE_SILENT, CardId.STRIKE_REGENT, CardId.SOLAR_STRIKE, CardId.MINION_STRIKE, CardId.LEADING_STRIKE, CardId.ULTIMATE_STRIKE, CardId.SEEKER_STRIKE, CardId.STRIKE_IRONCLAD, CardId.PERFECTED_STRIKE, CardId.POMMEL_STRIKE, CardId.TWIN_STRIKE,
                           CardId.ASHEN_STRIKE, CardId.SETUP_STRIKE})
 
 def _curse_debuff(player, status : StatusId):

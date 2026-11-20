@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 
 from sts2_lite.relic import RelicId, block_gained, block_multiplier, debuff_multiplier, poison_given
 from sts2_lite.status import StatusId
+from sts2_lite.necrobinder import after_debuff
 
 from sts2_lite.card.constants import ENCHANT_CORRUPTED_DAMAGE, ENCHANT_EMBER_DAMAGE, ENCHANT_INSTINCT_DAMAGE, MAD_SCIENCE_DAMAGE
 from sts2_lite.card.ids import CardId, EnchantmentId
@@ -110,6 +111,8 @@ def _vulnerable(combat : CombatSimulator, target : Creature, amount : int):
     target.apply_status(StatusId.VULNERABLE, amount)
     if target.status_amount(StatusId.VULNERABLE) > before:      # Vicious: not if Artifact stopped it
         player.draw_cards(player.status_amount(StatusId.VICIOUS))
+        if StatusId.SLEIGHT_OF_FLESH in player.status:
+            after_debuff(combat, target, StatusId.VULNERABLE)
 
 def _debuff(combat : CombatSimulator, target : Creature, status : StatusId, amount : int):
     """A debuff from the card being played (Unsettling Lamp doubles it)."""
@@ -118,7 +121,10 @@ def _debuff(combat : CombatSimulator, target : Creature, status : StatusId, amou
         if status is StatusId.POISON:
             amount = poison_given(player, amount)
         amount *= debuff_multiplier(player, combat.card_in_play, target)
+    before = target.status_amount(status)
     target.apply_status(status, amount)
+    if player.status and target.status_amount(status) > before and (StatusId.SHROUD in player.status or StatusId.SLEIGHT_OF_FLESH in player.status):
+        after_debuff(combat, target, status)
 
 def _weak(combat : CombatSimulator, target : Creature, amount : int):
     _debuff(combat, target, StatusId.WEAK, amount)
@@ -132,6 +138,8 @@ def temp_strength(target : Creature, marker : StatusId, amount : int, sign : int
     if target.status_amount(marker) == before:          # Artifact stopped the debuff
         return
     target.apply_status(StatusId.STRENGTH, sign * amount, bypass_artifact=True)
+    if sign < 0 and combat is not None and StatusId.SLEIGHT_OF_FLESH in combat.combat_state.player.status:
+        after_debuff(combat, target, StatusId.STRENGTH)      # the Strength loss is a debuff the player applied (the temporary marker itself is not)
 
 PLAIN_DAMAGE = {        # id : (damage, damage upgraded) of the cards that print one fixed number
     CardId.BACKSTAB : (11, 15),

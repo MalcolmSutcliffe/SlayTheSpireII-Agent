@@ -24,6 +24,7 @@ class Creature:
     has_been_attacked_this_turn : bool
     lost_hp_this_turn : bool
     relics = ()         # only the player holds relics (Player.relics); empty for everything else
+    doom_hook = None    # only the player turns damage into Doom (Player.doom_hook)
 
     def __init__(self, max_hp=1, current_hp=1, block=0, status=None, is_minion=False):
         self.max_hp=max_hp
@@ -128,6 +129,7 @@ class Creature:
                 from sts2_lite.card.effects import temp_strength
                 temp_strength(self, StatusId.MONARCHS_GAZE_STRENGTH_DOWN, dealer.status[StatusId.MONARCHS_GAZE].amount, -1)
         hp_before = self.current_hp
+        taken_before = self.damage_taken
         broken = False
         if self.block > 0:
             if self.block > damage:
@@ -149,6 +151,10 @@ class Creature:
             after_damage_given(dealer, self, broken)
         if powered and dealer is not None and hp_before > self.current_hp and StatusId.PAPER_CUTS in dealer.status:
             self.lose_max_hp(dealer.status[StatusId.PAPER_CUTS].amount)      # PaperCutsPower.AfterDamageGiven
+        if powered and dealer is not None and dealer is not self:
+            doomer = getattr(dealer, "owner", dealer)          # Osty's hits count for its owner
+            if StatusId.REAPER_FORM in doomer.status and doomer.doom_hook is not None and self.damage_taken > taken_before:
+                doomer.doom_hook(self, (self.damage_taken - taken_before) * doomer.status[StatusId.REAPER_FORM].amount)       # ReaperFormPower.AfterDamageGiven: Doom as much as the damage
         if self.current_hp > 0:
             self._after_damage(hp_before - self.current_hp, broken, powered, dealer)
 

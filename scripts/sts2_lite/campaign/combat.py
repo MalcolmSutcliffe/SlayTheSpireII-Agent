@@ -9,7 +9,7 @@ from sts2_lite.datacopy import deepcopy_data
 from sts2_lite.status import StatusId
 from dataclasses import dataclass
 
-from sts2_lite.card import Card
+from sts2_lite.card import Card, CardId
 from sts2_lite.combat import CombatSimulator, CombatState
 from sts2_lite.encounters import build_combat
 from sts2_lite.player import Player
@@ -74,6 +74,11 @@ def start_fight(run : RunState, encounter_id : str, room_type : str, game, final
         for i, raw in enumerate(cards):
             if raw["_upgrade"] and player.draw_pile[i].is_upgradable:
                 player.draw_pile[i] = player.draw_pile[i].upgraded_copy()
+        for i, raw in enumerate(cards):
+            if player.draw_pile[i].card_id is CardId.THE_SCYTHE:       # its growth is kept by the deck's version
+                scythe = Card.create_copy(player.draw_pile[i])
+                scythe.bonus_damage, scythe.deck_index = run.deck[i].get("scythe_bonus", 0), i
+                player.draw_pile[i] = scythe
         player.shuffle_draw_pile()
         cs = build_combat(encounter_id, run.ascension, player, game.stream("monster_ai"), max_energy=energy, final_fight=final_fight, variant=variant)
         if one_hp:          # Fur Coat: a marked fight
@@ -132,3 +137,7 @@ def carry_back(run : RunState, sim : CombatSimulator):
     left = {p.slot for p in player.potions}
     run.potions = [p for i, p in enumerate(run.potions) if i in left or PotionId.from_game_id(p.get("id")) is None]      # one the sim does not know cannot have been used
     run.dead = run.hp <= 0
+    for i, bonus in player.deck_buffs.items():
+        if i < len(run.deck) and run.deck[i]["id"] == "THE_SCYTHE":
+            run.deck[i] = dict(run.deck[i], scythe_bonus=bonus)
+    return 0 if run.dead else player.status_amount(StatusId.FORBIDDEN_GRIMOIRE)       # ForbiddenGrimoirePower.AfterCombatEnd: a card removal reward each
