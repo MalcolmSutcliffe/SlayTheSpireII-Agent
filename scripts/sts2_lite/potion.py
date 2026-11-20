@@ -102,6 +102,9 @@ class PotionId(Enum):
     POTION_OF_DOOM = auto()             # the Necrobinder's potions: common
     BONE_BREW = auto()                  # uncommon
     POT_OF_GHOULS = auto()              # rare
+    FOCUS_POTION = auto()               # the Defect's potions: common
+    POTION_OF_CAPACITY = auto()         # uncommon
+    ESSENCE_OF_DARKNESS = auto()        # rare
 
     @property
     def info(self) -> PotionInfo:
@@ -163,6 +166,7 @@ POTION_INFO : dict[PotionId, PotionInfo] = {
     PotionId.GHOST_IN_A_JAR : PotionInfo("Ghost in a Jar", R, ME),
     PotionId.STAR_POTION : PotionInfo("Star Potion", C, ME), PotionId.KINGS_COURAGE : PotionInfo("King's Courage", U, ME), PotionId.COSMIC_CONCOCTION : PotionInfo("Cosmic Concoction", R, ME),
     PotionId.POTION_OF_DOOM : PotionInfo("Potion of Doom", C, ONE), PotionId.BONE_BREW : PotionInfo("Bone Brew", U, ME), PotionId.POT_OF_GHOULS : PotionInfo("Pot of Ghouls", R, ME),
+    PotionId.FOCUS_POTION : PotionInfo("Focus Potion", C, ME), PotionId.POTION_OF_CAPACITY : PotionInfo("Potion of Capacity", U, ME), PotionId.ESSENCE_OF_DARKNESS : PotionInfo("Essence of Darkness", R, ME),
 }
 _BY_NORMALISED_NAME = {_normalise(p.name): p for p in PotionId}
 _BY_NORMALISED_NAME.update({_normalise(info.name): p for p, info in POTION_INFO.items()})
@@ -300,6 +304,19 @@ def _kings_courage(combat, t):
     combat.forge(KINGS_COURAGE_FORGE)
 
 POTION_OF_DOOM_DOOM, BONE_BREW_SUMMON, POT_OF_GHOULS_SOULS = 33, 15, 2
+FOCUS_POTION_FOCUS, POTION_OF_CAPACITY_SLOTS = 2, 2
+
+def _focus_potion(combat, t):
+    player_of(combat).apply_status(StatusId.FOCUS, FOCUS_POTION_FOCUS)
+
+def _potion_of_capacity(combat, t):
+    from sts2_lite import orbs
+    orbs.add_slots(player_of(combat), POTION_OF_CAPACITY_SLOTS)
+
+def _essence_of_darkness(combat, t):
+    """A Dark orb for every slot of the queue."""
+    from sts2_lite import orbs
+    orbs.channel(combat, orbs.DARK, player_of(combat).orb_slots)
 
 def _potion_of_doom(combat, t):
     from sts2_lite.necrobinder import apply_doom
@@ -477,6 +494,7 @@ EFFECTS : dict[PotionId, Callable] = {
     PotionId.POISON_POTION : _poison_potion, PotionId.CUNNING_POTION : _cunning_potion, PotionId.GHOST_IN_A_JAR : _ghost_in_a_jar,
     PotionId.STAR_POTION : _star_potion, PotionId.KINGS_COURAGE : _kings_courage, PotionId.COSMIC_CONCOCTION : _cosmic_concoction,
     PotionId.POTION_OF_DOOM : _potion_of_doom, PotionId.BONE_BREW : _bone_brew, PotionId.POT_OF_GHOULS : _pot_of_ghouls,
+    PotionId.FOCUS_POTION : _focus_potion, PotionId.POTION_OF_CAPACITY : _potion_of_capacity, PotionId.ESSENCE_OF_DARKNESS : _essence_of_darkness,
 }
 assert set(EFFECTS) == set(PotionId) == set(POTION_INFO)
 

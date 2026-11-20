@@ -233,6 +233,31 @@ class StatusId(Enum):
     SPIRIT_OF_ASH = auto()    # Block when an Ethereal card is played
     VEILPIERCER = auto()    # the next Ethereal cards are free
     SUMMON_NEXT_TURN = auto()    # Summon at the next turn's start
+    # the Defect
+    FOCUS = auto()    # orb values; negative is a debuff
+    BIASED_COGNITION = auto()    # loses Focus at each turn's start
+    CONSUMING_SHADOW = auto()    # evokes the last orb at the end of the turn
+    COOLANT = auto()    # Block for each kind of orb at the start of the turn
+    CREATIVE_AI = auto()    # a random Power in the hand each turn
+    ECHO_FORM = auto()    # the first card each turn is played twice
+    FERAL = auto()    # 0-cost Attacks return to the hand
+    FOCUSED_STRIKE = auto()    # temporary Focus (marker)
+    HAILSTORM = auto()    # damage at the end of the turn while a Frost orb is held
+    HOTFIX = auto()    # temporary Focus (marker)
+    HYPERBEAM_FOCUS_DOWN = auto()    # temporary Focus loss (marker)
+    ITERATION = auto()    # drawing a Status the first time each turn draws cards
+    LIGHTNING_ROD = auto()    # a Lightning orb at the start of the next turns
+    LOOP = auto()    # the first orb's Passive again at the start of the turn
+    MACHINE_LEARNING = auto()    # more cards in the hand draw
+    SIGNAL_BOOST = auto()    # the next Power is played twice
+    SMOKESTACK = auto()    # damage whenever a Status is made
+    SPINNER = auto()    # a Glass orb at the start of each turn
+    STORM = auto()    # a Lightning orb whenever a Power is played
+    SUBROUTINE = auto()    # Energy whenever a Power is played
+    SYNCHRONIZE = auto()    # temporary Focus (marker)
+    THUNDER = auto()    # damage whenever a Lightning orb is evoked
+    TRASH_TO_TREASURE = auto()    # a random orb whenever a Status is made
+    FREE_POWER = auto()    # the next Power costs nothing
 
 INFESTED_SPAWNS = 4
 CRAB_RAGE_STRENGTH, CRAB_RAGE_BLOCK = 6, 99
@@ -259,10 +284,10 @@ DEBUFFS = frozenset({StatusId.DOOM, StatusId.BORROWED_TIME, StatusId.DEBILITATE,
                      StatusId.NO_BLOCK, StatusId.THE_GAMBIT, StatusId.DARK_SHACKLES,
                      StatusId.TENDER, StatusId.TAINTED, StatusId.SURROUNDED, StatusId.DISINTEGRATION, StatusId.MIND_ROT,
                      StatusId.SLOTH, StatusId.WASTE_AWAY, StatusId.HEX, StatusId.DAMPEN, StatusId.CHAINS_OF_BINDING, StatusId.SMOGGY, StatusId.STRANGLE,
-                     StatusId.DEMISE})
+                     StatusId.DEMISE, StatusId.HYPERBEAM_FOCUS_DOWN})
 
 def is_debuff(status_id : StatusId, amount : int) -> bool:
-    return status_id in DEBUFFS or (status_id in (StatusId.STRENGTH, StatusId.DEXTERITY) and amount < 0)
+    return status_id in DEBUFFS or (status_id in (StatusId.STRENGTH, StatusId.DEXTERITY, StatusId.FOCUS) and amount < 0)
 
 # Powers that every play adds a separate copy of (PowerInstanceType.Instanced). The bridge lists each copy; the
 # state keeps one status whose `records` hold one list per copy: [shown amount, ...what else the copy remembers].
@@ -1156,3 +1181,5 @@ STATUS_HANDLERS : dict[tuple[StatusId, HookType], Callable] = HandlerTable({
 
 from sts2_lite import necrobinder as _necrobinder      # the Necrobinder's powers (after the table, which they join)
 STATUS_HANDLERS.update(_necrobinder.STATUS_HANDLERS)
+from sts2_lite import defect as _defect      # the Defect's powers
+STATUS_HANDLERS.update(_defect.STATUS_HANDLERS)

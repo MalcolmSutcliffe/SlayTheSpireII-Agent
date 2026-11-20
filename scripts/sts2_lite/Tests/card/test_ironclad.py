@@ -1192,7 +1192,8 @@ def test_strike_tag_cards():
     assert STRIKE_CARDS == {CardId.STRIKE_IRONCLAD, CardId.PERFECTED_STRIKE, CardId.POMMEL_STRIKE, CardId.TWIN_STRIKE,
                             CardId.ASHEN_STRIKE, CardId.SETUP_STRIKE, CardId.ULTIMATE_STRIKE, CardId.SEEKER_STRIKE, CardId.STRIKE_SILENT, CardId.LEADING_STRIKE, CardId.STRIKE_REGENT,
                             CardId.SOLAR_STRIKE, CardId.MINION_STRIKE, CardId.SHINING_STRIKE,
-                            CardId.STRIKE_NECROBINDER, CardId.BLIGHT_STRIKE, CardId.SCULPTING_STRIKE}
+                            CardId.STRIKE_NECROBINDER, CardId.BLIGHT_STRIKE, CardId.SCULPTING_STRIKE,
+                            CardId.STRIKE_DEFECT, CardId.ADAPTIVE_STRIKE, CardId.FOCUSED_STRIKE, CardId.METEOR_STRIKE, CardId.MOMENTUM_STRIKE}
 
 
 # ---------------------------------------------------------------- Hellraiser

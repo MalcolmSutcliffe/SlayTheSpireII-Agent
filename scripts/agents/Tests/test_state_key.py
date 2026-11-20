@@ -185,6 +185,7 @@ KEYED_OR_IGNORED = {
                "returning", "card_blocks_this_turn", "cards_exhausted_this_turn", "gold", "has_been_attacked_this_turn",
                "lost_hp_this_turn", "hp_loss_events", "hp_lost_log", "is_minion", "binding", "bound_cards", "bound_played", "smogged",
                "potions", "extra_turn_pending", "osty", "osty_attacks_this_turn", "extra_draws_this_turn", "doom_applied_this_turn", "ethereal_plays", "deck_buffs",
+               "orbs", "orb_slots", "lightning_channeled", "energy_spent_this_turn", "series_this_turn", "statuses_drawn_this_turn", "zero_cost_attacks_this_turn",
                # ignored: accounting that nothing reads between actions, and hooks wired by the simulator
                "cards_drawn", "unknown_draws", "damage_taken", "block_play", "block_play_gains",
                "osty_hurt_hook", "doom_hook", "shuffle_hook", "draw_hook", "draw_pause_hook", "block_cleared_hook", "generated_hook", "counts_hits", "opening_hook",   # opening_hook: one-shot, set only while a deck-built fight opens

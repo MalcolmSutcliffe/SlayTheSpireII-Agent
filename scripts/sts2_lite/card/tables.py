@@ -103,7 +103,8 @@ TOKEN_CARDS = {CardId.GIANT_ROCK : ("Giant Rock", CardType.Attack, 1, A),      #
                CardId.MINION_DIVE_BOMB : ("Minion Dive Bomb", CardType.Attack, 0, A),
                CardId.MINION_SACRIFICE : ("Minion Sacrifice", CardType.Skill, 0, S),
                CardId.SOUL : ("Soul", CardType.Skill, 0, S),
-               CardId.SWEEPING_GAZE : ("Sweeping Gaze", CardType.Attack, 0, RAND)}      # Charge's transform      # the Regent's Forge makes it          # Radiant Pearl: Retain. Gain 2 Energy (3 upgraded). Exhaust.
+               CardId.SWEEPING_GAZE : ("Sweeping Gaze", CardType.Attack, 0, RAND),
+               CardId.FUEL : ("Fuel", CardType.Skill, 0, S)}      # Charge's transform      # the Regent's Forge makes it          # Radiant Pearl: Retain. Gain 2 Energy (3 upgraded). Exhaust.
 
 # event cards (CardRarity.Event): never generated in combat; listed so tests and transforms can build them
 EVENT_CARDS = {
@@ -249,6 +250,8 @@ ANCIENT_CARDS = {
     CardId.METEOR_SHOWER : ("Meteor Shower", CardType.Attack, 0, ALL), CardId.THE_SEALED_THRONE : ("The Sealed Throne", CardType.Power, 1, S),
     CardId.FORBIDDEN_GRIMOIRE : ("Forbidden Grimoire", CardType.Power, 2, S),
     CardId.PROTECTOR : ("Protector", CardType.Attack, 1, A),
+    CardId.BIASED_COGNITION : ("Biased Cognition", CardType.Power, 1, S),
+    CardId.QUADCAST : ("Quadcast", CardType.Skill, 1, S),
 }
 
 # the Regent's cards (RegentCardPool), Basic ones included; the Star cost of each is in constants.STAR_COST
@@ -428,7 +431,95 @@ NECROBINDER_CARDS = {
     CardId.WISP : ("Wisp", CardType.Skill, 0, S),
 }
 
-CHARACTER_CARDS = {"IRONCLAD": GENERATABLE_CARDS, "SILENT": SILENT_CARDS, "REGENT": REGENT_CARDS, "NECROBINDER": NECROBINDER_CARDS}      # each character's card table (its pool, Basic cards included for the Silent)
+# the Defect's cards (DefectCardPool), Basic ones included; the multiplayer-only ones (Energy Surge, Hibernate, Ignition, Imitation Learning, One for All) are left out
+DEFECT_CARDS = {
+    CardId.ADAPTIVE_STRIKE : ("Adaptive Strike", CardType.Attack, 2, A),
+    CardId.ALL_FOR_ONE : ("All for One", CardType.Attack, 2, A),
+    CardId.BALL_LIGHTNING : ("Ball Lightning", CardType.Attack, 1, A),
+    CardId.BARRAGE : ("Barrage", CardType.Attack, 1, A),
+    CardId.BEAM_CELL : ("Beam Cell", CardType.Attack, 0, A),
+    CardId.BOOST_AWAY : ("Boost Away", CardType.Skill, 0, S),
+    CardId.BOOT_SEQUENCE : ("Boot Sequence", CardType.Skill, 0, S),
+    CardId.BUFFER : ("Buffer", CardType.Power, 2, S),
+    CardId.BULK_UP : ("Bulk Up", CardType.Power, 2, S),
+    CardId.CAPACITOR : ("Capacitor", CardType.Power, 1, S),
+    CardId.CHAOS : ("Chaos", CardType.Skill, 1, S),
+    CardId.CHARGE_BATTERY : ("Charge Battery", CardType.Skill, 1, S),
+    CardId.CHILL : ("Chill", CardType.Skill, 0, S),
+    CardId.CLAW : ("Claw", CardType.Attack, 0, A),
+    CardId.COLD_SNAP : ("Cold Snap", CardType.Attack, 1, A),
+    CardId.COMPACT : ("Compact", CardType.Skill, 1, S),
+    CardId.COMPILE_DRIVER : ("Compile Driver", CardType.Attack, 1, A),
+    CardId.CONSUMING_SHADOW : ("Consuming Shadow", CardType.Power, 2, S),
+    CardId.COOLANT : ("Coolant", CardType.Power, 1, S),
+    CardId.COOLHEADED : ("Coolheaded", CardType.Skill, 1, S),
+    CardId.CREATIVE_AI : ("Creative AI", CardType.Power, 3, S),
+    CardId.DARKNESS : ("Darkness", CardType.Skill, 1, S),
+    CardId.DEFEND_DEFECT : ("Defend", CardType.Skill, 1, S),
+    CardId.DEFRAGMENT : ("Defragment", CardType.Power, 1, S),
+    CardId.DOUBLE_ENERGY : ("Double Energy", CardType.Skill, 1, S),
+    CardId.DUALCAST : ("Dualcast", CardType.Skill, 1, S),
+    CardId.ECHO_FORM : ("Echo Form", CardType.Power, 3, S),
+    CardId.FERAL : ("Feral", CardType.Power, 2, S),
+    CardId.FIGHT_THROUGH : ("Fight Through", CardType.Skill, 1, S),
+    CardId.FLAK_CANNON : ("Flak Cannon", CardType.Attack, 2, RAND),
+    CardId.FOCUSED_STRIKE : ("Focused Strike", CardType.Attack, 1, A),
+    CardId.FTL : ("FTL", CardType.Attack, 0, A),
+    CardId.FUSION : ("Fusion", CardType.Skill, 1, S),
+    CardId.GENETIC_ALGORITHM : ("Genetic Algorithm", CardType.Skill, 1, S),
+    CardId.GLACIER : ("Glacier", CardType.Skill, 2, S),
+    CardId.GLASSWORK : ("Glasswork", CardType.Skill, 1, S),
+    CardId.GO_FOR_THE_EYES : ("Go for the Eyes", CardType.Attack, 0, A),
+    CardId.GUNK_UP : ("Gunk Up", CardType.Attack, 1, A),
+    CardId.HAILSTORM : ("Hailstorm", CardType.Power, 1, S),
+    CardId.HELIX_DRILL : ("Helix Drill", CardType.Attack, 0, A),
+    CardId.HOLOGRAM : ("Hologram", CardType.Skill, 1, S),
+    CardId.HOTFIX : ("Hotfix", CardType.Skill, 0, S),
+    CardId.HYPERBEAM : ("Hyperbeam", CardType.Attack, 2, ALL),
+    CardId.ICE_LANCE : ("Ice Lance", CardType.Attack, 3, A),
+    CardId.ITERATION : ("Iteration", CardType.Power, 1, S),
+    CardId.LEAP : ("Leap", CardType.Skill, 1, S),
+    CardId.LIGHTNING_ROD : ("Lightning Rod", CardType.Skill, 1, S),
+    CardId.LOOP : ("Loop", CardType.Power, 1, S),
+    CardId.MACHINE_LEARNING : ("Machine Learning", CardType.Power, 1, S),
+    CardId.METEOR_STRIKE : ("Meteor Strike", CardType.Attack, 5, A),
+    CardId.MODDED : ("Modded", CardType.Skill, 0, S),
+    CardId.MOMENTUM_STRIKE : ("Momentum Strike", CardType.Attack, 1, A),
+    CardId.MULTI_CAST : ("Multi-Cast", CardType.Skill, "X", S),
+    CardId.NULL : ("Null", CardType.Attack, 2, A),
+    CardId.OVERCLOCK : ("Overclock", CardType.Skill, 0, S),
+    CardId.RAINBOW : ("Rainbow", CardType.Skill, 2, S),
+    CardId.REBOOT : ("Reboot", CardType.Skill, 0, S),
+    CardId.REFRACT : ("Refract", CardType.Attack, 3, A),
+    CardId.ROCKET_PUNCH : ("Rocket Punch", CardType.Attack, 2, A),
+    CardId.SCAVENGE : ("Scavenge", CardType.Skill, 1, S),
+    CardId.SCRAPE : ("Scrape", CardType.Attack, 1, A),
+    CardId.SHADOW_SHIELD : ("Shadow Shield", CardType.Skill, 2, S),
+    CardId.SHATTER : ("Shatter", CardType.Attack, 1, ALL),
+    CardId.SIGNAL_BOOST : ("Signal Boost", CardType.Skill, 1, S),
+    CardId.SKIM : ("Skim", CardType.Skill, 1, S),
+    CardId.SMOKESTACK : ("Smokestack", CardType.Power, 1, S),
+    CardId.SPINNER : ("Spinner", CardType.Power, 1, S),
+    CardId.STORM : ("Storm", CardType.Power, 1, S),
+    CardId.STRIKE_DEFECT : ("Strike", CardType.Attack, 1, A),
+    CardId.SUBROUTINE : ("Subroutine", CardType.Power, 1, S),
+    CardId.SUNDER : ("Sunder", CardType.Attack, 3, A),
+    CardId.SUPERCRITICAL : ("Supercritical", CardType.Skill, 0, S),
+    CardId.SWEEPING_BEAM : ("Sweeping Beam", CardType.Attack, 1, ALL),
+    CardId.SYNCHRONIZE : ("Synchronize", CardType.Skill, 1, S),
+    CardId.SYNTHESIS : ("Synthesis", CardType.Attack, 2, A),
+    CardId.TEMPEST : ("Tempest", CardType.Skill, "X", S),
+    CardId.TESLA_COIL : ("Tesla Coil", CardType.Attack, 0, A),
+    CardId.THUNDER : ("Thunder", CardType.Power, 1, S),
+    CardId.TRASH_TO_TREASURE : ("Trash to Treasure", CardType.Power, 1, S),
+    CardId.TURBO : ("Turbo", CardType.Skill, 0, S),
+    CardId.UPROAR : ("Uproar", CardType.Attack, 2, A),
+    CardId.VOLTAIC : ("Voltaic", CardType.Skill, 3, S),
+    CardId.WHITE_NOISE : ("White Noise", CardType.Skill, 1, S),
+    CardId.ZAP : ("Zap", CardType.Skill, 1, S),
+}
+
+CHARACTER_CARDS = {"DEFECT": DEFECT_CARDS, "IRONCLAD": GENERATABLE_CARDS, "SILENT": SILENT_CARDS, "REGENT": REGENT_CARDS, "NECROBINDER": NECROBINDER_CARDS}      # each character's card table (its pool, Basic cards included for the Silent)
 
 # what Jack of All Trades can make: Hand of Greed (and Alchemize and Hidden Gem) cannot be generated in combat, and it makes no Jack of All Trades
 NOT_GENERATED_COLORLESS = frozenset({CardId.HAND_OF_GREED, CardId.HIDDEN_GEM, CardId.JACK_OF_ALL_TRADES, CardId.ALCHEMIZE})
@@ -524,6 +615,15 @@ _RARITY_NAMES = {
     ),
 }
 
+# the Defect's rarities
+_RARITY_NAMES[CardRarity.Basic] += " DEFEND_DEFECT  DUALCAST  STRIKE_DEFECT  ZAP"
+_RARITY_NAMES[CardRarity.Common] += " BALL_LIGHTNING  BARRAGE  BEAM_CELL  BOOST_AWAY  CHARGE_BATTERY  CLAW  COLD_SNAP  COMPILE_DRIVER  COOLHEADED  FOCUSED_STRIKE  GO_FOR_THE_EYES  GUNK_UP  HOLOGRAM  HOTFIX  LEAP  LIGHTNING_ROD  MOMENTUM_STRIKE  SWEEPING_BEAM  TURBO  UPROAR"
+_RARITY_NAMES[CardRarity.Uncommon] += " BOOT_SEQUENCE  BULK_UP  CAPACITOR  CHAOS  CHILL  COMPACT  DARKNESS  DOUBLE_ENERGY  FERAL  FIGHT_THROUGH  FTL  FUSION  GLACIER  GLASSWORK  HAILSTORM  ITERATION  LOOP  NULL  OVERCLOCK  REFRACT  ROCKET_PUNCH  SCAVENGE  SCRAPE  SHADOW_SHIELD  SKIM  SMOKESTACK  STORM  SUBROUTINE  SUNDER  SYNCHRONIZE  SYNTHESIS  TEMPEST  TESLA_COIL  THUNDER  WHITE_NOISE"
+_RARITY_NAMES[CardRarity.Rare] += " ADAPTIVE_STRIKE  ALL_FOR_ONE  BUFFER  CONSUMING_SHADOW  COOLANT  CREATIVE_AI  DEFRAGMENT  ECHO_FORM  FLAK_CANNON  GENETIC_ALGORITHM  HELIX_DRILL  HYPERBEAM  ICE_LANCE  MACHINE_LEARNING  METEOR_STRIKE  MODDED  MULTI_CAST  RAINBOW  REBOOT  SHATTER  SIGNAL_BOOST  SPINNER  SUPERCRITICAL  TRASH_TO_TREASURE  VOLTAIC"
+_RARITY_NAMES[CardRarity.Ancient] += " BIASED_COGNITION  QUADCAST"
+_RARITY_NAMES[CardRarity.Token] += " FUEL"
+_RARITY_NAMES[CardRarity.Status] += " VOID"
+
 CARD_RARITY : dict[CardId, CardRarity] = {CardId[name] : rarity for rarity, names in _RARITY_NAMES.items() for name in names.split()}
 
 CARD_RARITY[CardId.NOT_IMPLEMENTED] = CardRarity.Status       # placeholder, not a real card
@@ -545,6 +645,7 @@ COMBAT_CARDS = {
     "IRONCLAD": GENERATABLE_CARDS,
     "SILENT": {cid: v for cid, v in SILENT_CARDS.items() if CARD_RARITY[cid] in _GENERATED_RARITIES and cid not in NOT_GENERATED_IN_COMBAT},
     "NECROBINDER": {cid: v for cid, v in NECROBINDER_CARDS.items() if CARD_RARITY[cid] in _GENERATED_RARITIES and cid not in NOT_GENERATED_IN_COMBAT},
+    "DEFECT": {cid: v for cid, v in DEFECT_CARDS.items() if CARD_RARITY[cid] in _GENERATED_RARITIES and cid not in NOT_GENERATED_IN_COMBAT},
     "REGENT": {cid: v for cid, v in REGENT_CARDS.items() if CARD_RARITY[cid] in _GENERATED_RARITIES and cid not in NOT_GENERATED_IN_COMBAT},
 }
 
@@ -577,10 +678,10 @@ def splash_pool(character : str = "IRONCLAD") -> list[CardId]:
 RETURNING_CARDS = frozenset({CardId.BOLAS, CardId.THRUMMING_HATCHET})
 
 # cards with the Defend tag (Fasten)
-DEFEND_CARDS = frozenset({CardId.DEFEND_NECROBINDER, CardId.DEFEND_IRONCLAD, CardId.ULTIMATE_DEFEND, CardId.DEFEND_SILENT, CardId.DEFEND_REGENT})
+DEFEND_CARDS = frozenset({CardId.DEFEND_DEFECT, CardId.DEFEND_NECROBINDER, CardId.DEFEND_IRONCLAD, CardId.ULTIMATE_DEFEND, CardId.DEFEND_SILENT, CardId.DEFEND_REGENT})
 
 # cards with the Strike tag (Hellraiser plays them when they are drawn)
-STRIKE_CARDS = frozenset({CardId.STRIKE_NECROBINDER, CardId.BLIGHT_STRIKE, CardId.SCULPTING_STRIKE, CardId.SHINING_STRIKE, CardId.STRIKE_SILENT, CardId.STRIKE_REGENT, CardId.SOLAR_STRIKE, CardId.MINION_STRIKE, CardId.LEADING_STRIKE, CardId.ULTIMATE_STRIKE, CardId.SEEKER_STRIKE, CardId.STRIKE_IRONCLAD, CardId.PERFECTED_STRIKE, CardId.POMMEL_STRIKE, CardId.TWIN_STRIKE,
+STRIKE_CARDS = frozenset({CardId.STRIKE_DEFECT, CardId.ADAPTIVE_STRIKE, CardId.FOCUSED_STRIKE, CardId.METEOR_STRIKE, CardId.MOMENTUM_STRIKE, CardId.STRIKE_NECROBINDER, CardId.BLIGHT_STRIKE, CardId.SCULPTING_STRIKE, CardId.SHINING_STRIKE, CardId.STRIKE_SILENT, CardId.STRIKE_REGENT, CardId.SOLAR_STRIKE, CardId.MINION_STRIKE, CardId.LEADING_STRIKE, CardId.ULTIMATE_STRIKE, CardId.SEEKER_STRIKE, CardId.STRIKE_IRONCLAD, CardId.PERFECTED_STRIKE, CardId.POMMEL_STRIKE, CardId.TWIN_STRIKE,
                           CardId.ASHEN_STRIKE, CardId.SETUP_STRIKE})
 
 def _curse_debuff(player, status : StatusId):

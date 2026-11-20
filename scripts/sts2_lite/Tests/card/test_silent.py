@@ -174,7 +174,7 @@ def test_ironclad_run_is_unchanged():
 def test_unknown_character_is_refused():
     from sts2_lite.run.state import new_run
     with pytest.raises(NotImplementedError):
-        new_run(0, "DEFECT")
+        new_run(0, "WATCHER")
 
 def test_silent_reward_pool_holds_its_commons():
     from sts2_lite.rewards.cards import card_pool_ids
