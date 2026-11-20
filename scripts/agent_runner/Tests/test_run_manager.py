@@ -387,13 +387,3 @@ def test_a_hand_still_being_dealt_is_waited_for_after_end_turn_and_at_the_start_
     assert not combat_session.turn_is_changing(two_of_five, late)                                   # a reduced draw: taken as it is after the timeout
     assert not combat_session.first_state_ready(two_of_five) and combat_session.first_state_ready(full)
     assert combat_session.first_state_ready(two_of_five, waited=combat_session.PARTIAL_HAND_TIMEOUT)
-
-
-def test_a_slow_deal_is_waited_for_beyond_the_turn_change_timeout():
-    """necrobinder-a0-1: a game in the background dealt nothing for 20s+, and the agent ended three turns on an empty hand."""
-    from agent_runner import combat_session
-    import time
-    dealing = {"round": 5, "hand": [], "energy": 3, "draw_pile_count": 5, "discard_pile_count": 5}
-    assert combat_session.turn_is_changing(dealing, {"round": 4, "time": time.time() - 30})
-    assert not combat_session.turn_is_changing(dealing, {"round": 4, "time": time.time() - combat_session.DEAL_TIMEOUT - 1})
-    assert not combat_session.turn_is_changing({**dealing, "draw_pile_count": 0, "discard_pile_count": 0}, {"round": 4, "time": time.time() - 30})

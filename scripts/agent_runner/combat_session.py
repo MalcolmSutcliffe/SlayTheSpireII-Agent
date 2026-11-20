@@ -16,8 +16,6 @@ from sts2_lite.combat import CombatState, CombatSimulator
 BASE_HAND = 5                   # cards drawn at the start of a turn
 PARTIAL_HAND_TIMEOUT = 5.0      # seconds a hand that is short of its deal is waited for after End Turn / the fight showing, before it is taken as it is
 TURN_CHANGE_TIMEOUT = 10.0      # seconds to wait for the round number to advance after End Turn
-DEAL_TIMEOUT = 90.0             # seconds to wait for a new turn's cards while the hand is empty and the piles still hold some: a game in the background deals them very slowly
-_warned_slow_deal = set()
 LOCKED_READS = 8                # reads of locked-looking cards (about 3 s) before the agent acts anyway
 NEW_FIGHT_TIMEOUT = 30.0        # seconds a new fight may show no hand before the agent acts anyway (a fight that starts with no cards drawn)
 TIME_BUDGET_SECONDS = 10.0      # Max time allocated for agent to think
@@ -91,16 +89,8 @@ def turn_is_changing(game_state : dict, ended : dict | None) -> bool:
     (hand empty, energy 0; or energy already back with the hand empty or only partly dealt).
     `ended`: the round the agent ended (and when). Wait for a started turn, but not forever: an extra turn
     (Pael's Eye) keeps the round number."""
-    if ended is None:
+    if ended is None or time.time() - ended["time"] >= TURN_CHANGE_TIMEOUT:
         return False
-    waited = time.time() - ended["time"]
-    undealt = game_state.get("round") != ended["round"] and not game_state.get("hand") and (
-        game_state.get("energy") == 0 or (game_state.get("draw_pile_count") or 0) + (game_state.get("discard_pile_count") or 0) > 0)
-    if waited >= (DEAL_TIMEOUT if undealt else TURN_CHANGE_TIMEOUT):
-        return False
-    if undealt and waited >= TURN_CHANGE_TIMEOUT and ended["time"] not in _warned_slow_deal:
-        _warned_slow_deal.add(ended["time"])
-        print(f"the game has not dealt the new hand after {waited:.0f}s - is it running in the background? waiting for it (ending the turn now would throw the turn away)")
     if game_state.get("round") == ended["round"]:
         return True
     if not game_state.get("hand"):
