@@ -831,6 +831,14 @@ public static partial class BridgeMod
             {
                 var hitbox = ancientLayout.GetNodeOrNull<NClickableControl>("%DialogueHitbox");
                 inDialogue = hitbox != null && hitbox.Visible && hitbox.IsEnabled;
+                if (inDialogue)
+                {
+                    // Which line the dialogue is on: advancing it changes nothing else in the state, so a runner comparing states would think the click did nothing
+                    var layoutType = typeof(NAncientEventLayout);
+                    const System.Reflection.BindingFlags flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+                    state["dialogue_line"] = layoutType.GetField("_currentDialogueLine", flags)?.GetValue(ancientLayout);
+                    state["dialogue_lines"] = (layoutType.GetField("_dialogue", flags)?.GetValue(ancientLayout) as System.Collections.ICollection)?.Count;
+                }
             }
         }
         state["in_dialogue"] = inDialogue;
