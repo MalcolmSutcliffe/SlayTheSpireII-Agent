@@ -337,3 +337,96 @@ def test_protector_hits_for_ten_plus_osty_max_hp():
     cs.player.osty.current_hp = 2
     play(cs)
     assert hp(cs) == 100 - 16
+
+
+# ------------------------------------------------------------ the bridge: Osty and shown costs
+def raw_card(card_id, cost, ctype="Attack", keywords=(), upgraded=False):
+    return {"id": card_id, "name": card_id.title(), "type": ctype, "cost": str(cost), "star_cost": None, "target_type": "AnyEnemy" if ctype == "Attack" else "Self",
+            "can_play": True, "is_upgraded": upgraded, "description": "", "card_keywords": list(keywords)}
+
+def raw_player(hand, status=(), osty=None):
+    raw = {"character": "The Necrobinder", "max_hp": 66, "hp": 60, "block": 0, "status": list(status), "hand": hand, "draw_pile": [], "discard_pile": [],
+           "exhaust_pile": [], "relics": [], "energy": 3, "max_energy": 3}
+    if osty is not None:
+        raw["osty"] = osty
+    return raw
+
+def loaded(hand, status=(), osty=None):
+    from sts2_lite.player import Player
+    player = Player.from_dict(raw_player(hand, status, osty))
+    player.remove_displayed_cost_modifiers()
+    return player
+
+def test_osty_is_read_from_the_bridge():
+    player = loaded([], osty={"hp": 7, "max_hp": 12, "alive": True})
+    assert (player.osty.current_hp, player.osty.max_hp, player.osty.owner) == (7, 12, player)
+    assert loaded([], osty={"hp": 0, "max_hp": 12, "alive": False}).osty.current_hp == 0
+    assert loaded([]).osty is None
+
+def test_borrowed_time_is_taken_back_out_of_the_shown_costs():
+    player = loaded([raw_card("STRIKE_NECROBINDER", 3), raw_card("NEUROSURGE", 2, "Power")],
+                    status=[{"id": "BORROWED_TIME_POWER", "name": "Borrowed Time", "amount": 2, "type": "Debuff", "keywords": []}])
+    assert [c.energy_cost for c in player.hand] == [1, 0]
+    assert [c.current_cost(player) for c in player.hand] == [3, 2]
+
+def test_veilpiercer_gets_the_cost_of_its_ethereal_cards_back():
+    player = loaded([raw_card("DEFILE", 0, keywords=["Ethereal"]), raw_card("STRIKE_NECROBINDER", 1)],
+                    status=[{"id": "VEILPIERCER_POWER", "name": "Veilpiercer", "amount": 1, "type": "Buff", "keywords": []}])
+    ethereal, plain = player.hand
+    assert ethereal.energy_cost == 1 and ethereal.guessed_cost and ethereal.current_cost(player) == 0
+    assert plain.energy_cost == 1
+
+def test_the_scythe_reads_its_growth_from_the_text():
+    from sts2_lite.player import Player
+    card = raw_card("THE_SCYTHE", 2)
+    card["description"] = "Deal 23 damage."
+    player = Player.from_dict(raw_player([card]))
+    player._read_growing_cards()
+    assert player.hand[0].bonus_damage == 10
+
+
+# ------------------------------------------------------------ the run: Forbidden Grimoire and The Scythe
+def test_a_scythe_kept_in_the_deck_grows_between_fights():
+    from agents.base_agent import BaseAgent
+    from sts2_lite.campaign import RunSimulator
+    from sts2_lite.campaign.combat import carry_back, start_fight
+    from sts2_lite.encounters import ENCOUNTERS
+    from sts2_lite.event import card_entry
+    sim = RunSimulator(BaseAgent(), seed=3, time_budget=None, character="NECROBINDER")
+    run = sim.run_state
+    run.deck = [card_entry("THE_SCYTHE")] + [card_entry("STRIKE_NECROBINDER")] * 5
+    encounter = next(iter(ENCOUNTERS))
+    fight = start_fight(run, encounter, "monster", sim.game)
+    player = fight.combat_state.player
+    scythe = next(c for c in player.hand + player.draw_pile if c.card_id is CardId.THE_SCYTHE)
+    if scythe in player.draw_pile:
+        player.draw_pile.remove(scythe)
+        player.hand.append(scythe)
+    fight.combat_state.energy = 9
+    fight.play_card(player.hand.index(scythe), 0)
+    carry_back(run, fight)
+    assert run.deck[0]["scythe_bonus"] == 5
+    again = start_fight(run, encounter, "monster", sim.game).combat_state.player
+    assert next(c for c in again.draw_pile + again.hand if c.card_id is CardId.THE_SCYTHE).bonus_damage == 5
+
+def test_forbidden_grimoire_pays_card_removals_after_the_fight():
+    from sts2_lite.campaign.combat import carry_back
+    from sts2_lite.run import new_run
+    run = new_run(0, "NECROBINDER")
+    cs = state([])
+    cs.player.apply_status(StatusId.FORBIDDEN_GRIMOIRE, 2)
+    assert carry_back(run, type("Sim", (), {"combat_state": cs})()) == 2
+
+def test_the_reward_screen_offers_the_removals_and_takes_a_card_out():
+    from sts2_lite.campaign import RunSimulator
+    from sts2_lite.campaign.Tests.test_sandbox import RandomFighter
+    from sts2_lite.encounters import ENCOUNTERS
+    seen = []
+    class Watcher(RandomFighter):
+        def get_decision(self, decision):
+            seen.extend(i["type"] for i in decision.state.get("items") or [])
+            return super().get_decision(decision)
+    sim = RunSimulator(Watcher(), seed=5, time_budget=None, character="NECROBINDER")
+    sim.removal_rewards = 2
+    sim.rewards(next(e for e in ENCOUNTERS.values() if e.room == "Monster"))
+    assert seen.count("card_removal") >= 1

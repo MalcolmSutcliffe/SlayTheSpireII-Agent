@@ -420,6 +420,8 @@ def play_the_scythe(card : Card, combat : CombatSimulator, target_index=0, is_up
     """13 plus what it has grown by; each play adds 5 (7). `card` is this play's own copy, so it can remember the growth."""
     _attack(combat, 13 + card.bonus_damage, enemy_at(combat, target_index))
     card.bonus_damage += 7 if is_upgraded else 5
+    if card.deck_index is not None:
+        _player(combat).deck_buffs[card.deck_index] = card.bonus_damage      # BuffFromPlay on the DeckVersion
 
 def play_times_up(card : Card, combat : CombatSimulator, target_index=0, is_upgraded=False):
     target = enemy_at(combat, target_index)

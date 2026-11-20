@@ -51,6 +51,7 @@ class Card:
     until_played : bool = False                # the temporary cost also ends when the card is played (SetThisTurnOrUntilPlayed)
     replay : int = 0                           # extra plays the card has for good (Hidden Gem); Glam's is the REPLAY keyword
     bonus_damage : int = 0                     # damage Rampage and Thrash have gained this combat
+    deck_index : int | None = None             # the position in the run's deck of a card whose growth outlasts the fight (The Scythe)
     shown_damage : int | None = None           # the damage printed on the card when it was loaded from the game
     enchantment : EnchantmentId | None = None  # at most one per card
     enchant_amount : int = 0                   # the enchantment's X (Sharp 2, Adroit 3, ...)
@@ -537,6 +538,7 @@ class Card:
         new_card.guessed_cost = card.guessed_cost
         new_card.until_played = card.until_played
         new_card.bonus_damage = card.bonus_damage
+        new_card.deck_index = card.deck_index
         new_card.last_played_turn = card.last_played_turn
         new_card.replay = card.replay
         new_card.enchantment, new_card.enchant_amount, new_card.enchant_bonus = card.enchantment, card.enchant_amount, card.enchant_bonus

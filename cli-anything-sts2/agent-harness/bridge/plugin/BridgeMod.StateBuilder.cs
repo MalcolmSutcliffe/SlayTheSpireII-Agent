@@ -462,6 +462,18 @@ public static partial class BridgeMod
                 state["stars"] = combatState.Stars;
             }
 
+            // Osty (The Necrobinder's pet): absent until summoned, hp 0 once it has died
+            var osty = player.Osty;
+            if (osty != null)
+            {
+                state["osty"] = new Dictionary<string, object?>
+                {
+                    ["hp"] = osty.CurrentHp,
+                    ["max_hp"] = osty.MaxHp,
+                    ["alive"] = osty.IsAlive
+                };
+            }
+
             // Hand
             var hand = new List<Dictionary<string, object?>>();
             int cardIndex = 0;

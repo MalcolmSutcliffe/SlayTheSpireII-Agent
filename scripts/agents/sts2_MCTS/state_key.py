@@ -71,7 +71,7 @@ def _player(p) -> tuple:
             tuple(sorted(p.returning, key=repr)), p.card_blocks_this_turn, p.cards_exhausted_this_turn, p.gold,
             p.has_been_attacked_this_turn, p.lost_hp_this_turn, p.hp_loss_events, tuple(p.hp_lost_log), p.is_minion, p.binding, p.bound_cards, p.bound_played, p.smogged,
             tuple(sorted((x.slot, x.potion_id.value) for x in p.potions)), p.extra_turn_pending,
-            (p.osty.current_hp, p.osty.max_hp) if p.osty is not None else None, p.osty_attacks_this_turn, p.extra_draws_this_turn, p.doom_applied_this_turn, p.ethereal_plays)
+            (p.osty.current_hp, p.osty.max_hp) if p.osty is not None else None, p.osty_attacks_this_turn, p.extra_draws_this_turn, p.doom_applied_this_turn, p.ethereal_plays, tuple(sorted(p.deck_buffs.items())))
 
 def _continuation(kind : str, args : list) -> tuple:
     if kind == "finish":                # (card, hp_loss_mark, force_exhaust, dupe, to_top)

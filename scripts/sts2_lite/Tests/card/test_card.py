@@ -506,7 +506,7 @@ def test_create_copy_fields_are_all_in_the_signature():
     import inspect
     src = inspect.getsource(Card.create_copy)
     copied = {line.split("new_card.")[1].split(" =")[0].split(",")[0] for line in src.splitlines() if "new_card." in line and "=" in line}
-    not_in_signature = {"type", "name", "target_type", "guessed_cost"}    # follow from card_id; guessed_cost only says how the cost was read, it never changes a play
+    not_in_signature = {"type", "name", "target_type", "guessed_cost", "deck_index"}    # follow from card_id; guessed_cost only says how the cost was read, it never changes a play; deck_index only says where a deck-kept growth is stored (Player.deck_buffs is keyed)
     sig_src = inspect.getsource(Card.signature)
     for field in copied - not_in_signature:
         assert field.lstrip("_") in sig_src or field == "_keywords", field

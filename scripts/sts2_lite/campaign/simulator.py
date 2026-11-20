@@ -57,14 +57,15 @@ class RunResult:
 
 
 class RunSimulator:
-    def __init__(self, agent, seed : int | None = None, ascension : int = 0, search_seed : int | None = None, time_budget : float | None = DEFAULT_TIME_BUDGET):
+    def __init__(self, agent, seed : int | None = None, ascension : int = 0, search_seed : int | None = None, time_budget : float | None = DEFAULT_TIME_BUDGET, character : str = "IRONCLAD"):
         self.agent, self.ascension, self.time_budget = agent, ascension, time_budget
         self.game = GameRng(seed)
         self.search = SearchRng(search_seed)
-        self.run_state = new_run(ascension)
+        self.run_state = new_run(ascension, character)
         self.run_state.hidden.relic_bag = RelicGrabBag(self.game.stream("relics"), self.run_state.character)
         self.run_state.hidden.relic_bag.remove(self.run_state.relics[0]["id"])
         self.fights = 0
+        self.removal_rewards = 0
         self.took_damage = True         # the last fight cost hit points (Lava Lamp)
         self.illegal = 0
         self.shared_ancients : dict[int, tuple] = {}
@@ -249,7 +250,7 @@ class RunSimulator:
         sim = start_fight(r, encounter.id, room.lower(), self.game, final_fight=final, one_hp=getattr(self, "fur_coat", False), variant=variant)
         self.fights += 1
         play_fight(sim, self.agent, self.game, self.search, self.time_budget, turn_limit)
-        carry_back(r, sim)
+        self.removal_rewards = carry_back(r, sim)
         improvement = sim.combat_state.player.status.get(StatusId.IMPROVEMENT)
         if improvement is not None and not r.dead:       # Mad Science (Improvement): upgrades a random card of the deck as the combat ends
             self.ctx().upgrade_random(improvement.amount)
@@ -264,6 +265,9 @@ class RunSimulator:
         r = self.run_state
         last_boss = encounter.room == "Boss" and r.act == 3
         items = generate_rewards(r, encounter, last_boss, self.game)
+        if encounter.rewards and not (encounter.room == "Boss" and last_boss):
+            items += [Reward("card_removal") for _ in range(getattr(self, "removal_rewards", 0))]
+        self.removal_rewards = 0
         for kind, *_ in extra:
             if kind == "relic":
                 items.append(Reward("relic", relic=pull_relic(r) if r.hidden.relic_bag else None))
@@ -280,6 +284,8 @@ class RunSimulator:
                 self.add_potion(item.potion)
             elif item.kind == "relic":
                 self.gain_relic(item.relic)
+            elif item.kind == "card_removal":
+                self.ctx().remove_cards(1)
             elif item.kind == "card":
                 picked = self.card_reward(item.cards, in_combat=True, room=item.room)
                 if not picked:

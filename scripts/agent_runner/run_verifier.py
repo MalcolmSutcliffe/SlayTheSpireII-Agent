@@ -38,7 +38,7 @@ OVERLAYS = ("card_reward", "card_select", "relic_select")                       
 SCREENS = ANCHORS + OVERLAYS
 PLAYER_FIELDS = ("hp", "max_hp", "gold")
 GOLD_RANGE = {"Monster": (10, 20), "Elite": (35, 45), "Boss": (100, 100)}
-REWARD_TYPES = {"gold", "potion", "card", "relic", "special_card", "linked_set", "remove_card"}
+REWARD_TYPES = {"gold", "potion", "card", "relic", "special_card", "linked_set", "remove_card", "card_removal"}
 ALIASES = {"REST": "HEAL", "SMELT": "SMITH"}
 NOT_A_REWARD_RARITY = {"Basic", "Curse", "Status", "Event", "Ancient", "Token", "Quest"}
 

@@ -87,6 +87,7 @@ class Player(Creature):
         self.extra_draws_this_turn = 0  # cards drawn outside the hand draw this turn (Parse)
         self.doom_applied_this_turn = False
         self.ethereal_plays = 0         # Ethereal cards played this combat (Banshee's Cry, Big Hat)
+        self.deck_buffs = {}            # deck position -> the growth The Scythe has gained there (the deck's version keeps it after the fight)
 
     @classmethod
     def from_dict(cls, player : dict):
@@ -98,6 +99,12 @@ class Player(Creature):
         pl.block = player["block"]
         pl.gold = player.get("gold", 0)
         pl.stars = int(player.get("stars") or 0)
+        osty = player.get("osty")
+        if osty is not None:                # the Necrobinder's pet (BridgeMod reports it once summoned; hp 0 when dead)
+            from sts2_lite.osty import new_osty
+            pl.osty = new_osty(int(osty.get("max_hp", 1)))
+            pl.osty.current_hp = int(osty.get("hp", 0)) if osty.get("alive", True) else 0
+            pl.osty.owner = pl
         pl.potions = [Potion(potion_id, p.get("slot", i)) for i, p in enumerate(player.get("potions") or [])
                       if (potion_id := PotionId.from_game_id(p.get("id"))) is not None]
         pl.potion_slots = max(player.get("potion_slots", DEFAULT_POTION_SLOTS), 1 + max((p.slot for p in pl.potions), default=-1))
@@ -211,7 +218,7 @@ class Player(Creature):
                     self.cards_played_total = max(self.cards_played_total, base_from_displayed(shown, self, Creature()) if pile is self.hand else shown)
                     continue
                 momentum = card.enchantment == EnchantmentId.MOMENTUM and card.card_id in PLAIN_DAMAGE
-                if card.shown_damage is None or not (momentum or card.card_id in (CardId.RAMPAGE, CardId.THRASH, CardId.MAUL, CardId.SOVEREIGN_BLADE, CardId.KINGLY_PUNCH)):
+                if card.shown_damage is None or not (momentum or card.card_id in (CardId.RAMPAGE, CardId.THRASH, CardId.MAUL, CardId.SOVEREIGN_BLADE, CardId.KINGLY_PUNCH, CardId.THE_SCYTHE)):
                     continue
                 shown = card.shown_damage
                 if pile is self.hand:
@@ -225,10 +232,33 @@ class Player(Creature):
                     card.bonus_damage = max(0, shown - (6 if card.is_upgraded else 5))
                 elif card.card_id == CardId.KINGLY_PUNCH:          # +4 (+6) each draw
                     card.bonus_damage = max(0, shown - (10 if card.is_upgraded else 8))
+                elif card.card_id == CardId.THE_SCYTHE:            # 13 plus 5 (7) a play
+                    card.bonus_damage = max(0, shown - 13)
                 elif card.card_id == CardId.SOVEREIGN_BLADE:       # Forge adds to its 10
                     card.bonus_damage = max(0, shown - SOVEREIGN_BLADE_DAMAGE)
                 else:
                     card.bonus_damage = max(0, shown - (6 if card.is_upgraded else 4))
+
+    def remove_displayed_cost_modifiers(self):
+        """Borrowed Time adds to every cost the bridge shows, and Veilpiercer shows its Ethereal cards at 0: the base costs come back
+        (Veilpiercer's from the card tables, a guess a later state may correct, see CombatState.carry_card_costs)."""
+        borrowed = self.status_amount(StatusId.BORROWED_TIME)
+        veil = StatusId.VEILPIERCER in self.status
+        if not borrowed and not veil:
+            return
+        known = combat_cards(self.character)
+        for pile in (self.hand, self.draw_pile, self.discard_pile, self.exhaust_pile):
+            for card in pile:
+                if card.energy_cost == "X":
+                    continue
+                if veil and card.ethereal and card.energy_cost == 0 and pile is self.hand:
+                    if card.card_id in known:
+                        base = Card.create_generated(card.card_id, card.is_upgraded).energy_cost
+                        if base != "X" and base != 0:
+                            card.energy_cost, card.guessed_cost = base, True
+                    continue
+                if borrowed:
+                    card.energy_cost = max(0, card.energy_cost - borrowed)
 
     def remove_displayed_tangled(self):
         """The bridge shows attack costs with Tangled included; keep base costs."""
@@ -298,6 +328,7 @@ class Player(Creature):
         new_pl.extra_draws_this_turn = player.extra_draws_this_turn
         new_pl.doom_applied_this_turn = player.doom_applied_this_turn
         new_pl.ethereal_plays = player.ethereal_plays
+        new_pl.deck_buffs = dict(player.deck_buffs)
         return new_pl
     
     def clear_bound(self):

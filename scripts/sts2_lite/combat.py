@@ -88,6 +88,7 @@ class CombatState:
         cs = cls()
         cs.player = Player.from_dict(combat_state["player"])
         cs.player.remove_displayed_tangled()
+        cs.player.remove_displayed_cost_modifiers()
         cs.enemies = []
         ascension = combat_state.get("context", {}).get("ascension", 0)
         cs.ascension = ascension
