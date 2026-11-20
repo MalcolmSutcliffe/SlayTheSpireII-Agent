@@ -38,10 +38,10 @@ def zero_cost(card):
 def test_every_potion_is_described_and_has_an_effect():
     assert set(EFFECTS) == set(PotionId) == set(POTION_INFO)
 
-def test_the_list_is_the_wikis_ironclad_silent_and_regent_list():
+def test_the_list_is_the_wikis_ironclad_silent_regent_and_necrobinder_list():
     counts = {r: sum(1 for p in PotionId if p.rarity == r) for r in PotionRarity}
-    assert counts == {PotionRarity.COMMON : 18, PotionRarity.UNCOMMON : 18, PotionRarity.RARE : 18, PotionRarity.SPECIAL : 4}
-    assert len(PotionId) == 58
+    assert counts == {PotionRarity.COMMON : 19, PotionRarity.UNCOMMON : 19, PotionRarity.RARE : 19, PotionRarity.SPECIAL : 4}
+    assert len(PotionId) == 61
 
 @pytest.mark.parametrize("game_id, expected", [
     ("FAIRY_IN_A_BOTTLE", PotionId.FAIRY_IN_A_BOTTLE), ("fairy_in_a_bottle", PotionId.FAIRY_IN_A_BOTTLE), ("REGEN_POTION", PotionId.REGEN_POTION),
@@ -60,7 +60,7 @@ def test_only_fairy_in_a_bottle_works_by_itself():
 def test_targets_follow_the_wiki():
     assert {p for p in PotionId if p.info.target == TargetType.AnyEnemy} == {
         PotionId.FIRE_POTION, PotionId.VULNERABLE_POTION, PotionId.WEAK_POTION, PotionId.POWDERED_DEMISE, PotionId.BEETLE_JUICE, PotionId.POTION_SHAPED_ROCK,
-        PotionId.POISON_POTION}
+        PotionId.POISON_POTION, PotionId.POTION_OF_DOOM}
 
 
 # ---------------------------------------------------------------- loading and actions

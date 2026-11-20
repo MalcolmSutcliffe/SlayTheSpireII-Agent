@@ -9,7 +9,7 @@ from sts2_lite.hooks import HookType
 from sts2_lite.card.constants import STAR_COST, UPGRADE_STAR_COST, MAD_SCIENCE_BLOCK, MAD_SCIENCE_DAMAGE, mad_science_rider, BECKON_HP_LOSS, BURN_DAMAGE, CONSUMED_ON_PLAY, CURSE_NAMES, ENCHANT_CORRUPTED_HP_LOSS, ENCHANT_SOWN_ENERGY, INFECTION_DAMAGE, NORMALITY_CARD_LIMIT, PLAYABLE_CURSES, QUEST_NAMES, TOXIC_DAMAGE, UPGRADE_BASE_COST, UPGRADE_COST_CHANGE, UPGRADE_KEYWORD, UPGRADE_REMOVED_KEYWORD, WITHER_DAMAGE, _AXE, _CHOKER, _ETHEREAL, _EXHAUST, _INNATE, _REPLAY, _RETAIN, _SCARF, _SLY, _UNPLAYABLE, QUEST_CARDS, _unknown_cards, _unknown_enchantments, keyword_mask
 from sts2_lite.card.effects import _gain_block
 from sts2_lite.card.ids import CardId, CardKeyword, CardType, EnchantmentId, TargetType
-from sts2_lite.card.tables import ANCIENT_CARDS, COLORLESS_CARDS, EVENT_CARDS, GENERATABLE_CARDS, REGENT_CARDS, SILENT_CARDS, HAND_CURSE_EFFECTS, STRIKE_CARDS, TOKEN_CARDS
+from sts2_lite.card.tables import ANCIENT_CARDS, COLORLESS_CARDS, EVENT_CARDS, GENERATABLE_CARDS, NECROBINDER_CARDS, REGENT_CARDS, SILENT_CARDS, HAND_CURSE_EFFECTS, STRIKE_CARDS, TOKEN_CARDS
 
 if TYPE_CHECKING:
     from sts2_lite.combat import CombatSimulator
@@ -35,6 +35,7 @@ def _void_form_free(void_form) -> bool:
     return (void_form.records[0][0] if void_form.records else 0) < void_form.amount
 
 _VOID_FORM = StatusId.VOID_FORM
+_VEILPIERCER, _BORROWED_TIME = StatusId.VEILPIERCER, StatusId.BORROWED_TIME
 
 class Card:
     card_id : CardId
@@ -60,6 +61,7 @@ class Card:
     bound : bool = False                       # the Queen's Chains of Binding: only one Bound card can be played a turn
     _keywords : int | None = None              # keyword mask; None: the card's canonical keywords
     turn_keywords : int = 0                    # keyword bits given for this turn only (CardCmd.ApplySingleTurnRetain / ApplySingleTurnSly)
+    last_played_turn : int = -1                # the player turn this card was last played (Fetch draws only the first time)
     generated : bool = False                   # made during this fight (the game's DeckVersion is null); the Thieving Hopper cannot take it
 
     def __init__(self):
@@ -358,7 +360,7 @@ class Card:
     @classmethod
     def create_generated(cls, card_id : CardId, upgraded : bool = False) -> Card:
         """A fresh copy of a card that a card effect adds to the player's piles (Infernal Blade, Stoke)."""
-        name, card_type, cost, target = (GENERATABLE_CARDS.get(card_id) or SILENT_CARDS.get(card_id) or REGENT_CARDS.get(card_id) or COLORLESS_CARDS.get(card_id) or EVENT_CARDS.get(card_id) or ANCIENT_CARDS.get(card_id)
+        name, card_type, cost, target = (GENERATABLE_CARDS.get(card_id) or SILENT_CARDS.get(card_id) or REGENT_CARDS.get(card_id) or NECROBINDER_CARDS.get(card_id) or COLORLESS_CARDS.get(card_id) or EVENT_CARDS.get(card_id) or ANCIENT_CARDS.get(card_id)
                                          or TOKEN_CARDS[card_id])
         c = cls()
         c.card_id, c.name, c.type = card_id, name, card_type
@@ -380,6 +382,26 @@ class Card:
         if new_card.restore_cost is None:
             new_card.restore_cost = self.energy_cost
         new_card.energy_cost = max(0, self.energy_cost - amount)
+        return new_card
+
+    def cheaper_until_played(self, amount : int) -> Card:
+        """EnergyCost.AddUntilPlayed(-amount) (Bookmark)."""
+        if self.energy_cost == "X":
+            return self
+        new_card = Card.create_copy(self)
+        if new_card.restore_cost is None:
+            new_card.restore_cost = self.energy_cost
+        new_card.energy_cost, new_card.until_played = max(0, self.energy_cost - amount), True
+        return new_card
+
+    def cheaper_this_combat(self, amount : int) -> Card:
+        """EnergyCost.AddThisCombat(-amount): a cost change that lasts the fight (Melancholy, Banshee's Cry)."""
+        if self.energy_cost == "X":
+            return self
+        new_card = Card.create_copy(self)
+        new_card.energy_cost = max(0, self.energy_cost - amount)
+        if new_card.restore_cost is not None:
+            new_card.restore_cost = max(0, new_card.restore_cost - amount)
         return new_card
 
     def free_this_combat(self) -> Card:
@@ -515,6 +537,7 @@ class Card:
         new_card.guessed_cost = card.guessed_cost
         new_card.until_played = card.until_played
         new_card.bonus_damage = card.bonus_damage
+        new_card.last_played_turn = card.last_played_turn
         new_card.replay = card.replay
         new_card.enchantment, new_card.enchant_amount, new_card.enchant_bonus = card.enchantment, card.enchant_amount, card.enchant_bonus
         new_card._keywords = card._keywords
@@ -530,7 +553,7 @@ class Card:
         """Everything that decides how this card plays: two cards with equal signatures are interchangeable
         (the fields create_copy carries over, minus name/type/target which follow from the id)."""
         return (self.card_id, self.is_upgraded, self.energy_cost, self.star_cost, self.is_unplayable, self.restore_cost, self.until_played,
-                self.bonus_damage, self.replay, self.enchantment, self.enchant_amount, self.enchant_bonus, self._mask, self.generated, self.dampened_from is not None, self.wither_level, self.bound, self.rider, self.turn_keywords)
+                self.bonus_damage, self.last_played_turn, self.replay, self.enchantment, self.enchant_amount, self.enchant_bonus, self._mask, self.generated, self.dampened_from is not None, self.wither_level, self.bound, self.rider, self.turn_keywords)
 
     @property
     def is_minion(self) -> bool:
@@ -544,6 +567,8 @@ class Card:
         ctype, status = self.type, player.status
         if _VOID_FORM in status and _void_form_free(status[_VOID_FORM]):
             return 0                # VoidFormPower.TryModifyEnergyCostInCombatLate
+        if _VEILPIERCER in status and self._mask & _ETHEREAL:
+            return 0                # VeilpiercerPower.TryModifyEnergyCostInCombatLate: Ethereal cards in hand
         if ctype is _SKILL:
             if _CORRUPTION in status:
                 return 0
@@ -558,6 +583,8 @@ class Card:
             cost = energy_cost + (tangled.amount if tangled is not None else 0)
         else:
             cost = energy_cost
+        if _BORROWED_TIME in status:
+            cost += status[_BORROWED_TIME].amount           # BorrowedTimePower.TryModifyEnergyCostInCombat: every card, 0-cost ones too
         if player.relics and _SCARF in player.relics and free_by_relic(player):
             return 0                # Brilliant Scarf (TryModifyEnergyCostInCombatLate)
         return cost
@@ -630,6 +657,7 @@ class Card:
                 punch.amount += 1
                 player.status[punch.status_id] = punch
             raise
+        combat.last_energy_paid = spent
         combat.finish_vigor()
         if spent > 0:
             combat.fire(HookType.ENERGY_SPENT, spent)
@@ -733,6 +761,8 @@ class Card:
             return False            # Clash: only while the hand holds nothing but Attacks
         if self.card_id is CardId.GRAND_FINALE and player.draw_pile:
             return False            # Grand Finale: only with an empty draw pile
+        if self.card_id is CardId.HIGH_FIVE and (player.osty is None or not player.osty.alive):
+            return False            # High Five: IsPlayable needs Osty
         if ctype is _SKILL and player.smogged:
             return False            # Smoggy: afflicted with Smog
         if self.bound and player.bound_played:

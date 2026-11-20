@@ -40,7 +40,7 @@ SLING_STRENGTH, EMBER_TEA_STRENGTH = 2, 2
 CONCH_DRAW, CONCH_ENERGY, COCOA_ENERGY, LANTERN_ENERGY, BREAD_ENERGY_LOSS = 2, 1, 4, 1, 2
 PANTOGRAPH_HEAL, POPPER_DAMAGE, ROYAL_POISON_DAMAGE = 25, 9, 4
 ANTLER_DAZED, TEA_DAZED = 3, 2
-STONE_CRACKER_CARDS, POWER_CELL_CARDS, ORANGE_DOUGH_CARDS, BIG_HAT_CARDS = 2, 2, 2, 2
+STONE_CRACKER_CARDS, POWER_CELL_CARDS, ORANGE_DOUGH_CARDS, BIG_HAT_CARDS, FUNERARY_MASK_SOULS = 2, 2, 2, 2, 3
 
 
 class Opening:
@@ -79,6 +79,9 @@ class Opening:
                 player.apply_status(status, amount)
         if self.has("DIVINE_RIGHT"):
             player.stars += DIVINE_RIGHT_STARS          # AfterRoomEntered
+        if self.has("BOUND_PHYLACTERY") or self.has("PHYLACTERY_UNBOUND"):
+            from sts2_lite.necrobinder import summon
+            summon(player, 5 if self.has("PHYLACTERY_UNBOUND") else 1)      # BeforeCombatStart (the later turns are relic/necrobinder.py)
         if self.has("FAKE_SNECKO_EYE"):
             player.apply_status(StatusId.CONFUSED, 1)
         if self.has("SLING_OF_COURAGE") and self.elite:
@@ -98,6 +101,9 @@ class Opening:
             for card in rng.sample(free, min(POWER_CELL_CARDS, len(free))):
                 player.remove_from_draw_pile(card)
                 player.add_to_hand(card)
+        if self.has("FUNERARY_MASK"):
+            for _ in range(FUNERARY_MASK_SOULS):
+                player.insert_into_draw_pile(Card.create_generated(CardId.SOUL))        # BeforeHandDraw, turn 1
         antler = ANTLER_DAZED if self.has("BLESSED_ANTLER") else 0
         tea = TEA_DAZED if self.has("TEA_OF_DISCOURTESY") else 0
         for _ in range(antler + tea):

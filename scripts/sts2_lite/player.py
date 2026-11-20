@@ -9,7 +9,7 @@ from sts2_lite.creature import Creature
 from sts2_lite.card import Card, CardId, CardType, CardKeyword, TargetType, CONFUSED_MAX_COST, EnchantmentId, SLITHER_MAX_COST, PLAIN_DAMAGE
 from sts2_lite.card.tables import combat_cards
 
-BASIC_ATTACK_COSTS = {CardId.STRIKE_IRONCLAD: 1, CardId.BASH: 2, CardId.STRIKE_SILENT: 1}      # the starter Attacks are not in the generated-card table
+BASIC_ATTACK_COSTS = {CardId.STRIKE_IRONCLAD: 1, CardId.BASH: 2, CardId.STRIKE_SILENT: 1, CardId.STRIKE_NECROBINDER: 1}      # the starter Attacks are not in the generated-card table
 from sts2_lite.status import StatusInstance, StatusId, INSTANCED
 from sts2_lite.relic import RelicId, RelicInstance, strength_received, lizard_tail_revive, hand_draw_bonus, blocks_draw, free_by_relic
 from sts2_lite.potion import Potion, PotionId, DEFAULT_POTION_SLOTS, FAIRY_HEAL
@@ -82,6 +82,11 @@ class Player(Creature):
         self.bound_cards = 0            # cards bound so far this turn
         self.bound_played = False       # a Bound card has been played this turn: no other can be
         self.smogged = False            # Smoggy: a Skill was played this turn, so every Skill card is afflicted with Smog until it ends
+        self.osty = None                # the Necrobinder's pet (osty.Osty), dead with 0 HP once it has fallen
+        self.osty_attacks_this_turn = 0 # Attacks Osty has made this turn (Flatten, Rattle)
+        self.extra_draws_this_turn = 0  # cards drawn outside the hand draw this turn (Parse)
+        self.doom_applied_this_turn = False
+        self.ethereal_plays = 0         # Ethereal cards played this combat (Banshee's Cry, Big Hat)
 
     @classmethod
     def from_dict(cls, player : dict):
@@ -187,7 +192,7 @@ class Player(Creature):
             base = BASIC_ATTACK_COSTS.get(card.card_id) if card.type == CardType.Attack else None
             if base is None and card.card_id in combat_cards(self.character):
                 base = Card.create_generated(card.card_id, card.is_upgraded).energy_cost
-            if base is None and card.card_id in (CardId.DEFEND_IRONCLAD, CardId.DEFEND_SILENT, CardId.SURVIVOR, CardId.SLIMED):
+            if base is None and card.card_id in (CardId.DEFEND_IRONCLAD, CardId.DEFEND_SILENT, CardId.DEFEND_NECROBINDER, CardId.SURVIVOR, CardId.SLIMED):
                 base = 1
             if base not in (None, 0) and base != "X":
                 own = Card.create_copy(card)
@@ -286,6 +291,13 @@ class Player(Creature):
         new_pl.gold = player.gold
         new_pl.binding, new_pl.bound_cards, new_pl.bound_played = player.binding, player.bound_cards, player.bound_played
         new_pl.smogged = player.smogged
+        new_pl.osty = player.osty.copy() if player.osty is not None else None
+        if new_pl.osty is not None:
+            new_pl.osty.owner = new_pl
+        new_pl.osty_attacks_this_turn = player.osty_attacks_this_turn
+        new_pl.extra_draws_this_turn = player.extra_draws_this_turn
+        new_pl.doom_applied_this_turn = player.doom_applied_this_turn
+        new_pl.ethereal_plays = player.ethereal_plays
         return new_pl
     
     def clear_bound(self):
@@ -298,6 +310,8 @@ class Player(Creature):
                 if c.bound:
                     pile[i] = c.bound_copy(False)
 
+    doom_hook = None            # called with (target, amount) when damage is turned into Doom (Reaper Form; set by the simulator)
+    osty_hurt_hook = None       # called with the HP Osty lost (set by the simulator for Necro Mastery)
     opening_hook = None
 
     def turn_start(self):
@@ -312,6 +326,9 @@ class Player(Creature):
         self.skills_played_this_turn = 0
         self.shivs_played_this_turn = 0
         self.discards_this_turn = 0
+        self.osty_attacks_this_turn = 0
+        self.extra_draws_this_turn = 0
+        self.doom_applied_this_turn = False
         self.plays_started_this_turn = 0
         self.card_blocks_this_turn = 0
         self.block_play, self.block_play_gains = None, 0
@@ -326,7 +343,7 @@ class Player(Creature):
             if clarity.amount <= 0:
                 del self.status[StatusId.CLARITY_EXTRACT]
         count = max(0, (5 + hand_draw_bonus(self) if self.relics else 5) + (extra_draw.amount if extra_draw else 0) + (1 if clarity else 0) - self.status_amount(StatusId.MIND_ROT)
-                    + self.status_amount(StatusId.TOOLS_OF_THE_TRADE) + self.status_amount(StatusId.TYRANNY))
+                    + self.status_amount(StatusId.TOOLS_OF_THE_TRADE) + self.status_amount(StatusId.TYRANNY) + self.status_amount(StatusId.DEMESNE))
         if self.opening_hook is not None:       # a fight built from a deck: first-turn relics and Innate cards (relic/combat_start.py)
             hook, self.opening_hook = self.opening_hook, None
             count = hook(self, count)
@@ -367,6 +384,16 @@ class Player(Creature):
         if status is StatusId.STRENGTH and amount > 0 and self.relics:
             amount = strength_received(self, amount)
         super().apply_status(status, amount, bypass_artifact)
+
+    def _lose_hp_from_damage(self, damage : int, dealer, powered : bool):
+        """DieForYouPower: a living Osty takes the unblocked part of an Attack first; what it cannot take goes on to the player."""
+        osty = self.osty
+        if powered and osty is not None and osty.current_hp > 0 and damage > 0:
+            from sts2_lite.osty import hurt_osty
+            damage -= hurt_osty(self, damage)
+            if damage <= 0:
+                return
+        super()._lose_hp_from_damage(damage, dealer, powered)
 
     def die(self):
         if self.potions and self._fairy_revive():
@@ -413,6 +440,8 @@ class Player(Creature):
             self.bound_cards += 1
         self.hand.append(card)
         self.cards_drawn += 1
+        if not from_hand_draw:
+            self.extra_draws_this_turn += 1
         if self.known_top > 0:
             self.known_top -= 1
         else:

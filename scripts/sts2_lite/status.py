@@ -205,6 +205,34 @@ class StatusId(Enum):
     WELL_LAID_PLANS = auto()        # the hand is not discarded at the end of the turn
     THE_HUNT = auto()               # The Hunt killed: an extra card reward (marker)
     DOUBLE_DAMAGE = auto()          # attacks from cards deal double damage; 1 less at the end of each of the owner's turns
+    # the Necrobinder
+    DOOM = auto()    # dies at the end of the turn once its HP are no more than this
+    BORROWED_TIME = auto()    # every card costs this much more until the turn ends
+    CALCIFY = auto()    # Osty's attacks do this much more
+    CALL_OF_THE_VOID = auto()    # Ethereal cards from the pool at each turn's start
+    COUNTDOWN = auto()    # Doom on a random enemy each turn
+    DANSE_MACABRE = auto()    # Block for cards that cost 2 or more
+    DEBILITATE = auto()    # an enemy's Vulnerable and Weak count double
+    DEMESNE = auto()    # more Energy and cards each turn
+    DEVOUR_LIFE = auto()    # a Soul played summons
+    ENFEEBLING_TOUCH = auto()    # temporary Strength loss (marker)
+    FORBIDDEN_GRIMOIRE = auto()    # a card removal after each fight
+    FRIENDSHIP = auto()    # more Energy each turn
+    HANG = auto()    # damage multiplier of the next Hang
+    HAUNT = auto()    # a Soul played hurts a random enemy
+    LETHALITY = auto()    # the first Attack of the turn does more damage
+    NECRO_MASTERY = auto()    # Osty's HP lost is dealt to every enemy
+    NEUROSURGE = auto()    # Doom on the player each turn
+    OBLIVION = auto()    # every card played adds Doom to the enemy
+    PAGESTORM = auto()    # drawing an Ethereal card draws more
+    REAPER_FORM = auto()    # Attack damage is also Doom
+    SENTRY_MODE = auto()    # Sweeping Gazes at each turn's start
+    SHROUD = auto()    # Block when Doom is applied
+    SIC_EM = auto()    # Osty's hits on the enemy summon
+    SLEIGHT_OF_FLESH = auto()    # a debuff applied to an enemy hurts it
+    SPIRIT_OF_ASH = auto()    # Block when an Ethereal card is played
+    VEILPIERCER = auto()    # the next Ethereal cards are free
+    SUMMON_NEXT_TURN = auto()    # Summon at the next turn's start
 
 INFESTED_SPAWNS = 4
 CRAB_RAGE_STRENGTH, CRAB_RAGE_BLOCK = 6, 99
@@ -221,10 +249,11 @@ TICKS_DOWN = frozenset({
     StatusId.NO_BLOCK,      # ticks when the enemies' turn ends
     StatusId.CONQUEROR,     # ticks when the enemies' turn ends
     StatusId.INTANGIBLE,    # damage taken is capped at 1; ticks at the end of the enemy turn
+    StatusId.DEBILITATE,    # ticks when the enemies' turn ends
 })
 RESETS_EACH_TURN = frozenset({StatusId.SLOW})
 
-DEBUFFS = frozenset({StatusId.DYING_STAR, StatusId.MONARCHS_GAZE_STRENGTH_DOWN, StatusId.CONQUEROR, StatusId.POISON, StatusId.PIERCING_WAIL, StatusId.CRUSH_UNDER, StatusId.WEAK, StatusId.VULNERABLE, StatusId.FRAIL, StatusId.SHRINK,
+DEBUFFS = frozenset({StatusId.DOOM, StatusId.BORROWED_TIME, StatusId.DEBILITATE, StatusId.HANG, StatusId.NEUROSURGE, StatusId.OBLIVION, StatusId.SIC_EM, StatusId.ENFEEBLING_TOUCH, StatusId.DYING_STAR, StatusId.MONARCHS_GAZE_STRENGTH_DOWN, StatusId.CONQUEROR, StatusId.POISON, StatusId.PIERCING_WAIL, StatusId.CRUSH_UNDER, StatusId.WEAK, StatusId.VULNERABLE, StatusId.FRAIL, StatusId.SHRINK,
                      StatusId.CONSTRICT, StatusId.TANGLED, StatusId.RINGING,
                      StatusId.NO_DRAW, StatusId.NO_ENERGY_GAIN, StatusId.MANGLE, StatusId.CONFUSED,
                      StatusId.NO_BLOCK, StatusId.THE_GAMBIT, StatusId.DARK_SHACKLES,
@@ -1124,3 +1153,6 @@ STATUS_HANDLERS : dict[tuple[StatusId, HookType], Callable] = HandlerTable({
     (StatusId.CALAMITY, HookType.CARD_PLAYED) : _calamity_on_card_played,
     (StatusId.ENTROPY, HookType.PLAYER_TURN_START) : _entropy_on_turn_start,
 })
+
+from sts2_lite import necrobinder as _necrobinder      # the Necrobinder's powers (after the table, which they join)
+STATUS_HANDLERS.update(_necrobinder.STATUS_HANDLERS)

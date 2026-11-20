@@ -13,6 +13,7 @@ from sts2_lite.card import TargetType, CardType, Card, CardId, CardKeyword, Ench
 from sts2_lite.damage import modify_damage, base_from_displayed, bases_from_displayed, EPSILON
 from sts2_lite import rng
 from sts2_lite.hooks import HookType
+from sts2_lite.necrobinder import after_card_played as necrobinder_card_played, on_enemy_died as necrobinder_on_died, apply_doom, osty_hurt, NECROBINDER_CHOICES
 from sts2_lite.relic import RelicId, poison_given, dexterity_bonus, PER_TURN_FLAG, ALWAYS_REPORTED, take_extra_turn, after_card_played, release_card, fire_relics, blocks_play, PHILOSOPHERS_STONE_STRENGTH, upgraded_after_play, \
     max_energy_gain, victory_heal
 
@@ -512,6 +513,7 @@ class CombatSimulator:
         self.play_id = None             # id of the current play; card objects can repeat
         self.vigor_pending = None       # Vigor the current attack command adds (VigorPower.BeforeAttack)
         self.auto_playing = False       # CardPlay.IsAutoPlay of the play being resolved
+        self.last_energy_paid = 0
         self.card_x = 0                 # the X of the X-cost card last played
         self.end_turn_requested = False  # Void Form: the turn ends once the card is played
         self.last_stars_spent = 0       # the Stars the card last played was paid with (CardModel.LastStarsSpent)
@@ -520,6 +522,8 @@ class CombatSimulator:
         combat_state.player.shuffle_hook = self._shuffled
         combat_state.player.block_cleared_hook = self._block_cleared
         combat_state.player.generated_hook = self._card_generated
+        combat_state.player.osty_hurt_hook = lambda lost: osty_hurt(self, lost)
+        combat_state.player.doom_hook = lambda target, amount: apply_doom(self, target, amount)
         self._check_is_over()
 
     ###
@@ -848,6 +852,8 @@ class CombatSimulator:
         elif choice.kind == "begone":               # Begone: the pick becomes a Minion Strike in the same place of the hand
             strike = Card.create_generated(CardId.MINION_STRIKE, bool(choice.amount))
             self._replace_in_hand(index, strike)
+        elif choice.kind in NECROBINDER_CHOICES:
+            NECROBINDER_CHOICES[choice.kind](self, choice, index, card)
         elif choice.kind == "to_draw_pile":
             self._pile(choice.pile).remove(card)
             player.put_on_top(card)                 # the end of the list is the top
@@ -929,7 +935,7 @@ class CombatSimulator:
     def private_copy(card : Card) -> Card:
         """Cards that change when played (Rampage, Thrash, Frantic Escape, Swift/Sown/Vigorous/Momentum/Glam) are played as a copy: card objects are shared between
         simulated states, so the played one must not be changed in place. The copy goes to the discard pile."""
-        if card.card_id in (CardId.RAMPAGE, CardId.THRASH, CardId.FRANTIC_ESCAPE, CardId.UP_MY_SLEEVE) or card.enchantment in CHANGED_ON_PLAY:
+        if card.card_id in (CardId.RAMPAGE, CardId.FETCH, CardId.THE_SCYTHE, CardId.THRASH, CardId.FRANTIC_ESCAPE, CardId.UP_MY_SLEEVE) or card.enchantment in CHANGED_ON_PLAY:
             return Card.create_copy(card)
         return card
 
@@ -987,6 +993,9 @@ class CombatSimulator:
             for enemy in self.combat_state.enemies:
                 if enemy.current_hp > 0:
                     enemy.apply_status(StatusId.POISON, poison_given(player, wave.amount))
+        pagestorm = player.status.get(StatusId.PAGESTORM)
+        if pagestorm is not None and card.ethereal:
+            player.draw_cards(pagestorm.amount)         # PagestormPower.AfterCardDrawn
         speedster = player.status.get(StatusId.SPEEDSTER)
         if speedster is not None and not from_hand_draw:
             for enemy in self.combat_state.enemies:
@@ -1044,6 +1053,8 @@ class CombatSimulator:
             player.reduce_stomp_costs(CardId.PINPOINT)          # Pinpoint.AfterCardPlayed
         if player.relics:
             after_card_played(player, card)
+        if player.character == "NECROBINDER":
+            necrobinder_card_played(self, card)
         if card.type == CardType.Skill:
             self._make_it_so(card)
         self.fire(HookType.CARD_PLAYED, card)
@@ -1352,7 +1363,7 @@ class CombatSimulator:
     @staticmethod
     def _return_temporary_strength(creature : Creature):
         """Setup Strike, Mangle and Dark Shackles: the Strength they gave or took is returned when the creature's turn ends."""
-        for marker, sign in ((StatusId.SETUP_STRIKE, 1), (StatusId.MANGLE, -1), (StatusId.PIERCING_WAIL, -1), (StatusId.CRUSH_UNDER, -1), (StatusId.MONOLOGUE_STRENGTH, 1), (StatusId.DYING_STAR, -1), (StatusId.MONARCHS_GAZE_STRENGTH_DOWN, -1), (StatusId.DARK_SHACKLES, -1), (StatusId.FLEX_POTION, 1), (StatusId.REPTILE_TRINKET, 1), (StatusId.FEEDING_FRENZY, 1)):
+        for marker, sign in ((StatusId.SETUP_STRIKE, 1), (StatusId.MANGLE, -1), (StatusId.PIERCING_WAIL, -1), (StatusId.CRUSH_UNDER, -1), (StatusId.ENFEEBLING_TOUCH, -1), (StatusId.MONOLOGUE_STRENGTH, 1), (StatusId.DYING_STAR, -1), (StatusId.MONARCHS_GAZE_STRENGTH_DOWN, -1), (StatusId.DARK_SHACKLES, -1), (StatusId.FLEX_POTION, 1), (StatusId.REPTILE_TRINKET, 1), (StatusId.FEEDING_FRENZY, 1)):
             amount = creature.status.pop(marker, None)
             if amount is not None:
                 creature.apply_status(StatusId.STRENGTH, -sign * amount.amount, bypass_artifact=True)
@@ -1404,6 +1415,9 @@ class CombatSimulator:
             self.combat_state.energy += self.combat_state.max_energy        # Ice Cream: unspent energy is kept
         else:
             self.combat_state.energy = self.combat_state.max_energy
+        bonus_energy = player.status_amount(StatusId.DEMESNE) + player.status_amount(StatusId.FRIENDSHIP)
+        if bonus_energy:
+            self.combat_state.energy += bonus_energy     # Demesne / Friendship: ModifyMaxEnergy
         pending_energy = player.status.pop(StatusId.ENERGY_NEXT_TURN, None)
         if pending_energy is not None:
             self.gain_energy(pending_energy.amount)        # Relax: after the energy reset
@@ -1560,6 +1574,7 @@ class CombatSimulator:
                 for enemy in dead:
                     if StatusId.REATTACH in enemy.status:
                         self.combat_state.dormant.append(Enemy.lie_dead(enemy))
+            necrobinder_on_died(self, len(dead))
             for enemy in dead:
                 self._fire_death(enemy)
                 self.fire(HookType.CREATURE_KILLED, enemy)

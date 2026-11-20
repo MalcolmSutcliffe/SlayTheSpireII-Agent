@@ -246,7 +246,8 @@ def _add_cards(card_id : str, n : int = 1) -> Callable:
 
 def _touch_of_orobas(c):
     """The starter relic is replaced by its upgrade (Burning Blood: Black Blood)."""
-    upgrades = {"BURNING_BLOOD": ("BLACK_BLOOD", "Black Blood"), "RING_OF_THE_SNAKE": ("RING_OF_THE_DRAKE", "Ring of the Drake")}
+    upgrades = {"BURNING_BLOOD": ("BLACK_BLOOD", "Black Blood"), "RING_OF_THE_SNAKE": ("RING_OF_THE_DRAKE", "Ring of the Drake"),
+                "BOUND_PHYLACTERY": ("PHYLACTERY_UNBOUND", "Phylactery Unbound")}
     for i, r in enumerate(c.run.relics):
         if r["id"] in upgrades:
             c.run.relics[i] = {"id": upgrades[r["id"]][0], "name": upgrades[r["id"]][1]}
@@ -255,7 +256,7 @@ def _touch_of_orobas(c):
 
 def _archaic_tooth(c):
     """A starter card becomes its Ancient version (Bash: Break), keeping its upgrade and enchantment."""
-    transcend = {"BASH": "BREAK", "FALLING_STAR": "METEOR_SHOWER", "NEUTRALIZE": "SUPPRESS"}
+    transcend = {"BASH": "BREAK", "FALLING_STAR": "METEOR_SHOWER", "NEUTRALIZE": "SUPPRESS", "UNLEASH": "PROTECTOR"}
     for i, card in enumerate(c.run.deck):
         if card["id"] in transcend:
             new = card_entry(transcend[card["id"]], bool(card.get("is_upgraded")))

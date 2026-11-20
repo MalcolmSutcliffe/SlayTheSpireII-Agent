@@ -146,6 +146,14 @@ POOL = [
     ('ORANGE_DOUGH', 'Rare', True, False, 'regent'),
     ('REGALITE', 'Uncommon', True, False, 'regent'),
     ('VITRUVIAN_MINION', 'Shop', True, False, 'regent'),
+    ('BOUND_PHYLACTERY', 'Starter', True, False, 'necrobinder'),          # NecrobinderRelicPool
+    ('BIG_HAT', 'Rare', True, False, 'necrobinder'),
+    ('BONE_FLUTE', 'Common', True, False, 'necrobinder'),
+    ('BOOK_REPAIR_KNIFE', 'Uncommon', True, False, 'necrobinder'),
+    ('BOOKMARK', 'Rare', True, False, 'necrobinder'),
+    ('FUNERARY_MASK', 'Uncommon', True, False, 'necrobinder'),
+    ('IVORY_TILE', 'Rare', True, False, 'necrobinder'),
+    ('UNDYING_SIGIL', 'Shop', True, False, 'necrobinder'),
 ]
 
 # MerchantCost overrides (a relic class that sets its own price)
