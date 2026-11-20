@@ -138,6 +138,8 @@ def temp_strength(target : Creature, marker : StatusId, amount : int, sign : int
     if target.status_amount(marker) == before:          # Artifact stopped the debuff
         return
     target.apply_status(StatusId.STRENGTH, sign * amount, bypass_artifact=True)
+    if sign < 0 and combat is not None and StatusId.SLEIGHT_OF_FLESH in combat.combat_state.player.status:
+        after_debuff(combat, target, StatusId.STRENGTH)      # the Strength loss is a debuff the player applied (the temporary marker itself is not)
 
 PLAIN_DAMAGE = {        # id : (damage, damage upgraded) of the cards that print one fixed number
     CardId.BACKSTAB : (11, 15),

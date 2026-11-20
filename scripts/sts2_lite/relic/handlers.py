@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Callable
 
 from sts2_lite.hooks import HookType, HandlerTable
 
-from sts2_lite.relic.card_hooks import _art_of_war_turn, _attack_seen, _burning_sticks, _charons_ashes, _count_card, _count_scarf, _daughter_of_the_wind, _forgotten_soul, _helical_dart, _tingsha, _tough_bandages, _game_piece, _iron_club, _joss_paper_ethereal, _joss_paper_exhausted, _kunai, _kusarigama, _letter_opener, _lost_wisp, _mummified_hand, _music_box, _new_turn_flag, _new_turn_rainbow, _nunchaku, _on_attack, _on_power, _on_skill, _ornamental_fan, _pen_nib_played, _permafrost, _pocketwatch_played, _pocketwatch_turn, _pollinous_core_turn, _rainbow_ring, _reset_counter, _ring_of_the_drake_turn, _ripple_basin_end, _shuriken, _tuning_fork
+from sts2_lite.relic.card_hooks import _art_of_war_turn, _attack_seen, _burning_sticks, _charons_ashes, _count_card, _count_scarf, _daughter_of_the_wind, _forgotten_soul, _helical_dart, _tingsha, _tough_bandages, _game_piece, _iron_club, _joss_paper_ethereal, _joss_paper_exhausted, _kunai, _kusarigama, _letter_opener, _lost_wisp, _mummified_hand, _music_box, _new_turn_flag, _new_turn_rainbow, _nunchaku, _on_attack, _on_power, _on_skill, _ornamental_fan, _pen_nib_played, _permafrost, _pocketwatch_played, _pocketwatch_turn, _pendulum_turn, _pollinous_core_turn, _rainbow_ring, _reset_counter, _ring_of_the_drake_turn, _ripple_basin_end, _shuriken, _tuning_fork
 from sts2_lite.relic.ids import RelicId
 from sts2_lite.relic.necrobinder import _bookmark, _bound_phylactery, _ivory_tile, _phylactery_unbound
 from sts2_lite.relic.regent import _galactic_dust, _lunar_pastry, _mini_regent, _new_turn, _regalite
@@ -105,7 +105,7 @@ EVENT_HANDLERS : dict[tuple[RelicId, HookType], Callable] = HandlerTable({
 EVENT_HANDLERS.update({
     (RelicId.CENTENNIAL_PUZZLE, HookType.HP_LOST) : _centennial_puzzle,
     (RelicId.GREMLIN_HORN, HookType.CREATURE_KILLED) : _gremlin_horn,
-    (RelicId.PENDULUM, HookType.PLAYER_TURN_START) : _pendulum,
+    (RelicId.PENDULUM, HookType.BEFORE_PLAYER_TURN) : _pendulum_turn,
     (RelicId.THE_ABACUS, HookType.SHUFFLED) : _abacus,
     (RelicId.BIIIG_HUG, HookType.SHUFFLED) : _biiig_hug,
     (RelicId.UNCEASING_TOP, HookType.HAND_EMPTIED) : _unceasing_top,

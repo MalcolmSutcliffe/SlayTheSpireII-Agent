@@ -267,7 +267,7 @@ def _pocketwatch_turn(combat, relic):
 
 HAND_DRAW_FIXED : dict[RelicId, int] = {RelicId.PAELS_BLOOD : 1, RelicId.SNECKO_EYE : 2, RelicId.FIDDLE : 2}
 
-HAND_DRAW_SET = frozenset({RelicId.POCKETWATCH, RelicId.RING_OF_THE_DRAKE, RelicId.POLLINOUS_CORE})   # `value`, set at BEFORE_PLAYER_TURN
+HAND_DRAW_SET = frozenset({RelicId.PENDULUM, RelicId.POCKETWATCH, RelicId.RING_OF_THE_DRAKE, RelicId.POLLINOUS_CORE})   # `value`, set at BEFORE_PLAYER_TURN
 
 def hand_draw_bonus(owner : Creature) -> int:
     """Hook.ModifyHandDraw (all additive, so ModifyHandDrawLate order doesn't matter)."""
@@ -289,6 +289,11 @@ POLLINOUS_CORE_TURNS, POLLINOUS_CORE_DRAW = 4, 2
 
 def _ring_of_the_drake_turn(combat, relic):
     relic.value = RING_OF_THE_DRAKE_DRAW if combat.combat_state.player_turn <= RING_OF_THE_DRAKE_TURNS else 0
+
+def _pendulum_turn(combat, relic):
+    """Pendulum.BeforeHandDraw: TurnsSeen = (+1) % 3; on 0 the hand draw gets one more (ModifyHandDraw), so Fiddle does not stop it. Reads 3 while flashing, which is 0."""
+    relic.counter = (_count(relic) % 3 + 1) % 3
+    relic.value = 1 if relic.counter == 0 else 0
 
 def _pollinous_core_turn(combat, relic):
     """TurnsSeen++ before the draw; +2 and reset at 4. Reads 4 while flashing, which is 0."""

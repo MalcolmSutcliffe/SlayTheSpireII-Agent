@@ -27,6 +27,7 @@ KNOWN_GAPS = {
     "f39_r1_Slimed_Berserker_163749411389",                  # saved after a Swift Potion was drunk (3 cards more in the hand, 1 energy less) and 14 damage dealt
     "f35_r1_Living_Shield+Turret_Operator_163120247940",     # Mr. Struggles' 1 damage hurts the Turret Operator in the game (hp 40) before the Rampart block comes; the sim blocks it (hp 41, block 24)
     "f13_r1_Phantasmal_Gardener_220125297297",               # saved mid-fight: the Gardeners are hurt and Vulnerable, 2 energy, 4 cards in hand (the fight's other captures match)
+    "f45_r1_Cubex_Construct+Punch_Construct_135932020467",   # necrobinder-a0-1: saved while the relics were still applying (Bag of Marbles done, Red Mask not yet, hand empty)
     "f48_r1_Queen+Torch_Head_Amalgam_224458603556",          # saved after a Radiant Tincture was drunk (Radiance, and 3 Strength from Reptile Trinket, 1 energy more)
     # captures from the runs a10-3 and a10-4 whose "round 1" state was saved after the agent had already played (or while the hand was still being dealt): hand empty or short, energy spent,
     # block already gained. The runner has since waited for the dealt hand (CombatSession.turn_is_changing), so these are not an opening to compare

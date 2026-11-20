@@ -430,3 +430,19 @@ def test_the_reward_screen_offers_the_removals_and_takes_a_card_out():
     sim.removal_rewards = 2
     sim.rewards(next(e for e in ENCOUNTERS.values() if e.room == "Monster"))
     assert seen.count("card_removal") >= 1
+
+
+def test_neurosurge_doom_on_self_gives_shroud_block():
+    from sts2_lite.necrobinder import _neurosurge_on_turn_start
+    cs = state([])
+    cs.player.apply_status(StatusId.SHROUD, 3)
+    cs.player.block = 0
+    _neurosurge_on_turn_start(CombatSimulator(cs), cs.player, 3)
+    assert cs.player.block == 3 and cs.player.status_amount(StatusId.DOOM) == 3
+
+
+def test_dark_shackles_strength_loss_triggers_sleight_of_flesh():
+    cs = state([gen(CardId.DARK_SHACKLES)], hp=100)
+    cs.player.apply_status(StatusId.SLEIGHT_OF_FLESH, 9)
+    play(cs)
+    assert hp(cs) == 91

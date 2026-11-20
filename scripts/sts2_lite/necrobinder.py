@@ -201,6 +201,9 @@ def _countdown_on_turn_start(combat, owner, amount):
 def _neurosurge_on_turn_start(combat, owner, amount):
     if _own(combat, owner):
         owner.apply_status(StatusId.DOOM, amount)
+        shroud = owner.status.get(StatusId.SHROUD)      # ShroudPower: applier == owner, and Neurosurge applies to itself
+        if shroud is not None:
+            combat.gain_block(owner, shroud.amount)
 
 def _danse_macabre_on_card_played(combat, owner, amount, card):
     """DanseMacabrePower.BeforeCardPlayed: a card that costs 2 or more gives Block (Unpowered)."""
