@@ -219,10 +219,37 @@ class Ridge:
         return m
 
 
+def group_codes(groups) -> np.ndarray:
+    """0..k-1 for the k distinct ids of `groups`, in order of first appearance."""
+    _, first, codes = np.unique(np.asarray(groups), return_index=True, return_inverse=True)
+    return np.argsort(np.argsort(first))[codes].astype(np.int64)
+
+
+def demean(v : np.ndarray, codes : np.ndarray) -> np.ndarray:
+    """`v` less the mean of its group (codes from group_codes, or any small ints)."""
+    codes = codes - codes.min() if len(codes) else codes
+    mean = np.bincount(codes, v) / np.maximum(np.bincount(codes), 1)
+    return (v - mean[codes]).astype(v.dtype)
+
+
+def _sigmoid(x):
+    return 1.0 / (1.0 + np.exp(-np.clip(x, -30, 30)))
+
+
 class MLP:
-    """Two hidden layers of ReLU, MSE, Adam, early stopping on the validation set."""
-    def __init__(self, hidden=(128, 64), lr : float = 1e-3, weight_decay : float = 1e-4, epochs : int = 40, batch : int = 512, patience : int = 5, seed : int = 0, verbose : bool = False):
+    """Hidden layers of ReLU, Adam, early stopping on the validation set. `loss`: "mse" (a value), or "bce" (a probability: a sigmoid output and cross-entropy on 0/1 targets)."""
+    def __init__(self, hidden=(128, 64), lr : float = 1e-3, weight_decay : float = 1e-4, epochs : int = 40, batch : int = 512, patience : int = 5, seed : int = 0, verbose : bool = False,
+                 loss : str = "mse"):
         self.hidden, self.lr, self.wd, self.epochs, self.batch, self.patience, self.seed, self.verbose = hidden, lr, weight_decay, epochs, batch, patience, seed, verbose
+        if loss not in ("mse", "bce"):
+            raise ValueError(f"unknown loss {loss!r}: mse or bce")
+        self.loss = loss
+
+    def _val_loss(self, out, y, w) -> float:
+        if self.loss == "bce":
+            p = np.clip(_sigmoid(out + self.ymu), 1e-6, 1 - 1e-6)
+            return float(np.mean(w * -(y * np.log(p) + (1 - y) * np.log(1 - p))))
+        return float(np.mean(w * (out + self.ymu - y) ** 2))
 
     def _init(self, n):
         rng = np.random.default_rng(self.seed)
@@ -242,13 +269,22 @@ class MLP:
             acts.append(Z)
         return acts
 
-    def fit(self, X, y, Xval=None, yval=None, w=None, wval=None):
-        """`w`, `wval`: a weight per row of the training and validation sets (a weighted MSE; default all 1)."""
+    def fit(self, X, y, Xval=None, yval=None, w=None, wval=None, groups=None, gval=None):
+        """`w`, `wval`: a weight per row of the training and validation sets (a weighted MSE; default all 1).
+        `groups`, `gval` (mse only): a group id per row; the model then learns only the differences inside each group (fixed effects): the loss is on the
+        output and the target each less its group's mean, and a batch holds whole groups. The output's level is then arbitrary (ymu 0)."""
+        if groups is not None:
+            return self._fit_groups(X, y, Xval, yval, groups, gval)
         self.mu, self.sd = X.mean(0), np.maximum(X.std(0), MIN_SD)
         w = np.ones(len(X), dtype=np.float32) if w is None else (np.asarray(w, dtype=np.float32) / np.mean(w))
         wval = None if yval is None else np.ones(len(yval)) if wval is None else np.asarray(wval) / np.mean(wval)
-        self.ymu = float(np.average(y, weights=w))
-        Z, t = self._scale(X), (y - self.ymu).astype(np.float32)
+        if self.loss == "bce":           # ymu: the logit of the mean, the output's offset (the targets stay 0/1)
+            mean = min(max(float(np.average(y, weights=w)), 1e-4), 1 - 1e-4)
+            self.ymu = math.log(mean / (1 - mean))
+            Z, t = self._scale(X), np.asarray(y, dtype=np.float32)
+        else:
+            self.ymu = float(np.average(y, weights=w))
+            Z, t = self._scale(X), (y - self.ymu).astype(np.float32)
         Zv = None if Xval is None else self._scale(Xval)
         self._init(Z.shape[1])
         mW = [np.zeros_like(w) for w in self.W]; vW = [np.zeros_like(w) for w in self.W]
@@ -259,7 +295,10 @@ class MLP:
             for s in range(0, len(Z), self.batch):
                 idx = order[s:s + self.batch]
                 acts = self._forward(Z[idx])
-                grad = (2.0 / len(idx)) * (w[idx] * (acts[-1][:, 0] - t[idx]))[:, None]
+                if self.loss == "bce":
+                    grad = (1.0 / len(idx)) * (w[idx] * (_sigmoid(acts[-1][:, 0] + self.ymu) - t[idx]))[:, None]
+                else:
+                    grad = (2.0 / len(idx)) * (w[idx] * (acts[-1][:, 0] - t[idx]))[:, None]
                 step += 1
                 for k in range(len(self.W) - 1, -1, -1):
                     gW = acts[k].T @ grad + self.wd * self.W[k]
@@ -271,9 +310,61 @@ class MLP:
                         v[k] = 0.999 * v[k] + 0.001 * g * g
                         p[k] -= self.lr * (m[k] / (1 - 0.9 ** step)) / (np.sqrt(v[k] / (1 - 0.999 ** step)) + 1e-8)
             if Zv is not None:
-                loss = float(np.mean(wval * (self._forward(Zv)[-1][:, 0] + self.ymu - yval) ** 2))
+                loss = self._val_loss(self._forward(Zv)[-1][:, 0], yval, wval)
                 if self.verbose:
-                    print(f"  epoch {epoch + 1}: val mse {loss:.3f}", flush=True)
+                    print(f"  epoch {epoch + 1}: val {self.loss} {loss:.4f}", flush=True)
+                if loss < best - 1e-4:
+                    best, best_state, bad = loss, ([w.copy() for w in self.W], [b.copy() for b in self.b]), 0
+                else:
+                    bad += 1
+                    if bad >= self.patience:
+                        break
+        if best_state is not None:
+            self.W, self.b = best_state
+        return self
+
+    def _adam(self, acts, grad, opt):
+        mW, vW, mb, vb, step = opt
+        for k in range(len(self.W) - 1, -1, -1):
+            gW = acts[k].T @ grad + self.wd * self.W[k]
+            gb = grad.sum(0)
+            if k > 0:
+                grad = (grad @ self.W[k].T) * (acts[k] > 0)
+            for m, v, g, p in ((mW, vW, gW, self.W), (mb, vb, gb, self.b)):
+                m[k] = 0.9 * m[k] + 0.1 * g
+                v[k] = 0.999 * v[k] + 0.001 * g * g
+                p[k] -= self.lr * (m[k] / (1 - 0.9 ** step)) / (np.sqrt(v[k] / (1 - 0.999 ** step)) + 1e-8)
+
+    def _fit_groups(self, X, y, Xval, yval, groups, gval):
+        if self.loss != "mse":
+            raise ValueError("groups: mse only")
+        self.mu, self.sd, self.ymu = X.mean(0), np.maximum(X.std(0), MIN_SD), 0.0
+        codes = group_codes(groups)
+        Z, t = self._scale(X), demean(np.asarray(y, dtype=np.float32), codes)
+        rows = np.argsort(codes, kind="stable")
+        starts = np.searchsorted(codes[rows], np.arange(codes.max() + 1))
+        sizes = np.diff(np.append(starts, len(rows)))
+        val = None
+        if Xval is not None:
+            cv = group_codes(gval)
+            val = (self._scale(Xval), demean(np.asarray(yval, dtype=np.float32), cv), cv)
+        self._init(Z.shape[1])
+        opt = ([np.zeros_like(w) for w in self.W], [np.zeros_like(w) for w in self.W], [np.zeros_like(b) for b in self.b], [np.zeros_like(b) for b in self.b], 0)
+        rng, best, best_state, bad = np.random.default_rng(self.seed + 1), math.inf, None, 0
+        for epoch in range(self.epochs):
+            order = rng.permutation(len(sizes))
+            batch_of = (np.cumsum(sizes[order]) - sizes[order]) // self.batch          # whole groups per batch
+            for b in range(int(batch_of[-1]) + 1):
+                gs = order[batch_of == b]
+                idx = np.concatenate([rows[starts[g]:starts[g] + sizes[g]] for g in gs])
+                acts = self._forward(Z[idx])
+                e = demean(acts[-1][:, 0], codes[idx]) - t[idx]
+                opt = opt[:4] + (opt[4] + 1,)
+                self._adam(acts, (2.0 / len(idx)) * demean(e, codes[idx])[:, None], opt)
+            if val is not None:
+                loss = float(np.mean((demean(self._forward(val[0])[-1][:, 0], val[2]) - val[1]) ** 2))
+                if self.verbose:
+                    print(f"  epoch {epoch + 1}: val within-group mse {loss:.4f}", flush=True)
                 if loss < best - 1e-4:
                     best, best_state, bad = loss, ([w.copy() for w in self.W], [b.copy() for b in self.b]), 0
                 else:
@@ -285,17 +376,18 @@ class MLP:
         return self
 
     def predict(self, X):
-        return self._forward(self._scale(X))[-1][:, 0] + self.ymu
+        out = self._forward(self._scale(X))[-1][:, 0] + self.ymu
+        return _sigmoid(out) if self.loss == "bce" else out
 
     def state(self) -> dict:
-        st = {"kind": "mlp", "mu": self.mu, "sd": self.sd, "ymu": np.float32(self.ymu), "layers": np.int32(len(self.W))}
+        st = {"kind": "mlp", "mu": self.mu, "sd": self.sd, "ymu": np.float32(self.ymu), "layers": np.int32(len(self.W)), "loss": self.loss}
         for k, (W, b) in enumerate(zip(self.W, self.b)):
             st[f"W{k}"], st[f"b{k}"] = W, b
         return st
 
     @classmethod
     def from_state(cls, st) -> "MLP":
-        m = cls()
+        m = cls(loss=str(st.get("loss", "mse")))
         m.mu, m.sd, m.ymu = st["mu"], st["sd"], float(st["ymu"])
         n = int(st["layers"])
         m.W, m.b = [st[f"W{k}"] for k in range(n)], [st[f"b{k}"] for k in range(n)]

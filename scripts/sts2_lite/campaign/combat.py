@@ -57,8 +57,10 @@ def _combat_start_potions(run : RunState, game):
             add(random_potion(game.stream("potion_rewards")))
 
 
-def start_fight(run : RunState, encounter_id : str, room_type : str, game, final_fight : bool = False, one_hp : bool = False, variant : int | None = None) -> CombatSimulator:
-    """Round 1 of `encounter_id` with the run's deck shuffled, the opening hand drawn and the start-of-combat relics applied."""
+def start_fight(run : RunState, encounter_id : str, room_type : str, game, final_fight : bool = False, one_hp : bool = False, variant : int | None = None,
+                aligned_shuffle : int | None = None) -> CombatSimulator:
+    """Round 1 of `encounter_id` with the run's deck shuffled, the opening hand drawn and the start-of-combat relics applied.
+    `aligned_shuffle`: a seed for Player.aligned_shuffle (experiments: decks that differ by a card draw the rest in the same order); None shuffles at random."""
     cards = [card_dict(c) for c in run.deck]
     relics = deepcopy_data(run.relics)
     _combat_start_potions(run, game)
@@ -71,6 +73,7 @@ def start_fight(run : RunState, encounter_id : str, room_type : str, game, final
           "relics": relics, "potions": [dict(p, slot=i) for i, p in enumerate(run.potions)], "potion_slots": run.potion_slots, "energy": energy, "max_energy": energy}
     with game.scope("combat"):
         player = Player.from_dict(me)
+        player.aligned_shuffle = aligned_shuffle
         for i, raw in enumerate(cards):
             if raw["_upgrade"] and player.draw_pile[i].is_upgradable:
                 player.draw_pile[i] = player.draw_pile[i].upgraded_copy()

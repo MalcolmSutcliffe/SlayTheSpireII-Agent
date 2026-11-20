@@ -18,6 +18,7 @@ SOVEREIGN_BLADE_DAMAGE = 10
 GHOST_SEED_CARDS = frozenset({CardId.STRIKE_IRONCLAD, CardId.DEFEND_IRONCLAD})     # Basic rarity, Strike or Defend tag
 
 from operator import attrgetter
+import zlib
 _CARD_ID, _RESTORE_COST, _BOUND = attrgetter("card_id"), attrgetter("restore_cost"), attrgetter("bound")
 _STOMP = CardId.STOMP
 
@@ -33,6 +34,9 @@ class Player(Creature):
     unknown_draws : int     # running total of draws and top-card plays the agent could not foresee; compare before and after an action
     inferno_plays : int      # times Inferno has been played this combat: its HP loss each turn
     shuffle_hook = None      # called when the discard pile is shuffled into the draw pile (set by the simulator)
+    aligned_shuffle = None   # experiments only (agents/strategy/experiments.py): a seed; while set, a shuffle orders the cards by a hash of the seed, the shuffle's number and each card
+                             # instead of drawing from the rng, so two decks that differ by one card draw the others in the same order. Never copied (deepcopy): a search's states shuffle at random
+    aligned_shuffles = 0     # the shuffles made in that mode (the shuffle's number in the hash)
     draw_hook = None         # called with each card drawn into the hand (set by the simulator for Hellraiser)
     draw_pause_hook = None   # called after each card drawn with the draws still to make: True when a card choice is waiting, so the rest of the draw waits for it (set by the simulator)
     counts_hits = False         # a Beat into Shape is in the deck: enemies keep count of the Attacks that hit them this turn
@@ -508,13 +512,29 @@ class Player(Creature):
 
     def shuffle_draw_pile(self):
         """Shuffle the draw pile, leaving the known cards on top where they are."""
+        shuffle = rng.shuffle if self.aligned_shuffle is None else self._aligned_shuffle
         if self.known_top <= 0:
-            rng.shuffle(self.draw_pile)
+            shuffle(self.draw_pile)
             return
         split = max(0, len(self.draw_pile) - self.known_top)
         rest = self.draw_pile[:split]
-        rng.shuffle(rest)
+        shuffle(rest)
         self.draw_pile[:split] = rest
+
+    def _aligned_shuffle(self, cards : list[Card]):
+        """The aligned_shuffle order: each card's place is a hash of the seed, this shuffle's number, the card (id and upgrade) and which copy of it it is, so
+        adding or removing a card leaves the others in the same order around it. Draws nothing from the rng."""
+        n = self.aligned_shuffles
+        self.aligned_shuffles += 1
+        copies : dict[tuple, int] = {}
+        keyed = []
+        for card in cards:
+            ident = (card.card_id.name, card.is_upgraded)
+            k = copies.get(ident, 0)
+            copies[ident] = k + 1
+            keyed.append((zlib.crc32(f"{self.aligned_shuffle}/{n}/{ident[0]}/{int(ident[1])}/{k}".encode()), card))
+        keyed.sort(key=lambda kc: kc[0])
+        cards[:] = [c for _, c in keyed]
 
     def take_top(self) -> Card | None:
         """Remove and return the top card of the draw pile (reshuffling an empty pile first) without

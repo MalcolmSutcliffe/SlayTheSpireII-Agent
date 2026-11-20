@@ -143,4 +143,10 @@ def test_every_table_move_corresponds_to_a_game_move(monster):
     table = MOVE_TABLES[monster](0)
     reachable = {table_move_id(monster, g, table) for g in ids}
     synthetic = {"STUN", "STUNNED"}      # simulator-only moves
-    assert set(table) - reachable - synthetic == set()
+    assert set(table) - reachable - synthetic - LEGACY_MOVES.get(monster, set()) == set()
+
+
+# moves the current game no longer has, kept in the tables so older captures and logs line up
+LEGACY_MOVES = {
+    "TORCH_HEAD_AMALGAM": {"TACKLE"},      # the pre-v0.111 TACKLE_MOVE opening (now STRONG_TACKLE_MOVE)
+}

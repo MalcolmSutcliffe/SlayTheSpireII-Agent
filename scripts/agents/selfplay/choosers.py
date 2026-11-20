@@ -86,12 +86,16 @@ def make_chooser(name : str, seed : int | str = 0) -> CardChooser:
         from agents.selfplay.pick_model import PickChooser
         path, _, margin = name[len("pick:"):].partition(":")
         return PickChooser(_pick_model(path), float(margin) if margin else None)
+    if name.startswith("strength:"):        # the strength model (strategy/card_chooser.py): strength:NAME[:MARGIN], e.g. strength:s1
+        from agents.strategy.card_chooser import StrengthChooser, load_strength
+        path, _, margin = name[len("strength:"):].partition(":")
+        return StrengthChooser(load_strength(path), float(margin) if margin else 0.0)
     if name.startswith("model:"):
         from agents.selfplay.value_model import ModelChooser
         path, _, floor = name[len("model:"):].partition(":")
         return ModelChooser(_value_model(path), float(floor) if floor else 0.0)
     if name not in CHOOSERS:
-        raise ValueError(f"unknown chooser {name!r}: {sorted(CHOOSERS)}, model:NAME[:FLOOR] or pick:NAME[:MARGIN]")
+        raise ValueError(f"unknown chooser {name!r}: {sorted(CHOOSERS)}, model:NAME[:FLOOR], pick:NAME[:MARGIN] or strength:NAME[:MARGIN]")
     return CHOOSERS[name](seed)
 
 

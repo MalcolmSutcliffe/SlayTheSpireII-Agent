@@ -17,11 +17,13 @@ from agents.deck_eval.config import DEFAULT, DeckEvalConfig
 from agents.deck_eval.evaluator import WALK_POLICY
 from agents.deck_eval.route_sim import RouteSimulator, WalkAgent, note_engine_error
 from agents.sts2_MCTS.params import SearchConfig
+from agents.pathing import PathPlanner
 from agents.selfplay.choosers import Counts, Explorer, card_key, make_chooser, snapshot
 from sts2_lite import rng
 from sts2_lite.campaign.simulator import ROOM_OF_POINT, RunOver, RunSimulator, StalledFight
 
 BIG_ROOMS = ("Elite", "Boss")
+PATHS = ("random", "score")           # who picks the path up the map (SelfPlayAgent)
 ENGINE_ERROR = "engine error"         # a run's `cause` when the engine failed in a fight: not a death of the deck (value_model.Rows leaves it out)
 RUN_TIMEOUT = 900                     # seconds: a run still going after this is stuck (an endless loop in the engine), not slow; an MCTS-piloted run takes ~0.1-150 s
 
@@ -64,13 +66,17 @@ def reward_snapshot(sim : "SelfPlayRun") -> dict:
 
 
 class SelfPlayAgent(WalkAgent):
-    """The walks' stand-in agent, except that card rewards go to the explorer and the path up the map is random."""
-    def __init__(self, explorer : Explorer, sim : "SelfPlayRun", seed : int):
+    """The walks' stand-in agent, except that card rewards go to the explorer and the path up the map is `path`: "random", or "score" (the live agent's
+    node-score planner, pathing.PathPlanner, without the walks: the route to the boss with the highest total node score)."""
+    def __init__(self, explorer : Explorer, sim : "SelfPlayRun", seed : int, path : str = "random"):
         super().__init__(1.0, seed)
         self.explorer, self.sim = explorer, sim
+        if path not in PATHS:
+            raise ValueError(f"unknown path {path!r}: {PATHS}")
+        self.planner = PathPlanner() if path == "score" else None
 
     def _get_map_decision(self, decision):
-        return self._rng_choice(decision.options)
+        return self.planner.choose(decision) if self.planner else self._rng_choice(decision.options)
 
     def _get_card_reward_decision(self, decision):
         options = [o for o in decision.options if "id" in (o.data or {})]
@@ -87,18 +93,42 @@ class SelfPlayAgent(WalkAgent):
         return options[index]
 
 
+def mcts_fight(sim, config : SearchConfig, label : str, max_turns : int, scope, tally : list | None = None) -> None:
+    """Plays `sim` with the MCTS (`config`) until the fight is over, no action is left, or `max_turns` more turns have begun. The search's own draws are seeded
+    from `label` and the decision's number (not the game's streams), so the same fight plays the same way twice; `scope()` wraps performing each action (the
+    game's combat stream). `tally`, when given, is kept as [MCTS decisions made, the last action] (also when the engine fails: the caller reports the action)."""
+    from agents.sts2_MCTS.MCTS import sts2_MCTS          # the MCTS only when a fight needs it
+    mcts, cs = sts2_MCTS(), sim.combat_state
+    tally = tally if tally is not None else [0, None]
+    end_turn = cs.turn_number + max_turns
+    while not sim.is_over and cs.turn_number < end_turn:
+        actions = sim.get_available_actions()
+        if not actions:
+            return
+        if len(actions) == 1:
+            tally[1] = actions[0]
+        else:
+            rng.seed(f"{label}/{tally[0]}")
+            tally[1], _ = mcts.monte_carlo_tree_search(cs, config)
+            tally[0] += 1
+        with scope():
+            sim.perform_action(tally[1])
+
+
 class SelfPlayRun(RouteSimulator):
     """The run simulator with the pilot's fights. `rooms`: a snapshot of the run on entering each room; `picks`: every card reward, with `after`, the run
     right after the pick (see reward_snapshot)."""
-    def __init__(self, seed : int, config, explorer : Explorer, ascension : int = 0, scoring : DeckEvalConfig = DEFAULT, pilot : Pilot | str = Pilot()):
+    def __init__(self, seed : int, config, explorer : Explorer, ascension : int = 0, scoring : DeckEvalConfig = DEFAULT, pilot : Pilot | str = Pilot(), path : str = "random"):
         RunSimulator.__init__(self, None, seed=seed, ascension=ascension, search_seed=seed, time_budget=None)
         self.walk = SimpleNamespace(seed=seed)          # the walks' fights seed their dice from it
         self.config, self.opening, self.turn_limit, self.scoring = config, None, None, scoring
         self.credits, self.partial, self.in_room, self.continuation = [], 0.0, False, 0.0
-        self.agent = SelfPlayAgent(explorer, self, seed)
+        self.agent = SelfPlayAgent(explorer, self, seed, path)
         self.rooms, self.picks = [], []
         self.pilot = parse_pilot(pilot)
         self.fight_kind = None          # the room of the fight being played (Monster, Elite, Boss)
+        self.fight_state = None         # its combat state
+        self.fight_log = []             # every fight of the run (fight_record)
         self.mcts_decisions = 0
 
     def enter(self, point):
@@ -108,40 +138,45 @@ class SelfPlayRun(RouteSimulator):
         self.in_room = False
 
     def fight(self, encounter, room : str, *args, **kwargs) -> bool:
+        """The fight, logged in `fight_log` however it ends (see fight_record)."""
         self.fight_kind = room
-        return super().fight(encounter, room, *args, **kwargs)
+        before, self.fight_state = {**snapshot(self.run_state), "room": room}, None
+        won = False
+        try:
+            won = super().fight(encounter, room, *args, **kwargs)
+            return won
+        finally:
+            self.fight_log.append(self.fight_record(encounter, room, before, won))
+
+    def fight_record(self, encounter, room : str, before : dict, won : bool) -> dict:
+        """What a fight was and how it went, for a fight model: the run going in (`before`: a snapshot, its `room` the fight's kind), the encounter, who played it
+        (`mcts`: the MCTS, else the rollout policy, whose result route_sim's correction then changed when `corrected`), and the result: `won`, `dead`, the HP and max HP
+        after it (before the relics that heal after a fight), the turns it took, the potions it drank, and for a fight not won the share of the enemies' HP taken off
+        (`progress`). `error`: the engine failed in it (not a result of the deck)."""
+        r, cs = self.run_state, self.fight_state
+        mcts = self.pilot.mcts_plays(room)
+        return {"room_index": len(self.rooms) - 1, "encounter": encounter.id, "kind": room, "mcts": mcts, "corrected": not mcts and self.scoring.correct,
+                "before": before, "won": bool(won), "dead": bool(r.dead or r.hp <= 0), "hp_after": max(0, r.hp), "max_hp_after": r.max_hp,
+                "turns": cs.turn_number if cs is not None else None, "potions_used": max(0, len(before["potions"]) - len(snapshot(r)["potions"])),
+                "progress": None if won else round(self.partial, 4), "error": str(self.cause).startswith(ENGINE_ERROR)}
 
     def play(self, sim):
+        self.fight_state = sim.combat_state
         if not self.pilot.mcts_plays(self.fight_kind):
             try:
                 return super().play(sim)            # raises RunOver only when the engine failed in the fight
             except RunOver:
                 self.cause = ENGINE_ERROR
                 raise
-        from agents.sts2_MCTS.MCTS import sts2_MCTS          # the MCTS only when a pilot needs it
-        mcts, config = sts2_MCTS(), self.pilot.search_config()
-        cs = sim.combat_state
-        end_turn = cs.turn_number + (self.turn_limit or self.scoring.max_turns)
-        decision, action = 0, None
+        tally = [0, None]
         try:
-            while not sim.is_over and cs.turn_number < end_turn:
-                actions = sim.get_available_actions()
-                if not actions:
-                    return
-                if len(actions) == 1:
-                    action = actions[0]
-                else:
-                    rng.seed(f"{self.walk.seed}/mcts/{self.fights}/{decision}")         # the search's own draws (not the game's streams)
-                    action, _ = mcts.monte_carlo_tree_search(cs, config)
-                    decision += 1
-                with self.game.scope("combat"):
-                    sim.perform_action(action)
+            mcts_fight(sim, self.pilot.search_config(), f"{self.walk.seed}/mcts/{self.fights}", self.turn_limit or self.scoring.max_turns, lambda: self.game.scope("combat"), tally)
         except Exception as error:
-            note_engine_error(error, sim, action)
+            note_engine_error(error, sim, tally[1])
             self.partial, self.cause = 0.0, ENGINE_ERROR
             raise RunOver
         finally:
-            self.mcts_decisions += decision
+            self.mcts_decisions += tally[0]
 
     def correct(self, sim, room : str, expected : float, hp0 : int):
         """The correction stands in for the MCTS: a fight the MCTS played is not corrected."""
@@ -165,15 +200,15 @@ class SelfPlayRun(RouteSimulator):
 
 
 def play_run(seed : int, chooser : str = "rarity", counts : Counts | None = None, c : float = 0.5, epsilon : float = 0.05, ascension : int = 0,
-             explorer : Explorer | None = None, pilot : str | Pilot = "rollout") -> dict:
-    """The run with this `seed`: the same seed and settings play the same run. Returns {seed, ascension, pilot, rooms, picks, outcome}."""
+             explorer : Explorer | None = None, pilot : str | Pilot = "rollout", path : str = "random") -> dict:
+    """The run with this `seed`: the same seed and settings play the same run. Returns {seed, ascension, pilot, rooms, picks, fight_log, outcome}."""
     config = SearchConfig().tuned(rollout=WALK_POLICY)
     pilot = parse_pilot(pilot)
     if explorer is None:
         explorer = Explorer(make_chooser(chooser, f"{seed}/chooser"), counts or Counts(), c, epsilon, f"{seed}/explore")
-    sim = SelfPlayRun(seed, config, explorer, ascension, pilot=pilot)
+    sim = SelfPlayRun(seed, config, explorer, ascension, pilot=pilot, path=path)
     outcome = sim.play_run()
-    return {"seed": seed, "ascension": ascension, "pilot": pilot.name, "rooms": sim.rooms, "picks": sim.picks, "outcome": outcome}
+    return {"seed": seed, "ascension": ascension, "pilot": pilot.name, "rooms": sim.rooms, "picks": sim.picks, "fight_log": sim.fight_log, "outcome": outcome}
 
 
 class RunTimedOut(BaseException):

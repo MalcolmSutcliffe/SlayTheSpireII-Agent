@@ -29,7 +29,7 @@ if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
 from agents.selfplay.choosers import Counts, base_id
-from agents.selfplay.run import RUN_TIMEOUT, parse_pilot, play_run_guarded
+from agents.selfplay.run import PATHS, RUN_TIMEOUT, parse_pilot, play_run_guarded
 
 try:
     from data_paths import DATA
@@ -60,9 +60,9 @@ def ascension_of(seed : int, levels : list[int]) -> int:
 
 
 def job(args) -> list[dict]:
-    seeds, chooser, counts, c, epsilon, levels, pilot, timeout = args
+    seeds, chooser, counts, c, epsilon, levels, pilot, timeout, path = args
     counts = Counts.from_json(counts)
-    return [play_run_guarded(s, chooser, counts, c, epsilon, ascension=ascension_of(s, levels), pilot=pilot, timeout=timeout) for s in seeds]
+    return [play_run_guarded(s, chooser, counts, c, epsilon, ascension=ascension_of(s, levels), pilot=pilot, timeout=timeout, path=path) for s in seeds]
 
 
 def summary(runs : list[dict]) -> str:
@@ -86,12 +86,13 @@ def main(argv=None):
     p.add_argument("--out", required=True, help="the folder name under data/selfplay")
     p.add_argument("--runs", type=int, default=1000, help="runs in all (with --start-seed, the seeds start-seed .. start-seed + runs - 1)")
     p.add_argument("--start-seed", type=int, default=1)
-    p.add_argument("--chooser", default="rarity", help="random | rarity | model:NAME[:FLOOR] (a fitted value model under data/selfplay/models)")
+    p.add_argument("--chooser", default="rarity", help="random | rarity | model:NAME[:FLOOR] (a fitted value model under data/selfplay/models) | pick:NAME[:MARGIN] | strength:NAME[:MARGIN] (models/strength/NAME; scores in HP)")
     p.add_argument("--pilot", default="rollout", help="who fights: rollout | mcts:N (every fight) | mcts:N:big (elites and bosses; the rest by the corrected rollout policy)")
     p.add_argument("--c", type=float, default=0.5, help="exploration bonus c / sqrt(n + 1), in the chooser's score units")
     p.add_argument("--epsilon", type=float, default=0.05, help="chance of a uniform random pick")
     p.add_argument("--ascensions", default="0", help="the ascension of each run is drawn from these: 10, 0-10, 0,5,10; a level listed twice is drawn twice as often")
     p.add_argument("--workers", type=int, default=os.cpu_count() or 1)
+    p.add_argument("--path", default="random", choices=PATHS, help="the path up the map: random, or score (the live agent's node-score planner)")
     p.add_argument("--batch", type=int, default=25, help="runs a worker plays per round (an MCTS pilot plays a run in seconds to a minute: use a small batch, e.g. 5)")
     p.add_argument("--run-timeout", type=int, default=RUN_TIMEOUT, help="seconds before a run is given up as stuck (logged as an engine error; 0: never)")
     args = p.parse_args(argv)
@@ -101,6 +102,8 @@ def main(argv=None):
     out.mkdir(parents=True, exist_ok=True)
     log = out / "runs.jsonl.gz"
     meta = {k: getattr(args, k) for k in ("chooser", "c", "epsilon", "ascensions", "pilot")}
+    if args.path != "random":           # older logs have no path: random
+        meta["path"] = args.path
     meta_file = out / "meta.json"
     if meta_file.exists() and {"pilot": "rollout", **json.loads(meta_file.read_text())} != meta:          # a log from before pilots: the rollout policy
         print(f"{meta_file} has other settings ({meta_file.read_text().strip()}): use another --out, or the same settings", file=sys.stderr)
@@ -121,7 +124,7 @@ def main(argv=None):
         for i in range(0, len(todo), chunk):
             seeds = todo[i:i + chunk]
             batches = [seeds[j:j + per_job] for j in range(0, len(seeds), per_job)]
-            jobs = [(b, args.chooser, counts.to_json(), args.c, args.epsilon, levels, args.pilot, args.run_timeout) for b in batches]
+            jobs = [(b, args.chooser, counts.to_json(), args.c, args.epsilon, levels, args.pilot, args.run_timeout, args.path) for b in batches]
             results = []
             for batch in pool.imap_unordered(job, jobs):
                 with gzip.open(log, "at", encoding="utf-8") as f:          # written as it comes in: a stopped suite keeps every run it finished

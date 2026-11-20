@@ -122,7 +122,7 @@ def play_labeled_run(seed : int, ascension : int = 0, pilot="rollout", fights : 
     pilot = parse_pilot(pilot)
     sim = LabelRun(seed, SearchConfig().tuned(rollout=WALK_POLICY), ascension, pilot, fights, epsilon)
     outcome = sim.play_run()
-    return {"seed": seed, "ascension": ascension, "pilot": pilot.name, "labeled": True, "rooms": sim.rooms, "picks": sim.picks, "outcome": outcome}
+    return {"seed": seed, "ascension": ascension, "pilot": pilot.name, "labeled": True, "rooms": sim.rooms, "picks": sim.picks, "fight_log": sim.fight_log, "outcome": outcome}
 
 
 def job(args) -> dict:
