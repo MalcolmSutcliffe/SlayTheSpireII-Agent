@@ -55,7 +55,7 @@ def unrest_site(c : Ctx) -> Page:
     def kill(c : Ctx):
         c.lose_max_hp(8)
         c.gain_relic()
-    return [Option("rest", rest), Option("kill", kill)]
+    return [Option("rest", rest), Option("kill", kill, max_hp_cost=8)]
 
 
 @event("SPIRIT_GRAFTER", acts=(2,))
@@ -96,7 +96,7 @@ def drowning_beacon(c : Ctx) -> Page:
     def climb(c : Ctx):
         c.lose_max_hp(13)
         c.gain_relic("FRESNEL_LENS", "Fresnel Lens")
-    return [Option("bottle", lambda c: c.gain_potion("GLOWWATER_POTION")), Option("climb", climb)]
+    return [Option("bottle", lambda c: c.gain_potion("GLOWWATER_POTION")), Option("climb", climb, max_hp_cost=13)]
 
 
 @event("HUNGRY_FOR_MUSHROOMS", acts=(3,))
@@ -405,7 +405,7 @@ def tablet_of_truth(c : Ctx) -> Page:
 
     def page(again : bool) -> Page:
         cost = c.vars["cost"]
-        options = [Option("decipher", decipher, lethal=c.run.max_hp <= cost)]
+        options = [Option("decipher", decipher, lethal=c.run.max_hp <= cost, max_hp_cost=cost)]
         return options + [Option("give_up", lambda c: None)] if again else options + [Option("smash", lambda c: c.heal(20))]
     return page(False)
 

@@ -197,6 +197,9 @@ class WalkResult:
 CARD_WALK_HEAL_BELOW = 0.5          # the walks that rate a card rest below this share of the max HP
 
 
+MAX_HP_LIMIT = 10          # an event option taking more max HP than this is left alone (Tablet of Truth's 12 and 24)
+
+
 class WalkAgent(BaseAgent):
     """The decisions inside a walk. Rest, upgrades, rewards and relics are BaseAgent's; a card reward takes the rarest card by chance `take_rate`."""
     name = "walk"
@@ -223,9 +226,16 @@ class WalkAgent(BaseAgent):
 
 
     def _get_event_decision(self, decision):
-        """A random option, drawn from the walk's seed and the screen alone: whatever the deck did before, every deck meets the same choice."""
+        """A random option, drawn from the walk's seed and the screen alone: whatever the deck did before, every deck meets the same choice. An option that costs
+        all the HP left (its `hp_cost`), ends the run (`lethal`) or takes more than MAX_HP_LIMIT max HP is never taken while there is another."""
+        hp = decision.player.get("hp", decision.player.get("current_hp"))
+
+        def ok(o):
+            d = o.data or {}
+            return not d.get("lethal") and d.get("max_hp_cost", 0) <= MAX_HP_LIMIT and (hp is None or d.get("hp_cost", 0) < hp)
+        safe = [o for o in decision.options if ok(o)] or decision.options
         key = "%s/event/%s/%s" % (self.seed, decision.state.get("event_id"), "|".join(o.label for o in decision.options))
-        return random.Random(key).choice(decision.options)
+        return random.Random(key).choice(safe)
 
     def _get_shop_decision(self, decision):
         """Spend everything: the cheapest relic that can be paid, else the removal of a curse or a Strike, else the rarest card (the cheaper of equals), else a potion; then leave."""

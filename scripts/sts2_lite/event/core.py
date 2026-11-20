@@ -41,7 +41,8 @@ class Option:
     apply : Callable[["Ctx"], "Page | None"]
     locked : bool = False           # shown but cannot be chosen (not enough gold)
     hp_cost : int = 0               # hit points the option takes (for a quick look, not used by the rules)
-    lethal : bool = False
+    lethal : bool = False           # the option ends the run
+    max_hp_cost : int = 0           # max HP the option takes (shown in the game's text)
 
 
 Page = list[Option]

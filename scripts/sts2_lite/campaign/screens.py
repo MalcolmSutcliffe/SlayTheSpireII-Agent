@@ -58,7 +58,7 @@ def card_select(run : RunState, screen_type : str, cards : list[dict], selected 
 
 def event_choice(run : RunState, event_id : str, options : list) -> dict:
     return screen(run, "event_choice", event_id=event_id, in_dialogue=False,
-                  options=[{"index": i, "title": o.key, "is_locked": o.locked} for i, o in enumerate(options)])
+                  options=[{"index": i, "title": o.key, "is_locked": o.locked, **{k: getattr(o, k) for k in ("hp_cost", "max_hp_cost", "lethal") if getattr(o, k, 0)}} for i, o in enumerate(options)])      # what an option costs, as the game's text shows it
 
 
 def treasure(run : RunState, relics : list[dict], can_proceed : bool) -> dict:
