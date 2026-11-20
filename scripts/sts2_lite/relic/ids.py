@@ -119,6 +119,14 @@ class RelicId(Enum):
     BOOKMARK = auto()
     IVORY_TILE = auto()
     UNDYING_SIGIL = auto()
+    CRACKED_CORE = auto()          # the Defect's relics (the orbs they hand out are in combat_start.py)
+    INFUSED_CORE = auto()
+    DATA_DISK = auto()
+    EMOTION_CHIP = auto()
+    GOLD_PLATED_CABLES = auto()
+    METRONOME = auto()
+    RUNIC_CAPACITOR = auto()
+    SYMBIOTIC_VIRUS = auto()
 
 # What the bridge calls a relic's state (if it reports one) when `used` is true.
 # The game marks Vambrace, Unsettling Lamp and Burning Sticks "Active" until they trigger, and a spent Lizard Tail "Disabled".

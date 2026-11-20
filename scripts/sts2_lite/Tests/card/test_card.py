@@ -1,7 +1,7 @@
 import pytest
 import re
 from sts2_lite.card import Card, CardId, CardType, TargetType, CARD_RARITY, RARE_CARDS, CardRarity, CardKeyword, EnchantmentId, UPGRADE_COST_CHANGE
-from sts2_lite.card.tables import NECROBINDER_CARDS
+from sts2_lite.card.tables import DEFECT_CARDS, NECROBINDER_CARDS
 from sts2_lite.combat import CombatSimulator, CombatState, IllegalActionError
 from sts2_lite.enemy import Enemy
 from sts2_lite.player import Player
@@ -354,7 +354,7 @@ def test_every_single_target_card_rejects_a_bad_target():
                                CardId.INFLAME, CardId.CRIMSON_MANTLE, CardId.IMPERVIOUS, CardId.EVIL_EYE,
                                    CardId.SECOND_WIND, CardId.BLOODLETTING, CardId.WHIRLWIND,
                                    CardId.SWORD_BOOMERANG, *NEW_POWER_CARDS, *UNTARGETED_COLORLESS, *UNTARGETED_EVENT,
-                                   *[c for c, v in NECROBINDER_CARDS.items() if v[3] != TargetType.AnyEnemy], CardId.FORBIDDEN_GRIMOIRE, CardId.SOUL, CardId.SWEEPING_GAZE)]
+                                   *[c for c, v in NECROBINDER_CARDS.items() if v[3] != TargetType.AnyEnemy], *[c for c, v in DEFECT_CARDS.items() if v[3] != TargetType.AnyEnemy], CardId.FUEL, CardId.QUADCAST, CardId.BIASED_COGNITION, CardId.FORBIDDEN_GRIMOIRE, CardId.SOUL, CardId.SWEEPING_GAZE)]
     assert len(targeted) >= 10
     for cid in targeted:
         cs = make_state([make_card(cid, cid.name, CardType.Attack, 1, TargetType.AnyEnemy)], enemy_count=1)
@@ -554,7 +554,9 @@ def test_cards_that_get_cheaper_when_upgraded(card_id):
                 CardId.BULLET_TIME: 3, CardId.MASTER_PLANNER: 2, CardId.MURDER: 3, CardId.NIGHTMARE: 3, CardId.SHADOW_STEP: 1, CardId.SHADOWMELD: 1,
                 CardId.TOOLS_OF_THE_TRADE: 1, CardId.TRACKING: 2, CardId.WELL_LAID_PLANS: 2, CardId.THE_SEALED_THRONE: 1, CardId.ORBIT: 2, CardId.SPECTRUM_SHIFT: 2, CardId.MONARCHS_GAZE: 2, CardId.SEVEN_STARS: 2, CardId.SWORD_SAGE: 2, CardId.SOVEREIGN_BLADE: 2,
                 CardId.BANSHEES_CRY: 9, CardId.DEMESNE: 3, CardId.EIDOLON: 2, CardId.FORBIDDEN_GRIMOIRE: 2, CardId.PAGESTORM: 1, CardId.PROTECTOR: 1,
-                CardId.SACRIFICE: 1, CardId.SEANCE: 1, CardId.SENTRY_MODE: 2}[card_id]
+                CardId.SACRIFICE: 1, CardId.SEANCE: 1, CardId.SENTRY_MODE: 2,
+                CardId.CREATIVE_AI: 3, CardId.DOUBLE_ENERGY: 1, CardId.DUALCAST: 1, CardId.FERAL: 2, CardId.QUADCAST: 1, CardId.SIGNAL_BOOST: 1, CardId.SUBROUTINE: 1,
+                CardId.TRASH_TO_TREASURE: 1, CardId.WHITE_NOISE: 1, CardId.ZAP: 1}[card_id]
     assert power(card_id, base).upgraded_copy().energy_cost == base - (2 if card_id is CardId.BANSHEES_CRY else 1)
 
 def test_cost_never_goes_below_zero():

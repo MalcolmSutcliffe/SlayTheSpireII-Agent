@@ -9,7 +9,7 @@ from sts2_lite.creature import Creature
 from sts2_lite.card import Card, CardId, CardType, CardKeyword, TargetType, CONFUSED_MAX_COST, EnchantmentId, SLITHER_MAX_COST, PLAIN_DAMAGE
 from sts2_lite.card.tables import combat_cards
 
-BASIC_ATTACK_COSTS = {CardId.STRIKE_IRONCLAD: 1, CardId.BASH: 2, CardId.STRIKE_SILENT: 1, CardId.STRIKE_NECROBINDER: 1}      # the starter Attacks are not in the generated-card table
+BASIC_ATTACK_COSTS = {CardId.STRIKE_DEFECT: 1, CardId.STRIKE_IRONCLAD: 1, CardId.BASH: 2, CardId.STRIKE_SILENT: 1, CardId.STRIKE_NECROBINDER: 1}      # the starter Attacks are not in the generated-card table
 from sts2_lite.status import StatusInstance, StatusId, INSTANCED
 from sts2_lite.relic import RelicId, RelicInstance, strength_received, lizard_tail_revive, hand_draw_bonus, blocks_draw, free_by_relic
 from sts2_lite.potion import Potion, PotionId, DEFAULT_POTION_SLOTS, FAIRY_HEAL
@@ -88,6 +88,13 @@ class Player(Creature):
         self.doom_applied_this_turn = False
         self.ethereal_plays = 0         # Ethereal cards played this combat (Banshee's Cry, Big Hat)
         self.deck_buffs = {}            # deck position -> the growth The Scythe has gained there (the deck's version keeps it after the fight)
+        self.orbs = []                  # the Defect's orb queue (orbs.Orb), the first one is evoked next
+        self.orb_slots = 0              # how many orbs the queue holds
+        self.lightning_channeled = 0    # Lightning orbs channeled this combat (Voltaic)
+        self.energy_spent_this_turn = 0 # Energy cards were paid with this turn (Helix Drill)
+        self.series_this_turn = 0       # cards played this turn, replays not counted (Echo Form)
+        self.statuses_drawn_this_turn = 0   # Iteration
+        self.zero_cost_attacks_this_turn = 0    # Feral
 
     @classmethod
     def from_dict(cls, player : dict):
@@ -130,6 +137,7 @@ class Player(Creature):
         for relic in map(RelicInstance.from_dict, player.get("relics", [])):
             if relic is not None:
                 pl.relics[relic.relic_id] = relic
+        pl._read_orbs(player)       # after the status and relics: the shown values have Focus and Infused Core in them
         if RelicId.GHOST_SEED in pl.relics:
             pl._apply_ghost_seed()
         if StatusId.CONFUSED in pl.status:
@@ -162,6 +170,16 @@ class Player(Creature):
         if RelicId.BRILLIANT_SCARF in pl.relics and free_by_relic(pl):
             pl._read_scarf_costs()
         return pl
+
+    def _read_orbs(self, player : dict):
+        """The Defect's orb queue (the bridge lists each orb with its shown values; a deck-built fight starts with the character's three slots)."""
+        from sts2_lite import orbs
+        self.orb_slots = int(player["orb_slots"]) if player.get("orb_slots") is not None else (orbs.DEFECT_SLOTS if self.character == "DEFECT" else 0)
+        self.orbs = []
+        for raw in player.get("orbs") or []:
+            orb = orbs.orb_from_state(self, raw)
+            if orb is not None:
+                self.orbs.append(orb)
 
     def _read_confused_stomps(self):
         """A shown Stomp cost under Confused is the roll (minus Attacks played since the draw), not 3 minus Attacks."""
@@ -199,7 +217,7 @@ class Player(Creature):
             base = BASIC_ATTACK_COSTS.get(card.card_id) if card.type == CardType.Attack else None
             if base is None and card.card_id in combat_cards(self.character):
                 base = Card.create_generated(card.card_id, card.is_upgraded).energy_cost
-            if base is None and card.card_id in (CardId.DEFEND_IRONCLAD, CardId.DEFEND_SILENT, CardId.DEFEND_NECROBINDER, CardId.SURVIVOR, CardId.SLIMED):
+            if base is None and card.card_id in (CardId.DEFEND_IRONCLAD, CardId.DEFEND_SILENT, CardId.DEFEND_NECROBINDER, CardId.DEFEND_DEFECT, CardId.SURVIVOR, CardId.SLIMED):
                 base = 1
             if base not in (None, 0) and base != "X":
                 own = Card.create_copy(card)
@@ -218,7 +236,7 @@ class Player(Creature):
                     self.cards_played_total = max(self.cards_played_total, base_from_displayed(shown, self, Creature()) if pile is self.hand else shown)
                     continue
                 momentum = card.enchantment == EnchantmentId.MOMENTUM and card.card_id in PLAIN_DAMAGE
-                if card.shown_damage is None or not (momentum or card.card_id in (CardId.RAMPAGE, CardId.THRASH, CardId.MAUL, CardId.SOVEREIGN_BLADE, CardId.KINGLY_PUNCH, CardId.THE_SCYTHE)):
+                if card.shown_damage is None or not (momentum or card.card_id in (CardId.RAMPAGE, CardId.THRASH, CardId.MAUL, CardId.SOVEREIGN_BLADE, CardId.KINGLY_PUNCH, CardId.THE_SCYTHE, CardId.CLAW)):
                     continue
                 shown = card.shown_damage
                 if pile is self.hand:
@@ -234,6 +252,8 @@ class Player(Creature):
                     card.bonus_damage = max(0, shown - (10 if card.is_upgraded else 8))
                 elif card.card_id == CardId.THE_SCYTHE:            # 13 plus 5 (7) a play
                     card.bonus_damage = max(0, shown - 13)
+                elif card.card_id == CardId.CLAW:                  # 3 (4) plus the increase of every Claw played
+                    card.bonus_damage = max(0, shown - (4 if card.is_upgraded else 3))
                 elif card.card_id == CardId.SOVEREIGN_BLADE:       # Forge adds to its 10
                     card.bonus_damage = max(0, shown - SOVEREIGN_BLADE_DAMAGE)
                 else:
@@ -329,6 +349,10 @@ class Player(Creature):
         new_pl.doom_applied_this_turn = player.doom_applied_this_turn
         new_pl.ethereal_plays = player.ethereal_plays
         new_pl.deck_buffs = dict(player.deck_buffs)
+        new_pl.orbs = [o.copy() for o in player.orbs]
+        new_pl.orb_slots, new_pl.lightning_channeled = player.orb_slots, player.lightning_channeled
+        new_pl.energy_spent_this_turn, new_pl.series_this_turn = player.energy_spent_this_turn, player.series_this_turn
+        new_pl.statuses_drawn_this_turn, new_pl.zero_cost_attacks_this_turn = player.statuses_drawn_this_turn, player.zero_cost_attacks_this_turn
         return new_pl
     
     def clear_bound(self):
@@ -361,6 +385,7 @@ class Player(Creature):
         self.extra_draws_this_turn = 0
         self.doom_applied_this_turn = False
         self.plays_started_this_turn = 0
+        self.energy_spent_this_turn = self.series_this_turn = self.statuses_drawn_this_turn = self.zero_cost_attacks_this_turn = 0
         self.card_blocks_this_turn = 0
         self.block_play, self.block_play_gains = None, 0
         if self.block_cleared_hook is not None:
@@ -374,7 +399,7 @@ class Player(Creature):
             if clarity.amount <= 0:
                 del self.status[StatusId.CLARITY_EXTRACT]
         count = max(0, (5 + hand_draw_bonus(self) if self.relics else 5) + (extra_draw.amount if extra_draw else 0) + (1 if clarity else 0) - self.status_amount(StatusId.MIND_ROT)
-                    + self.status_amount(StatusId.TOOLS_OF_THE_TRADE) + self.status_amount(StatusId.TYRANNY) + self.status_amount(StatusId.DEMESNE))
+                    + self.status_amount(StatusId.TOOLS_OF_THE_TRADE) + self.status_amount(StatusId.MACHINE_LEARNING) + self.status_amount(StatusId.TYRANNY) + self.status_amount(StatusId.DEMESNE))
         if self.opening_hook is not None:       # a fight built from a deck: first-turn relics and Innate cards (relic/combat_start.py)
             hook, self.opening_hook = self.opening_hook, None
             count = hook(self, count)
@@ -553,7 +578,7 @@ class Player(Creature):
             if list(map(_RESTORE_COST, pile)).count(None) == len(pile):        # no card of the pile has a cost to get back
                 continue
             for i, c in enumerate(pile):
-                if c.restore_cost is not None:
+                if c.restore_cost is not None and not (c.lasting and c.until_played):
                     restored = Card.create_copy(c)
                     restored.energy_cost, restored.restore_cost, restored.until_played = c.restore_cost, None, False
                     pile[i] = restored

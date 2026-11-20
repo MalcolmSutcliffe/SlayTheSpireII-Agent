@@ -241,3 +241,36 @@ def _printed_damage(card : Card, combat : CombatSimulator) -> int:
 ###
 
 ### Ancient cards that are not in the decompiled source: written from the cards' text
+
+# the Defect's
+PLAIN_DAMAGE.update({
+    CardId.ADAPTIVE_STRIKE : (18, 23),
+    CardId.ALL_FOR_ONE : (10, 14),
+    CardId.BALL_LIGHTNING : (7, 10),
+    CardId.BARRAGE : (5, 7),
+    CardId.BEAM_CELL : (3, 4),
+    CardId.CLAW : (3, 4),
+    CardId.COLD_SNAP : (6, 9),
+    CardId.COMPILE_DRIVER : (7, 10),
+    CardId.FLAK_CANNON : (8, 11),
+    CardId.FOCUSED_STRIKE : (9, 11),
+    CardId.FTL : (5, 6),
+    CardId.GO_FOR_THE_EYES : (3, 4),
+    CardId.GUNK_UP : (4, 5),
+    CardId.HELIX_DRILL : (3, 5),
+    CardId.HYPERBEAM : (24, 30),
+    CardId.ICE_LANCE : (19, 24),
+    CardId.METEOR_STRIKE : (24, 30),
+    CardId.MOMENTUM_STRIKE : (11, 15),
+    CardId.NULL : (10, 13),
+    CardId.REFRACT : (10, 13),
+    CardId.ROCKET_PUNCH : (13, 14),
+    CardId.SCRAPE : (7, 10),
+    CardId.SHATTER : (7, 11),
+    CardId.STRIKE_DEFECT : (6, 9),
+    CardId.SUNDER : (26, 34),
+    CardId.SWEEPING_BEAM : (6, 9),
+    CardId.SYNTHESIS : (14, 20),
+    CardId.TESLA_COIL : (3, 4),
+    CardId.UPROAR : (6, 8),
+})

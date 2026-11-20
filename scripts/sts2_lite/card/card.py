@@ -9,16 +9,16 @@ from sts2_lite.hooks import HookType
 from sts2_lite.card.constants import STAR_COST, UPGRADE_STAR_COST, MAD_SCIENCE_BLOCK, MAD_SCIENCE_DAMAGE, mad_science_rider, BECKON_HP_LOSS, BURN_DAMAGE, CONSUMED_ON_PLAY, CURSE_NAMES, ENCHANT_CORRUPTED_HP_LOSS, ENCHANT_SOWN_ENERGY, INFECTION_DAMAGE, NORMALITY_CARD_LIMIT, PLAYABLE_CURSES, QUEST_NAMES, TOXIC_DAMAGE, UPGRADE_BASE_COST, UPGRADE_COST_CHANGE, UPGRADE_KEYWORD, UPGRADE_REMOVED_KEYWORD, WITHER_DAMAGE, _AXE, _CHOKER, _ETHEREAL, _EXHAUST, _INNATE, _REPLAY, _RETAIN, _SCARF, _SLY, _UNPLAYABLE, QUEST_CARDS, _unknown_cards, _unknown_enchantments, keyword_mask
 from sts2_lite.card.effects import _gain_block
 from sts2_lite.card.ids import CardId, CardKeyword, CardType, EnchantmentId, TargetType
-from sts2_lite.card.tables import ANCIENT_CARDS, COLORLESS_CARDS, EVENT_CARDS, GENERATABLE_CARDS, NECROBINDER_CARDS, REGENT_CARDS, SILENT_CARDS, HAND_CURSE_EFFECTS, STRIKE_CARDS, TOKEN_CARDS
+from sts2_lite.card.tables import ANCIENT_CARDS, COLORLESS_CARDS, EVENT_CARDS, GENERATABLE_CARDS, DEFECT_CARDS, NECROBINDER_CARDS, REGENT_CARDS, SILENT_CARDS, HAND_CURSE_EFFECTS, STRIKE_CARDS, TOKEN_CARDS
 
 if TYPE_CHECKING:
     from sts2_lite.combat import CombatSimulator
 
 # hot-path aliases (enum members are singletons: `is` is their equality)
-_ATTACK, _SKILL = CardType.Attack, CardType.Skill
+_ATTACK, _SKILL, _POWER = CardType.Attack, CardType.Skill, CardType.Power
 _CLASH, _NORMALITY, _ENTHRALLED = CardId.CLASH, CardId.NORMALITY, CardId.ENTHRALLED
 _CORRUPTION, _FREE_ATTACK, _TANGLED, _RINGING, _SLOTH = StatusId.CORRUPTION, StatusId.FREE_ATTACK, StatusId.TANGLED, StatusId.RINGING, StatusId.SLOTH
-_FREE_SKILL = StatusId.FREE_SKILL
+_FREE_SKILL, _FREE_POWER = StatusId.FREE_SKILL, StatusId.FREE_POWER
 
 
 _UNAFFORDABLE = frozenset({"EnergyCostTooHigh", "StarCostTooHigh"})
@@ -48,6 +48,7 @@ class Card:
     is_unplayable : bool
     guessed_cost : bool = False                # the cost was put back from the card tables while the Scarf showed 0: a previous state may know better
     restore_cost : int | str | None = None     # set while the cost is changed for this turn: the cost it gets back
+    lasting : bool = False                     # an until-played change that survives the end of the turn (AddUntilPlayed: Bookmark, Rocket Punch)
     until_played : bool = False                # the temporary cost also ends when the card is played (SetThisTurnOrUntilPlayed)
     replay : int = 0                           # extra plays the card has for good (Hidden Gem); Glam's is the REPLAY keyword
     bonus_damage : int = 0                     # damage Rampage and Thrash have gained this combat
@@ -268,6 +269,15 @@ class Card:
         return c
 
     @classmethod
+    def create_void(cls) -> Card:
+        c = cls()
+        c.card_id, c.name, c.type = CardId.VOID, "Void", CardType.Status
+        c.energy_cost, c.target_type = 0, TargetType.NONE
+        c.is_upgraded = False
+        c.is_unplayable = True
+        return c
+
+    @classmethod
     def create_wound(cls) -> Card:
         c = cls()
         c.card_id, c.name, c.type = CardId.WOUND, "Wound", CardType.Status
@@ -361,7 +371,7 @@ class Card:
     @classmethod
     def create_generated(cls, card_id : CardId, upgraded : bool = False) -> Card:
         """A fresh copy of a card that a card effect adds to the player's piles (Infernal Blade, Stoke)."""
-        name, card_type, cost, target = (GENERATABLE_CARDS.get(card_id) or SILENT_CARDS.get(card_id) or REGENT_CARDS.get(card_id) or NECROBINDER_CARDS.get(card_id) or COLORLESS_CARDS.get(card_id) or EVENT_CARDS.get(card_id) or ANCIENT_CARDS.get(card_id)
+        name, card_type, cost, target = (GENERATABLE_CARDS.get(card_id) or SILENT_CARDS.get(card_id) or REGENT_CARDS.get(card_id) or NECROBINDER_CARDS.get(card_id) or DEFECT_CARDS.get(card_id) or COLORLESS_CARDS.get(card_id) or EVENT_CARDS.get(card_id) or ANCIENT_CARDS.get(card_id)
                                          or TOKEN_CARDS[card_id])
         c = cls()
         c.card_id, c.name, c.type = card_id, name, card_type
@@ -392,7 +402,7 @@ class Card:
         new_card = Card.create_copy(self)
         if new_card.restore_cost is None:
             new_card.restore_cost = self.energy_cost
-        new_card.energy_cost, new_card.until_played = max(0, self.energy_cost - amount), True
+        new_card.energy_cost, new_card.until_played, new_card.lasting = max(0, self.energy_cost - amount), True, True
         return new_card
 
     def cheaper_this_combat(self, amount : int) -> Card:
@@ -449,7 +459,7 @@ class Card:
         if not self.until_played:
             return self
         new_card = Card.create_copy(self)
-        new_card.energy_cost, new_card.restore_cost, new_card.until_played = self.restore_cost, None, False
+        new_card.energy_cost, new_card.restore_cost, new_card.until_played, new_card.lasting = self.restore_cost, None, False, False
         return new_card
 
     @property
@@ -537,6 +547,7 @@ class Card:
         new_card.restore_cost = card.restore_cost
         new_card.guessed_cost = card.guessed_cost
         new_card.until_played = card.until_played
+        new_card.lasting = card.lasting
         new_card.bonus_damage = card.bonus_damage
         new_card.deck_index = card.deck_index
         new_card.last_played_turn = card.last_played_turn
@@ -554,7 +565,7 @@ class Card:
     def signature(self) -> tuple:
         """Everything that decides how this card plays: two cards with equal signatures are interchangeable
         (the fields create_copy carries over, minus name/type/target which follow from the id)."""
-        return (self.card_id, self.is_upgraded, self.energy_cost, self.star_cost, self.is_unplayable, self.restore_cost, self.until_played,
+        return (self.card_id, self.is_upgraded, self.energy_cost, self.star_cost, self.is_unplayable, self.restore_cost, self.until_played, self.lasting,
                 self.bonus_damage, self.last_played_turn, self.replay, self.enchantment, self.enchant_amount, self.enchant_bonus, self._mask, self.generated, self.dampened_from is not None, self.wither_level, self.bound, self.rider, self.turn_keywords)
 
     @property
@@ -577,6 +588,10 @@ class Card:
             free_skill = status.get(_FREE_SKILL)
             if free_skill is not None and free_skill.amount > 0:
                 return 0            # FreeSkillPower.TryModifyEnergyCostInCombatLate
+        elif ctype is _POWER:
+            free_power = status.get(_FREE_POWER)
+            if free_power is not None and free_power.amount > 0:
+                return 0            # FreePowerPower.TryModifyEnergyCostInCombatLate
         if ctype is _ATTACK:
             free_attack = status.get(_FREE_ATTACK)
             if free_attack is not None and free_attack.amount > 0:
@@ -604,7 +619,8 @@ class Card:
         if star_cost and _VOID_FORM in player.status and _void_form_free(player.status[_VOID_FORM]):
             star_cost = 0           # VoidFormPower.TryModifyStarCost
         free_attack = (player.status.get(StatusId.FREE_ATTACK) if self.type == CardType.Attack
-                       else player.status.get(StatusId.FREE_SKILL) if self.type == CardType.Skill else None)    # FreeAttackPower / FreeSkillPower: the next one is free
+                       else player.status.get(StatusId.FREE_SKILL) if self.type == CardType.Skill
+                       else player.status.get(StatusId.FREE_POWER) if self.type == CardType.Power else None)    # FreeAttackPower / FreeSkillPower: the next one is free
         free_attack_amount = free_attack.amount if free_attack else 0
         from sts2_lite.card.plays.registry import GET_CARD_FUNCTION
         play = GET_CARD_FUNCTION[self.card_id]
@@ -660,8 +676,10 @@ class Card:
                 player.status[punch.status_id] = punch
             raise
         combat.last_energy_paid = spent
+        player.series_this_turn += 1
         combat.finish_vigor()
         if spent > 0:
+            player.energy_spent_this_turn += spent
             combat.fire(HookType.ENERGY_SPENT, spent)
 
         self.run_extra_plays(combat, target_index, x, extra, saved, spent)
@@ -731,6 +749,16 @@ class Card:
         if StatusId.DUPLICATION in player.status:        # Duplicator Potion: the next card this turn, once
             extra += 1
             del player.status[StatusId.DUPLICATION]
+        if player.status:
+            echo = player.status.get(StatusId.ECHO_FORM)
+            if echo is not None and player.series_this_turn < echo.amount:
+                extra += 1              # EchoFormPower.ModifyCardPlayCount: the first card(s) of the turn
+            boost = player.status.get(StatusId.SIGNAL_BOOST)
+            if boost is not None and self.type == CardType.Power:
+                extra += 1              # SignalBoostPower: the next Power is played twice
+                boost.amount -= 1
+                if boost.amount <= 0:
+                    del player.status[StatusId.SIGNAL_BOOST]
         if self._mask & _REPLAY:        # Replay 1 (Glam); it is spent after this play, but this count is fixed before it
             extra += 1
         if player.relics and _AXE in player.relics:

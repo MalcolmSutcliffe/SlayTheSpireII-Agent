@@ -61,11 +61,12 @@ def test_splash_table():
     assert not card.exhausts
 
 def test_splash_pool_is_the_other_characters_attacks():
-    attacks = {name: set(combat_pool(name, CardType.Attack)) for name in ("IRONCLAD", "SILENT", "REGENT", "NECROBINDER")}
-    assert set(splash_pool("SILENT")) == attacks["IRONCLAD"] | attacks["REGENT"] | attacks["NECROBINDER"]
-    assert set(splash_pool("IRONCLAD")) == attacks["SILENT"] | attacks["REGENT"] | attacks["NECROBINDER"]
-    assert set(splash_pool("REGENT")) == attacks["IRONCLAD"] | attacks["SILENT"] | attacks["NECROBINDER"]
-    assert set(splash_pool("NECROBINDER")) == attacks["IRONCLAD"] | attacks["SILENT"] | attacks["REGENT"]
+    attacks = {name: set(combat_pool(name, CardType.Attack)) for name in ("IRONCLAD", "SILENT", "REGENT", "NECROBINDER", "DEFECT")}
+    assert set(splash_pool("SILENT")) == attacks["IRONCLAD"] | attacks["REGENT"] | attacks["NECROBINDER"] | attacks["DEFECT"]
+    assert set(splash_pool("IRONCLAD")) == attacks["SILENT"] | attacks["REGENT"] | attacks["NECROBINDER"] | attacks["DEFECT"]
+    assert set(splash_pool("REGENT")) == attacks["IRONCLAD"] | attacks["SILENT"] | attacks["NECROBINDER"] | attacks["DEFECT"]
+    assert set(splash_pool("NECROBINDER")) == attacks["IRONCLAD"] | attacks["SILENT"] | attacks["REGENT"] | attacks["DEFECT"]
+    assert set(splash_pool("DEFECT")) == attacks["IRONCLAD"] | attacks["SILENT"] | attacks["REGENT"] | attacks["NECROBINDER"]
 
 @pytest.mark.parametrize("upgraded", [False, True])
 def test_splash_offers_three_other_attacks_and_the_pick_is_free(upgraded):

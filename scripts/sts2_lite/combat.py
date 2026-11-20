@@ -13,6 +13,7 @@ from sts2_lite.card import TargetType, CardType, Card, CardId, CardKeyword, Ench
 from sts2_lite.damage import modify_damage, base_from_displayed, bases_from_displayed, EPSILON
 from sts2_lite import rng
 from sts2_lite.hooks import HookType
+from sts2_lite import defect
 from sts2_lite.necrobinder import after_card_played as necrobinder_card_played, on_enemy_died as necrobinder_on_died, apply_doom, osty_hurt, NECROBINDER_CHOICES
 from sts2_lite.relic import RelicId, poison_given, dexterity_bonus, PER_TURN_FLAG, ALWAYS_REPORTED, take_extra_turn, after_card_played, release_card, fire_relics, blocks_play, PHILOSOPHERS_STONE_STRENGTH, upgraded_after_play, \
     max_energy_gain, victory_heal
@@ -867,7 +868,7 @@ class CombatSimulator:
         elif choice.kind == "draw_to_hand":
             player.remove_from_draw_pile(card)
             (player.hand if len(player.hand) < MAX_HAND_SIZE else player.discard_pile).append(card)     # a full hand sends it to the discard pile
-        elif choice.kind == "to_hand":
+        elif choice.kind in ("to_hand", "hologram"):
             if len(player.hand) >= 10:              # a full hand leaves the cards in the discard pile
                 return
             player.discard_pile.remove(card)
@@ -936,7 +937,7 @@ class CombatSimulator:
     def private_copy(card : Card) -> Card:
         """Cards that change when played (Rampage, Thrash, Frantic Escape, Swift/Sown/Vigorous/Momentum/Glam) are played as a copy: card objects are shared between
         simulated states, so the played one must not be changed in place. The copy goes to the discard pile."""
-        if card.card_id in (CardId.RAMPAGE, CardId.FETCH, CardId.THE_SCYTHE, CardId.THRASH, CardId.FRANTIC_ESCAPE, CardId.UP_MY_SLEEVE) or card.enchantment in CHANGED_ON_PLAY:
+        if card.card_id in (CardId.RAMPAGE, CardId.FETCH, CardId.THE_SCYTHE, CardId.THRASH, CardId.FRANTIC_ESCAPE, CardId.UP_MY_SLEEVE, CardId.CLAW, CardId.MODDED, CardId.MOMENTUM_STRIKE, CardId.GENETIC_ALGORITHM) or card.enchantment in CHANGED_ON_PLAY:
             return Card.create_copy(card)
         return card
 
@@ -967,6 +968,8 @@ class CombatSimulator:
         return self.combat_state.pending_choice is not None
 
     def _card_generated(self, card : Card):
+        if card.type is CardType.Status:
+            defect.status_made(self, card)
         self.fire(HookType.CARD_GENERATED, card)
 
     def _block_cleared(self):
@@ -987,6 +990,8 @@ class CombatSimulator:
     def _card_drawn(self, card : Card, from_hand_draw : bool = False):
         """Automation counts every card drawn; Hellraiser plays a Strike the moment it is drawn; Speedster hits every enemy for a draw outside the hand draw."""
         player = self.combat_state.player
+        if card.type is CardType.Status:
+            defect.card_drawn(self, card)
         if card.card_id is CardId.KINGLY_KICK or card.card_id is CardId.KINGLY_PUNCH:
             self._kingly_draw(card)
         wave = player.status.get(StatusId.CORROSIVE_WAVE)
@@ -1286,6 +1291,8 @@ class CombatSimulator:
             self.fire(HookType.CARD_EXHAUSTED, card)
         elif to_top or card.card_id is CardId.SHINING_STRIKE:
             player.put_on_top(card)         # Nostalgia; Shining Strike
+        elif player.status and StatusId.FERAL in player.status and defect.card_moved_after_play(self, card, played):
+            pass                            # Feral: the free Attack is back in the hand
         elif card.card_id is CardId.PARTICLE_WALL:
             player.add_to_hand(card)        # Particle Wall comes back to the hand (a full hand sends it to the discard pile)
         else:
@@ -1309,6 +1316,7 @@ class CombatSimulator:
         if self.combat_state.player.relics:         # only relics hook it (Pael's Eye)
             self.fire(HookType.TURN_END_EARLY)
             self.resolve_deaths()
+        defect.before_turn_end(self)            # the orbs' Passives
         self.fire(HookType.END_TURN)
         self.resolve_deaths()
         self.combat_state.player.clear_bound()
@@ -1368,6 +1376,7 @@ class CombatSimulator:
             amount = creature.status.pop(marker, None)
             if amount is not None:
                 creature.apply_status(StatusId.STRENGTH, -sign * amount.amount, bypass_artifact=True)
+        defect.return_temporary_focus(creature)
         for marker in (StatusId.SPEED_POTION, StatusId.ANTICIPATE, StatusId.HELICAL_DART):        # Speed Potion, Anticipate, Helical Dart: their Dexterity
             speed = creature.status.pop(marker, None)
             if speed is not None:
@@ -1434,6 +1443,7 @@ class CombatSimulator:
             radiant.amount -= 1
             if radiant.amount <= 0:
                 del player.status[StatusId.RADIANT_TINCTURE]
+        defect.after_energy_reset(self)        # Lightning Rod, Spinner, Plasma
         self.combat_state.cards_played = 0
         self.combat_state.sloth_played = 0
         if enemies_start:

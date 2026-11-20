@@ -33,6 +33,8 @@ CHARACTERS = {
                         ("STRIKE_REGENT",) * 4 + ("DEFEND_REGENT",) * 4 + ("FALLING_STAR", "VENERATE")),       # Regent.StartingDeck
     "NECROBINDER": Character("NECROBINDER", "The Necrobinder", 66, 99, 3, "BOUND_PHYLACTERY", "Bound Phylactery",
                              ("STRIKE_NECROBINDER",) * 4 + ("DEFEND_NECROBINDER",) * 4 + ("BODYGUARD", "UNLEASH")),       # Necrobinder.StartingDeck
+    "DEFECT": Character("DEFECT", "The Defect", 75, 99, 3, "CRACKED_CORE", "Cracked Core",
+                        ("STRIKE_DEFECT",) * 4 + ("DEFEND_DEFECT",) * 4 + ("ZAP", "DUALCAST")),       # Defect.StartingDeck
 }
 
 

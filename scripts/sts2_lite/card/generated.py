@@ -12,6 +12,7 @@ GENERATED_CARDS = {
     CardId.WITHER : Card.create_wither,
     CardId.DAZED : Card.create_dazed,
     CardId.WOUND : Card.create_wound,
+    CardId.VOID : Card.create_void,
     CardId.SOOT : Card.create_soot,
     CardId.TOXIC : Card.create_toxic,
     CardId.FRANTIC_ESCAPE : Card.create_frantic_escape,

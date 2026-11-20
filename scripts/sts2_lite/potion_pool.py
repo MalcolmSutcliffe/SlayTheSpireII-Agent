@@ -11,7 +11,8 @@ SHARED = ("ATTACK_POTION BEETLE_JUICE BLESSING_OF_THE_FORGE BLOCK_POTION BOTTLED
 CHARACTER = {"IRONCLAD": ("BLOOD_POTION", "SOLDIERS_STEW", "ASHWATER"),      # Ironclad4Epoch.Potions, in its order
              "SILENT": ("POISON_POTION", "GHOST_IN_A_JAR", "CUNNING_POTION"),     # Silent4Epoch.Potions
              "REGENT": ("STAR_POTION", "KINGS_COURAGE", "COSMIC_CONCOCTION"),
-             "NECROBINDER": ("POTION_OF_DOOM", "BONE_BREW", "POT_OF_GHOULS")}
+             "NECROBINDER": ("POTION_OF_DOOM", "BONE_BREW", "POT_OF_GHOULS"),
+             "DEFECT": ("FOCUS_POTION", "ESSENCE_OF_DARKNESS", "POTION_OF_CAPACITY")}
 RARE_UP_TO, UNCOMMON_UP_TO = 0.1, 0.35                                      # PotionFactory.RollRarity on NextFloat
 
 

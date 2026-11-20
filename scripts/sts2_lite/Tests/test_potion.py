@@ -38,10 +38,10 @@ def zero_cost(card):
 def test_every_potion_is_described_and_has_an_effect():
     assert set(EFFECTS) == set(PotionId) == set(POTION_INFO)
 
-def test_the_list_is_the_wikis_ironclad_silent_regent_and_necrobinder_list():
+def test_the_list_is_the_wikis_list_of_the_five_characters():
     counts = {r: sum(1 for p in PotionId if p.rarity == r) for r in PotionRarity}
-    assert counts == {PotionRarity.COMMON : 19, PotionRarity.UNCOMMON : 19, PotionRarity.RARE : 19, PotionRarity.SPECIAL : 4}
-    assert len(PotionId) == 61
+    assert counts == {PotionRarity.COMMON : 20, PotionRarity.UNCOMMON : 20, PotionRarity.RARE : 20, PotionRarity.SPECIAL : 4}
+    assert len(PotionId) == 64
 
 @pytest.mark.parametrize("game_id, expected", [
     ("FAIRY_IN_A_BOTTLE", PotionId.FAIRY_IN_A_BOTTLE), ("fairy_in_a_bottle", PotionId.FAIRY_IN_A_BOTTLE), ("REGEN_POTION", PotionId.REGEN_POTION),
@@ -52,7 +52,7 @@ def test_game_ids_are_recognised(game_id, expected):
     assert PotionId.from_game_id(game_id) is expected
 
 def test_another_characters_potion_is_not_known():
-    assert PotionId.from_game_id("FOCUS_POTION") is None and PotionId.from_game_id("") is None
+    assert PotionId.from_game_id("WATCHER_POTION") is None and PotionId.from_game_id("") is None
 
 def test_only_fairy_in_a_bottle_works_by_itself():
     assert [p for p in PotionId if not p.info.combat_usable] == [PotionId.FAIRY_IN_A_BOTTLE]
@@ -70,7 +70,7 @@ def player_dict(potions):
     return d
 
 def test_potions_load_with_their_slots_and_unknown_ones_are_left_out():
-    p = Player.from_dict(player_dict([{"id" : "FIRE_POTION", "slot" : 0}, {"id" : "FOCUS_POTION", "slot" : 1}, {"id" : "REGEN_POTION", "slot" : 2}]))
+    p = Player.from_dict(player_dict([{"id" : "FIRE_POTION", "slot" : 0}, {"id" : "WATCHER_POTION", "slot" : 1}, {"id" : "REGEN_POTION", "slot" : 2}]))
     assert [(x.potion_id, x.slot) for x in p.potions] == [(PotionId.FIRE_POTION, 0), (PotionId.REGEN_POTION, 2)]
     assert p.potion_slots >= 3
 

@@ -154,6 +154,14 @@ POOL = [
     ('FUNERARY_MASK', 'Uncommon', True, False, 'necrobinder'),
     ('IVORY_TILE', 'Rare', True, False, 'necrobinder'),
     ('UNDYING_SIGIL', 'Shop', True, False, 'necrobinder'),
+    ('CRACKED_CORE', 'Starter', True, False, 'defect'),          # DefectRelicPool
+    ('DATA_DISK', 'Common', True, False, 'defect'),
+    ('EMOTION_CHIP', 'Rare', True, False, 'defect'),
+    ('GOLD_PLATED_CABLES', 'Uncommon', True, False, 'defect'),
+    ('POWER_CELL', 'Rare', True, False, 'defect'),
+    ('METRONOME', 'Rare', True, False, 'defect'),
+    ('RUNIC_CAPACITOR', 'Shop', True, False, 'defect'),
+    ('SYMBIOTIC_VIRUS', 'Uncommon', True, False, 'defect'),
 ]
 
 # MerchantCost overrides (a relic class that sets its own price)

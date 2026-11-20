@@ -27,8 +27,9 @@ COUNTER_RELICS = frozenset({"EMBER_TEA", "BONE_TEA", "TEA_OF_DISCOURTESY", "PUMP
 
 PLAYER_STATUS = {"VAJRA": (StatusId.STRENGTH, 1), "SWORD_OF_JADE": (StatusId.STRENGTH, 3), "ODDLY_SMOOTH_STONE": (StatusId.DEXTERITY, 1),
                  "AKABEKO": (StatusId.VIGOR, 8), "GORGET": (StatusId.PLATING, 4), "BRONZE_SCALES": (StatusId.THORNS, 3),
-                 "DIAMOND_DIADEM": (StatusId.BLUR, 1)}
+                 "DIAMOND_DIADEM": (StatusId.BLUR, 1), "DATA_DISK": (StatusId.FOCUS, 1)}
 NINJA_SCROLL_SHIVS = 3
+RUNIC_CAPACITOR_SLOTS, INFUSED_CORE_LIGHTNING = 3, 3
 DIVINE_RIGHT_STARS = 3
 FENCING_MANUAL_FORGE = 10
 TWISTED_FUNNEL_POISON = 4
@@ -137,6 +138,19 @@ class Opening:
                 for enemy in cs.enemies:
                     enemy.apply_status(status, amount)
 
+    def _orb_relics(self, sim : CombatSimulator):
+        """The Defect's relics of the first turn: Cracked Core (BeforeSideTurnStart) and Runic Capacitor, Infused Core and Symbiotic Virus (AfterSideTurnStart)."""
+        from sts2_lite import orbs
+        player = sim.combat_state.player
+        if self.has("CRACKED_CORE"):
+            orbs.channel(sim, orbs.LIGHTNING, 1)
+        if self.has("RUNIC_CAPACITOR"):
+            orbs.add_slots(player, RUNIC_CAPACITOR_SLOTS)
+        if self.has("INFUSED_CORE"):
+            orbs.channel(sim, orbs.LIGHTNING, INFUSED_CORE_LIGHTNING)
+        if self.has("SYMBIOTIC_VIRUS"):
+            orbs.channel(sim, orbs.DARK, 1)
+
     # --- after the hand draw (AfterPlayerTurnStart, AfterSideTurnStart)
     def after_draw(self, sim : CombatSimulator):
         cs = sim.combat_state
@@ -149,6 +163,7 @@ class Opening:
         for relic, amount in BLOCK.items():
             if self.has(relic):
                 player.apply_block(amount)
+        self._orb_relics(sim)
         if self.has("ROYAL_POISON"):       # the game loses the hp before it heals (a full-hp player ends 2 under with Blood Vial, not 4)
             mark = player.hp_loss_events
             player.lose_hp(ROYAL_POISON_DAMAGE)

@@ -435,6 +435,94 @@ CARD_ENERGY_COST_AND_TARGET : dict[CardId, tuple[int | str, TargetType]] = {
     CardId.UNDEATH : (0, _S),
     CardId.VEILPIERCER : (1, _A),
     CardId.WISP : (0, _S),
+    # the Defect's
+    CardId.ADAPTIVE_STRIKE : (2, _A),
+    CardId.ALL_FOR_ONE : (2, _A),
+    CardId.BALL_LIGHTNING : (1, _A),
+    CardId.BARRAGE : (1, _A),
+    CardId.BEAM_CELL : (0, _A),
+    CardId.BIASED_COGNITION : (1, _S),
+    CardId.BOOST_AWAY : (0, _S),
+    CardId.BOOT_SEQUENCE : (0, _S),
+    CardId.BUFFER : (2, _S),
+    CardId.BULK_UP : (2, _S),
+    CardId.CAPACITOR : (1, _S),
+    CardId.CHAOS : (1, _S),
+    CardId.CHARGE_BATTERY : (1, _S),
+    CardId.CHILL : (0, _S),
+    CardId.CLAW : (0, _A),
+    CardId.COLD_SNAP : (1, _A),
+    CardId.COMPACT : (1, _S),
+    CardId.COMPILE_DRIVER : (1, _A),
+    CardId.CONSUMING_SHADOW : (2, _S),
+    CardId.COOLANT : (1, _S),
+    CardId.COOLHEADED : (1, _S),
+    CardId.CREATIVE_AI : (3, _S),
+    CardId.DARKNESS : (1, _S),
+    CardId.DEFEND_DEFECT : (1, _S),
+    CardId.DEFRAGMENT : (1, _S),
+    CardId.DOUBLE_ENERGY : (1, _S),
+    CardId.DUALCAST : (1, _S),
+    CardId.ECHO_FORM : (3, _S),
+    CardId.FERAL : (2, _S),
+    CardId.FIGHT_THROUGH : (1, _S),
+    CardId.FLAK_CANNON : (2, _RAND),
+    CardId.FOCUSED_STRIKE : (1, _A),
+    CardId.FTL : (0, _A),
+    CardId.FUSION : (1, _S),
+    CardId.GENETIC_ALGORITHM : (1, _S),
+    CardId.GLACIER : (2, _S),
+    CardId.GLASSWORK : (1, _S),
+    CardId.GO_FOR_THE_EYES : (0, _A),
+    CardId.GUNK_UP : (1, _A),
+    CardId.HAILSTORM : (1, _S),
+    CardId.HELIX_DRILL : (0, _A),
+    CardId.HOLOGRAM : (1, _S),
+    CardId.HOTFIX : (0, _S),
+    CardId.HYPERBEAM : (2, _ALL),
+    CardId.ICE_LANCE : (3, _A),
+    CardId.ITERATION : (1, _S),
+    CardId.LEAP : (1, _S),
+    CardId.LIGHTNING_ROD : (1, _S),
+    CardId.LOOP : (1, _S),
+    CardId.MACHINE_LEARNING : (1, _S),
+    CardId.METEOR_STRIKE : (5, _A),
+    CardId.MODDED : (0, _S),
+    CardId.MOMENTUM_STRIKE : (1, _A),
+    CardId.MULTI_CAST : ("X", _S),
+    CardId.NULL : (2, _A),
+    CardId.OVERCLOCK : (0, _S),
+    CardId.QUADCAST : (1, _S),
+    CardId.RAINBOW : (2, _S),
+    CardId.REBOOT : (0, _S),
+    CardId.REFRACT : (3, _A),
+    CardId.ROCKET_PUNCH : (2, _A),
+    CardId.SCAVENGE : (1, _S),
+    CardId.SCRAPE : (1, _A),
+    CardId.SHADOW_SHIELD : (2, _S),
+    CardId.SHATTER : (1, _ALL),
+    CardId.SIGNAL_BOOST : (1, _S),
+    CardId.SKIM : (1, _S),
+    CardId.SMOKESTACK : (1, _S),
+    CardId.SPINNER : (1, _S),
+    CardId.STORM : (1, _S),
+    CardId.STRIKE_DEFECT : (1, _A),
+    CardId.SUBROUTINE : (1, _S),
+    CardId.SUNDER : (3, _A),
+    CardId.SUPERCRITICAL : (0, _S),
+    CardId.SWEEPING_BEAM : (1, _ALL),
+    CardId.SYNCHRONIZE : (1, _S),
+    CardId.SYNTHESIS : (2, _A),
+    CardId.TEMPEST : ("X", _S),
+    CardId.TESLA_COIL : (0, _A),
+    CardId.THUNDER : (1, _S),
+    CardId.TRASH_TO_TREASURE : (1, _S),
+    CardId.TURBO : (0, _S),
+    CardId.UPROAR : (2, _A),
+    CardId.VOLTAIC : (3, _S),
+    CardId.WHITE_NOISE : (1, _S),
+    CardId.ZAP : (1, _S),
+    CardId.FUEL : (0, _S),
 }
 
 INFECTION_DAMAGE = 3
@@ -530,12 +618,12 @@ CURSE_CARDS = frozenset({CardId.BAD_LUCK, CardId.DEBT, CardId.REGRET, CardId.DEC
 PLAYABLE_CURSES = {CardId.SPORE_MIND : 1, CardId.ENTHRALLED : 2}      # energy cost of the curses that can be played
 
 # cards with the Unplayable keyword
-UNPLAYABLE_CARDS = frozenset({CardId.SPOILS_MAP, CardId.LANTERN_KEY, CardId.BYRDONIS_EGG, CardId.DOWSING, CardId.DAZED, CardId.WOUND, CardId.NOT_IMPLEMENTED, CardId.INFECTION, CardId.BURN, CardId.WITHER, CardId.SOOT,
+UNPLAYABLE_CARDS = frozenset({CardId.VOID, CardId.SPOILS_MAP, CardId.LANTERN_KEY, CardId.BYRDONIS_EGG, CardId.DOWSING, CardId.DAZED, CardId.WOUND, CardId.NOT_IMPLEMENTED, CardId.INFECTION, CardId.BURN, CardId.WITHER, CardId.SOOT,
                               CardId.DISINTEGRATION, CardId.MIND_ROT, CardId.SLOTH, CardId.WASTE_AWAY}
                              | (CURSE_CARDS - PLAYABLE_CURSES.keys()))
 
 # cards with the Ethereal keyword: exhausted instead of discarded if still in hand at end of turn
-ETHEREAL_CARDS = frozenset({CardId.DYING_STAR, CardId.VOID_FORM, CardId.APPARITION, CardId.DAZED, CardId.CLUMSY, CardId.FOLLY, CardId.ASCENDERS_BANE})
+ETHEREAL_CARDS = frozenset({CardId.VOID, CardId.ECHO_FORM, CardId.DYING_STAR, CardId.VOID_FORM, CardId.APPARITION, CardId.DAZED, CardId.CLUMSY, CardId.FOLLY, CardId.ASCENDERS_BANE})
 
 # Retain / Innate / Eternal: only Retain acts in combat (Innate and Eternal are deck-level)
 RETAINING_CARDS = frozenset({CardId.SOVEREIGN_BLADE, CardId.POOR_SLEEP, CardId.RESTLESSNESS, CardId.PURITY, CardId.LUMINESCE, CardId.SNAKEBITE})
@@ -564,6 +652,16 @@ RETAINING_CARDS = RETAINING_CARDS | frozenset({CardId.ERADICATE, CardId.REAP, Ca
 INNATE_CARDS = INNATE_CARDS | frozenset({})
 ETERNAL_CARDS = ETERNAL_CARDS | frozenset({CardId.FORBIDDEN_GRIMOIRE})
 OSTY_ATTACK_CARDS = frozenset({CardId.BONE_SHARDS, CardId.FETCH, CardId.FLATTEN, CardId.HIGH_FIVE, CardId.POKE, CardId.PROTECTOR, CardId.RATTLE, CardId.RIGHT_HAND_HAND, CardId.SIC_EM, CardId.SNAP, CardId.SQUEEZE, CardId.UNLEASH, CardId.SWEEPING_GAZE})      # CardTag.OstyAttack
+
+UPGRADE_COST_CHANGE.update({CardId.CREATIVE_AI : -1, CardId.DOUBLE_ENERGY : -1, CardId.DUALCAST : -1, CardId.FERAL : -1, CardId.QUADCAST : -1, CardId.SIGNAL_BOOST : -1, CardId.SUBROUTINE : -1, CardId.TRASH_TO_TREASURE : -1, CardId.WHITE_NOISE : -1, CardId.ZAP : -1})
+UPGRADE_BASE_COST.update({CardId.CREATIVE_AI : 3, CardId.DOUBLE_ENERGY : 1, CardId.DUALCAST : 1, CardId.FERAL : 2, CardId.QUADCAST : 1, CardId.SIGNAL_BOOST : 1, CardId.SUBROUTINE : 1, CardId.TRASH_TO_TREASURE : 1, CardId.WHITE_NOISE : 1, CardId.ZAP : 1})
+# the Defect's keywords
+EXHAUSTING_CARDS = EXHAUSTING_CARDS | frozenset({CardId.BOOT_SEQUENCE, CardId.CHILL, CardId.DOUBLE_ENERGY, CardId.FUSION, CardId.GENETIC_ALGORITHM, CardId.HOLOGRAM, CardId.HOTFIX, CardId.RAINBOW, CardId.REBOOT, CardId.SHATTER, CardId.SIGNAL_BOOST, CardId.SUPERCRITICAL, CardId.VOLTAIC, CardId.WHITE_NOISE, CardId.FUEL})
+ETHEREAL_CARDS = ETHEREAL_CARDS | frozenset({CardId.ECHO_FORM, CardId.VOID})
+INNATE_CARDS = INNATE_CARDS | frozenset({CardId.BOOT_SEQUENCE})
+UNPLAYABLE_CARDS = UNPLAYABLE_CARDS | frozenset({CardId.VOID})
+UPGRADE_REMOVED_KEYWORD.update({CardId.CHILL : 1, CardId.FUSION : 1, CardId.HOLOGRAM : 1, CardId.HOTFIX : 1, CardId.RAINBOW : 1, CardId.VOLTAIC : 1, CardId.ECHO_FORM : 2})
+UPGRADE_KEYWORD.update({CardId.MACHINE_LEARNING : 4})
 
 def _set_canonical_keywords():
     """CardModel.CanonicalKeywords, stored as a mask on each CardId member."""
